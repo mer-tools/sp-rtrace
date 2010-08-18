@@ -6,6 +6,8 @@ compile and test process with the following environment variables:
   RT_DISABLE_COMPILE - set to 1 to disable compilation 
   RT_DISABLE_TEST - set to 1 to disable test execution.
   
+The test suite requires dejagnu package.
+  
 
 
 
