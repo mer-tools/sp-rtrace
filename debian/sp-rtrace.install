@@ -1,0 +1,15 @@
+debian/tmp/usr/bin/sp-rtrace*
+debian/tmp/usr/lib/libsp-rtrace-main.so* /usr/lib/sp-rtrace/
+debian/tmp/usr/lib/libsp-rtrace-memory.so* /usr/lib/sp-rtrace/
+debian/tmp/usr/lib/libsp-rtrace-memtransfer.so* /usr/lib/sp-rtrace/
+debian/tmp/usr/bin/rtrace-allocmap
+debian/tmp/usr/bin/rtrace-allocmap-animate
+debian/tmp/usr/bin/rtrace-rename
+debian/tmp/usr/bin/rtrace-sort
+debian/tmp/usr/bin/rtrace-stats
+debian/tmp/usr/share/man/man1/sp-rtrace*.1
+debian/tmp/usr/share/man/man1/rtrace-allocmap.1
+debian/tmp/usr/share/man/man1/rtrace-allocmap-animate.1
+debian/tmp/usr/share/man/man1/rtrace-rename.1
+debian/tmp/usr/share/man/man1/rtrace-sort.1
+debian/tmp/usr/share/man/man1/rtrace-stats.1

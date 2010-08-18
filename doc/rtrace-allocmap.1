@@ -1,0 +1,25 @@
+.TH RTRACE-ALLOCMAP 1 "2010-08-03" "sp-rtrace"
+.SH NAME
+rtrace-allocmap - visualize fragmentation of traced allocations
+.SH SYNOPSIS
+rtrace-allocmap <rtrace leak reports>
+.SH DESCRIPTION
+\fIrtrace-allocmap\fP script visualizes where unfreed allocations
+reported by sp-rtrace are in the process heap, so that you can see
+whether memory usage increase is because of heap fragmentation or not.
+Rtrace leak report is sp-rtrace report post-processed with -l[cr] option.
+.PP
+If you give the script multiple leak reports, the allocations
+from each one are shown with different digit.  If only one report
+is given, '#' mark is used to indicate each 4KB page 'dirtied'
+by unfreed allocation(s).
+.SH SEE ALSO
+.IR sp-rtrace (1),
+.IR sp-rtrace-allocmap (1),
+.IR rtrace-allocmap-animate (1)
+.SH COPYRIGHT
+Copyright (C) 2007,2010 Nokia Corporation.
+.PP
+This is free software.  You may redistribute copies of it under the
+terms of the GNU General Public License v2 included with the software.
+There is NO WARRANTY, to the extent permitted by law.

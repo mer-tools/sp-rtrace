@@ -1,0 +1,24 @@
+.TH RTRACE-SORT 1 "2010-08-03" "sp-rtrace"
+.SH NAME
+rtrace-sort - list allocations from rtrace report sorted by address
+.SH SYNOPSIS
+rtrace-sort <rtrace report> <number of shown addresses> [lines of context]
+.SH DESCRIPTION
+\fIrtrace-sort\fP shows a sorted list of resource allocations from
+the given report file, so that you can see the topmost allocations.
+This script is mostly obsoleted by \fIsp-rtrace-allocmap\fP.
+Rtrace report is sp-rtrace output post-processed with -l[c] option.
+.PP
+You can then use the allocation address to find the leak
+from the rtrace report or ask the script to give you
+the report context (usually backtrace).
+.SH SEE ALSO
+.IR sp-rtrace (1),
+.IR rtrace-allocmap (1),
+.IR sp-rtrace-postproc (1)
+.SH COPYRIGHT
+Copyright (C) 2007,2010 Nokia Corporation.
+.PP
+This is free software.  You may redistribute copies of it under the
+terms of the GNU General Public License v2 included with the software.
+There is NO WARRANTY, to the extent permitted by law.

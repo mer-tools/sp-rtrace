@@ -1,0 +1,39 @@
+Resource tracing module writing guide.
+
+A resource tracing module reports resource allocation/freeing
+calls to the main module which passes this information to pre-processor.
+
+The resource tracing module must:
+1) provide tracing enable/disable function void (*)(bool)
+   (see sp_rtrace_enable_tracing_t typedef in sp_rtrace_main.h).
+   This function is called from the main module whenever tracing
+   is being toggled (enabled/disabled).
+ 
+2) provide module information data by implementing 
+   sp_rtrace_get_module_info function returning a pointer to
+   sp_rtrace_module_info_t structure with module data.
+
+3) call sp_rtrace_register_module() during initialization process. 
+   This function registers the tracing enabled/disable function and
+   reports module name and version, which are used by main module when
+   it sends the MI (Module Information) packets for all active tracing
+   modules.
+   
+4) call sp_rtrace_write_function_call whenever the traced resource
+   is being allocated or freed.
+   
+5) call sp_rtrace_store_heap_info to store memory heap statistics
+   that will be sent when tracing is being disabled. This is used
+   by memory module to report final heap statistics and probably is
+   not of any use for other resource tracing modules.
+   
+
+   
+See sp_rtrace_memtransfer.c for simple resource tracing module
+implementation. The sp_rtrace_memtransfer module is used to track 
+memory transfer operations. 
+
+   
+TODO:
+   The main module (sp_rtrace_main) must also provide function to 
+   report function call arguments.

@@ -1,0 +1,74 @@
+.TH SP-RTRACE-ALLOCMAP 1 "2010-08-03" "sp-rtrace"
+.SH NAME
+sp-rtrace-allocmap - visualize fragmentation of given list of allocations
+.SH SYNOPSIS
+sp-rtrace-allocmap [options] < allocationlist
+.SH DESCRIPTION
+\fIsp-rtrace-allocmap\fP outputs an ASCII map of which of the 4KB memory pages
+within the area occupied by the allocation listed in the \fIallocationlist\fP
+actually contain allocations.  If the map contains any "holes" these
+are memory that could be returned back to the system if the allocations
+were either freed or arranged better.
+.PP
+There's also an option to zoom into this map (use smaller block size)
+so that you can see whether there's any fragmentation inside the 4KB
+memory blocks (4KB is the minimum Linux and MMU HW memory page size).
+.PP
+As \fIsp-rtrace-allocmap\fP cannot directly process \fIsp-rtrace\fP data,
+this tool is normally used through the \fIrtrace-allocmap\fP or
+\fIsp-rtrace-allocmap-animate\fP scripts.
+.SH OPTIONS
+.TP
+\fB-s\fP
+Input data contains only single run (allocations are marked marked
+differently for different runs)
+.TP
+\fB-t\fP \fIheap-top\fP
+Top of the heap
+.TP
+\fB-k\fP \fIkeepcost\fP
+How much could be trimmed off the heap top
+.TP
+\fB-h\fP \fIaddress\fP
+Highest allocated address in the use-case
+(doesn't take into account size of the allocation)
+.TP
+\fB-l\fP \fIaddress\fP
+Lowest allocated address the use-case
+.TP
+\fB-b\fP \fIheap-base\fI
+Bottom address of the heap
+.TP
+\fB-p\fP \fIpage size\fP
+Page size to use in output in KB (1,2,4...)
+.SH ALLOCATION LIST FORMAT
+Allocation list format is "hex-address dec-size", for example:
+.br
+	$ sp-rtrace-allocmap -t 0x08443215 -k 131072
+.br
+	0x0834aa90 22
+.br
+	0x0834ab70 15
+.PP
+Heap base and top are given as hexadecimal and trim offset (keepcost)
+as decimal. They can also be given before the allocs in the input data
+like this:
+.br
+	# base=0x08100000
+.br
+	# top=0x0854aa90
+.br
+	# keepcost=131072
+.PP
+Input file overrides the command line options (it's parsed later) and 'base'
+should be set before anything else (program doesn't check this, the results
+will just be funny...).
+.SH SEE ALSO
+.IR leaks-allocmap (1),
+.IR leaks-allocmap-animate (1)
+.SH COPYRIGHT
+Copyright (C) 2007,2010 Nokia Corporation.
+.PP
+This is free software.  You may redistribute copies of it under the
+terms of the GNU General Public License v2 included with the software.
+There is NO WARRANTY, to the extent permitted by law.

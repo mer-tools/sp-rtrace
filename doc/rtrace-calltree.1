@@ -1,0 +1,197 @@
+.TH RTRACE-CALLTREE 1 "2010-08-03" "sp-rtrace"
+.SH NAME
+rtrace-calltree - post-processing for rtrace reports
+.SH SYNOPSIS
+rtrace-calltree [options] <rtrace report>  >  report.[txt|dot|html]
+.SH DESCRIPTION
+\fIrtrace-calltree\fP can produce different reports from rtrace non-freed
+resource allocations reports.
+From these output reports you can see for example which of the functions
+account for most of the resource usage and how
+the resource allocations are divided between the functions they call.
+Rtrace leak report is sp-rtrace report post-processed with -lr[c] option.
+.PP
+\fIrtrace-calltree\fP works by accumulating the allocations upwards in
+the backtrace calltrees.  Each function is a node in the allocation
+graph. Once all allocations are propagated to the functions from
+which the calls to the allocation function originated, the information
+is output in the requested format.
+.SH OUTPUT REPORT TYPES
+\fIrtrace-calltree\fP supports several different output report types:
+.TP
+\fBstats\fP
+(ASCII) allocation histogram and allocation statistics.
+This is the default report type.
+.TP
+\fBgraph\fP
+A graph of the largest allocations.  This is probably the most
+interesting report, but you normally need to specify quite a lot of
+additional options to get exactly what you want.  Using this is
+explained more in detail with the (PDF) analysis document coming
+with the \fIsp-rtrace\fP package.
+.PP
+Note that number of called functions and amount of allocations do not
+always match exactly between caller and called functions.  This is not
+an error. Main reason is that nodes for functions which are not involved
+in enough allocations are left out of graphs, but their share of
+allocs is still counted in the shown nodes.
+.PP
+Graphs are output in \fIdot\fP format.  You will need GraphViz package
+to generate PostScript, SVG, PNG etc. formats out of them.
+.TP
+\fBtopmost\fP
+Output a graph of topmost allocations backtraces.
+.PP
+Note that the count and total size of allocations listed in this graph
+is for all the unfreed allocations in the use-case, not just for the
+bactraces included into \fItopmost\fP graph.
+.TP
+\fBhtml\fP
+Output hyperlinked backtraces sorted according to allocation sizes
+(as percentage of total allocs).
+.PP
+The output is similar to what \fIvalgrind\fP Massif plugin shows, but
+the content differs significantly; Massif offers a bottom-up "space*time"
+view to all allocations within (whole) application life-time. Rtrace
+and \fIrtrace-calltree\fP can offer both top-down and bottom-up views to all
+non-freed allocations between specified points of time in the
+application life-cycle.  Allocation life-time is not taken into
+account when sorting the backtraces.
+.SH REPORT OUTPUT OPTIONS
+.TP
+\fB--type\fP=\fIvalue\fP
+Value is one of the above report types.
+.TP
+\fB--stat\fPs=\fIvalue\fP (stats report)
+Value is either "count" or "total" depending on whether you want
+the histogram to show graphically the number of the given sized
+allocations or how much they take memory (with the estimated
+C-library allocation overhead).
+.TP
+\fB--depth\fP=\fIvalue\fP (topmost report)
+Depth value is an integer (1-99), in topmost report it specifies
+how many of the traces to highest allocations are shown. Default
+is 3.
+.TP
+\fB--direction\fP=\fIvalue\fP (graph and html reports)
+The report direction value is either \'tb' for top to bottom
+(i.e. from main() towards malloc()) or 'bt' for bottom to top
+(i.e. from malloc() towards main()).  Default is 'tb'.
+.TP
+\fB--emph-limit\fP=\fIvalue\fP (graph report)
+Value (1.0-100) is used to indicate that function nodes responsible for
+more than the given percentage of total allocations should be emphasized.
+Default is 60.0.
+.TP
+\fB--own-alloc-limit\fP=\fIvalue\fP (graph report)
+value is a factor (1.1 - 10) used to indicate how much single node needs
+to do more allocations than all of its children together for it to be
+emphatized.  Only nodes whose allocations go over the --emph-limit
+value are checked for this. Default is 1.2.
+.TP
+\fB--cluster\fP=\fIvalue\fP (graph report)
+Value is the name of the library which nodes should be clustered in the graph.
+.PP
+This option is useless with recursive backtraces, e.g. for Gtk applications
+you should use also --ignore-gtk-internals=yes with this option.
+.SH REPORT CONTENT FILTERING OPTIONS
+Programs doing a lot of allocations with complex backtraces produce
+so much data that you really cannot analyse it without reducing the
+amount of data.  Options for doing that are:
+.TP
+\fB--limit\fP=\fIvalue\fP (graph and html reports)
+The given value (0.1-100) is a minimum percentage of how much
+of the allocations need to go through the given function for it
+to get included.  Default is 10.0.
+.PP
+Note: If you decrease this with the 'html' report, --stop use
+is recommended as the generated HTML output can be very large
+(even gigabytes if rtrace report was megabytes).  For
+"graph" report, there are additional options for reducing
+the amount of output, see the filtering options.
+.TP
+\fB--show-below-limit\fP=\fIno\fP
+Do not show nodes summarizing how many called nodes were below the
+specified (or default) limit (see --limit option).
+.TP
+\fB--stop\fP=\fIvalue\fP
+Value is a substring of the node name where the current backtrace
+backtracking is stopped.  Using something like following could make
+Gtk memory allocation graphs more readable (or you could use just
+--ignore-gtk-internals=yes):
+.br
+		--stop=closure_marshal --stop=gtk_marshal
+.TP
+\fB--include-only\fP=\fIvalue\fP
+Value is a substring of the node name for backtraces that should be
+included into reports. All backtraces \fBnot\fP containing a node name
+with this substring are ignored.
+.TP
+\fB--ignore\fP=\fIvalue\fP
+Value is a substring of the node name which is ignored in the
+backtraces.
+.TP
+\fB--no-ignore\fP=\fIvalue\fP
+Value is a substring of the node name which is kept in the backtraces
+although it is matched by --ignore.
+.TP
+\fB--ignore-gtk-internals\fP=\fIyes\fP
+Shortcut option which ignores several lowest level allocation, standard
+data structure handling and recursed functions called by Gtk applications.
+You can use --verbose option to see what is ignored.  You might want to use
+also these options:
+
+.nf
+		--leafs=no
+		--intermediate=no
+		--show-below-limit=no
+		--ignore=gtk_widget_
+		--no-ignore=gtk_widget_show
+		--ignore=gdk_window_
+		--ignore=dcgettext
+		--ignore=tsearch
+		--join-lib=fontconfig
+		--join-lib=ld-2.3.2.so
+.fi
+.TP
+\fB--join-lib\fP=\fIvalue\fP
+Value is the name of the library (part of node name before ':') which
+should be represented as a single node.
+.TP
+\fB--intermediate\fP=\fIno\fP
+Leave out nodes with only one parent and child.
+.TP
+\fB--leafs\fP=\fIno\fP
+Leave out nodes which have either one parent and no children, or
+one child and no parents.
+.PP
+Options --stop, --ignore, --include-only, --join-lib and --cluster
+can be given as many times as you wish and they apply to all
+values you gave. For all the other options, only the last value
+applies.
+.SH DEBUG OPTIONS
+.TP
+\fB--node\fP=\fIvalue\fP
+Show internal information about given node. This option can be given
+as many as times as needed.
+.TP
+\fB--show-references\fP=\fIyes\fP
+Show what other nodes refer nodes specified with the --node option.
+.TP
+\fB--verbose\fP=\fIyes\fP
+Show more information about rtrace-calltree internal working.
+.SH LIMITATIONS / TODOS
+Currently user needs to generate each report type separately,
+\fIrtrace-calltree\fP cannot create multiple reports in the same run.
+.SH SEE ALSO
+.IR sp-rtrace (1),
+.IR rtrace-graphs-function (1),
+.IR rtrace-graphs-overview (1),
+.IR valgrind (1),
+.IR dot (1)
+.SH COPYRIGHT
+Copyright (C) 2007,2010 Nokia Corporation.
+.PP
+This is free software.  You may redistribute copies of it under the
+terms of the GNU General Public License v2 included with the software.
+There is NO WARRANTY, to the extent permitted by law.

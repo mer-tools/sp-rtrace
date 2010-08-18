@@ -1,0 +1,76 @@
+version=1.0, arch=i486-linux-gnu, time=2010.8.13 16:14:41, process=, pid=22258, 
+# heap status information:
+#   heap bottom 0x835b000
+#   heap top 0x837c000
+#   lowest block 0x835b7c0
+#   highest block 0x8362210
+#   non-mmapped space allocated from system 135168
+#   number of free chunks 1
+#   number of fastbin blocks 0
+#   number of mmapped regions 0
+#   space in mmapped regions 0
+#   maximum total allocated space 0
+#   space available in freed fastbin blocks 0
+#   total allocated space 30200
+#   total free space 104968
+#   top-most, releasable (via malloc_trim) space 104968
+# tracing module: main (1.0)
+# tracing module: memory (1.0)
+@ 1 : first context
+@ 2 : second context
+: /lib/tls/i686/cmov/libpthread-2.11.1.so => 0x110000-0x125000
+: /usr/lib/sp-rtrace/libsp-rtrace-memory.so.1.0.0 => 0x2af000-0x2b1000
+: /usr/lib/libsp-rtrace1.so.1.0.0 => 0x45a000-0x45c000
+: /lib/tls/i686/cmov/libm-2.11.1.so => 0x5ad000-0x5d1000
+: /lib/tls/i686/cmov/libdl-2.11.1.so => 0x69d000-0x69f000
+: /lib/ld-2.11.1.so => 0x928000-0x943000
+: /lib/tls/i686/cmov/libc-2.11.1.so => 0x9df000-0xb32000
+: /usr/lib/sp-rtrace/libsp-rtrace-main.so.1.0.0 => 0xb9b000-0xba0000
+: /lib/tls/i686/cmov/librt-2.11.1.so => 0xd9f000-0xda6000
+: /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/bin/alloc_context_test => 0x8048000-0x8049000
+2. @2 [09:02:05.914] malloc(1002) = 0x835b7c0
+14. @2 [09:02:05.914] malloc(1002) = 0x835c780
+26. @2 [09:02:05.914] malloc(1002) = 0x835d740
+38. @2 [09:02:05.914] malloc(1002) = 0x835e700
+50. @2 [09:02:05.914] malloc(1002) = 0x835f6c0
+	0x80486fa
+	0x8048759
+	0x80487a9
+3. @3 [09:02:05.914] malloc(1001) = 0x835bbb0
+15. @3 [09:02:05.914] malloc(1001) = 0x835cb70
+27. @3 [09:02:05.914] malloc(1001) = 0x835db30
+39. @3 [09:02:05.914] malloc(1001) = 0x835eaf0
+51. @3 [09:02:05.914] malloc(1001) = 0x835fab0
+	0x80486a3
+	0x804870f
+	0x8048759
+	0x80487a9
+4. @3 [09:02:05.914] malloc(1000) = 0x835bfa0
+16. @3 [09:02:05.914] malloc(1000) = 0x835cf60
+28. @3 [09:02:05.914] malloc(1000) = 0x835df20
+40. @3 [09:02:05.914] malloc(1000) = 0x835eee0
+52. @3 [09:02:05.914] malloc(1000) = 0x835fea0
+	0x8048666
+	0x80486b8
+	0x804870f
+	0x8048759
+	0x80487a9
+61. @2 [09:02:05.914] malloc(1002) = 0x8360290
+70. @2 [09:02:05.914] malloc(1002) = 0x8360e60
+79. @2 [09:02:05.914] malloc(1002) = 0x8361a30
+	0x80486fa
+	0x80487cc
+62. @3 [09:02:05.914] malloc(1001) = 0x8360680
+71. @3 [09:02:05.914] malloc(1001) = 0x8361250
+80. @3 [09:02:05.914] malloc(1001) = 0x8361e20
+	0x80486a3
+	0x804870f
+	0x80487cc
+63. @3 [09:02:05.914] malloc(1000) = 0x8360a70
+72. @3 [09:02:05.914] malloc(1000) = 0x8361640
+81. @3 [09:02:05.914] malloc(1000) = 0x8362210
+	0x8048666
+	0x80486b8
+	0x804870f
+	0x80487cc
+# 24 blocks leaked with total size of 24024 bytes

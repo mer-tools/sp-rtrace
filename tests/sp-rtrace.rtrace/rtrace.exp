@@ -1,0 +1,361 @@
+#
+# This file is part of sp-rtrace package.
+#
+# Copyright (C) 2010 by Nokia Corporation
+#
+# Contact: Eero Tamminen <eero.tamminen@nokia.com>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public License
+# as published by the Free Software Foundation; either version 2 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+# 02r10-1301 USA
+#
+
+
+set src_dir "sp-rtrace.rtrace"
+set out_file "trace_test"
+set src_deps ""
+set src_opts "-O0"
+
+#
+# Check if the produced rtrace text file has the minimum of expected
+# log records
+#
+proc check_log { command header_recs mmap_recs malloc_recs free_recs {trace_depth -1} } {
+	verbose "Checking output of the command: $command \[header>=$header_recs; mmap>=$mmap_recs; mallocs>=$malloc_recs; frees>=$free_recs; trace_depth=$trace_depth\]"
+	set has_header 0
+	set has_mapping 0
+	set has_malloc 0
+	set has_free 0
+	set has_trace 0
+	eval spawn $command
+	expect {
+		-re {([^\r]+)\r\n} {
+			set line $expect_out(1,string)
+			if { [regexp {^version.*, arch.*, time=[0-9]+\.[0-9]+\.[0-9]+ [0-9]+:[0-9]+:[0-9]+, .*process.*pid=[0-9]+,} $line] } {
+				set has_header [expr $has_header + 1]
+				exp_continue
+			}
+			if { [regexp {^: [^\s]+ => 0x[0-9a-fA-F]+-0x[0-9a-fA-F]+} $line] } {
+				set has_mapping [expr $has_mapping + 1]
+				exp_continue
+			}
+			if { [regexp {^[0-9]+\. \[[^\]]+\] malloc\([0-9]+\) = 0x[0-9a-fA-F]+} $line] } {
+				set has_malloc [expr $has_malloc + 1]
+				exp_continue
+			}
+			if { [regexp {^[0-9]+\. \[[^\]]+\] free\(0x[0-9a-fA-F]+\)} $line] } {
+				set has_free [expr $has_free + 1]
+				exp_continue
+			}
+			if { [regexp {^\t0x[0-9a-fA-F]} $line] } {
+				set has_trace [expr $has_trace + 1]
+				exp_continue
+			}
+			exp_continue
+			
+		}
+	}
+#	puts "HS:$has_header, MM:$has_mapping, FC+:$has_malloc, FC-:$has_free, BT:$has_trace"
+	if { $has_header < $header_recs } {
+		fail "check_log: expected at least $header_recs header records, got: $has_header"
+		return -1
+	}
+	if { $has_mapping < $mmap_recs } {
+		fail "check_log: expected at least $header_mmap memory mapping records, got: $has_mapping"
+		return -1
+	}
+	if { $has_malloc < $malloc_recs } {
+		fail "check_log: expected at least $malloc_recs malloc records, got: $has_malloc"
+		return -1
+	}
+	if { $has_free < $free_recs } {
+		fail "check_log: expected at least $free_recs header records, got: $has_free"
+		return -1
+	}
+	if { $trace_depth >= 0 && [expr $trace_depth * ($has_free + $has_malloc)] != $has_trace } {
+		fail "check_log: wrong number of backtrace frames: $has_trace"
+		return -1
+	}
+	return 0
+}
+
+#
+# Application startup tracing tests with post-processor options
+#
+proc test_startup_text { bt_depth args } {
+	verbose "test_startup_text $args"
+	set log_file ""
+	# start test application and send it termination signal after 1 second
+	eval spawn $::src_dir/launcher.sh "$::bin_dir/$::out_file" "-o$::bin_dir" "-s" "-P-" $args 
+ 	after 1000
+	if { [exec kill -SIGUSR2 [pidof $::out_file] ] == -1 } {
+		return -1
+	}
+	
+	# text format output log file should be created
+	expect {
+		-re {(?n)^INFO: Created text log file ([^\s]+)} {
+			set log_file $expect_out(1,string)
+		}
+	}
+	if { $log_file == "" } {
+		fail "no trace output file found"
+		return -1
+	}
+	# print to standard output and verify if it has at least minimum required records
+	set rc [check_log "cat $log_file" 1 2 1 1 $bt_depth]
+	file delete $log_file
+	return $rc
+}
+
+#
+# Application startup tracing tests
+#
+proc test_startup_bin { args } {
+	verbose "test_startup_bin $args"
+	set log_file ""
+	# start test application and send it termination signal after 1 second
+	eval spawn $::src_dir/launcher.sh "$::bin_dir/$::out_file" "-o$::bin_dir" "-s" $args 
+ 	after 1000
+	if { [exec kill -SIGUSR2 [pidof $::out_file]] == -1 } {
+		return -1
+	}
+
+	# binary format output log file should be created
+	expect {
+		-re {(?n)^INFO: Opening binary log file ([^\s]+)} {
+			set log_file $expect_out(1,string)
+		}
+	}
+	if { $log_file == "" } {
+		fail "no trace output file found"
+		return -1
+	}
+	# convert to text format and verify if it has at least minimum required records
+	set rc [check_log "sp-rtrace-postproc -i$log_file" 1 2 1 1]
+	file delete $log_file
+	return $rc
+}
+
+
+#
+# Application startup tests (tracing disabled)
+#
+proc test_startup_bin_notrace { args } {
+	verbose "test_startup_bin_notrace $args"
+	set log_file ""
+	# start test application and send it termination signal after 1 second
+	eval spawn $::src_dir/launcher.sh "$::bin_dir/$::out_file" "-o$::bin_dir" $args 
+ 	after 1000
+	if { [exec kill -SIGUSR2 [pidof $::out_file]] == -1 } {
+		return -1
+	}
+
+	# binary format output log file should NOT be created
+	expect {
+		-re {(?n)^INFO: Opening binary log file ([^\s]+)} {
+			set log_file $expect_out(1,string)
+		}
+	}
+	if { $log_file != "" } {
+		fail "binary output file was created when process started with trace disabled"
+		file delete $log_file
+		return -1
+	}
+	return 0
+}
+
+#
+# Trace toggling tests for binary output
+#
+proc test_toggle_bin { start mode } {
+	verbose "test_toggle_bin $start $mode"
+	set log_file ""
+	set files ""
+	set rc 0
+	set timeout 5
+	# start test application and send it termination signal after 1 second
+	eval spawn $::src_dir/launcher.sh "$::bin_dir/$::out_file" "-o$::bin_dir" $start $mode 
+	set script_id $spawn_id
+	after 1000
+	
+	set pid [pidof $::out_file]
+	if { $pid <= 0 } {
+		fail "test_toggle_bin: failed to retrieve target process pid"
+		return -1
+	}
+
+	for { set i 1 } { $i <= 5 } { incr i } {
+		if { $start == ""} {
+			spawn sp-rtrace $mode -t $pid
+		} else {
+			set start ""
+		}
+		set log_file ""
+		# in managed mode the logging sp-rtrace process will be spawned by the main module -
+		# so INFO: output will be printed in the original process. While in normal mode
+		# the toggling sp-rtrace process servers also as logging process - so INFO: output
+		# will be printed in the toggling sp-rtrace process.
+		if { $mode != "" } {
+			set spawn_id $script_id
+		}
+		expect {
+			-re {(?n)^INFO: Opening binary log file ([^\s]+)} {
+				set log_file $expect_out(1,string)
+			}
+		}
+		if { $log_file == "" } {
+			fail "test_toggle_bin: failed to locate binary output file"
+			return -1
+		}
+
+		after 2000
+		spawn sp-rtrace $mode -t $pid
+		lappend files $log_file
+		set rc [check_log "sp-rtrace-postproc -i$log_file" 1 2 1 1 7]
+		if { $rc == -1 } break
+	}
+	exec kill -SIGUSR2 $pid
+	set index 0
+	verbose "Trace toggle test produced logs: $files"
+	foreach file $files {
+	#	file delete $file
+		set index [expr $index + 1]
+	}
+	if { $rc == 0 && $index < 5 } {
+		fail "test_toggle_bin: expected 5 files produced by 5 toggles, but got: $index"
+		return -1
+	}
+	return $rc
+}
+
+#
+# Trace toggling tests for text output
+#
+proc test_toggle_text { start mode } {
+	verbose "test_toggle_text $start $mode"
+	set log_file ""
+	set files ""
+	set rc 0
+	set timeout 5
+	# start test application and send it termination signal after 1 second
+	eval spawn $::src_dir/launcher.sh "$::bin_dir/$::out_file" "-o$::bin_dir" "-P-" $start $mode 
+	after 1000
+	
+	set pid [pidof $::out_file]
+	if { $pid <= 0 } {
+		fail "test_toggle_text: failed to retrieve target process pid"
+		return -1
+	}
+
+	for { set i 1 } { $i <= 5 } { incr i } {
+		if { $start == ""} {
+			spawn sp-rtrace $mode -t $pid
+		} else {
+			set start ""
+		}
+
+		after 2000
+		set log_file ""
+		spawn sp-rtrace $mode -t $pid
+		expect {
+			-re {(?n)^INFO: Created text log file ([^\s]+)} {
+				set log_file $expect_out(1,string)
+			}
+		}
+		if { $log_file == "" } {
+			fail "test_toggle_text: failed to locate text output file"
+			return -1
+		}
+		lappend files $log_file
+		set rc [check_log "cat $log_file" 1 2 1 1 7]
+		if { $rc == -1 } break
+	}
+	exec kill -SIGUSR2 $pid
+	set index 0
+	verbose "Trace toggle test produced logs: $files"
+	foreach file $files {
+	#	file delete $file
+		set index [expr $index + 1]
+	}
+	if { $rc == 0 && $index < 5 } {
+		fail "test_toggle_text: expected 5 files produced by 5 toggles, but got: $index"
+		return -1
+	}
+	return $rc
+}
+
+#
+#
+#
+proc test_trace { args } {
+	# startup tests with tracing disabled
+	if { [test_startup_bin_notrace ""] == 0 } {
+		pass "application startup trace in normal mode with tracing disabled"
+	}
+	if { [test_startup_bin_notrace "-m"] == 0 } {
+		pass "application startup trace in managed mode with tracing disabled"
+	}
+	
+	# startup tests with tracing enabled
+	if { [test_startup_text "" ""] == 0 } {
+		pass "application startup trace in normal mode with post-processing"
+	}
+	if { [test_startup_text "" "-m"] == 0 } {
+		pass "application startup trace in managed mode with post-processing"
+	}
+	if { [test_startup_bin "" ""] == 0 } {
+		pass "application startup trace in normal mode"
+	}
+	if { [test_startup_bin "" "-m"] == 0 } {
+		pass "application startup trace in managed mode"
+	}
+	
+	# trace toggling tests
+	if { [test_toggle_bin "" ""] == 0 } {
+		pass "trace toggle in normal mode when started with tracing disabled"
+	}
+	if { [test_toggle_bin "-s" ""] == 0 } {
+		pass "trace toggle in normal mode when started with tracing enabled"
+	}
+	if { [test_toggle_bin "" "-m"] == 0 } {
+		pass "trace toggle in managed mode when started with tracing disabled"
+	}
+	if { [test_toggle_bin "-s" "-m"] == 0 } {
+		pass "trace toggle in managed mode when started with tracing enabled"
+	}
+	
+	# backtrace depth tests
+	if { [test_startup_text 0 "-b0"] == 0 } {
+		pass "backtrace depth setting: 0"
+	}
+	if { [test_startup_text 2 "-b2"] == 0 } {
+		pass "backtrace depth setting: 2"
+	}
+	if { [test_startup_text 4 "-b4"] == 0 } {
+		pass "backtrace depth setting: 4"
+	}
+	if { [test_startup_text 7 "20"] == 0 } {
+		pass "backtrace depth setting: 20"
+	}
+	
+}
+
+set result [rt_compile $src_dir $out_file $src_deps]
+if { $result == "" } {
+	rt_test test_trace
+} else {
+	fail  "failed to compile $src_dir/$out_file.c:\n $result"
+}
+

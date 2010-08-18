@@ -1,0 +1,18 @@
+.TH RTRACE-FROM-FUNCTION 1 "2010-08-03" "sp-rtrace"
+.SH NAME
+rtrace-from-function - amount of allocs from a function in rtrace report
+.SH SYNOPSIS
+rtrace-from-function <function name>  <  <rtrace-report>
+.SH DESCRIPTION
+\fIrtrace-from-function\fP sums the amount of un-freed allocations
+originating from the given function in the given rtrace report.
+Rtrace report is sp-rtrace output post-processed with -l[rc] option.
+.SH SEE ALSO
+.IR sp-rtrace (1),
+.IR rtrace-graphs-function (1)
+.SH COPYRIGHT
+Copyright (C) 2007,2010 Nokia Corporation.
+.PP
+This is free software.  You may redistribute copies of it under the
+terms of the GNU General Public License v2 included with the software.
+There is NO WARRANTY, to the extent permitted by law.

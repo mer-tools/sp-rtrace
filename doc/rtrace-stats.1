@@ -1,0 +1,36 @@
+.TH RTRACE-STATS 1 "2010-08-03" "sp-rtrace"
+.SH NAME
+rtrace-stats - show allocation size/counts from rtrace reports
+.SH SYNOPSIS
+rtrace-stats <two or more rtrace leak reports>
+.SH DESCRIPTION
+
+\fIrtrace-stats\fP counts changes in the number of allocations per allocation
+size from the given rtrace reports. The rtrace reports are supposed to
+be taken from increasing number of (potentially leaking) use-case repeats.
+
+Rtrace report is sp-rtrace output post-processed with -l[c] option.
+.PP
+If the number of certain sized allocations grows with the number of
+test-case repeats, there's a leak.  You can then find the leak by
+searching the last rtrace report for backtraces having'size <size>'.
+.PP
+The backtraces having largest number of these sized allocs are the ones
+leaking.  This way you could find even very small leakage (which might
+not show up in Valgrind/memcheck when code is still keeping a reference
+to them).
+.PP
+This script is mostly obsoleted by \fIrtrace-calltree\fP and the scripts
+using it, but it can be useful in environments which don't have
+Python and GraphViz required by \fIrtrace-calltree\fP.
+.SH SEE ALSO
+.IR sp-rtrace (1),
+.IR sp-rtrace-postproc (1),
+.IR rtrace-calltree (1),
+.IR rtrace-graphs-overview (1)
+.SH COPYRIGHT
+Copyright (C) 2007,2009,2010 Nokia Corporation.
+.PP
+This is free software.  You may redistribute copies of it under the
+terms of the GNU General Public License v2 included with the software.
+There is NO WARRANTY, to the extent permitted by law.

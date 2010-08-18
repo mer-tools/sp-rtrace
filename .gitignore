@@ -1,0 +1,33 @@
+*.o
+*~
+*.swp
+src/.libs
+src/sp-rtrace
+src/sp-rtrace-postproc
+src/sp-rtrace-resolve
+src/sp-rtrace-allocmap
+core
+tags
+
+# tests
+tests/bin
+
+# autoconf/automake generated files
+autom4te.cache
+configure
+config.guess
+config.log
+config.status
+config.status.lineno
+config.sub
+Makefile.in
+Makefile
+aclocal.m4
+include/config.h.in
+include/config.h
+include/stamp-h1
+depcomp
+missing
+compile
+install-sh
+.deps

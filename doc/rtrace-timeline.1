@@ -1,0 +1,36 @@
+.TH RTRACE-TIMELINE 1 "2010-08-03" "sp-rtrace"
+.SH NAME
+rtrace-timeline - creates resource usage timeline graphs.
+.SH SYNOPSIS
+rtrace-timeline --type=lifetime|totals|usage [<options>] --in=<file> --out=<file>
+.SH DESCRIPTION
+Creates resource lifetime, totals and usage graphs.
+
+Lifetime graph displays life time for resources, starting
+with their allocation and ending with release.
+
+Totals graph displays resource allocation totals over the time.
+
+Usage graph displays resource allocation 'intensity' - the resource
+allocations per time slices.
+
+.SS Options:
+.TP 
+    \fI--slice\fP=<value>
+The time slice in milliseconds for the 'usage' report type. 
+.TP 
+\fI--plot\fP
+Specifies that gnuplot must be invoked automatically to generate graphs.
+.TP 
+\fI--resources-per-page\fP=<value>
+Specifies the number of resources per page to display for 'lifetime'
+report type.
+
+.SH SEE ALSO
+.IR rtrace-calltree
+.SH COPYRIGHT
+Copyright (C) 2010 Nokia Corporation.
+.PP
+This is free software.  You may redistribute copies of it under the
+terms of the GNU General Public License v2 included with the software.
+There is NO WARRANTY, to the extent permitted by law.

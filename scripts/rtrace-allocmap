@@ -1,0 +1,97 @@
+#!/bin/sh
+#
+# A script for visualizing memory fragmentation in rtrace reports
+# using allocmap.
+#
+# This file is part of sp-rtrace.
+#
+# Copyright (C) 2006,2010 by Nokia Corporation
+#
+# Contact: Eero Tamminen <eero.tamminen@nokia.com>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License 
+# version 2 as published by the Free Software Foundation. 
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+# 02110-1301 USA
+#
+# Originally this file was a part of libleaks package, but moved
+# to the sp-rtrace package during libleaks redesign.
+#
+
+# show help
+if [ $# -lt 1 ]; then
+	echo "A script to visualize (with allocmap) where unfreed allocations"
+	echo "reported by rtrace are in the process heap, so that you can see"
+	echo "whether memory usage increase is because of heap fragmentation or not."
+	echo 
+	echo "If you give the script multiple leak reports, the allocations"
+	echo "from each one are shown with different digit.  If only one report"
+	echo "is given, '#' mark is used to indicate each 4KB page 'dirtied'"
+	echo "by unfreed allocation(s)."
+	echo
+	echo "Usage: $0 <rtrace leak reports>"
+	exit
+fi
+
+map=sp-rtrace-allocmap
+postproc=sp-rtrace-postproc
+
+if [ -z $(which $map) ]; then
+	echo "$map binary needed for producing the ASCII address map is missing."
+	exit
+fi
+
+if [ -z $(which $postproc) ]; then
+	echo "$postproc binary needed for removing freed allocations is missing."
+	exit
+fi
+
+tmp=/tmp/multileaks.tmp
+tmp_leaks=$(tempfile)
+
+rm -f $tmp
+for leaks in $*; do
+  echo "Parsing '$leaks'..."
+  
+  # remove freed allocations
+  $postproc -lc -i$leaks > $tmp_leaks
+  
+  # get the addresses and sizes from leaks report and pipe them to
+  # allocmap for producing an ASCII chart of where they are.
+  top=$(grep 'heap top' $tmp_leaks|sed 's/^.*\(0x[0-9a-z]\+\)/\1/')
+  high=$(grep 'highest block' $tmp_leaks|sed 's/^.*\(0x[0-9a-z]\+\)/\1/')
+  trim=$(grep 'malloc_trim' $tmp_leaks|sed 's/^.* \([0-9]\+\)$/\1/')
+  low=$(grep 'lowest block' $tmp_leaks|sed 's/^.*\(0x[0-9a-z]\+\)/\1/')
+  base=$(grep 'heap bottom' $tmp_leaks|sed 's/^.*\(0x[0-9a-z]\+\)/\1/')
+  filter='s/^[0-9]\+\. [^(]\+(\([0-9]\+\)) = \(0x[0-9a-f]\+\).*$/\2 \1/'
+
+  if [ -z $top -o -z $trim -o -z $high -o -z $low -o -z $base ]; then
+	echo "Warning: heap bottom/low/high/trim/top value missing from the leak report."
+	echo "- Is the rtrace an old version?"
+	exit
+  fi
+  echo "# base=$base" >> $tmp
+  echo "# top=$top" >> $tmp
+  echo "# low=$low" >> $tmp
+  echo "# keepcost=$trim" >> $tmp
+  grep -E "^[0-9]+\. " $tmp_leaks|sed "$filter"|sort -n >> $tmp
+  
+  rm "$tmp_leaks"
+done
+
+if [ $# -eq 1 ]; then
+	# only single report
+	$map -s < $tmp
+else
+	$map < $tmp
+fi
+rm $tmp

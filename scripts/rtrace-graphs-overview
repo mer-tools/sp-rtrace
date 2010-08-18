@@ -1,0 +1,128 @@
+#!/bin/sh
+#
+# This automatically resolves all leak reports in current directory,
+# generates overview dot files for them and generates graphs from
+# the dot files.
+#
+# This file is part of sp-rtrace.
+#
+# Copyright (C) 2006,2007,2010 by Nokia Corporation
+#
+# Contact: Eero Tamminen <eero.tamminen@nokia.com>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License 
+# version 2 as published by the Free Software Foundation. 
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+# 02110-1301 USA
+#
+#
+# CHANGES
+# 
+# 2007-07-16
+# - check/complain about tool only if it's needed
+# - parse both alloc leaks and unreffed Gobject reports
+# 2010-08-02
+# - Updated to support rtrace format and moved to sp-rtrace pacakge.
+#
+# Originally this file was a part of libleaks package, but moved
+# to the sp-rtrace package during libleaks redesign.
+#
+
+
+count=0
+
+if [ -z $(which sp-rtrace-resolve) ]; then
+	echo "EROR: 'sp-rtrace-resolve' utility missing from PATH"
+	exit 1
+fi
+if [ -z $(which sp-rtrace-postproc) ]; then
+	echo "EROR: 'sp-rtrace-postproc' utility missing from PATH"
+	exit 1
+fi
+
+
+# resolve function names all trace files
+echo "Resolving all unresolved .trace leak files..."
+for trace in *.rtrace.txt
+do
+	resolved=${trace%.txt}.resolved
+	if [ -f $resolved ]; then
+		continue
+	fi
+	echo "Removing freed allocations and resolving traces: $trace -> $resolved"
+	sp-rtrace-postproc -lcri $trace > $resolved
+	if [ $? != 0 ]; then
+		rm $resolved
+		echo "ERROR: 'sp-rtrace-resolve' call failed"
+		exit 1
+	fi
+	count=$(($count+1))
+done
+
+# generate dot files for all resolved traces
+echo "Generating overview .dot files for all .resolved leak files..."
+for resolved in *.rtrace.resolved
+do
+	dot=${resolved%.resolved}.dot
+	if [ -f $dot ]; then
+		continue
+	fi
+	if [ -z $(which rtrace-calltree) ]; then
+		echo "ERROR: 'rtrace-calltree' utility missing from PATH"
+		exit 1
+	fi
+	echo "Generating call tree: $resolved -> $dot"
+	rtrace-calltree --type=graph --limit=1 --emph-limit=5 \
+	--ignore-gtk-internals=yes --show-below-limit=no $resolved > $dot
+	if [ $? != 0 ]; then
+		rm $dot
+		echo "ERROR: 'rtrace-calltree' call failed"
+		exit 1
+	fi
+	count=$(($count+1))
+done
+
+if [ -z $(which dot) ]; then
+	echo "ERROR: 'dot' utility is missing from PATH"
+	echo "- 'dot' it used for converting the graphs into PostScript"
+	echo "- you can get it from http://www.graphviz.org/"
+	echo "  (configure GraphViz with '--without-x')"
+	exit 1
+fi
+
+# generate postscript files of all dot files
+echo "Converting .dot files to .ps PostScript files..."
+for dot in *.rtrace.dot
+do
+	ps=${dot%.dot}.ps
+	if [ -f $ps ]; then
+		continue
+	fi
+	echo "Plotting function call graph: $dot -> $ps"
+	dot -Tps $dot > $ps
+	if [ $? != 0 ]; then
+		rm $ps
+		echo "ERROR: 'dot' (GraphViz) call failed"
+		exit 1
+	fi
+	count=$(($count+1))
+done
+
+if [ $count -eq 0 ]; then
+	echo "WARNING: No .trace, .resolved or .dot files to process."
+	exit 1
+fi
+
+echo
+ls *.ps
+echo
+echo "DONE!"

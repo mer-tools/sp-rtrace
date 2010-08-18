@@ -1,0 +1,10 @@
+include_HEADERS = src/library/sp_rtrace_context.h src/library/sp_rtrace_formatter.h
+
+dist_bin_SCRIPTS = scripts/*
+
+SUBDIRS = src doc tests
+
+DISTCLEANFILES = Makefile Makefile.in configure config.* autoscan.log aclocal.m4 config-*
+
+distclean-local:
+	rm -rf aux m4 autom4te.cache sp-rtrace.log sp-rtrace.sum

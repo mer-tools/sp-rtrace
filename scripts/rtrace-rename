@@ -1,0 +1,67 @@
+#!/bin/sh
+#
+# Script for renaming rtrace output files.
+# This file is part of sp-rtrace.
+#
+# Copyright (C) 2006,2010 by Nokia Corporation
+#
+# Contact: Eero Tamminen <eero.tamminen@nokia.com>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License 
+# version 2 as published by the Free Software Foundation. 
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+# 02110-1301 USA
+#
+# Originally this file was a part of libleaks package, but moved
+# to the sp-rtrace package during libleaks redesign.
+#
+
+#
+# Renames files matching specified pattern by replacing $pid with $name
+#
+rename_pattern()
+{	
+	files=$(ls $1 2>/dev/null)
+	if [ -n "$files" ]; then
+		for i in $files 
+		do
+			mv $i $(echo $i | sed "s/$pid\([.-]\)/$name\1/")
+			count=$(($count+1))
+		done
+	fi
+}
+
+# check command line args
+if [ $# -lt 2 ]; then
+	echo "Renames all (also post-processed) rtrace files"
+	echo "in the current directory from format 'PID.rtrace.*'"
+	echo "to 'NAME.rtrace.*' format."
+	echo
+	echo "usage: ${0##*/} <PID1> <NAME1> <PID2> <NAME2> ..."
+	exit 1
+fi
+
+count=0
+
+while true
+do
+	pid=$1
+	[ -z "$pid" ] && break
+	shift
+	name=$1
+	[ -z "$name" ] && break
+	shift
+	rename_pattern $pid.'rtrace*'
+	rename_pattern $pid-'*.rtrace*'
+done
+echo "Renamed $count files."
+exit 0

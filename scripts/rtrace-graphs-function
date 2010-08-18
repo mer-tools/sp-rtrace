@@ -1,0 +1,130 @@
+#!/bin/sh
+#
+# This script generates leak graphs for given function for all given
+# leak files. This file is part of sp-rtrace.
+#
+# Copyright (C) 2006,2010 by Nokia Corporation
+#
+# Contact: Eero Tamminen <eero.tamminen@nokia.com>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License 
+# version 2 as published by the Free Software Foundation. 
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+# 02110-1301 USA
+#
+# Originally this file was a part of libleaks package, but moved
+# to the sp-rtrace package during libleaks redesign.
+#
+
+# check command line args
+if [ $# -lt 3 ]; then
+	echo "Generates graphs of unfreed resource allocations going"
+	echo "through given function for all given trace files.  The graphs"
+	echo "are saved to a subdirectory with the given function name."
+	echo
+	echo "Good values for <limit> are 0.1 - 2, depending on the trace"
+	echo "file contents."
+	echo
+	echo "To re-generate the files, just remove the directory."
+	echo
+	echo "usage: ${0##*/} <function name> <limit> <trace files>"
+	exit 1
+fi
+
+fun=$1
+limit=$2
+shift
+shift
+
+# check for required utilities
+if [ -z $(which sp-rtrace-resolve) ]; then
+	echo "ERROR: 'sp-rtrace-resolve' utility missing from PATH"
+	exit 1
+fi
+if [ -z $(which sp-rtrace-postproc) ]; then
+	echo "ERROR: 'sp-rtrace-postproc' utility missing from PATH"
+	exit 1
+fi
+if [ -z $(which rtrace-calltree) ]; then
+	echo "ERROR: 'rtrace-calltree' utility missing from PATH"
+	exit 1
+fi
+if [ -z $(which dot) ]; then
+	echo "ERROR: 'dot' utility is missing from PATH"
+	echo "- 'dot' it used for converting the graphs into PostScript"
+	echo "- you can get it from http://www.graphviz.org/"
+	echo "  (configure GraphViz with '--without-x')"
+	exit 1
+fi
+
+
+if [ -d $fun ]; then
+	echo "ERROR: directory '$fun' exists already,"
+	echo "cowardly refusing to overwrite it."
+	exit 1
+else
+	mkdir $fun
+fi
+
+# process all given trace files
+echo "-------------------------------------------------------------------"
+for trace in $*
+do
+	echo "Processing '$trace'..."
+	if [ \! -f ]; then
+		echo "ERROR: Given file '$trace' missing!"
+		exit 1
+	fi
+	resolved=${trace%.txt}.resolved
+	if [ \! -f $resolved ]; then
+		echo "Removing freed allocations and resolving traces: $trace -> $resolved"
+		sp-rtrace-postproc -lcri $trace > $resolved
+		if [ $? != 0 ]; then
+			rm $resolved
+			echo "ERROR: 'sp-rtrace-resolve' call failed"
+			exit 1
+		fi
+	fi
+	dot=$fun/${resolved%.resolved}.dot
+	if [ \! -f $dot ]; then
+		echo "Generating call tree: $resolved -> $dot"
+		rtrace-calltree --type=graph --limit=$limit --emph-limit=4 \
+		--include-only=$fun --ignore=malloc --ignore=realloc \
+		--ignore=strdup --ignore=memdup $resolved > $dot
+		if [ $? != 0 ]; then
+			rm $dot
+			echo "ERROR: 'rtrace-calltree' call failed"
+			exit 1
+		fi
+	fi
+	ps=${dot%.dot}.ps
+	if [ \! -f $ps ]; then
+		echo "Plotting function call graph: $dot -> $ps"
+		dot -Tps $dot > $ps
+		if [ $? != 0 ]; then
+			rm $ps
+			echo "ERROR: 'dot' (GraphViz) call failed"
+			exit 1
+		fi
+	fi
+done
+
+echo "-------------------------------------------------------------------"
+echo
+echo "Generated graphs of allocations going through function '$fun'"
+echo "and showing nodes for functions through which went at least $limit%"
+echo "those allocations."
+echo
+echo $fun/
+ls $fun/
+echo
+echo "DONE!"

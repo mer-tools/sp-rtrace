@@ -1,0 +1,78 @@
+#
+# This file is part of sp-rtrace package.
+#
+# Copyright (C) 2010 by Nokia Corporation
+#
+# Contact: Eero Tamminen <eero.tamminen@nokia.com>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public License
+# as published by the Free Software Foundation; either version 2 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+# 02r10-1301 USA
+#
+
+set src_dir "sp-rtrace.postproc"
+set out_file "alloc_context_test"
+set src_deps ""
+set src_opts "-g -lsp-rtrace1 -L../src/.libs"
+
+
+proc test_context_filter { context postproc } {
+	set out_file "$::bin_dir/context.txt.$context.$postproc"
+	exec sp-rtrace-postproc -${context} -${postproc}i $::src_dir/context.raw > $out_file
+	if { ![file exists $out_file] || [file size $out_file] == 0} {
+		fail "Failed to produce trace report: $out_file"
+		return -1
+	}
+	spawn diff -u $::src_dir/context.txt.$context.$postproc $out_file
+	expect {
+		-re {.+} {
+			fail "diff -u $::src_dir/context.txt.$context.$postproc $out_file:\n$expect_out(buffer)"
+			return 0;
+		}
+	}
+	pass "sp-rtrace-postproc -${context} -${postproc}i <binary data>"
+}
+
+proc test_context_filters { args } {
+	if { [test_context_filter "" ""] == -1} {return -1}
+	if { [test_context_filter "C1" ""] == -1} {return -1}
+	if { [test_context_filter "C2" ""] == -1} {return -1}
+	if { [test_context_filter "C3" ""] == -1} {return -1}
+	if { [test_context_filter "C4" ""] == -1} {return -1}
+
+	if { [test_context_filter "" "lc"] == -1} {return -1}
+	if { [test_context_filter "C1" "lc"] == -1} {return -1}
+	if { [test_context_filter "C2" "lc"] == -1} {return -1}
+	if { [test_context_filter "C3" "lc"] == -1} {return -1}
+	if { [test_context_filter "C4" "lc"] == -1} {return -1}
+
+	if { [test_context_filter "" "lcr"] == -1} {return -1}
+	if { [test_context_filter "C1" "lcr"] == -1} {return -1}
+	if { [test_context_filter "C2" "lcr"] == -1} {return -1}
+	if { [test_context_filter "C3" "lcr"] == -1} {return -1}
+	if { [test_context_filter "C4" "lcr"] == -1} {return -1}
+}
+
+#
+#
+#
+set result [rt_compile $src_dir $out_file $src_deps $src_opts]
+if { $result == "" } {
+
+	rt_test test_context_filters
+
+} else {
+	fail  "failed to compile $src_dir/$out_file.c:\n $result"
+}
+

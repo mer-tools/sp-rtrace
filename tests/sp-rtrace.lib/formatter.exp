@@ -1,0 +1,369 @@
+#
+# This file is part of sp-rtrace package.
+#
+# Copyright (C) 2010 by Nokia Corporation
+#
+# Contact: Eero Tamminen <eero.tamminen@nokia.com>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public License
+# as published by the Free Software Foundation; either version 2 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+# 02r10-1301 USA
+#
+
+set src_dir "sp-rtrace.lib"
+set out_file "formatter_test"
+set src_deps "common/utils.c"
+set src_opts "-L$lib_dir -lsp-rtrace1 -O3"
+
+#
+# Test case implementation.
+#
+
+
+proc check_print_header { version arch time pid process } {
+	set out_version ""
+	set out_arch ""
+	set out_time ""
+	set out_pid ""
+	set out_process ""
+
+	spawn $::bin_dir/$::out_file header $version $arch $time $pid $process
+	expect {
+		-re {version=([^,]+), arch=([^,]+), time=([^,]+), pid=([^,]+), process=([^,]+),} {
+			set out_version $expect_out(1,string)
+			set out_arch $expect_out(2,string)
+			set out_time $expect_out(3,string)
+			set out_pid $expect_out(4,string)
+			set out_process $expect_out(5,string)
+		} 
+	}
+	if { $out_version != $version } {
+		fail "Wrong header version field. Expected '$version', got '$out_version'"
+		return -1
+	}
+	if { $out_arch != $arch } {
+		fail "Wrong header architecture field. Expected '$arch', got '$out_arch'"
+		return -1
+	}
+	if { $out_time != $time } {
+		fail "Wrong header time field. Expected '$time', got '$out_time'"
+		return -1
+	}
+	if { $out_pid != "$pid" } {
+		fail "Wrong header pid field. Expected '$pid', got '$out_pid'"
+		return -1
+	}
+	if { $out_process != $process } {
+		fail "Wrong header process field. Expected '$process', got '$out_process'"
+		return -1
+	}
+	return 0
+}
+
+proc check_print_mmap { module from to } {
+	set out_module ""
+	set out_from ""
+	set out_to ""  
+
+	spawn $::bin_dir/$::out_file mmap $module $from $to
+	expect {
+		-re {: ([^ ]+) =\> (0x[0-9a-f]+)-(0x[0-9a-f]+)} {
+			set out_module $expect_out(1,string)
+			set out_from $expect_out(2,string)
+			set out_to $expect_out(3,string)
+		} 
+	}
+	if { $out_module != $module } {
+		fail "Wrong mmap module name. Expected '$module', got '$out_module'"
+		return -1
+	}
+	if { $out_from != $from } {
+		fail "Wrong mmap from address. Expected '$from', got '$out_from'"
+		return -1
+	}
+	if { $out_to != $to } {
+		fail "Wrong mmap to address. Expected '$to', got '$out_to'"
+		return -1
+	}
+	return 0
+}
+
+proc check_print_call { index context timestamp name res_size res_id } {
+	set out_index ""
+	set out_context ""
+	set out_timestamp ""
+	set out_name ""
+	set out_res_size ""
+	set out_res_id ""
+
+	spawn $::bin_dir/$::out_file call $index $context $timestamp $name $res_size $res_id
+	expect {
+		-re {([0-9]+)\.(?: @([0-9a-fA-F]+)|)(?: \[([^\]]+)\]|) ([^\(]+)\(([^\)]+)\)(?: = (0x[0-9a-fA-F]+)|)} {
+			set out_index $expect_out(1,string)
+			if { [info exists expect_out(2,string)] } {
+				set out_context $expect_out(2,string)
+			}
+			if { [info exists expect_out(3,string)] } {
+				set out_timestamp $expect_out(3,string)
+			}
+			set out_name $expect_out(4,string)
+			if { [info exists expect_out(6,string)] } {
+				set out_res_size $expect_out(5,string)
+				set out_res_id $expect_out(6,string)
+			} else {
+				set out_res_id $expect_out(5,string)
+			}
+		} 
+	}
+	if { "$out_index" != "$index" } {
+		fail "Wrong call index. Expected '$index', got '$out_index'"
+		return -1
+	}
+	if { "$out_context" != "$context" } {
+		fail "Wrong call context. Expected '$context', got '$out_context'"
+		return -1
+	}
+	if { $out_timestamp != $timestamp} {
+		fail "Wrong call timestamp. Expected '$timestamp', got '$out_timestamp'"
+		return -1
+	}
+	if { $out_name != $name } {
+		fail "Wrong call name. Expected '$name', got '$out_name'"
+		return -1
+	}
+	if { $out_res_size != $res_size } {
+		fail "Wrong call resource size. Expected '$res_size', got '$out_res_size'"
+		return -1
+	}
+	if { $out_res_id != $res_id } {
+		fail "Wrong call resource id. Expected '$res_id', got '$out_res_id'"
+		return -1
+	}
+	return 0
+}
+
+
+proc check_print_trace { nframes args } {
+	set out_args "$nframes"
+	foreach arg $args {
+		lappend out_args $arg
+	}
+	set index 0
+	eval spawn $::bin_dir/$::out_file trace $out_args
+	expect {
+		-re {(?n)^\t(0x[0-9a-fA-F]+)(?: \(([^\r\n]+)\)|)\s*$} {
+			set out_addr $expect_out(1,string)
+			if { [info exists expect_out(2,string)] } {
+				set out_resolved $expect_out(2,string)
+			} else {
+				set out_resolved ""
+			}
+			set in_addr "[lindex $args [expr $index * 2]]"
+			set in_resolved "[lindex $args [expr $index * 2 + 1]]"
+			if {  $in_addr != $out_addr } {
+				fail "Wrong bactrace address. Expected '$in_addr', got '$out_addr"
+				return -1
+			}
+			if {  $in_resolved != $out_resolved } {
+				fail "Wrong bactrace resolved name. Expected '$in_resolved', got '$out_resolved"
+				return -1
+			}
+			set expect_out(2,string) ""
+			set index [expr $index + 1]
+			exp_continue
+		}
+		-re	{(?n)^([^\n\r]+)\s*$} {
+			fail "Unrecognized backtrace format: $expect_out(1,string)"
+			return -1
+		}		
+	}
+	return 0
+}
+
+
+proc check_print_trace_step { addr name } {
+
+	spawn $::bin_dir/$::out_file trace_step $addr $name
+	expect {
+		-re {(?n)^\t(0x[0-9a-fA-F]+)(?: \(([^\n\r]+)\)|)\s*$} {
+			set out_addr $expect_out(1,string)
+			if { [info exists expect_out(2,string)] } {
+				set out_name $expect_out(2,string)
+			} else {
+				set out_name ""
+			}
+		}
+		if {  $addr != $out_addr } {
+			fail "Wrong bactrace step address. Expected '$addr', got '$out_addr"
+			return -1
+		}
+		if {  $name != $out_name } {
+			fail "Wrong bactrace step resolved name. Expected '$name', got '$out_name"
+			return -1
+		}
+	}
+	return 0
+}
+
+proc check_print_context { id name } {
+	
+	set out_name ""
+	set out_id ""
+	spawn $::bin_dir/$::out_file context $id $name
+	expect {
+		-re {(?n)^@ ([0-9a-fA-F]+) : ([^\n\r]+)\s*$} {
+			set out_id $expect_out(1,string)
+			set out_name $expect_out(2,string)
+		}
+	}
+	if {  $id != $out_id } {
+		fail "Wrong context id. Expected '$id', got '$out_id'"
+		return -1
+	}
+	if {  $name != $out_name } {
+		fail "Wrong context name. Expected '$name', got '$out_name'"
+		return -1
+	}
+	return 0
+}
+
+proc check_print_comment { comment } {
+	set out_comment ""
+	spawn $::bin_dir/$::out_file comment $comment
+	expect {
+		-re	{(?n)^([^\n\r]+)\s*$} {
+			set out_comment $expect_out(1,string)
+		}
+	}
+	if {  $comment != $out_comment } {
+		fail "Wrong comment text. Expected '$comment', got '$out_comment'"
+		return -1
+	}
+	return 0
+}
+
+proc check_print_argument { args } {
+	set out_arg ""
+	eval spawn $::bin_dir/$::out_file args $args
+	set index 0
+	expect {
+		-re {(?n)^\t\$[0-9]+ = ([^\n\r]+)\s*$} {
+			set out_arg $expect_out(1,string)
+			set in_arg [lindex $args $index]
+			if {  $in_arg != $out_arg } {
+				fail "Wrong function argument. Expected '$in_arg', got '$out_arg'"
+				return -1
+			}
+			set index [expr $index + 1]
+			exp_continue
+		}
+		-re	{(?n)^([^\n\r]+)\s*$} {
+			fail "Unrecognized function argument format: $expect_out(1,string)"
+			return -1
+		}		
+	}
+	return 0
+}
+
+#
+# Test cases
+#
+
+proc test_print_header { args } {
+	if { [check_print_header "1.0" "test-arch" "12.09.2010 12:34:56" "789" "test_process"] == -1 } {return -1}
+	pass "sp_rtrace_print_header"
+}
+
+proc test_print_mmap { args } {
+	if { [check_print_mmap "some/library" "0x012345678" "0xdeadc0de"] == -1 } {return -1}
+	pass "sp_rtrace_print_mmap"
+}
+
+proc test_print_call { args } {
+	# resource allocation record checks
+	if { [check_print_call "1" "" "12:34:56.789" "malloc" "100" "0xc0de0001"] == -1 } {return -1}
+	if { [check_print_call "1" "8" "12:34:56.789" "malloc" "100" "0xc0de0001"] == -1 } {return -1}
+	if { [check_print_call "1" "" "" "malloc" "100" "0xc0de0001"] == -1 } {return -1}
+	if { [check_print_call "1" "9" "" "malloc" "100" "0xc0de0001"] == -1 } {return -1}
+
+	# resource deallocation record checks
+	if { [check_print_call "1" "" "12:34:56.789" "free" "" "0xc0de0001"] == -1 } {return -1}
+	if { [check_print_call "1" "8" "12:34:56.789" "free" "" "0xc0de0001"] == -1 } {return -1}
+	if { [check_print_call "1" "" "" "free" "" "0xc0de0001"] == -1 } {return -1}
+	if { [check_print_call "1" "9" "" "free" "" "0xc0de0001"] == -1 } {return -1}
+
+	pass "sp_rtrace_print_call"
+}
+
+proc test_print_trace { args } {
+	if { [check_print_trace "2" "0xc0de0001" "" "0xc0de0002" ""] == -1} {return -1}
+	if { [check_print_trace "2" "0xc0de0001" "func1()" "0xc0de0002" ""] == -1} {return -1}
+	if { [check_print_trace "2" "0xc0de0001" "func1" "0xc0de0002" "func2 at file.c"] == -1} {return -1}
+	if { [check_print_trace "3" "0xc0de0001" "func1" "0xc0de0002" "func2 at file.c" "0xc0de0003" "func3 in module3"] == -1} {return -1}
+	
+	pass "sp_rtrace_print_trace"
+}
+
+proc test_print_trace_step { args } {
+	if { [check_print_trace_step "0xc0de0001" ""] == -1} {return -1}
+	if { [check_print_trace_step "0xc0de0001" "func1 at file1.c"] == -1} {return -1}
+
+	pass "sp_rtrace_print_trace_step"
+}
+
+
+proc test_print_context { args } {
+	if { [check_print_context "8" "eighth context"] == -1} {return -1}
+	if { [check_print_context "16" "sixteenth context"] == -1} {return -1}
+
+	pass "sp_rtrace_print_context"
+}
+
+
+proc test_print_comment { args } {
+	if { [check_print_comment "just a comment"] == -1} {return -1}
+
+	pass "sp_rtrace_print_comment"
+}
+
+proc test_print_argument { args } {
+	if { [check_print_argument] == -1} {return -1}
+	if { [check_print_argument "1"] == -1} {return -1}
+	if { [check_print_argument "1" "second arg"] == -1} {return -1}
+	if { [check_print_argument "1" "second arg" "III"] == -1} {return -1}
+
+	pass "sp_rtrace_print_arg"
+}
+
+
+#
+#
+#
+
+set result [rt_compile $src_dir $out_file $src_deps $src_opts]
+if { $result == "" } {
+
+	rt_test test_print_header
+	rt_test test_print_mmap
+	rt_test test_print_call
+	rt_test test_print_trace
+	rt_test test_print_trace_step
+	rt_test test_print_context
+	rt_test test_print_comment
+	rt_test test_print_argument
+
+} else {
+	fail  "failed to compile $src_dir/$out_file.c:\n $result"
+}
+

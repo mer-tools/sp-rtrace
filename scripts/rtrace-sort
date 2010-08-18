@@ -1,0 +1,63 @@
+#!/bin/sh
+#
+# Rtrace helper script. This file is part of sp-rtrace.
+#
+# Copyright (C) 2006,2007,2010 by Nokia Corporation
+#
+# Contact: Eero Tamminen <eero.tamminen@nokia.com>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License 
+# version 2 as published by the Free Software Foundation. 
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+# 02110-1301 USA
+#
+#
+# Changes:
+# - 2007-07-20: work also with librefs reports
+# - 2010-08-02: updated to support rtrace format and moved into
+#               sp-rtrace package
+#
+# Originally this file was a part of libleaks package, but moved
+# to the sp-rtrace package during libleaks redesign.
+#
+
+# show help
+if [ $# -lt 2 -o $# -gt 3 ]; then
+	echo "A script to show sorted list of the leaks, so that you can see topmost allocs."
+	echo "(you can then use the alloc address to find the leak from rtrace report"
+	echo "or ask the script to give you the report context)"
+	echo
+	echo "Usage: $0 <rtrace report> <# of shown addresses> [lines of context]"
+	exit
+fi
+
+if [ -z $(which sp-rtrace-postproc) ]; then
+	echo "EROR: 'sp-rtrace-postproc' utility missing from PATH"
+	exit 1
+fi
+leaks=$(tempfile)
+sp-rtrace-postproc -lci $1 > $leaks
+
+if [ $# -eq 3 ]; then
+	# first get topmost addresses and then show their context
+	filter='s/^[^(]\+(\([0-9]\+\)) = \(0x[0-9a-f]\+\)/\2/'
+	list=$(egrep "^[0-9]+\. " $leaks|sed "$filter"|sort -n|tail -$2)
+	pattern=$(echo $list | sed 's/ /|/g')
+	egrep -A$3 "($pattern)" $leaks
+else
+	# show just topmost addresses with their allocation size
+	echo "address:   size:"
+	filter='s/^[^(]\+(\([0-9]\+\)) = \(0x[0-9a-f]\+\)/\2 \1/'
+	egrep "^[0-9]+\. " $leaks|sed "$filter"|sort -n|tail -$2
+fi
+
+rm $leaks

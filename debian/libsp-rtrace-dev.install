@@ -1,0 +1,6 @@
+debian/tmp/usr/include/sp_rtrace_context.h
+debian/tmp/usr/include/sp_rtrace_formatter.h
+debian/tmp/usr/share/man/man3/sp_rtrace_context*.3
+debian/tmp/usr/share/man/man3/sp_rtrace_formatter*.3
+debian/tmp/usr/share/man/man3/sp_rtrace_print*.3
+debian/tmp/usr/lib/libsp-rtrace1.so

@@ -1,0 +1,177 @@
+#
+# This file is part of sp-rtrace package.
+#
+# Copyright (C) 2010 by Nokia Corporation
+#
+# Contact: Eero Tamminen <eero.tamminen@nokia.com>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public License
+# as published by the Free Software Foundation; either version 2 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+# 02r10-1301 USA
+#
+
+#
+# Common functions used by sp-rtrace test cases.
+#
+
+# point library path to the compiled libraries
+set lib_dir "../src/.libs"
+set bin_dir "bin"
+
+set env(LD_LIBRARY_PATH) $lib_dir
+
+#
+# Check if the compile isn't disabled by environment variable 
+#
+proc rt_is_compile_enabled { args } {
+	if { [info exists ::env(RT_DISABLE_COMPILE)] && $::env(RT_DISABLE_COMPILE) == 1 } {
+		return false
+	}
+	return true
+}
+
+#
+# Check if testing isn't disabled by environment variable
+#
+proc rt_is_test_enabled { args } {
+	if { [info exists ::env(RT_DISABLE_TEST)] && $::env(RT_DISABLE_TEST) == 1 } {
+		return false
+	}
+	return true
+}
+
+#
+# Test case launcher
+#
+proc rt_test { testcase } {
+	if { [rt_is_test_enabled] } {
+		return [$testcase]
+	}
+}
+
+#
+# Run the RT test suite
+#
+# This function runs test application based on the RT test suite.
+#
+proc rt_run_test { out_file } {
+	spawn "$::bin_dir/$out_file"
+
+	expect {
+		-re "\t(\[^\.\]+) \.\.\. ok" {
+			pass "$expect_out(1,string)"
+			exp_continue
+		}
+		
+		-re "\t(\[^\.\]+) \.\.\. fail" {
+			fail "$expect_out(1,string)"
+			exp_continue
+		}
+		
+		-re "error while loading shared libraries: (\[^:\]+)" {
+			fail "Failed to load shared library: $expect_out(1,string)"
+			exp_continue
+		}
+	}
+}
+
+#
+# Compiles test application.
+#
+proc rt_compile {src_dir out_file {src_deps ""} {src_opts ""} {target_opts "debug"} } {
+	if { [rt_is_compile_enabled] } {
+		foreach dep $src_deps {
+			lappend dep_files "../src/$dep"
+		}
+		if { [regexp {c\+\+} $target_opts] } {
+			set ext ".cpp"
+		} else {
+			set ext ".c"
+		}
+		lappend dep_files "$src_dir/$out_file$ext"
+		append src_opts " -I../src -Ilib"
+		lappend target_opts "additional_flags=$src_opts"
+		
+		set result [ target_compile $dep_files "$::bin_dir/$out_file" executable $target_opts ] 
+		return "$result"
+	}
+}
+
+#
+# Set preload libraries
+#
+proc rt_preload_set { libs } {
+	if { [file isfile /targets/links/scratchbox.config] } {
+		set fp [open /etc/ld.so.preload w]
+		puts $fp "$libs"
+		close fp
+		
+	} else {
+		set ::env(LD_PRELOAD) "$libs"
+	}
+}
+
+#
+# Clear preload libraries
+#
+proc rt_preload_clear { args } {
+	if { [file isfile /targets/links/scratchbox.config] } {
+		file delete /etc/ld.so.preload
+	} else {
+		set ::env(LD_PRELOAD) ""
+	}
+}
+
+#
+# Retrieves pid of the process with specified name
+#
+proc pidof { name } {
+	catch {exec pidof $name} pid
+	if { [string is integer -strict $pid] } {
+		return $pid
+	} else {
+		fail "failed to determine target process pid"
+		return -1
+	}
+}
+
+#
+# Checks if the all required functions are tracked by the specified
+# module
+#
+# Arguments:
+#   module - the module to check.
+#   args   - list of functions that should be tracked by the module.
+#
+proc test_module { module args } {
+	eval spawn sp-rtrace -p $module -P- -s -x $::bin_dir/$::out_file
+	expect {
+		-re {(?n)^[0-9]+\. \[[^\]]+\] ([^\(]+)\([0-9a-fA-Fx]+\)} {
+			if { [info exists tracked($expect_out(1,string))] } {
+				set value [expr $tracked($expect_out(1,string)) + 1]
+			} else {
+				set value 1
+			}
+			set tracked($expect_out(1,string)) $value
+			exp_continue
+		}
+	}
+	foreach name $args {
+		if { ![info exists tracked($name)] } {
+			fail "$module module: function $name"
+		} else {
+			pass "$module module: function $name"
+		}
+	}
+}

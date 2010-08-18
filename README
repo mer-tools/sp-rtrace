@@ -1,0 +1,215 @@
+1. Introduction
+
+The resource consumption tracking (rtrace) package contains a set
+of utilities to provide resource allocation/deallocation call
+trace and post-processing.
+
+2. Components
++----------------------+    +---------------+      +----------------+
+|     main module      | -> | pre-processor |  ,-> | post-processor |
++----------------------+    +---------------+  |   +----------------+
+    | tracing module 1 |            |          |         |     ^
+    +------------------+            v          |         v     |
+    |       ...        |      binary output ---+       text output
+    +------------------+                                 |     ^
+    | tracing module N |                                 v     |
+    +------------------+                              +----------+
+                                                      | resolver |
+                                                      +----------+
+
+2.1 Tracing modules
+
+The tracing modules are the primary data source. They feed function
+trace data to the pre-processor via named (or simple in managed mode)
+pipe. 
+
+2.1.1 Main module (sp-rtrace-main.so)
+
+The main module is always preloaded for the target process when it
+is started with rtrace. The main module provides the following
+functionality:
+  1) pre-processor connection management,
+  2) data writing API used by tracing modules to report trace events,
+  3) tracking of new libraries.
+
+The main module is configured by environment variables. rtrace
+automatically sets the necessary variables before it launches 
+the target process. It is possible to set the variables and
+launch the target process manually, however it is not recommended.
+
+By default when tracing is enabled the main module attempts to open
+a named pipe /tmp/rtrace-<pid> where pid is the process id of the 
+current (traced) process. But in managed mode the main module
+starts the rtrace process by itself and uses its standard input to
+pipe trace data (see sp-rtrace manual page --manage-preproc option
+description for when to use managed mode).
+
+By default the main module buffers (KB) trace data for performance
+reasons. However it's possible to disable the data buffering with
+an environment variable.
+
+The main module ensures that memory mapping information is being
+kept up to date by tracking dlopen() calls and sending new library
+(NL) packet whenever a new library is opened. This packet instructs
+pre-processor to rescan /proc/<pid>/maps file for the target process.
+
+The main module keeps registry of loaded tracing modules to be able
+disable tracing when necessary.
+
+2.1.2 Tracing modules
+
+The tracing modules are either preloaded with LD_PRELOAD or LD_AUDIT.
+They provide tracing of resource alloaction/deallocation calls. 
+Usually one module covers single resource type (memory, file etc).
+For example memory tracing module monitors memory allocation/deallocation
+calls - malloc, alloc, calloc, posix_memalign, free.
+
+Tracing modules must register themselves to the main module during
+initialization to allow the main module enable/disable tracing when
+necessary.
+
+Tracing modules uses data writing API provided by the main module to 
+report resource allocation/deallocation calls.
+
+2.2 Data pre-processor (rtrace)
+
+The data pre-processor provides the following functionality:
+1) launching of a binary file with enabled resource tracing,
+2) pre-processing data sent by tracing modules,
+3) trace enabling/disabling for already launched process. 
+
+Normally after launching a new process (if the tracing is enabled
+at start) the pre-processor creates named pipe /tmp/rtrace-<pid>
+and listens it for the trace data. But when managed mode is used
+pre-processor exists after launching the target process and a new
+pre-processor process purely for data pre-processing is started
+by the main module.
+
+The post-processor keeps track of the module memory mapping and
+rescans /proc/<pid>/maps file whenever new library (NL) packet is
+received. All executable module changes are reported by generating
+memory mapping (MM) packets.
+
+If post-processing options are specified, the pre-processor spawns
+post-processor (rtrace-postproc) process and pipes the trace data
+to it. Otherwise the data is stored in new file in the output
+directory (home directory by default) - rtrace-raw-<pid>-<number>
+Pre-processor never overwrites the existing data files, it increases
+the file number until a new file can be created.
+
+The pre-processor also uses internal buffer (4KB) for buffering 
+pipe data which can be also disabled (by the same option as 
+main module trace data buffer).
+
+When --toggle option is specified pre-processor sends the toggle signal
+to the target process. Then it either opens a named pipe and starts listening
+for trace data (non manage mode) or simply exits (managed mode).
+
+2.3 Data post-processor (rtrace-postproc)
+
+The post-processor provides binary data conversion to human readable text format
+and additional data post-processing. It also can parse the text format files, 
+allowing it to process its own generated output.
+
+If the --resolve option is specified, the post-processor spawns the resolver
+(rtrace-resolve) process and pipes the output data to it for name resolving.
+
+The data processing steps are:
+1) parse input file and create internal data structures,
+2) apply post-processing filters,
+3) generate output data.
+
+2.3.1 Internal data storage
+
+The memory mapping, context registry, comments, function calls
+are stored into double linked lists.
+
+The function traces are stored into hash table and shared between
+similar calls. Every function trace record holds double linked 
+list of the function call references.
+
+2.3.2 Post-processing
+
+Currently two post-processing options are implemented - leak filtering
+and backtrace compressing. 
+
+2.3.2.1 leak filtering (--filter-leaks)
+
+This option removes allocation records of resources that was later 
+deallocated. The deallocation records also are removed, leaving only
+allocations of the leaked resources. To speed up the resource lookup
+the resource identifiers are indexed in hash table during freed 
+allocation removal. 
+
+2.3.2.2 backtrace compressing (--compress)
+
+This option groups function calls by their backtraces and for all 
+functions with the same backtrace only one is printed.
+
+2.3.3.3 future post-processing options
+
+A plugin system could be added to post-processor allowing users to
+write their own custom plugins. 
+
+2.4 Name resolver (rtrace-resolve)
+
+The resolver processes the input file by replacing backtrace
+addresses with resolved names. To resolve an address a memory
+mapping record covering it must be located before the address.
+
+3 Configuration
+
+The tracing module configuration is done with environment
+variables (usually set by the rtrace launcher and other helper
+scripts).
+
+3.1 SP_RTRACE_OUTPUT_DIR
+Specifies the output directory for rtrace logs. By default the
+home directory is used.
+
+3.2 SP_RTRACE_TOGGLE_SIGNAL
+Specifies the trace toggling signal number. By default SIGUSR1 
+is used.
+
+3.3 SP_RTRACE_START
+Defines that trace should be started automatically when the 
+target process is spawned.
+
+3.4 SP_RTRACE_MANAGE_PREPROC
+Defines that the main trace module must spawn pre-processor
+process when necessary. By default sp-rtrace is spawned externally
+and the main module just connects to its named pipe.
+
+3.5 SP_RTRACE_BACKTRACE_DEPTH
+Specifies the maximum number of frames listed in the backtraces.
+
+3.6 SP_RTRACE_DISABLE_TIMESTAMP
+Disables timestamps reported by the tracing modules.
+
+3.7 SP_RTRACE_ENABLE_ARGUMENTS
+Enables sending function argument (FA) packets.
+
+3.8 SP_RTRACE_POSTPROC
+Specifies post-processing options. 
+
+3.9 SP_RTRACE_DISABLE_EVENT_BUFFERING
+
+Disables data buffering in main module and pre-processor.
+
+4 Operation
+
+The usual data flow is:
+sp-rtrace-<module>.so -> sp-rtrace-main.so -> rtrace -> rtrace-postproc -> 
+rtrace-resolve
+
+5 Notes
+
+In scratchbox (arm) to launch process with enabled tracing the managed mode
+must be used. Otherwise the pre-processor will create named pipe with
+emulation process id while the main module will try to connect to a named
+pipe created with its (target) process id.
+
+It's possible to enable additional debug output (mainly used for rtrace 
+debugging) with --enable-debug-info configure option. Note that log functions
+uses not async signal safe functions and therefore toggling trace could
+lead to corruption.

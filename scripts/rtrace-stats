@@ -1,0 +1,91 @@
+#!/bin/sh
+#
+# Rtrace helper script. This file is part of sp-rtrace.
+#
+# Copyright (C) 2006,2009,2010 by Nokia Corporation
+#
+# Contact: Eero Tamminen <eero.tamminen@nokia.com>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License 
+# version 2 as published by the Free Software Foundation. 
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+# 02110-1301 USA
+#
+# Originally this file was a part of libleaks package, but moved
+# to the sp-rtrace package during libleaks redesign.
+#
+# show help
+if [ $# -lt 2 ]; then
+	echo "A script to count changes in number of allocations per allocation size."
+	echo
+	echo "If the number of certain sized allocations grows with the number"
+	echo "of test-case repeats, there's a leak.  You can then find the"
+	echo " leak by searching the last rtrace report for backtraces having"
+	echo "'size <size>'."
+	echo
+	echo "The backtraces having largest number of these sized allocs are the ones"
+	echo "leaking.  This way you could find even very small leaks which might not"
+	echo "show up in Valgrind/memcheck because code is still keeping a reference"
+	echo "to them."
+	echo
+	echo "Usage: $0 <two or more rtrace leak reports>"
+	exit
+fi
+
+# Busybox doesn't have join
+if [ -z $(which join) ]; then
+	echo "WARNING: cannot find 'join' utility, will just count blocks."
+	echo
+	for file in $*; do
+		echo " count: size: (file: $file)"
+		egrep '^[0-9]+\. ' $file|sed 's/^[^(]\+(\([0-9]\+\))/\1/'|sort -n|uniq -c|sort -n
+	done
+	exit
+fi
+
+# tempfile is a Debian utility
+if [ -z $(which tempfile) ]; then
+	echo "ERROR: cannot find 'tempfile' utility!"
+	exit 1
+fi
+
+if [ -z $(which sp-rtrace-postproc) ]; then
+	echo "EROR: 'sp-rtrace-postproc' utility missing from PATH"
+	exit 1
+fi
+
+suffix=.leak-correlate
+tmp1=$(tempfile -s $suffix)
+tmp2=$(tempfile -s $suffix)
+
+count_allocs ()
+{	
+	sp-rtrace-postproc -lc -i $1 | egrep '^[0-9]+\. ' | sed 's/^[^(]\+(\([0-9]\+\)).*/\1/' | sort -n |uniq -c |sed -e 's/^ *//' 
+}
+
+count_allocs $1 > $tmp1
+filename1=${1##*/}
+shift
+
+for file in $*; do
+	filename2=${file##*/}
+	header="    Size   Delta   ($filename1 -> $filename2 block count)"
+	echo "$header"
+	count_allocs $file > $tmp2
+	join -j 2 -a 2 $tmp1 $tmp2 | awk '{printf("%8s%8d\t(%d -> %d)\n", $1, $3-$2, $2, $3)}'| grep -P -v '^ *[0-9]+ +0' | sort -n
+	filename1=$filename2
+	mv $tmp2 $tmp1
+
+done
+echo "$header"
+
+rm $tmp1

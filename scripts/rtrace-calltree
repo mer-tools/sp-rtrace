@@ -1,0 +1,1401 @@
+#!/usr/bin/env python
+# vim: et:ts=4:sw=4:
+#
+# This file is part of sp-rtrace.
+#
+# Copyright (C) 2005-2007,2009,2010 by Nokia Corporation
+#
+# Contact: Eero Tamminen <eero.tamminen@nokia.com>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License 
+# version 2 as published by the Free Software Foundation. 
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+# 02110-1301 USA
+#
+# CHANGES:
+#
+# 2005-10-21:
+# - First version
+# 2005-10-24:
+# - Changed everything to use classes
+# - Changed from tree model to all-nodes hash approach
+# - The memory usage is shown in HTML tables to make it more readable
+# - Support for showing the hash either top-down or bottom-up
+# 2005-10-25:
+# - Prevent output recursion
+# - Add hyperlinks to HTML output
+# - Add list of trace IDs to each node to:
+#   - Handle recursion in parsing which distorted allocation accounting
+#   - To be able to leave out functions which are not part of given trace
+#     although a function in the trace calls them with some other traces
+# 2005-10-26:
+# - Add GraphViz diagram output
+# - Add numeric IDs and percentage to all nodes
+# - Calculate node memory usage percentages on Graph completion
+#   - helps GraphViz (and other) reports
+# - In HTML report:
+#   - use Stats directly
+#   - node IDs instead of function names in links (saves >10% HTML size)
+#   - rows are right aligned by default (saves >5% HTML size)
+# - Add ASCII histogram output
+#   - Collect all alloc sizes to Stats
+# - Add topmost alloc graph output
+#   - Store highest address/trace ID when parsing
+# - Add command line option parsing
+# 2005-10-27:
+# - Make graphs more readable by grouping together child nodes below the limit
+# - Show always at least one '#' for histogram entries
+# - Bugfixes
+# 2005-10-28:
+# - Make output and graphs smaller / more readable:
+#   - coalesce same functions having different offsets in libleaks
+#   - add option for skipping rest of backtrace after given function
+#   - add option to have graph only of backtraces going through certain
+#     functions
+# - Improve graph readability visually:
+#   - correction: show percentage, size and count in nodes, not edges
+#   - add option for setting the graph node emphasize percent
+#   - show terminator nodes as different shapes
+#   - make arrow heads larger
+# - Add option to select how many highest address traces are shown
+#   in the topmost graph:
+#   - collect highest allocation address for each trace into Graph
+# - Fixes to the HTML output report and generalizing Graphviz reports
+# - Option parsing and show() methods output to stderr
+# - Move Stats & Graph finalizing out of parsing
+# - Document classes more
+# 2005-11-04:
+# - Graph readability improvements:
+#   - Ignore nodes without function names
+#   - Add option for merging all nodes from a library to one
+#   - Add node clustering option (useless with recursive Gtk backtraces)
+# 2005-11-07:
+# - Fix stats with --include-only option, move stats object to Graph
+# 2006-02-09:
+# - Support for the libleaks "name resolved" backtrace format
+# - Fix graph anonymous function counts (it was showing count of calls)
+# - Minor improvements to option parsing
+# - Add headings to GraphViz reports
+# 2006-02-21:
+# - Changed '--skip' parameter to '--stop'
+# - Added '--ignore' parameter to ignore certain functions in backtraces
+# - Finetune GraphViz output (e.g. fill leaf nodes)
+# - Allow minimum size limit < 1%
+# 2006-02-24:
+# - Add options to trim out intermediate and leaf nodes from the internal graph
+# - Add option for leaving out "a function/N function ..." stuff from reports
+# - Use debug() function instead of stdout/err.write
+# - --show-references option for debugging
+# - Use iterators for traversing dicts
+# 2006-02-27:
+# - Grouped options in help, added --ignore-gtk-internals and --verbose options
+# 2006-02-28:
+# - Added --no-ignore option to prevent ignoring certain nodes
+# - Fine-tune --ignore-gtk-internals
+# 2006-03-21:
+# - Added --own-alloc-limit option for highlighting nodes doing a certain
+#   factor of allocations (done through them) directly, instead of them
+#   being done by child functions
+# 2006-03-23:
+# - Show args, helps in debugging when leaks-calltree is called by a script
+# - Fix bug when --include-only doesn't match any nodes
+# 2006-05-10:
+# - In --ignore-gtk-internals option ignore also g_slice stuff
+# 2006-07-14
+# - Added --stats="total"/"count" option for statistics report output
+# 2007-07-14
+# - --ignore-gtk-internals -> --ignore-gtk-details
+# 2007-07-17
+# - Add support for Gobject traces and manual page
+# 2009-06-26
+# - Support non-indented backtraces from glibc backtrace_symbols_fd().
+# - Allow librefs to report zero size objects, that can result from
+#   g_type_query() failures.
+# 20010-08-02
+# - Updated to work with rtrace format, renamed to rtrace-calltree and
+#   moved to the sp-rtrace package.
+#
+# Originally this file (alloc-tree) was a part of libleaks package, but
+# renamed and moved to the sp-rtrace package during libleaks redesign.
+#
+"""
+ALLOC-TREE
+
+This script reads non-freed resources allocations from sp-rtrace and
+internally accumulates these to functions up in the listed backtraces.
+It can then produce a variety of reports from which you can see which
+of the functions account for most of the resource usage and how the
+resource allocations are divided between the functions they call.
+"""
+
+import sys, string, re
+
+
+def debug(msg):
+    sys.stderr.write("%s\n" % msg)
+
+def error(msg):
+    sys.stderr.write("ERROR: %s\n" % msg)
+    sys.exit(1)
+
+
+class TotalStats:
+    # estimated average allocation overhead, bytes
+    alloc_overhead = 8
+
+    def __init__(self):
+        self.zero()
+    
+    def zero(self):
+        self.sizes = []
+        self.median = 0
+        self.count = 0
+        self.size = 0
+        self.overhead = 0
+        self.size_with_overhead = 0
+    
+    def add_sizes(self, sizes):
+        "add list of given sizes to earlier sizes, return how many bytes added"
+        self.sizes += sizes
+        size = 0
+        for s in sizes:
+            size += s
+        return size
+    
+    def complete(self):
+        "calculate memory allocation count, overhead, total and median"
+        self.sizes.sort()
+        self.count = len(self.sizes)
+        if not self.count:
+                return
+        self.median = self.sizes[self.count/2]
+        self.overhead = self.count * self.alloc_overhead
+        self.size = 0
+        for amount in self.sizes:
+            self.size += amount
+        self.size_with_overhead = self.size + self.overhead
+
+# ----------- Single backtrace node in all-items hash ----------
+
+class Node:
+    def __init__(self, name, size, count, trace_id):
+        "initialize node with name, size & count"
+        # updated while nodes are being added to Graph
+        self.traces = [trace_id] # backtrace IDs
+        self.count = count      # number of allocations done in this node
+        self.size = size        # sum of allocations done in this node
+        self.name = name        # node function name / hash ID
+        self.children = []      # child node hash IDs
+        self.parents = []       # parent node hash IDs
+        # these are filled after all nodes have been added to Graph
+        self.nid = 0            # node ID
+        self.leafnode = 0       # set if node has no children or no parents
+        self.percentage = 0.0   # percentage of memory used by the node
+        self.own_allocs = 1.0   # factor of own vs. child allocs
+
+    def show(self):
+        "print out node contents"
+        debug("Node %d:" % self.nid)
+        debug("- Name: %s" % self.name)
+        debug("- Alloc count: %d" % self.count)
+        debug("- Total alloc size: %d" % self.size)
+        debug("- Percentage of all allocs: %.2f" % self.percentage)
+        debug("- Traces:")
+        debug(str(self.traces))
+        debug("- Parents: ")
+        debug(str(self.parents))
+        debug("- Children:")
+        debug(str(self.children))
+    
+    def add_size_count(self, size, count):
+        "add given size & count to node values"
+        self.count += count
+        self.size += size
+    
+    def add_child(self, fun_name):
+        "add given child to node"
+        if fun_name not in self.children:
+            self.children.append(fun_name)
+
+    def add_parent(self, fun_name):
+        "add given parent to node"
+        if fun_name not in self.parents:
+            self.parents.append(fun_name)
+
+    def remove_child(self, fun_name):
+        "removes given child from node"
+        if fun_name in self.children:
+            self.children.remove(fun_name)
+        else:
+            debug("ERROR: function '%s' not in node children" % fun_name)
+
+    def remove_parent(self, fun_name):
+        "removes given parent from node"
+        if fun_name in self.parents:
+            self.parents.remove(fun_name)
+        else:
+            debug("ERROR: function '%s' not in node parents" % fun_name)
+    
+    def add_trace(self, trace_id):
+        "add given trace id to node or return zero if it already was in"
+        if trace_id not in self.traces:
+            self.traces.append(trace_id)
+            return 1
+        else:
+            return 0
+
+# ---------------- All items hash handling -------------------
+
+class Graph:
+    def __init__(self):
+        # filled through .update()
+        self.trace_id = 0       # trace count, used as trace ID, start from 1
+        self.recursed = 0       # count of recursed functions
+        self.nodes = {}         # all nodes in the backtraces
+        self.addresses = []     # list of (address, trace id) tuples
+        self.stats = TotalStats()
+
+    def show(self):
+        "print out Graph contents"
+        self.stats()
+        debug(str(self.nodes))
+
+    def show_nodes(self, nodes, references, remove={}):
+        for name in nodes:
+            if name not in self.nodes:
+                debug("Warning: node '%s' does not exist" % name)
+                continue
+            self.nodes[name].show()
+            if references:
+                for node in self.nodes.itervalues():
+                    if name in node.parents:
+                        debug("parent-ref from '%s'" % node.name)
+                    if name in node.children:
+                        debug("child-ref from '%s'" % node.name)
+            if name in remove:
+                debug("- This node will be REMOVED")
+            debug("")
+
+    def stats(self):
+        "print out Graph parsing statistics"
+        debug("Graph statistics:")
+        debug("- backtraces parsed: %d" % self.trace_id)
+        debug("- Recursed functions: %d" % self.recursed)
+        debug("- Nodes: %d" % len(self.nodes))
+
+    def stats_oneliner(self):
+        "return one-line Graph parsing stats string"
+        return "%d traces (with %d recursed function calls) parsed to %d nodes." % (self.trace_id, self.recursed, len(self.nodes))
+    
+    def get_stats(self):
+        "return TotalStats object with Graph node alloc statistics"
+        return self.stats
+
+    def get_top_nodes(self):
+        "returns a list of keys for top nodes"
+        nodes = []
+        for key,node in self.nodes.iteritems():
+            # nodes without parents are top ones
+            if not node.parents:
+                nodes.append(key)
+        return nodes
+
+    def get_bottom_nodes(self):
+        "returns a list of keys for bottom nodes"
+        nodes = []
+        for key,node in self.nodes.iteritems():
+            # nodes without children are bottom ones
+            if not node.children:
+                nodes.append(key)
+        return nodes
+
+    def add_node(self, trace, idx, size, count):
+        "add trace item to graph"
+        #debug("DEBUG: add '%s'" % trace[idx])
+        name = trace[idx]
+        node = Node(name, size, count, self.trace_id)
+        if idx > 0:
+            node.add_child(trace[idx-1])
+        if idx+1 < len(trace):
+            node.add_parent(trace[idx+1])
+        self.nodes[name] = node
+
+    def merge_node(self, trace, idx, size, count):
+        "merge trace item to graph"
+        #debug("DEBUG: merge '%s'" % trace[idx])
+        node = self.nodes[trace[idx]]
+        # prevent size addition if this trace function is recursed
+        if node.add_trace(self.trace_id):
+            node.add_size_count(size, count)
+        else:
+            self.recursed += 1
+        if idx > 0:
+            node.add_child(trace[idx-1])
+        if idx+1 < len(trace):
+            node.add_parent(trace[idx+1])
+
+    def update(self, trace, sizes, count, address):
+        "update graph with given trace[], size, count, topmost address"
+        size = self.stats.add_sizes(sizes)
+        self.trace_id += 1
+        idx = 0
+        for line in trace:
+            if line in self.nodes:
+                self.merge_node(trace, idx, size, count)
+            else:
+                self.add_node(trace, idx, size, count)
+            idx += 1
+        self.addresses.append((address, self.trace_id))
+
+    def trim_intermediate(self, node, remove):
+        """if node has only one parent and child, add it to remove list
+        and relink surrounding nodes"""
+        if len(node.parents) == 1 and len(node.children) == 1:
+            parent_name = node.parents[0]
+            child_name = node.children[0]
+            if parent_name == child_name:
+                return
+            parent = self.nodes[parent_name]
+            child = self.nodes[child_name]
+            # remove references to this node and re-link the nodes
+            name = node.name
+            parent.remove_child(name)
+            child.remove_parent(name)
+            parent.add_child(child_name)
+            child.add_parent(parent_name)
+            node.parents = []
+            node.children = []
+            #debug("Removing intermediate node: '%s'" % name)
+            remove[name] = 1
+        
+    def trim_leaf(self, node, remove):
+        """if node is a leaf, put it and other nodes in the same leaf
+        to remove list and remove the refence to the leaf"""
+        # if this is a leaf node with only one reference,
+        # remove reference and leaf node, and check next
+        # node in the same direction
+        while (not len(node.parents)) and (len(node.children) == 1):
+            child = self.nodes[node.children[0]]
+            child.remove_parent(node.name)
+            node.children = []
+            #debug("Removing leaf node without parents: '%s'" % node.name)
+            remove[node.name] = 1
+            node = child
+        while (not len(node.children)) and (len(node.parents) == 1):
+            parent = self.nodes[node.parents[0]]
+            parent.remove_child(node.name)
+            node.parents = []
+            #debug("Removing leaf node without children: '%s'" % node.name)
+            remove[node.name] = 1
+            node = parent
+
+    def trim(self, options):
+        """if 'intermediates' not set, removes nodes with only one parent
+           and child.  if 'leafs' not set, removes leaf nodes"""
+        remove = {}
+        if not options.leafs:
+            for node in self.nodes.itervalues():
+                self.trim_leaf(node, remove)
+        if not options.intermediate:
+            for node in self.nodes.itervalues():
+                self.trim_intermediate(node, remove)
+        
+        # you cannot remove items while iterating, so do it now
+        if remove and options.node:
+            debug("NOTE: Removed some node(s), showing updated node infos")
+            self.show_nodes(options.node, options.references, remove)
+        for name in remove.iterkeys():
+            del(self.nodes[name])
+         
+    def complete(self):
+        """sets allocation percentage and creates an ID for each node,
+           returns stats object"""
+        self.stats.complete()
+        alloc_overhead = self.stats.alloc_overhead
+        total_size = self.stats.size_with_overhead
+        idx = 0
+        for node in self.nodes.itervalues():
+            node.percentage = 100.0 * (node.size + node.count*alloc_overhead) / total_size
+            if (not node.parents) or (not node.children):
+                node.leafnode = 1
+            childsize = sum([self.nodes[child].size for child in node.children])
+            if childsize > 0:
+                node.own_allocs = float(node.size) / childsize
+            node.nid = idx
+            idx += 1
+        return self.stats
+
+# -------------- rtrace report parsing --------------------
+
+class Rtrace:
+    def __init__(self, file):
+        # format: at <source file>:<line nro>
+        self.gdb_src_pattern = re.compile(".* at ([^ :]+):([0-9]+)")
+        # format: in <function name> ()
+        self.gdb_fun_pattern = re.compile(".*\(in ([^ )]+).*\)")
+        # format: from <library/binary file>
+        self.gdb_lib_pattern = re.compile(".* from (\S+)$")
+        # format: <address> <resolve data>
+        self.rtrace_pattern = re.compile("\t0x[a-fA-F0-9]+");
+        # format: block at <hex addr> with size <size>[...]
+        self.alloc_pattern = re.compile("^[0-9]+\. [^(]+\(([0-9]+)\) = (0x[a-fA-F0-9]+)(.*)")
+        self.leaks = open(file)
+
+    def libname_strip(self, libname):
+        "returns library name stripped of 'lib' prefix and '.so*' postfix"
+        libname = libname[libname.rfind("/") + 1:]
+        if libname[:3] == "lib":
+            pos = libname.rfind(".so")
+            return libname[3:pos]
+        else:
+            return libname
+
+    def new_trace_strip(self, line, join_libs):
+        "return relevant information from GDB style backtrace line"
+        match = self.gdb_fun_pattern.match(line)
+        if match:
+            fun = match.group(1)
+        else:
+            fun = None
+        match = self.gdb_src_pattern.match(line)
+        if match:
+            src,linenro = match.groups()
+            return "%s(%s): %s" % (src, linenro, fun)
+        match = self.gdb_lib_pattern.match(line)
+        if match:
+            lib = self.libname_strip(match.group(1))
+            if lib in join_libs:
+                return lib
+            if fun:
+                return "%s: %s" % (lib, fun)
+            else:
+                if lib == match.group(1):
+                    # not library, some other binary
+                    return lib
+                return None
+        return fun
+ 
+    def old_trace_strip(self, line, join_libs):
+        "return relevant information from glibc provided backtrace line"
+        # get the function name start
+        pos_fun = line.find('(')
+        if pos_fun > 0:
+            # format: /usr/lib/libglib-2.0.so.0(g_malloc0+0x2f) [0x4168cbbf]
+            lib = self.libname_strip(line[:pos_fun])
+            if lib in join_libs:
+                return lib
+            pos_addr = line.rfind('[')
+            pos_plus = line.find('+', pos_fun, pos_addr)
+            # library name: function name()
+            if pos_plus > 0:
+                return  lib + ": " + line[pos_fun+1:pos_plus] + "()"
+            else:
+                return  lib + ": " + line[pos_fun:pos_addr-1]
+        else:
+            # no function name
+            return None
+
+    def parse(self, graph, options):
+        "return parsed graph out of the given rtrace report"
+        ignored = 0 # ignored backtrace lines
+        address = 0 # highest allocation address for current backtrace
+        trace = []  # current backtrace
+        stack = 1   # current backtrace line number
+        count = 0   # number of allocations for current backtrace
+        sizes = []  # allocation sizes for current backtrace
+        skip = 0    # whether to skip rest of the current backtrace
+        include = 0 # whether to include this backtrace
+        inc_funs = options.include
+        stop_funs = options.stop
+        ignore_funs = options.ignore
+        noignore_funs = options.noignore
+        for line in self.leaks:
+            # new backtrace?
+            match = self.alloc_pattern.match(line)
+            if match:
+                # first alloc in backtrace?
+                if stack > 0:
+                    # add previous backtrace to Graph?
+                    if count:
+                        if inc_funs:
+                            if include:
+                                graph.update(trace, sizes, count, address)
+                        else:
+                            graph.update(trace, sizes, count, address)
+                    # initialize new backtrace
+                    address = 0
+                    trace = []
+                    stack = 0
+                    count = 0
+                    sizes = []
+                    skip = 0
+                    include = 0
+                # get alloc size
+                sizes.append(int(match.group(1)))
+                count += 1
+                # get alloc address
+                cur_addr = int(match.group(2), 16)
+                if (cur_addr > address):
+                    # largest address for this trace
+                    address = cur_addr
+            else:
+                # trace information?
+                if skip:
+                    continue
+                # continue current trace
+                if line[0] != '\t' or not self.rtrace_pattern.match(line):
+                    # not a backtrace record
+                    continue
+                line = self.new_trace_strip(line, options.lib)
+                # ignore lines without function names
+                if not line:
+                    ignored += 1
+                    continue
+                # ignore lines in the ignore list, but not in noignore list
+                ignore = 0
+                for fun in ignore_funs:
+                    if line.find(fun) >= 0:
+                        ignore = 1
+                        for fun in noignore_funs:
+                            if line.find(fun) >= 0:
+                                ignore = 0
+                        if ignore:
+                            break
+                if ignore:
+                    ignored += 1
+                    continue
+                trace.append(line)
+                # skip rest of the trace?
+                for fun in stop_funs:
+                    if line.find(fun) >= 0:
+                        skip = 1
+                        break
+                # flag this trace for node inclusion?
+                for fun in inc_funs:
+                    if line.find(fun) >= 0:
+                        include = 1
+                        break
+                stack += 1
+                continue
+
+        # add previous backtrace to Graph
+        if count:
+            if inc_funs:
+                if include:
+                    graph.update(trace, sizes, count, address)
+            else:
+                graph.update(trace, sizes, count, address)
+
+        return (graph, ignored)
+
+# -------------- HTML report output -------------------------
+
+class HtmlReport:
+    def __init__(self, traverse, stats, options):
+        self.traverse = traverse
+        self.limit = options.limit
+        self.stats = stats
+
+    def header(self):
+        "output html header"
+        print """
+<html>
+<head><title>Allocation tree for rtrace report</title></head>
+<body>
+<h1>Allocation tree for rtrace report</h1>
+        """
+
+    def footer(self):
+        "output html footer"
+        print "</html>"
+
+        
+    def overview(self):
+        "output html overview section"
+        count = self.stats.count
+        size = self.stats.size
+        overhead = self.stats.overhead
+        total_size = self.stats.size_with_overhead
+        alloc_overhead = self.stats.alloc_overhead
+        median = self.stats.median
+        print """
+<h2>Overview</h2>
+
+<p>Total counts for the rtrace use-case report:
+<table border="1" cellpadding="2">
+<tr><td>Number of allocations:</td><td align="right">%d</td></tr>
+<tr><td>Sum of all allocations:</td><td align="right">%d bytes</td></tr>
+<tr><td>Calculated allocation overhead*:</td><td align="right">%d bytes</td></tr>
+<tr><td>Total memory usage:</td><td align="right"><b>%d</b> bytes</td></tr>
+</table>
+
+<p>*Allocation overhead is calculated with an estimated single
+allocation overhead of %d bytes.  Median allocation size is %d bytes.
+
+<h3>Notes</h3>
+
+<p>Percentages below show how much each function (and whatever it
+calls within the use-case) contributes to the total size of all
+allocations, including the estimated allocation overhead, whereas
+the sizes shown do not include the allocation overhead (but you
+can count it yourself with the size+count*overhead).
+
+<p>Note that if backtraces do not extend to main(), the total of
+all "top-level" function allocation might not match the total
+allocations in the use-case.  Also, if some backtraces go through
+same functions, you may notice that the amount of allocations suddenly
+increases when you go down from the main().
+        """ % (count, size, overhead, total_size, alloc_overhead, median)
+
+        
+    def recurse_tree(self, root_keys, trace, root_name, root_id):
+        "outputs the given allocation tree as hyperlinked HTML"
+        # get the subtree information
+        showlist = []
+        for key in root_keys:
+            # returns None if this doesn't belong to right trace
+            node, next = self.traverse.get_node_next(trace, key)
+            if not node:
+                continue
+            # tuples are sorted according to first item
+            showlist.append((node.percentage, node, next))
+        # sort according to size percentage, descending
+        showlist.sort()
+        showlist.reverse()
+        # no nodes in tree or largest item percentage is too small
+        if not showlist or showlist[0][2] < self.limit:
+            return
+
+        print "<hr>"
+        if trace:
+            if len(trace) > 1:
+                parent_id = self.traverse.get_node_id(trace[-1])
+            else:
+                parent_id = 0
+            print "<a name=\"N%d-%d\"></a>" % (root_id, parent_id)
+        # print the backtrace leading to this
+        print "<p><i>This backtrace:</i><br>"
+        for line in trace:
+            print "%s<br>" % line
+        print "<b>%s</b><br>" % root_name
+        # need to copy the backtrace, it's a reference
+        trace = trace[:] + [root_name]
+        
+        # print the allocating functions
+        print "<p><i>%s:</i>" % self.traverse.funlist_header
+        print "<table border=\"1\" cellpadding=\"2\">"
+        print "<tr><th>Percentage:</th><th>Size:</th><th>Count:</th><th>Funtion:</th></tr>"
+        last = 0
+        for percentage,node,next in showlist:
+            if percentage >= self.limit:
+                print "<tr align=\"right\">"
+                print "<td>%.1f%%</td>" % percentage
+                print "<td>%dB</td>" % node.size
+                print "<td>%d</td>" % node.count
+                # no next item(s)?
+                if not next:
+                    print "<td align=left>%s</td>" % node.name
+                    last += 1
+                # do not recurse i.e. is this function is in preceding trace?
+                elif node.name in trace:
+                    print "<td align=left>%s (recursed)</td>" % node.name
+                    del(showlist[last])
+                else:
+                    print "<td align=left><a href=\"#N%d-%d\">%s</a></td>" % (node.nid, root_id, node.name)
+                    last += 1
+                print "</tr>"
+            else:
+                # FIXME: only if options.show_below_limit is set
+                funs = 0
+                size = 0
+                count = 0
+                percentage = 0
+                for percent,node,next in showlist[last:]:
+                    percentage += percent
+                    size += node.size
+                    count += node.count
+                    funs += 1
+                print "<tr align=\"right\">"
+                print "<td>%.1f%%</td>" % percentage
+                print "<td>%dB</td>" % size
+                print "<td>%d</td>" % count
+                print "<td align=left>%d other insignificant functions</td>" % funs
+                print "</tr>"
+                # rip insignificant functions out of showlist
+                showlist = showlist[:last]
+                break
+        print "</table>"
+
+        prev_keys = self.traverse.prev_keys(root_name)
+        if len(prev_keys) > 1:
+            print "<p>You can get here through:<ul>"
+            for key in prev_keys:
+                nid = self.traverse.get_node_id(key)
+                print "<li><a href=\"#N%d\">%s</a>" % (nid, key)
+            print "</ul>"
+
+        # print the 'children'
+        for percentage,node,next in showlist:
+            self.recurse_tree(next, trace, node.name, node.nid)
+
+    def output(self):
+        "outputs the given allocation tree as HTML page"
+        self.header()
+        self.overview()
+        self.recurse_tree(self.traverse.root_keys(), [], self.traverse.root_name, 0)
+        self.footer()
+
+# ------------- Graph access for HTML Reports ------------------
+
+class Traverse:
+    def __init__(self):
+        pass
+    
+    def root_keys(self):
+        return self.my_keys
+    
+    def get_node_id(self, key):
+        return self.graph.nodes[key].nid
+    
+    def get_node(self, trace, key):
+        "return node corresponding to key if it is valid for this trace"
+        if key not in self.graph.nodes:
+            debug("ERROR: key '%s' not in nodes" % key)
+            return None
+        node = self.graph.nodes[key]
+        tracelen = len(trace)
+        if tracelen > 1:
+            found = 0
+            pnode = self.graph.nodes[trace[tracelen-1]]
+            for trace in pnode.traces:
+                if trace in node.traces:
+                    found = 1
+                    break
+            # ignore nodes which don't belong to same trace with parent
+            if not found:
+                #debug("DEBUG: key '%s' not under parent '%s'" % (key, parent))
+                return None
+        return node
+
+class TraverseUp(Traverse):
+    def __init__(self, graph):
+        self.graph = graph
+        self.funlist_header = "Called from the following functions"
+        self.root_name = "BOTTOM-ROOT"
+        self.my_keys = graph.get_bottom_nodes()
+    
+    def prev_keys(self, key):
+        if key == self.root_name:
+            return []
+        return self.graph.nodes[key].children
+    
+    def get_node_next(self, trace, key):
+        node = self.get_node(trace, key)
+        if node:
+            return (node, node.parents)
+        else:
+            return (None, 0)
+
+class TraverseDown(Traverse):
+    def __init__(self, graph):
+        self.graph = graph
+        self.funlist_header = "Calls the following functions"
+        self.root_name = "TOP-ROOT"
+        self.my_keys = graph.get_top_nodes()
+    
+    def prev_keys(self, key):
+        if key == self.root_name:
+            return []
+        return self.graph.nodes[key].parents
+    
+    def get_node_next(self, trace, key):
+        node = self.get_node(trace, key)
+        if node:
+            return (node, node.children)
+        else:
+            return (None, 0)
+
+# --------------- Statistics output --------------------
+
+class AsciiReport:
+    "shows the size histogram and some statistics"
+    def __init__(self, stats, options):
+        self.stats = stats
+        self.stype = options.stats  # statistics type
+        self.width = 60             # columns reserved for histogram
+    
+    def header(self):
+        "output histogram header"
+        if self.stype == "count":
+            s = "Number of allocations"
+        else:
+            s = "Total of: number of allocs * (size + alloc overhead)"
+        print """
+Statistics about the non-freed allocations
+==========================================
+
+ size:  | %s:
+--------|------------------------------------------------------------------""" % s
+    
+    def histogram(self):
+        "calculate histogram info and output histogram"
+        sizelist = []
+        sizecount_max = count_max = count = 0
+        overhead = self.stats.alloc_overhead
+        size = self.stats.sizes[0]      # sizes are sorted
+        for amount in self.stats.sizes:
+            if amount == size:
+                count += 1
+                continue
+            if count > count_max:
+                count_max = count
+            sizecount = (size + overhead) * count
+            if sizecount > sizecount_max:
+                sizecount_max = sizecount
+            sizelist.append((size, count, sizecount))
+            size = amount
+            count = 1
+        if count > count_max:
+            count_max = count
+        sizecount = (size + overhead) * count
+        if sizecount > sizecount_max:
+            sizecount_max = sizecount
+        sizelist.append((size, count, sizecount))
+        if self.stype == "count":
+            for size, count, sizecount in sizelist:
+                bar = (self.width*count/count_max) + 1
+                print "%7d | %s (%d)" % (size, '#'*bar, count)
+        else:
+            for size, count, sizecount in sizelist:
+                bar = (self.width*sizecount/sizecount_max) + 1
+                print "%7d | %s (%d)" % (size, '#'*bar, sizecount)
+
+    def footer(self):
+        "output histogram footer/statistics"
+        median = self.stats.median
+        count = self.stats.count
+        overhead = self.stats.overhead
+        size = self.stats.size
+        total_size = self.stats.size_with_overhead
+        alloc_overhead = self.stats.alloc_overhead
+        print """
+Median allocation size is %d.
+
+Number of allocations  = %6d
+Allocations overhead   = %6d bytes*
+Sum of all allocations = %6d bytes
+-------------------------------------
+Allocations + overhead = %6d bytes
+
+*allocation overhead is calculated as %d bytes per allocation.
+""" % (median, count, overhead, size, total_size, alloc_overhead)
+    
+    def output(self):
+        "call the output methods"
+        self.header()
+        self.histogram()
+        self.footer()
+
+# --------------- GraphViz output reports -----------------
+
+class GraphvizReport:
+    def __init__(self, graph, options):
+        self.nodes = graph.nodes
+        self.show_leafs = options.show_below_limit
+        # don't show nodes using less memory and which to emphasize
+        self.emph_limit = options.emph_limit
+        self.own_allocs = options.own_allocs
+        self.limit = options.limit
+        self.counter = 0
+        self.cluster_nodes = options.cluster
+    
+    def header(self):
+        "output GraphViz header with help, layout and style options"
+        print """
+# Convert this to PostScript with:
+#   dot -Tps -o alloc-graph.ps <this file>
+
+digraph alloc_graph {
+# set layout options
+center=1;
+#ratio=fill;
+ratio=compress;
+# avoid line crossing
+#mclimit=2.0;
+
+# page size A4
+page="11.69,8.27";
+size="9.69,6.27";
+#page="8.27,11.69";
+#size="6.27,9.69";
+margin="1.0";
+
+# set style options
+color="black";
+bgcolor="white";
+node [shape="ellipse"];
+edge [dir="forward" arrowsize="2"];
+
+labelloc="t";
+label="%s";
+""" % self.heading
+
+    def footer(self):
+        "output GraphViz footer"
+        print "}"
+
+    def next_up(self, node):
+        return node.parents
+    def next_down(self, node):
+        return node.children
+    
+    def output(self):
+        "output GraphViz report"
+        self.header()
+        self.edges = []
+        clusters = {}
+        others = {}
+        for node in self.nodes.itervalues():
+            if not self.node_ok(node):
+                continue
+            # cluster name is just the library name
+            # FIXME: node names can now contain more stuff
+            name = node.name[:node.name.find(':')]
+            if name in self.cluster_nodes:
+                if name in clusters:
+                    clusters[name][node.name] = node
+                else:
+                    clusters[name] = { node.name: node }
+            else:
+                others[node.name] = node
+        for key in clusters.iterkeys():
+            print "subgraph \"cluster-%s\" {" % key
+            self.output_cluster(clusters[key])
+            print "}"
+        self.output_cluster(others)
+        for edge in self.edges:
+            print edge
+        self.footer()
+
+    def output_cluster(self, nodes):
+        "output all nodes in a cluster"
+        for node in nodes.values():
+            #if self.node_ok(node):
+            self.output_node(node)
+        
+    def output_node(self, node):
+        "output node name and links to its children"
+        # this node
+        percentage = node.percentage
+        style = ""
+        if percentage >= self.emph_limit:
+            if node.own_allocs >= self.own_allocs:
+                style = " style=filled fillcolor=lightgray color=red"
+            else:
+                style = " style=bold color=red"
+        if node.leafnode:
+            style += " shape=diamond style=filled fillcolor=lightgray"
+        nid, name, size, count = node.nid, node.name, node.size, node.count
+        if options.refs:
+            detail_str = "refcount: %d" % count
+        else:
+            detail_str = "%d%% (%dKB / %d)" % (percentage, (size + 512) / 1024, count)
+        print "N%d [label=\"%s\\n%s\"%s];" % (nid, name, detail_str, style)
+        # child nodes
+        self.output_child_nodes(node)
+
+    def output_child_nodes(self, node):
+        size = 0
+        funs = 0
+        count = 0
+        percentage = 0
+        for next_id in self.next(node):
+            next = self.nodes[next_id]
+            if self.node_ok(next):
+                self.edges.append("N%d -> N%d;" % (node.nid, next.nid))
+            elif self.show_leafs:
+                percentage += next.percentage
+                count += next.count
+                size += next.size
+                funs += 1
+        if funs:
+            if options.refs:
+                detail_str = "refcount: %d" % count
+            else:
+                detail_str = "%d%% (%dKB / %d)" % (percentage, (size + 512)/1024, count)
+            if funs > 1:
+                print "U%d [label=\"%d functions\\n%s\"];" % (self.counter, funs, detail_str)
+            else:
+                print "U%d [label=\"a function\\n%s\"];" % (self.counter, detail_str)
+            self.edges.append("N%d -> U%d;" % (node.nid, self.counter))
+            self.counter += 1
+
+class TopmostGraphReport(GraphvizReport):
+    "report showing a graph from topmost allocation to stack top or bottom"
+    def __init__(self, graph, options):
+        GraphvizReport.__init__(self, graph, options)
+        self.heading = "Functions involved in %d topmost allocations" % options.depth
+        # trace addresses from highest to lowest
+        graph.addresses.sort()
+        graph.addresses.reverse()
+        # how many of the highest address traces we want?
+        self.traces = []
+        for addr,tid in graph.addresses[:options.depth]:
+            print "# 0x%x: %d" % (addr, tid)
+            self.traces.append(tid)
+    
+    def node_ok(self, node):
+        # called by superclass output_child_nodes()
+        for tid in self.traces:
+            if tid in node.traces:
+                return 1
+        return 0
+        
+class AllocGraphReport(GraphvizReport):
+    "report showing a graph including the largest backtraces"
+    def __init__(self, graph, options):
+        "init GraphViz graph limits"
+        GraphvizReport.__init__(self, graph, options)
+        if options.refs:
+            self.heading = "Functions through which the references were done"
+        else:
+            self.heading = "Functions through which at least %.1f%% of the total allocations were done" % self.limit
+    
+    def node_ok(self, node):
+        # called by superclass output_child_nodes()
+        if node.percentage >= self.limit:
+            return 1
+        return 0
+
+# --------------------- Options class -----------------
+
+class Options:
+    "command line option help, parsing and storage"
+    cluster = []        # which libraries should be clustered
+    include = []        # include only backtraces having these functions
+    ignore = []         # substrings of function to ignore in the backtraces
+    noignore = []       # substrings of function not to ignore
+    stop = []           # substrings of functions where to end backtrace
+    lib = []            # libs which should be shown with single node
+    node = []           # which node(s) to show info about
+    depth = 3           # depends on report type
+    limit = 10          # maximum percentage of total to show
+    emph_limit = 60     # maximum percentage of total to emphasize
+    own_allocs = 1.2    # factor by how much own allocs can exceed child allocs
+    stats = "count"     # statistics report histogram type
+    report = "stats"    # report type
+    direction = "tb"    # traversal direction
+    intermediate = 1    # whether to leave out intermediate nodes
+    leafs = 1           # whether to leave out leaf nodes with only 1 parent
+    show_below_limit = 1# show how many nodes were below limit
+    references = 0      # whether to show what references --node=<node>
+    verbose = 0         # whether to have some extra output
+    refs = 0            # whether to talk in output about KBs or references
+    file = None         # input file
+    
+    def __init__(self, argv):
+        "parse command line options"
+        name = argv[0].split('/')[-1]
+        if len(argv) < 2:
+            self.help(name, "not enough arguments")
+        for arg in argv[1:]:
+            if arg[:2] == "--":
+                if arg.find('=') < 1:
+                    self.help(name, "option value missing", arg)
+                option, value = arg[2:].split("=")
+            else:
+                if arg[0] == "-":
+                    self.help(name, "Unknown option", arg)
+                self.file = arg
+                continue
+            # check/get options
+            if option == "limit":
+                value = float(value)
+                if value > 0.0 and value < 100.0:
+                    self.limit = float(value)
+                else:
+                    self.help(name, "invalid limit percentage", arg)
+            elif option == "emph-limit":
+                value = float(value)
+                if value >= 1.0 and value < 100.0:
+                    self.emph_limit = float(value)
+                else:
+                    self.help(name, "invalid emph-limit percentage", arg)
+            elif option == "own-alloc-emph-limit":
+                value = float(value)
+                if value > 1.0 and value < 10.0:
+                    self.own_allocs = float(value)
+                else:
+                    self.help(name, "invalid own-alloc-emph-limit factor", arg)
+            elif option == "depth":
+                value = int(value)
+                if value >= 1 and value < 100:
+                    self.depth = int(value)
+                else:
+                    self.help(name, "invalid percentage limit", arg)
+            elif option == "join-lib":
+                self.lib.append(value)
+            elif option == "ignore":
+                self.ignore.append(value)
+            elif option == "no-ignore":
+                self.noignore.append(value)
+            elif option == "ignore-gtk-internals":
+                self.ignore += ["g_type_", "g_object_", "g_signal_",
+                "g_enum_", "g_quark_", "g_param_", "g_pattern_spec_",
+                "g_hash_table_", "g_slist_", "g_list_", "g_array_",
+                "g_mem_", "closure_", "gtk_marshal_", "gtk_binding_",
+                "_gtk_", "gtk_container_", "_main_context_",
+                "FT_Realloc", "FT_Alloc", "FT_QAlloc", "FcStrCopy",
+                "_malloc", "realloc", "memdup", "strdup", "strndup",
+                "g_slice_", "ft_alloc", "png_zalloc" ]
+                # "gtk_widget_size_request",
+                # "gtk_widget_map", "gtk_widget_realize",
+                # "ld-2.3.2.so", "tsearch", "dcgettext"]
+            elif option == "stop":
+                self.stop.append(value)
+            elif option == "node":
+                self.node.append(value)
+            elif option == "cluster":
+                self.cluster.append(value)
+            elif option == "include-only":
+                self.include.append(value)
+            elif option == "show-below-limit":
+                self.show_below_limit = self.get_bool(name, arg, value)
+            elif option == "show-references":
+                self.references = self.get_bool(name, arg, value)
+            elif option == "intermediate":
+                self.intermediate = self.get_bool(name, arg, value)
+            elif option == "leafs":
+                self.leafs = self.get_bool(name, arg, value)
+            elif option == "verbose":
+                self.verbose = self.get_bool(name, arg, value)
+            elif option == "stats":
+                if value in ["count", "total"]:
+                    self.stats = value
+                else:
+                    self.help(name, "unknown 'stats' report type", arg)
+            elif option == "type":
+                if value in ["stats", "graph", "html", "topmost"]:
+                    self.report = value
+                else:
+                    self.help(name, "unknown report type", arg)
+            elif option == "direction":
+                if value in ["tb", "bt"]:
+                    self.direction = value
+                else:
+                    self.help(name, "unknown direction", arg)
+            else:
+                self.help(name, "unknown option", arg)
+        if not self.file:
+            self.help(name, "leak report missing")
+        debug(string.join(argv))
+        if self.verbose:
+            self.show_options()
+    
+    def show_options(self):
+        debug("file = '%s' (rtrace leak file to parse)" % self.file)
+        debug("report = '%s' (report type)" % self.report)
+        debug("direction = '%s' (report traversal direction)" % self.direction)
+        debug("depth = %d (number of topmost graphs to show)" % self.depth)
+        debug("limit = %.1f (show only nodes with amount of allocs >= given %% of total)" % self.limit)
+        debug("emph_limit = %.1f (emphatize nodes with amount of allocs >= given %% of total)" % self.emph_limit)
+        debug("intermediate = %s (whether to include intermediate nodes)" % self.bool_str(self.intermediate))
+        debug("leafs = %s (whether to include leaf nodes)" % self.bool_str(self.leafs))
+        debug("show_below_limit = %s (whether to show how many nodes were below limit)" % self.bool_str(self.show_below_limit))
+        self.show_list(self.cluster, "Cluster libs with following substrings together")
+        self.show_list(self.include, "Include only backtraces having these node(s) with these substrings")
+        self.show_list(self.ignore, "Ignore in backtraces nodes with these substrings")
+        self.show_list(self.noignore, "Do not ignore these although they would match ignore substring")
+        self.show_list(self.stop, "Stop backtrace parsing to functions with these substring")
+        self.show_list(self.lib, "Functions within these libraries are shown with a single node")
+        self.show_list(self.node, "Nodes about which to show debug information")
+        debug("references = %s (whether to show debug node references)" % self.bool_str(self.references))
+        debug("verbose = %s" % self.bool_str(self.verbose))
+
+    def show_list(self, list, title):
+        if list:
+            debug("%s:" % title)
+            for name in list:
+                debug("- %s" % name)
+    
+    def bool_str(self, value):
+        if value: return "yes"
+        else:     return "no"
+    
+    def get_bool(self, name, arg, value):
+        "check whether value is yes/no and returns corresponding bool"
+        if value in ["yes", "no"]:
+            return (value == "yes")
+        else:
+            self.help(name, "value should be either 'yes' or 'no'", arg)
+
+    def help(self, name, error, arg=None):
+        "show command line help and exit"
+        debug(__doc__)
+        debug("usage: %s [options] <rtrace-report>  >  report.[txt|dot|html]" % name)
+        debug("""
+Options for report output type and looks:
+
+    --type=value, value is one of following report types:
+        stats -- outputs ASCII allocation histogram and statistics (default)
+        graph -- outputs a graph of largest allocations
+        html  -- outputs hyperlinked backtraces sorted according to
+                 allocation sizes (as percentage of total allocs)
+        topmost -- outputs a graph of topmost allocations backtraces
+
+    --stats=value, value is either "count" or "total" depending on whether
+        you want the histogram to show graphically the number of the given
+        sized allocations or how much they take memory (with alloc overhead)
+
+    --direction=value, value is one of:
+        tb -- top to bottom i.e. from main() towards malloc()  (default)
+        bt -- bottom to top i.e. from malloc() towards main()
+        Default is "tb"
+
+    --depth=value, value is an integer (1-99) used in following reports:
+        topmost -- how many of the traces to highest allocations are shown
+        Default is 3
+
+    --emph-limit=value,  value (1.0-100) is used with "graph"
+        report type to indicate that functions responsible for more
+        than the given percentage of allocations should be emphasized.
+        Default is 60.0.
+
+    --own-alloc-limit=value, value is a factor (1.1 - 10) used with
+        "graph" report type to indicate how much single node needs to do
+        more allocations than all of its children together for it to be
+        emphatized.  Only nodes whose allocations go over emph-limit
+        are checked for this. Default is 1.2.
+
+    --cluster=value,  value is the name of the library which nodes
+        should be clustered in "graph". Note: this option is useless
+        with recursive backtraces, for Gtk applications you should
+        use also --ignore-gtk-internals=yes
+
+
+Additional options for reducing the amount of output data:
+
+    --limit=value,  value (0.1-100) is used with "graph" and
+        "html" report types to limit the number of functions included
+        into the output.  The given value is a percentage of how much
+        of the allocation come through that function.  Default is 10.0.
+        If you decrease this with 'html' report, --stop use is
+        recommended as the generated HTML output can be very large
+        (even gigabytes if rtrace report was megabytes).  For
+        "graph" report, there are additional options for reducing
+        the amount of output, see below
+
+    --show-below-limit=no, do not show nodes telling how many called
+        nodes were below the specified limit
+
+    --stop=value, value is a substring of the node name where the
+        current backtrace parsing is stopped.  Using something like
+        "--stop=closure_marshal --stop=gtk_marshal" could make Gtk
+        memory allocation graphs more readable
+
+    --include-only=value, value is a substring of the node name for
+        backtraces that should be included into reports.  All backtraces
+        NOT containing a node name with this substring are ignored
+
+    --ignore=value, value is a substring of the node name which is
+        ignored in the backtraces
+
+    --no-ignore=value,  value is a substring of the node name which is
+        kept in the backtraces although it is matched by --ignore
+    
+    --ignore-gtk-internals=yes, shortcut option which ignores several lowest
+        level allocation, standard data structure handling and recursed
+        functions called by Gtk applications.  Use --verbose to see what
+        is ignored.  You might want to use also these options:
+        --intermediate=no --leafs=no --show-below-limit=no 
+        --ignore=gtk_widget_ --no-ignore=gtk_widget_show
+        --ignore=gdk_window_ --ignore=dcgettext --ignore=tsearch
+        --join-lib=fontconfig --join-lib=ld-2.3.2.so
+
+    --join-lib=value, value is the name of the library (part of node
+        name before ':') which should be represented as a single node
+
+    --intermediate=no, leave out nodes with only one parent and child
+
+    --leafs=no, leaves out nodes which have either:
+        - one parent and no children, or
+        - one child and no parents
+    
+Debug options:
+    
+    --node=value -- shows internal information about given node
+
+    --show-references=yes -- show what other nodes refer nodes
+        specified with the above option
+
+    --verbose=yes -- show more information about rtrace-calltree working
+
+
+Following options can be given as many times as you wish and they apply
+to all values you gave (of other options, only the last value applies):
+    --stop
+    --ignore
+    --include-only
+    --join-lib
+    --cluster
+    --node
+
+Graphs are output in 'dot' format.  You will need GraphViz package to
+generate PostScript, SVG, PNG etc. formats out of them.""")
+        if error:
+            debug("\nERROR: %s!" % error)
+            if arg:
+                debug("(for option '%s')" % arg)
+        sys.exit(1)
+
+# ----------------------- main ------------------------
+
+graph = Graph()
+options = Options(sys.argv)
+
+debug("\nParsing...")
+leaks = Rtrace(options.file)
+(graph, ignored) = leaks.parse(graph, options)
+debug(graph.stats_oneliner())
+debug("Ignored %d backtrace lines without function names." % ignored)
+
+debug("Finalizing backtrace graph and stats...")
+stats = graph.complete()
+
+# debug output for selected nodes
+graph.show_nodes(options.node, options.references)
+
+# if requested, remove unwanted nodes
+graph.trim(options)
+
+debug("Writing report...")
+if options.report == "stats":
+    report = AsciiReport(stats, options)
+elif options.report in ["topmost", "graph"]:
+    if options.report == "graph":
+        report = AllocGraphReport(graph, options)
+    else:
+        report = TopmostGraphReport(graph, options)
+    if options.direction == "tb":
+        report.next = report.next_down
+        report.prev = report.next_up
+    else:
+        report.next = report.next_up
+        report.prev = report.next_down
+elif options.report == "html":
+    if options.direction == "tb":
+        traverse = TraverseDown(graph)
+    else:
+        traverse = TraverseUp(graph)
+    report = HtmlReport(traverse, stats, options)
+
+report.output()

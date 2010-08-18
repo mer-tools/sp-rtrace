@@ -1,0 +1,23 @@
+.TH RTRACE-RENAME 1 "2010-08-03" "sp-rtrace"
+.SH NAME
+rtrace-rename - renames rtrace files
+.SH SYNOPSIS
+rtrace-rename <PID1> <NAME1> [PID2] [NAME2] ...
+.SH DESCRIPTION
+\fIrtrace-rename\fP renames sp-rtrace reports and
+their post-processed output files in the current directory from
+format 'PID[-INDEX].rtrace[.*]'to 'NAME[-INDEX].rtrace[.*]'
+format.
+.PP
+If you have a lot of those files, this helps in finding and
+maintaining them.
+.SH SEE ALSO
+.IR sp-rtrace (1),
+.IR rtrace-graphs-overview (1)
+and the other rtrace-* scripts.
+.SH COPYRIGHT
+Copyright (C) 2007,2010 Nokia Corporation.
+.PP
+This is free software.  You may redistribute copies of it under the
+terms of the GNU General Public License v2 included with the software.
+There is NO WARRANTY, to the extent permitted by law.

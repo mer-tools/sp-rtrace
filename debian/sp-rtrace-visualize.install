@@ -1,0 +1,10 @@
+debian/tmp/usr/bin/rtrace-calltree
+debian/tmp/usr/bin/rtrace-from-function
+debian/tmp/usr/bin/rtrace-graphs-function
+debian/tmp/usr/bin/rtrace-graphs-overview
+debian/tmp/usr/bin/rtrace-timeline
+debian/tmp/usr/share/man/man1/rtrace-calltree.1
+debian/tmp/usr/share/man/man1/rtrace-from-function.1
+debian/tmp/usr/share/man/man1/rtrace-graphs-function.1
+debian/tmp/usr/share/man/man1/rtrace-graphs-overview.1
+debian/tmp/usr/share/man/man1/rtrace-timeline.1

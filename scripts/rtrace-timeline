@@ -1,0 +1,616 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2010 by Nokia Corporation
+#
+# Contact: Eero Tamminen <eero.tamminen@nokia.com>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License 
+# version 2 as published by the Free Software Foundation. 
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+# 02110-1301 USA
+
+"""
+This script creates totals/lifetime/usage graphs from rtrace format
+log files.
+  totals)
+     displays total resource allocation over time.
+  lifetime)
+     displays life time of every allocated resource.
+  usage)
+     displays resource allocations per time slice.  
+"""
+
+import sys, string, re, os
+
+def warning(msg):
+	sys.stderr.write("%s\n" % msg)
+
+
+#
+# Timestamp class
+#
+class Timestamp:
+	"""
+	This class contains basic implementation for a timestamp consisting of seconds
+	and microseconds passed since the start of Epoh. 
+	"""
+	seconds = 0
+	useconds = 0
+	
+	def __init__(self, seconds, useconds):
+		self.seconds = seconds
+		self.useconds = useconds
+		
+	def lt(self, timestamp):
+		"""
+		LessThan comparison.
+		Returns true if the current timestamp is less than the specified one.
+		"""
+		return self.seconds < timestamp.seconds or \
+			(self.seconds == timestamp.seconds and self.useconds < timestamp.useconds)
+
+	def gt(self, timestamp):
+		"""
+		GreaterThan comparison.
+		Returns true if the current timestamp is greater than the specified one.
+		"""
+		return self.seconds > timestamp.seconds or \
+			(self.seconds == timestamp.seconds and self.useconds > timestamp.useconds)
+
+	def set(self, timestamp):
+		"""
+		Sets the current timestamp to be equal to the specified one.
+		"""
+		self.seconds = timestamp.seconds
+		self.useconds = timestamp.useconds
+		
+	def diff(self, timestamp):
+		"""
+		Returns difference in microseconds between the current timestamp and the specified one.
+		"""
+		return (self.seconds - timestamp.seconds) * 1000000 + self.useconds - timestamp.seconds
+		
+	def usum(self, useconds):
+		"""
+		Returns a new timestamp acquired by adding the specified number of microseconds to the
+		current timestamp.
+		"""
+		rc = Timestamp(self.seconds, self.useconds)
+		rc.uadd(useconds)
+		return rc
+		
+	def uadd(self, useconds):
+		"""
+		Adds the specified number of microseconds to the current timestamp.
+		"""
+		self.useconds += useconds
+		self.seconds += self.useconds / 1000000
+		self.useconds %= 1000000
+			
+	def isZero(self):
+		"""
+		Checks if the current timestamp is zero.
+		"""
+		return self.seconds == 0 and self.useconds == 0
+		
+	def clone(self):
+		"""
+		Returns a new timestamp which is copy of the current one.
+		"""
+		return Timestamp(self.seconds, self.useconds)
+#
+# Options class
+#
+class Options:
+	"""
+	This class provides access to parsed command line options.
+	"""
+	listener = None         # listener for the choosed report type
+	slice = 100000 	        # time slice for usage graphs in microseconds
+	resourcesPerPage = 10   # number of resources per graph for lifetime reports
+	inName = None           # the input file name
+	outName = None          # the output file name
+	plot = True             # True if the resulting files should be automatically processed
+	                        # with gnupot. False otherwise.
+	
+	def __init__(self, argv):
+		"""
+		Parses the command line arguments and initializes settings variables.
+		"""
+		name = argv[0].split('/')[-1]
+		if len(argv) < 2:
+			self.error(name, "not enough arguments")
+		for arg in argv[1:]: 
+			if arg[:2] == "--":
+				if arg.find('=') < 1:
+					self.error(name, "option value missing", arg)
+				option, value = arg[2:].split("=")
+			else:
+				self.error(name, "Unknown option", arg)
+			if option == "type":
+				if value == "lifetime":	
+					self.listener = LifetimeListener(self)
+				elif value == "totals":
+					self.listener = TotalsListener(self)
+				elif value == "usage":
+					self.listener = UsageListener(self)
+			elif option == "slice":
+				self.slice = int(value) * 1000
+			elif option == "out":
+				self.outName = value
+			elif option == "in":
+				self.inName = value
+			elif option == "resources-per-page":
+				self.resourcesPerPage = int(value)
+			elif option == "plot":
+				self.plot = True	
+		if not self.inName:
+			self.error(name, "No input file specified")
+		if not self.outName:
+			self.error(name, "No output file specified")
+		if not self.listener:
+			self.error(name, "No report type specified")
+			
+	def error(self, name, error, arg=None):
+		"""
+		Displays error message with the usage information.
+		"""
+		warning("Usage: %s --type=lifetime|totals|usage [--slice=<slice>] [--plot=yes|no] [--resources-per-page=<value>] --in=<file> --out=<file> " % name)
+		warning("Where:")
+		warning("  type specifies the report mode:")
+		warning("    totals   - resource usage over time")
+		warning("    lifetime - resource life over time")
+		warning("    usage    - resource usage per time slice") 
+		warning("  slice      sets the time slice for resource usage per time reports (msecs)")
+		warning("  plot       specifies if the gnuplot should be invoked automatically")
+		warning("  resources-per-page sets the number of resoruces per one graph for lifetime mode")
+		warning("  in         sets the input file name")
+		warning("  out        sets the output file name")
+		
+		if error:
+			warning("\nError: %s" % error)
+			sys.exit(-1)
+
+#
+# Resource class
+#
+class Resource:
+	"""
+	Reference counted resource implementation.
+	"""
+	references = 0      # number of references to the resource
+	name = None         # the resource name
+	addr = 0            # the resource address (or unique id)
+	size = 0            # the resource size
+	
+	def __init__(self, addr, size):
+		"""
+		Sets the resource properties.
+		"""
+		self.references = 1
+		self.addr = addr
+		try:
+			self.size = int(size)
+		except ValueError:
+			self.size = 1
+			self.name = size
+		
+	def addref(self):
+		"""
+		Increments resource reference count.
+		"""
+		self.references += 1
+		return self.references
+		
+	def release(self):
+		"""
+		Decrements resource reference count.
+		"""
+		self.references -= 1
+		return self.references
+
+#
+# Generic Listener class
+#
+class Listener:
+	"""
+	This is generic listener implementation, used as base class for 
+	listeners used by different report modes (totals,lifetime,usage).
+	"""
+	options = None                                  # options parsed from command line
+	minRange = Timestamp(sys.maxint, sys.maxint)    # the smallest timestamp detected during log parsing
+	maxRange = Timestamp(0, 0)                      # the largest timestamp detected during log parsing
+	
+	def __init__(self, options):
+		self.options = options
+		
+		
+	def start(self):
+		"""
+		Starts the input log parsing.
+		"""
+		self.dataFile = open(self.options.outName + ".dat", 'w')
+		
+		
+	def finish(self):
+		"""
+		Finishes the input log parsing.
+		"""
+		self.dataFile.close()
+		
+		self.cfgFile = open(self.options.outName + ".cfg", 'w')
+		self.cfgFile.write("set terminal postscript eps color \"Courier\" 12\n")
+		self.cfgFile.write("set output \"%s.eps\"\n" % self.options.outName)
+		self.cfgFile.write("set xrange[%d.%06d:%d.%06d]\n" % (self.minRange.seconds, self.minRange.useconds,\
+			self.maxRange.seconds, self.maxRange.useconds))
+		self.cfgFile.write("set title \"[%s - %s]\"\n" % (self.getType(), self.options.outName))
+		self.cfgFile.write("set xlabel \"time\"\n")
+		self.cfgFile.write("set xtics rotate\n")
+		self.cfgFile.write("set format x \"%.2f\"\n")
+		self.cfgFile.write("set ylabel \"size\"\n")
+		self.cfgFile.write("set key outside\n")
+		self.cfgFile.write("set style data linespoints\n")
+		self.cfgFile.write("plot \"%s.dat\" with lines\n" % self.options.outName )
+		
+		self.cfgFile.close()
+		
+		
+	def write(self, timestamp, value):
+		"""
+		Writes data into gnuplot data file.
+		For basic graphs the data consists of timestamp-value(size) pairs.
+		"""
+		if timestamp.lt(self.minRange):
+			self.minRange.set(timestamp)
+		if timestamp.gt(self.maxRange):
+			self.maxRange.set(timestamp)
+		self.dataFile.write("%d.%06d %d\n" % (timestamp.seconds, timestamp.useconds, value))
+		
+		
+#
+# LifetimeListener class
+#
+class LifetimeListener(Listener):
+	"""
+	Listener for lifetime report mode.
+	Lifetime report mode is slightly different from the other report modes,
+	as it must display multiple graphs (one per resource) instead of combining
+	all resource data into single graph. For better readibility resources are
+	split over multiple graphs - to avoid cramping hundreds and thousands of
+	lines cramped in single graph. 
+	"""
+	
+	class Data:
+		"""
+		Resource data, containing start/end timestamps and the resource itself.
+		"""
+		start = None
+		end = None
+		resource = ""
+		def __init__(self, start, end, resource):
+			self.start = start
+			self.end = end
+			self.resource = resource
+	
+	data = {}        # the resource cache
+
+	def __init__(self, options):
+		Listener.__init__(self, options)
+		
+	def storeRange(self, timestamp):
+		"""
+		Updates the timestamp range.
+		"""
+		if timestamp.lt(self.minRange):
+			self.minRange.set(timestamp)
+		if timestamp.gt(self.maxRange):
+			self.maxRange.set(timestamp)
+		
+	def eventAlloc(self, timestamp, resource):
+		"""
+		Registers resource allocation.
+		The resource data is stored in 'data' map using resource address as
+		key index. Because the same resource address could be reused by system
+		after it was allocated/deallocated, an array is stored in each map record, 
+		containing data for each allocation. Every next allocation is appended
+		to it's data array.
+		map[<address>] = {alloc1, alloc2, ...}
+		"""
+		if resource.addr in self.data:
+			resources = self.data[resource.addr]
+		else:
+			resources = {}
+			self.data[resource.addr] = resources
+		index = len(resources) + 1
+		resources[index] = self.Data(timestamp.clone(), Timestamp(0, 0), resource)
+		self.storeRange(timestamp);
+		
+	def eventDealloc(self, timestamp, resource):
+		"""
+		Registers resource deallocation.
+		This method finds the latest allocation data of the specified resource
+		and sets it's deallocation (end) timestamp.
+		"""
+		if resource.addr in self.data:
+			resources = self.data[resource.addr]
+			index = len(resources)
+			if resources[index].end.isZero():
+				resources[index].end.set(timestamp)
+		self.storeRange(timestamp)
+		
+	def getType(self):
+		"""
+		Returns the report mode.
+		"""
+		return "lifetime"
+		
+	def finish(self):
+		"""
+		Finishes input log parsing.
+		Because lifetime mode must produce multiple lines per graph (and possibly also
+		multiple graphs) LifetimeListener provides own implementation of finish() method.
+		"""
+		self.cfgFile = open(self.options.outName + ".cfg", 'w')
+		self.cfgFile.write("set terminal postscript eps color \"Courier\" 12\n")
+		self.cfgFile.write("set xrange[%d.%06d:%d.%06d]\n" % (self.minRange.seconds, self.minRange.useconds,\
+			self.maxRange.seconds, self.maxRange.useconds))
+		self.cfgFile.write("set title \"[%s - %s]\"\n" % (self.getType(), self.options.outName))
+		self.cfgFile.write("set xlabel \"time\"\n")
+		self.cfgFile.write("set xtics rotate\n")
+		self.cfgFile.write("set format x \"%.2f\"\n")
+		self.cfgFile.write("set format y \"%.0f\"\n")
+		self.cfgFile.write("set ylabel \"size\"\n")
+		self.cfgFile.write("set key outside\n")
+		self.cfgFile.write("set style data linespoints\n")
+
+		for resources in self.data:
+			for idx in self.data[resources]:
+				item = self.data[resources][idx]
+				if item.end.isZero():
+					item.end.set(self.maxRange)
+				if item.resource.name != None:
+					item.desc = item.resource.name
+				else:
+					item.desc = item.resource.size
+				self.dataFile.write("%d.%06d %d " % (item.start.seconds, item.start.useconds, item.resource.size))
+
+		self.dataFile.write("\n")
+		index = 1
+		plot = ""
+		dataFile = " \"%s.dat\" " % self.options.outName
+		for resources in self.data:
+			for idx in self.data[resources]:
+				item = self.data[resources][idx]
+				self.dataFile.write("%d.%06d %d " % (item.end.seconds, item.end.useconds, item.resource.size))
+				if len(plot) > 0:
+					plot += ", "
+				plot += dataFile + "using %d:%d" % (index * 2 - 1, index * 2) + " title \"0x%x\"" % item.resource.addr
+				plot += " with lp lw 5"
+				if index % self.options.resourcesPerPage == 0:
+					self.cfgFile.write("set output \"%s-%d.eps\"\n" % (self.options.outName, index / self.options.resourcesPerPage))
+					self.cfgFile.write("plot %s\n" % plot)
+					plot = ""
+				index += 1
+		if len(plot) > 0:
+			self.cfgFile.write("set output \"%s-%d.eps\"\n" % (self.options.outName, index / self.options.resourcesPerPage))
+			self.cfgFile.write("plot %s\n" % plot)
+			
+		self.dataFile.close()
+		self.cfgFile.close()					
+					
+#
+# TotalsListener class
+#
+class TotalsListener(Listener):
+	"""
+	Listener for totals mode.
+	
+	"""
+	total = 0          # the total amount of resources allocated
+
+	def __init__(self, options):
+		Listener.__init__(self, options)
+
+	def eventAlloc(self, timestamp, resource):
+		"""
+		Registers resource allocation.
+		Totals mode simply increases total resource allocation amount and
+		writes the new data (timestamp-totals) into gnuplot data file.
+		"""
+		self.total += resource.size
+		self.write(timestamp, self.total)
+		
+	def eventDealloc(self, timestamp, resource):
+		"""
+		Registers resource deallocation.
+		Totals mode simply decreases total resource allocation amount and
+		writes the new data (timestamp-totals) into gnuplot data file.
+		"""
+		self.total -= resource.size
+		self.write(timestamp, self.total)
+
+	def getType(self):
+		"""
+		Returns the report mode.
+		"""
+		return "totals"
+		
+#
+# UsageListener class
+#
+class UsageListener(Listener):
+	"""
+	Listener for usage mode.
+	Usage mode displays amount of allocations done per time slice
+	(which can be specified by options).
+	"""
+	sliceTotal = 0                      # the amount of allocations per current time slice
+	sliceTimestamp = Timestamp(0, 0)    # the current time slice start timestamp
+	
+	def __init__(self, options):
+		Listener.__init__(self, options)
+		
+	def eventAlloc(self, timestamp, resource):
+		"""
+		Registers resource allocation.
+		If the new timestamp is inside the current slice the resource size is added to the 
+		current totals. Otherwise the current totals is written into gnuplot data file 
+		as (slice timestamp, slice totals) pair and the current timestamp and totals data is
+		reseted. 
+		If the new timestamp is also beyond the next time slice, data for the next and
+		pre-timestamp timeslices are written into gnuplot data file as (next slice timestamp, 0)
+		and (pre-timesetamp timeslice timestamp, 0) pairs (next slice timestamp could be the 
+		same as pre-timestamp timeslice timestamp). 
+		"""
+		if self.sliceTimestamp.isZero():
+			self.sliceTimestamp.set(timestamp)
+			self.sliceTotal = resource.size
+		else:
+			if timestamp.diff(self.sliceTimestamp) <= self.options.slice:
+				self.sliceTotal += resource.size
+			else:
+				self.write(self.sliceTimestamp.usum(self.options.slice / 2), self.sliceTotal)
+				self.sliceTimestamp.uadd(self.options.slice)
+				self.sliceTotal = resource.size
+				if timestamp.diff(self.sliceTimestamp) > self.options.slice:
+					self.write(self.sliceTimestamp.usum(self.options.slice / 2), 0)
+					self.sliceTimestamp.uadd(timestamp.diff(self.sliceTimestamp) / self.options.slice * self.options.slice)
+					self.write(self.sliceTimestamp.usum(self.options.slice / 2), 0)
+					
+		
+	def eventDealloc(self, timestamp, resource):
+		"""
+		Does nothing. 
+		"""
+		pass
+		
+	def finish(self):
+		"""
+		Writes the last timeslice data into gnuplot data file before calling the original
+		finish() method.
+		"""
+		self.write(self.sliceTimestamp.usum(self.options.slice / 2), self.sliceTotal)
+		Listener.finish(self)
+		
+	def getType(self):
+		"""
+		Returns the report mode.
+		"""
+		return "usage"
+
+#
+# Parser class
+#
+class Parser:
+	"""
+	Parses ftlogger format log file.
+	Parses input file and registeres every resource allocation/deallocation. 
+	allocation)
+	  If the resource was already in registry (identified by it's address) - the resource
+	  reference count is increased. Otherewise the resource is added to registry and 
+	  listener eventAlloc() method is called.
+	deallocation)
+	  Checks if the resource is in registry and decrements its reference count. If the reference
+	  counter reaches zero it is removed from registry and the listener eventDealloc() method is
+	  called.
+	"""
+	registry = {}       # the resource registry
+	fileName = None     # the input file name
+	
+	def __init__(self, file):
+		"""
+		Compiles regexp patterns for allocation,deallocation and timestamp parsing.
+		"""
+		self.fileName = file
+		self.regexAlloc = re.compile("^[0-9]+\. [^[]*\[([^\]]+)\][^(]+\(([^)]+)\) = (0x[a-fA-F0-9]+)(.*)")
+		self.regexDealloc = re.compile("^[0-9]+\. [^[]*\[([^\]]+)\][^(]+\((0x[a-fA-F0-9]+)\)")
+		self.regexTimestamp = re.compile("([0-9]+):([0-9]+):([0-9]+)\.([0-9]+)")
+
+	def process(self, listener):
+		"""
+		Parses the log file.
+		"""
+		file = open(self.fileName)
+		listener.start()
+		for line in file:
+			timestampString = None
+			match = self.regexAlloc.match(line)
+			if match:
+				addr = int(match.group(3), 16)
+				size = match.group(2)
+				timestampString = match.group(1)
+			else:
+				match = self.regexDealloc.match(line)
+				if match:
+					addr = int(match.group(2), 16)
+					timestampString = match.group(1)
+					size = None
+			if timestampString:
+				match = self.regexTimestamp.match(timestampString)
+				if match:
+					timestamp = Timestamp(int(match.group(1)) * 3600 + int(match.group(2)) * 60 + \
+						int(match.group(3)), int(match.group(4)))
+					if size:
+						resource = self.resourceRegister(addr, size)
+						if resource.references == 1:
+							listener.eventAlloc(timestamp, resource)
+					else:
+						resource = self.resourceUnregister(addr)
+						if resource and resource.references == 0:
+							listener.eventDealloc(timestamp, resource)
+		listener.finish()
+		file.close()
+
+
+	def resourceRegister(self, addr, size):
+		"""
+		Registers resource allocation
+		"""
+		resource = None
+		if addr in self.registry:
+			resource = self.registry[addr]
+			resource.addref()
+		else:
+			resource = Resource(addr, size)
+			self.registry[addr] = resource
+			rc = True
+		return resource
+		
+		
+	def resourceUnregister(self, addr):
+		"""
+		Registers resource deallocation.
+		"""
+		resource = None
+		if addr in self.registry:
+			resource = self.registry[addr]
+			if resource.release() == 0:
+				del self.registry[addr]
+		return resource		
+		
+
+# parse command line options
+options = Options(sys.argv)
+
+# create ftlogger parser
+parser = Parser(options.inName)
+
+# parse input file
+parser.process(options.listener)
+
+# plot the results
+if options.plot:
+	if os.system("gnuplot %s.cfg" % options.outName) == 0:
+		os.remove(options.outName + ".cfg")
+		os.remove( options.outName + ".dat")
+
+

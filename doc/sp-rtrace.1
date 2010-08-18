@@ -1,0 +1,154 @@
+.TH SP-RTRACE 1 "2010-07-1" "sp-rtrace"
+.SH NAME
+sp-rtrace - launch target binary in resource consumption tracing mode
+or manage already started process.
+.SH SYNOPSIS
+sp-rtrace \fI<options>\fP [-x \fI<binary>\fP [\fI<arg>\fP] ... [\fI<arg>\fP]]
+.SH DESCRIPTION
+sp-rtrace is a resource consumption tracing manager and data pre-processor.
+As a tracing manager sp-rtrace can launch binaries in trace mode or 
+enable/disable tracing for already launched processes.
+.PP
+As data pre-processor it accepts trace data from a pipe and either
+stores it on the disk or writes it into a post-processor pipe.
+.SS Options affecting all modes:
+.TP 
+\fI--help\fP (\fI-h\fP)
+Displays help information and exits.
+.TP
+\fI--list\fP (\fI-l\fP)
+Lists all available tracing modules. The first column identifies the module 
+type: P - preload module, A - audit module (see examples).
+.TP
+\fI--output-dir\fP=<path> (\fI-o\fP <path)
+Specifies the output directory for storing trace data. 
+
+By default the home directory is used.
+.TP
+\fI--manage-preproc\fP (\fI-m\fP)
+Specifies that the pre-processor (sp-rtrace) is launched internally by
+the main module. By default the main tracing module tries to connect to
+a named pipe (/tmp/rtrace-<pid>) created by pre-processor. But if startup 
+tracing of the sub processes is required or there are problems in 
+estabilishing data connection through named pipe (for example scratchbox
+arm emulation) a managed pre-processor mode can be used.
+
+In this mode the sp-rtrace process for data pre-processing is started by
+the tracing module. This allows to use the pre-processor standard input
+without using named pipes. However stopping tracing closes pre-processor
+and sends SIGCHLD signal to the tracing process, which can affect its work.
+
+Also managed mode must be used if the target process enables/disables
+tracing by sending toggle signal to itself.
+
+By default the managed mode is not used.
+.TP
+\fI--toggle-signal\fP=<signal> (\fI-S\fP <signal>)
+Specifies the tracing toggle signal. The main tracing module enables/disables
+tracing upon receiving this signal.
+
+By default SIGUSR1 is used, but it can be changed if it interferes with
+the target process signal handling.
+.SS Process launching options:
+.TP
+\fI--start\fP (\fI-s\fP)
+Enables tracing when the process is started.
+
+By default process starts with tracing disabled, but it can be enabled later 
+by sending the toggle signal. This option can be used when the process
+startup needs to be traced.
+.TP
+\fI--postproc\fP=<options> (\fI-P\fP <options>)
+Specifies post-processing options passed to the post-processor. 
+If this option is specified, sp-rtrace spawns a sp-rtrace-postproc process
+with the specified options and pipes the data to it. Otherwise sp-rtrace writes 
+data to the rtrace-raw-<pid>[-<number>] file in the directory specified
+by the \fI--output-dir\fP option.
+.TP
+\fI--preload\fP=<module1>[:<module2>[...:<moduleN>]]\fP (\fI-p\fP <module1>[:<module2>[...:<moduleN>]])
+Specifies preload tracing modules (the main tracing module is preloaded by
+default). When specifying multiple preload modules be careful to avoid
+modules that interfere with each other.
+Either full name of the module can be specified or its alias. The tracing
+modules are named 'libsp-rtrace-<module>.so'. So both - --preload=memory
+and --preload=libsp-rtrace-memory.so will specify the memory tracing 
+module libsp-rtrace-memory.so
+.TP
+\fI--audit\fP=<module1>[:<module2>[...:<moduleN>]]\fP (\fI-a\fP <module1>[:<module2>[...:<moduleN>]])
+Specifies audit tracing modules.
+.TP
+\fI--disable-packet-buffering\fP (\fI-B\fP)
+Disables internal packet buffering. Normally the packets are stored in to
+a 4KB buffer before sending to the next component (libsp-rtrace-main.so
+-> sp-rtrace -> sp-rtrace-postproc). Use this option if real-time packet
+delivery is required. Be aware that this can decrease the performance.
+
+By default packet buffering is enabled.
+.TP
+\fI--disable-timestamps\fP (\fI-T\fP)
+Disables timestamps in function call (FC) packets.
+
+By default timestamps are enabled.
+.TP
+\fI--enable-arguments\fP (\fI-A\fP)
+Enables function argument (FA) packets. Note that tracing modules might
+not support function argument packets as implementing them is optional.
+
+By default function argument packets are disabled.
+.TP
+\fI--backtrace-depth\fP=<depth>(\fI-b\fP <depth>)
+The maximum number of frame return addresses in stack trace. 0 will disable
+backtracing functionality. Reducing backtrace depth improves performance,
+but gives less information of the function call origins.
+
+By default the backtrace depth is 10.
+.SS Process managing options:
+.TP
+\fI--toggle\fP=<pid> (\fI-t\fP <pid>)
+Sends toggle signal to the specified process.
+.TP
+\fI--follow-forks\fP (\fI-f\fP)
+Toggles tracing also for all the child processes of the target process. By default
+the toggle signal is sent only to the target process, but by using this option
+it will be sent also to all child processes.
+(! Not yet implemented).
+
+.SH EXAMPLES
+.TP
+sp-rtrace -s -p memory -x sample
+Start sample process with tracing enabled at start. The (binary) output data
+will be stored in home directory.
+.TP
+sp-rtrace -s -p memory -P '-l -c' -o $(pwd) -x sample
+Start sample process with tracing enabled at start. Invoke sp-rtrace-postproc
+with options -l -c (filter leaks and compress backtraces - see sp-rtrace-postproc
+manual) and store the resulting file (text) into current directory.
+.TP
+sp-rtrace -s -p memory -P '-r' -x sample
+Start sample process with tracing enabled at start. Invoke sp-rtrace-postproc
+with options -r (resolve addresses) and write results to the standard output.
+.TP
+sp-rtrace -t $(pidof sample)
+Toggle tracing for an already running 'sample' process.
+.TP
+sp-rtrace -l
+Lists all available tracing modules. For example:
+.nf
+T      Name      Version                  Description
+- --------------- ----- -----------------------------------------------------
+P memory           1.0  Memory allocation/deallocation tracing module. Tracks 
+                        calls of malloc, calloc, realloc, posix_memalign and 
+                        free functions.
+P memtransfer      1.0  Memory transfer tracing module. Tracks calls of the 
+                        functions that results in changing memory blocks (
+                        strcpy, memmove, memset etc).
+.fi
+.SH SEE ALSO
+.IR sp-rtrace-postproc (1),
+.IR sp-rtrace-resolve (1)
+.SH COPYRIGHT
+Copyright (C) 2010 Nokia Corporation.
+.PP
+This is free software. You may redistribute copies of it under the
+terms of the GNU General Public License v2 included with the software.
+There is NO WARRANTY, to the extent permitted by law.

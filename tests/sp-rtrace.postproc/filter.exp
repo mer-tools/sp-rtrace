@@ -1,0 +1,104 @@
+#
+# This file is part of sp-rtrace package.
+#
+# Copyright (C) 2010 by Nokia Corporation
+#
+# Contact: Eero Tamminen <eero.tamminen@nokia.com>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public License
+# as published by the Free Software Foundation; either version 2 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+# 02r10-1301 USA
+#
+
+set src_dir "sp-rtrace.postproc"
+set out_file "alloc_test"
+set src_deps ""
+set src_opts "-g"
+
+proc test_binary_filter { out } {
+	set out_file "$::bin_dir/sample.txt.$out"
+	exec sp-rtrace-postproc -${out}i $::src_dir/sample.raw > $out_file
+	if { ![file exists $out_file] || [file size $out_file] == 0} {
+		fail "Failed to produce trace report: $out_file"
+		return -1
+	}
+	spawn diff -u $::src_dir/sample.txt.$out $out_file
+	expect {
+		-re {.+} {
+			fail "diff -u $::src_dir/sample.txt.$out $out_file:\n$expect_out(buffer)"
+			return 0;
+		}
+	}
+	pass "sp-rtrace-postproc -${out}i <binary data>"
+}
+
+proc test_text_filter { in out } {
+	set out_file "$::bin_dir/sample.txt.$in.$out"
+	exec sp-rtrace-postproc -${out}i $::src_dir/sample.txt.$in > $out_file
+	if { ![file exists $out_file] || [file size $out_file] == 0} {
+		fail "Failed to produce trace report: $out_file"
+		return -1
+	}
+	spawn diff -u $::src_dir/sample.txt.$in.$out $out_file
+	expect {
+		-re {.+} {
+			fail "diff -u $::src_dir/sample.txt.$in.$out $out_file:\n$expect_out(buffer)"
+			return 0;
+		}
+	}
+	pass "sp-trace-postproc -${out}i <binary data> | sp-rtrace-postproc -${out}"
+}
+
+#
+# Tests if the postprocessing works correctly with input
+# data post-processed with all possible options.
+#
+proc test_postproc_filters { args } {
+	if { [test_binary_filter ""] == -1} {return -1}
+	if { [test_binary_filter "r"] == -1} {return -1}
+	if { [test_binary_filter "lc"] == -1} {return -1}
+	if { [test_binary_filter "lcr"] == -1} {return -1}
+	
+	if { [test_text_filter "" ""] == -1} {return -1}
+	if { [test_text_filter "" "r"] == -1} {return -1}
+	if { [test_text_filter "" "lc"] == -1} {return -1}
+	if { [test_text_filter "" "lcr"] == -1} {return -1}
+	
+	if { [test_text_filter "r" ""] == -1} {return -1}
+	if { [test_text_filter "r" "r"] == -1} {return -1}
+	if { [test_text_filter "r" "lc"] == -1} {return -1}
+	if { [test_text_filter "r" "lcr"] == -1} {return -1}
+	
+	if { [test_text_filter "lc" ""] == -1} {return -1}
+	if { [test_text_filter "lc" "r"] == -1} {return -1}
+	if { [test_text_filter "lc" "lc"] == -1} {return -1}
+	if { [test_text_filter "lc" "lcr"] == -1} {return -1}
+	
+	if { [test_text_filter "lcr" ""] == -1} {return -1}
+	if { [test_text_filter "lcr" "r"] == -1} {return -1}
+	if { [test_text_filter "lcr" "lc"] == -1} {return -1}
+	if { [test_text_filter "lcr" "lcr"] == -1} {return -1}
+}
+
+#
+#
+#
+set result [rt_compile $src_dir $out_file $src_deps $src_opts]
+if { $result == "" } {
+
+	rt_test test_postproc_filters
+
+} else {
+	fail  "failed to compile $src_dir/$out_file.c:\n $result"
+}
