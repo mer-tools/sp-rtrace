@@ -48,6 +48,8 @@ proc check_print_header { version arch time pid process } {
 			set out_process $expect_out(5,string)
 		} 
 	}
+	exp_close
+	exp_wait
 	if { $out_version != $version } {
 		fail "Wrong header version field. Expected '$version', got '$out_version'"
 		return -1
@@ -84,6 +86,8 @@ proc check_print_mmap { module from to } {
 			set out_to $expect_out(3,string)
 		} 
 	}
+	exp_close
+	exp_wait
 	if { $out_module != $module } {
 		fail "Wrong mmap module name. Expected '$module', got '$out_module'"
 		return -1
@@ -126,6 +130,8 @@ proc check_print_call { index context timestamp name res_size res_id } {
 			}
 		} 
 	}
+	exp_close
+	exp_wait
 	if { "$out_index" != "$index" } {
 		fail "Wrong call index. Expected '$index', got '$out_index'"
 		return -1
@@ -160,6 +166,7 @@ proc check_print_trace { nframes args } {
 		lappend out_args $arg
 	}
 	set index 0
+	set rc 0
 	eval spawn $::bin_dir/$::out_file trace $out_args
 	expect {
 		-re {(?n)^\t(0x[0-9a-fA-F]+)(?: \(([^\r\n]+)\)|)\s*$} {
@@ -173,11 +180,11 @@ proc check_print_trace { nframes args } {
 			set in_resolved "[lindex $args [expr $index * 2 + 1]]"
 			if {  $in_addr != $out_addr } {
 				fail "Wrong bactrace address. Expected '$in_addr', got '$out_addr"
-				return -1
+				set rc -1
 			}
 			if {  $in_resolved != $out_resolved } {
 				fail "Wrong bactrace resolved name. Expected '$in_resolved', got '$out_resolved"
-				return -1
+				set rc -1
 			}
 			set expect_out(2,string) ""
 			set index [expr $index + 1]
@@ -185,15 +192,16 @@ proc check_print_trace { nframes args } {
 		}
 		-re	{(?n)^([^\n\r]+)\s*$} {
 			fail "Unrecognized backtrace format: $expect_out(1,string)"
-			return -1
+			set rc -1
 		}		
 	}
-	return 0
+	exp_wait
+	return $rc
 }
 
 
 proc check_print_trace_step { addr name } {
-
+	set rc 0
 	spawn $::bin_dir/$::out_file trace_step $addr $name
 	expect {
 		-re {(?n)^\t(0x[0-9a-fA-F]+)(?: \(([^\n\r]+)\)|)\s*$} {
@@ -206,18 +214,21 @@ proc check_print_trace_step { addr name } {
 		}
 		if {  $addr != $out_addr } {
 			fail "Wrong bactrace step address. Expected '$addr', got '$out_addr"
-			return -1
+			set rc -1
 		}
 		if {  $name != $out_name } {
 			fail "Wrong bactrace step resolved name. Expected '$name', got '$out_name"
-			return -1
+			set rc -1
 		}
 	}
-	return 0
+	exp_close
+	exp_wait
+	return $rc
 }
 
 proc check_print_context { id name } {
 	
+	set rc 0
 	set out_name ""
 	set out_id ""
 	spawn $::bin_dir/$::out_file context $id $name
@@ -229,16 +240,19 @@ proc check_print_context { id name } {
 	}
 	if {  $id != $out_id } {
 		fail "Wrong context id. Expected '$id', got '$out_id'"
-		return -1
+		set rc -1
 	}
 	if {  $name != $out_name } {
 		fail "Wrong context name. Expected '$name', got '$out_name'"
-		return -1
+		set rc 0
 	}
-	return 0
+	exp_close
+	exp_wait
+	return $rc
 }
 
 proc check_print_comment { comment } {
+	set rc 0
 	set out_comment ""
 	spawn $::bin_dir/$::out_file comment $comment
 	expect {
@@ -248,12 +262,15 @@ proc check_print_comment { comment } {
 	}
 	if {  $comment != $out_comment } {
 		fail "Wrong comment text. Expected '$comment', got '$out_comment'"
-		return -1
+		set rc -1
 	}
+	exp_close
+	exp_wait
 	return 0
 }
 
 proc check_print_argument { args } {
+	set rc 0
 	set out_arg ""
 	eval spawn $::bin_dir/$::out_file args $args
 	set index 0
@@ -263,17 +280,18 @@ proc check_print_argument { args } {
 			set in_arg [lindex $args $index]
 			if {  $in_arg != $out_arg } {
 				fail "Wrong function argument. Expected '$in_arg', got '$out_arg'"
-				return -1
+				set rc -1
 			}
 			set index [expr $index + 1]
 			exp_continue
 		}
 		-re	{(?n)^([^\n\r]+)\s*$} {
 			fail "Unrecognized function argument format: $expect_out(1,string)"
-			return -1
+			set rc -1
 		}		
 	}
-	return 0
+	exp_wait
+	return $rc
 }
 
 #
@@ -353,7 +371,7 @@ proc test_print_argument { args } {
 
 set result [rt_compile $src_dir $out_file $src_deps $src_opts]
 if { $result == "" } {
-
+	
 	rt_test test_print_header
 	rt_test test_print_mmap
 	rt_test test_print_call

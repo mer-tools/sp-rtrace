@@ -67,7 +67,6 @@ proc rt_test { testcase } {
 #
 proc rt_run_test { out_file } {
 	spawn "$::bin_dir/$out_file"
-
 	expect {
 		-re "\t(\[^\.\]+) \.\.\. ok" {
 			pass "$expect_out(1,string)"
@@ -84,6 +83,7 @@ proc rt_run_test { out_file } {
 			exp_continue
 		}
 	}
+	exp_wait 
 }
 
 #
@@ -167,6 +167,7 @@ proc test_module { module args } {
 			exp_continue
 		}
 	}
+	exp_wait
 	foreach name $args {
 		if { ![info exists tracked($name)] } {
 			fail "$module module: function $name"

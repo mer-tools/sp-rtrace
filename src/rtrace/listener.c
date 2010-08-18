@@ -62,7 +62,7 @@ static char output_buffer[BUFFER_SIZE * 2];
 static char* output_buffer_head = output_buffer;
 
 /* the handshake packet buffer */
-static char* hs_buffer[256];
+static char hs_buffer[256];
 static int hs_size = 0;
 
 /**
@@ -234,18 +234,18 @@ static int process_packet(const char* data, int size)
 		write_data(hs_buffer, hs_size);
 	}
 	else if (type == SP_RTRACE_PROTO_PROCESS_INFO) {
-		/* store target process pid. It will be needed to locate maps file */
-		offset += read_dword(data + offset, (unsigned int*)&rtrace_options.pid);
 
 		/* scan the timestamp value and set if it's zero */
 		int secs;
-		read_dword(data + offset, (unsigned int*)&secs);
+		read_dword(data + offset + 4, (unsigned int*)&secs);
 		if (!secs) {
 			struct timeval tv;
 			gettimeofday(&tv, NULL);
-			offset += write_dword((char*)data + offset, tv.tv_sec);
-			write_dword((char*)data + offset, tv.tv_usec);
+			write_dword((char*)data + offset + 4, tv.tv_sec);
+			write_dword((char*)data + offset + 8, tv.tv_usec);
 		}
+		/* store target process pid. It will be needed to locate maps file */
+		read_dword(data + offset, (unsigned int*)&rtrace_options.pid);
 	}
 	else if (type == SP_RTRACE_PROTO_NEW_LIBRARY) {
 		/* NL packet is not forwarded furhter to  post-procsesor.

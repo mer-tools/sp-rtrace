@@ -29,19 +29,18 @@ set src_opts "-g -lsp-rtrace1 -L../src/.libs"
 
 proc test_context_filter { context postproc } {
 	set out_file "$::bin_dir/context.txt.$context.$postproc"
-	exec sp-rtrace-postproc -${context} -${postproc}i $::src_dir/context.raw > $out_file
+	exec sp-rtrace-postproc -${context} -${postproc}i $::src_dir/context.txt > $out_file
 	if { ![file exists $out_file] || [file size $out_file] == 0} {
 		fail "Failed to produce trace report: $out_file"
 		return -1
 	}
-	spawn diff -u $::src_dir/context.txt.$context.$postproc $out_file
-	expect {
-		-re {.+} {
-			fail "diff -u $::src_dir/context.txt.$context.$postproc $out_file:\n$expect_out(buffer)"
-			return 0;
-		}
+	catch { exec diff -u $::src_dir/context.txt.$context.$postproc $out_file } result
+	if { $result != "" } {
+		fail "diff -u $::src_dir/context.txt.$context.$postproc $out_file"
+		return -1
 	}
 	pass "sp-rtrace-postproc -${context} -${postproc}i <binary data>"
+	return 0
 }
 
 proc test_context_filters { args } {

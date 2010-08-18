@@ -30,7 +30,7 @@ set src_opts "-L$lib_dir -lsp-rtrace1 -O3"
 # test case for context with preloaded sp-rtrace-main module
 #
 proc test_context { args } {
-	rt_preload_set "libsp-rtrace-main.so"
+	rt_preload_set "/usr/lib/sp-rtrace/libsp-rtrace-main.so"
 	rt_run_test $::out_file
 	rt_preload_clear
 }

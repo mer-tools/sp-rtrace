@@ -29,6 +29,7 @@
 
 #define _GNU_SOURCE
 #include <dlfcn.h>
+#include <stdio.h>
 
 #include "rtrace_testsuite.h"
 #include "library/sp_rtrace_context.h"

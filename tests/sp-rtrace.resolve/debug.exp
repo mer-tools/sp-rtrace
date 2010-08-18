@@ -30,27 +30,33 @@ set src_opts "-O0"
 proc check_resolve_debug { args } {
 	spawn sp-rtrace -p memory -P-r -s -x $::bin_dir/$::out_file
 	set index 0
+	set rc 0
 	expect {
 		-re {(?n)^\t0x[0-9a-fA-F]+ \(([^\r\n]+)\)[\r\n]$} {
 			if { ![regexp {^in ([^ ]+) at .*/([^/]+)$} $expect_out(1,string) match name source] } {
 				fail "couldn't parse backtrace record: $expect_out(1,string)"
+				exp_close
+				exp_wait
 				return -1
 			}
 			set out_name [lindex $args $index]
 			set out_source $::out_file.c:[lindex $args [expr $index + 1]]
 			if { $name != $out_name } {
 				fail "expected function: $out_name, but got: $name"
-				return -1				
+				exp_close
+				set rc -1			
 			}
 			if { $source != $out_source } {
 				fail "expected source location: $out_source, but got: $source"
-				return -1				
+				exp_close
+				set rc -1			
 			}
 			set index [expr $index + 2]
 			exp_continue
 		}
 	}
-	return 0
+	exp_wait
+	return $rc
 }
 
 proc test_resolve_debug { args } {

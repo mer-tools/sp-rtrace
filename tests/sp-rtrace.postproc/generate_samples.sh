@@ -49,10 +49,13 @@ fi
 LOG_RAW=$(ls *.rtrace)
 LOG_SAMPLE="sample.txt"
 
-sp-rtrace-postproc -i $LOG_RAW > $LOG_SAMPLE.
-sp-rtrace-postproc -i $LOG_RAW -r > $LOG_SAMPLE.r
-sp-rtrace-postproc -i $LOG_RAW -lc > $LOG_SAMPLE.lc
-sp-rtrace-postproc -i $LOG_RAW -lcr > $LOG_SAMPLE.lcr
+sp-rtrace-postproc -i $LOG_RAW > $LOG_SAMPLE
+rm $LOG_RAW
+
+sp-rtrace-postproc -i $LOG_SAMPLE > $LOG_SAMPLE.
+sp-rtrace-postproc -i $LOG_SAMPLE -r > $LOG_SAMPLE.r
+sp-rtrace-postproc -i $LOG_SAMPLE -lc > $LOG_SAMPLE.lc
+sp-rtrace-postproc -i $LOG_SAMPLE -lcr > $LOG_SAMPLE.lcr
 
 sp-rtrace-postproc -i $LOG_SAMPLE. > $LOG_SAMPLE..
 sp-rtrace-postproc -i $LOG_SAMPLE. -r > $LOG_SAMPLE..r
@@ -74,7 +77,6 @@ sp-rtrace-postproc -i $LOG_SAMPLE.lcr -r > $LOG_SAMPLE.lcr.r
 sp-rtrace-postproc -i $LOG_SAMPLE.lcr -lc > $LOG_SAMPLE.lcr.lc
 sp-rtrace-postproc -i $LOG_SAMPLE.lcr -lcr > $LOG_SAMPLE.lcr.lcr
 
-mv $LOG_RAW sample.raw
 
 #
 # context samples
@@ -97,22 +99,23 @@ fi
 LOG_RAW=$(ls *.rtrace)
 LOG_SAMPLE="context.txt"
 
-sp-rtrace-postproc  -i $LOG_RAW > $LOG_SAMPLE..
-sp-rtrace-postproc -C1 -i $LOG_RAW > $LOG_SAMPLE.C1.
-sp-rtrace-postproc -C2 -i $LOG_RAW > $LOG_SAMPLE.C2.
-sp-rtrace-postproc -C3 -i $LOG_RAW > $LOG_SAMPLE.C3.
-sp-rtrace-postproc -C4 -i $LOG_RAW > $LOG_SAMPLE.C4.
+sp-rtrace-postproc -i $LOG_RAW > $LOG_SAMPLE
+rm $LOG_RAW
 
-sp-rtrace-postproc  -lci $LOG_RAW > $LOG_SAMPLE..lc
-sp-rtrace-postproc -C1 -lci $LOG_RAW > $LOG_SAMPLE.C1.lc
-sp-rtrace-postproc -C2 -lci $LOG_RAW > $LOG_SAMPLE.C2.lc
-sp-rtrace-postproc -C3 -lci $LOG_RAW > $LOG_SAMPLE.C3.lc
-sp-rtrace-postproc -C4 -lci $LOG_RAW > $LOG_SAMPLE.C4.lc
+sp-rtrace-postproc  -i $LOG_SAMPLE > $LOG_SAMPLE..
+sp-rtrace-postproc -C1 -i $LOG_SAMPLE > $LOG_SAMPLE.C1.
+sp-rtrace-postproc -C2 -i $LOG_SAMPLE > $LOG_SAMPLE.C2.
+sp-rtrace-postproc -C3 -i $LOG_SAMPLE > $LOG_SAMPLE.C3.
+sp-rtrace-postproc -C4 -i $LOG_SAMPLE > $LOG_SAMPLE.C4.
 
-sp-rtrace-postproc  -lcri $LOG_RAW > $LOG_SAMPLE..lcr
-sp-rtrace-postproc -C1 -lcri $LOG_RAW > $LOG_SAMPLE.C1.lcr
-sp-rtrace-postproc -C2 -lcri $LOG_RAW > $LOG_SAMPLE.C2.lcr
-sp-rtrace-postproc -C3 -lcri $LOG_RAW > $LOG_SAMPLE.C3.lcr
-sp-rtrace-postproc -C4 -lcri $LOG_RAW > $LOG_SAMPLE.C4.lcr
+sp-rtrace-postproc  -lci $LOG_SAMPLE > $LOG_SAMPLE..lc
+sp-rtrace-postproc -C1 -lci $LOG_SAMPLE > $LOG_SAMPLE.C1.lc
+sp-rtrace-postproc -C2 -lci $LOG_SAMPLE > $LOG_SAMPLE.C2.lc
+sp-rtrace-postproc -C3 -lci $LOG_SAMPLE > $LOG_SAMPLE.C3.lc
+sp-rtrace-postproc -C4 -lci $LOG_SAMPLE > $LOG_SAMPLE.C4.lc
 
-mv $LOG_RAW context.raw
+sp-rtrace-postproc  -lcri $LOG_SAMPLE > $LOG_SAMPLE..lcr
+sp-rtrace-postproc -C1 -lcri $LOG_SAMPLE > $LOG_SAMPLE.C1.lcr
+sp-rtrace-postproc -C2 -lcri $LOG_SAMPLE > $LOG_SAMPLE.C2.lcr
+sp-rtrace-postproc -C3 -lcri $LOG_SAMPLE > $LOG_SAMPLE.C3.lcr
+sp-rtrace-postproc -C4 -lcri $LOG_SAMPLE > $LOG_SAMPLE.C4.lcr

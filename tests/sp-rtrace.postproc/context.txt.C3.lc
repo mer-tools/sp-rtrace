@@ -1,9 +1,22 @@
-version=1.0, arch=i486-linux-gnu, time=2010.8.13 16:14:41, process=, pid=22258, 
+version=1.0, arch=i486-linux-gnu, time=2010.8.18 17:06:19, process=, pid=9560, 
+@ 1 : first
+@ 2 : second
+: /usr/lib/sp-rtrace/libsp-rtrace-main.so.1.0.0 => 0x1ed000-0x1f2000
+: /lib/tls/i686/cmov/libc-2.11.1.so => 0x1f6000-0x349000
+: /usr/lib/libsp-rtrace1.so.1.0.0 => 0x8e4000-0x8e6000
+: /lib/ld-2.11.1.so => 0xa88000-0xaa3000
+: /lib/tls/i686/cmov/libpthread-2.11.1.so => 0xb48000-0xb5d000
+: /lib/tls/i686/cmov/libdl-2.11.1.so => 0xbbb000-0xbbd000
+: /lib/tls/i686/cmov/librt-2.11.1.so => 0xd18000-0xd1f000
+: /lib/libgcc_s.so.1 => 0xde8000-0xe05000
+: /lib/tls/i686/cmov/libm-2.11.1.so => 0xe44000-0xe68000
+: /usr/lib/sp-rtrace/libsp-rtrace-memory.so.1.0.0 => 0xedb000-0xedd000
+: /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/bin/alloc_context_test => 0x8048000-0x8049000
 # heap status information:
-#   heap bottom 0x835b000
-#   heap top 0x837c000
-#   lowest block 0x835b7c0
-#   highest block 0x8362210
+#   heap bottom 0x867f000
+#   heap top 0x86a0000
+#   lowest block 0x867f008
+#   highest block 0x8686600
 #   non-mmapped space allocated from system 135168
 #   number of free chunks 1
 #   number of fastbin blocks 0
@@ -16,59 +29,47 @@ version=1.0, arch=i486-linux-gnu, time=2010.8.13 16:14:41, process=, pid=22258,
 #   top-most, releasable (via malloc_trim) space 104968
 # tracing module: main (1.0)
 # tracing module: memory (1.0)
-@ 1 : first context
-@ 2 : second context
-: /lib/tls/i686/cmov/libpthread-2.11.1.so => 0x110000-0x125000
-: /usr/lib/sp-rtrace/libsp-rtrace-memory.so.1.0.0 => 0x2af000-0x2b1000
-: /usr/lib/libsp-rtrace1.so.1.0.0 => 0x45a000-0x45c000
-: /lib/tls/i686/cmov/libm-2.11.1.so => 0x5ad000-0x5d1000
-: /lib/tls/i686/cmov/libdl-2.11.1.so => 0x69d000-0x69f000
-: /lib/ld-2.11.1.so => 0x928000-0x943000
-: /lib/tls/i686/cmov/libc-2.11.1.so => 0x9df000-0xb32000
-: /usr/lib/sp-rtrace/libsp-rtrace-main.so.1.0.0 => 0xb9b000-0xba0000
-: /lib/tls/i686/cmov/librt-2.11.1.so => 0xd9f000-0xda6000
-: /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/bin/alloc_context_test => 0x8048000-0x8049000
-2. @2 [09:02:05.914] malloc(1002) = 0x835b7c0
-14. @2 [09:02:05.914] malloc(1002) = 0x835c780
-26. @2 [09:02:05.914] malloc(1002) = 0x835d740
-38. @2 [09:02:05.914] malloc(1002) = 0x835e700
-50. @2 [09:02:05.914] malloc(1002) = 0x835f6c0
+2. @2 [07:02:31.396] malloc(1002) = 0x867f7c0
+14. @2 [07:02:31.396] malloc(1002) = 0x8680780
+26. @2 [07:02:31.397] malloc(1002) = 0x8681740
+38. @2 [07:02:31.397] malloc(1002) = 0x8682700
+50. @2 [07:02:31.397] malloc(1002) = 0x86836c0
 	0x80486fa
 	0x8048759
 	0x80487a9
-3. @3 [09:02:05.914] malloc(1001) = 0x835bbb0
-15. @3 [09:02:05.914] malloc(1001) = 0x835cb70
-27. @3 [09:02:05.914] malloc(1001) = 0x835db30
-39. @3 [09:02:05.914] malloc(1001) = 0x835eaf0
-51. @3 [09:02:05.914] malloc(1001) = 0x835fab0
+3. @3 [07:02:31.396] malloc(1001) = 0x867fbb0
+15. @3 [07:02:31.396] malloc(1001) = 0x8680b70
+27. @3 [07:02:31.397] malloc(1001) = 0x8681b30
+39. @3 [07:02:31.397] malloc(1001) = 0x8682af0
+51. @3 [07:02:31.397] malloc(1001) = 0x8683ab0
 	0x80486a3
 	0x804870f
 	0x8048759
 	0x80487a9
-4. @3 [09:02:05.914] malloc(1000) = 0x835bfa0
-16. @3 [09:02:05.914] malloc(1000) = 0x835cf60
-28. @3 [09:02:05.914] malloc(1000) = 0x835df20
-40. @3 [09:02:05.914] malloc(1000) = 0x835eee0
-52. @3 [09:02:05.914] malloc(1000) = 0x835fea0
+4. @3 [07:02:31.396] malloc(1000) = 0x867ffa0
+16. @3 [07:02:31.396] malloc(1000) = 0x8680f60
+28. @3 [07:02:31.397] malloc(1000) = 0x8681f20
+40. @3 [07:02:31.397] malloc(1000) = 0x8682ee0
+52. @3 [07:02:31.397] malloc(1000) = 0x8683ea0
 	0x8048666
 	0x80486b8
 	0x804870f
 	0x8048759
 	0x80487a9
-61. @2 [09:02:05.914] malloc(1002) = 0x8360290
-70. @2 [09:02:05.914] malloc(1002) = 0x8360e60
-79. @2 [09:02:05.914] malloc(1002) = 0x8361a30
+61. @2 [07:02:31.397] malloc(1002) = 0x8684290
+70. @2 [07:02:31.397] malloc(1002) = 0x8684e60
+79. @2 [07:02:31.397] malloc(1002) = 0x8685a30
 	0x80486fa
 	0x80487cc
-62. @3 [09:02:05.914] malloc(1001) = 0x8360680
-71. @3 [09:02:05.914] malloc(1001) = 0x8361250
-80. @3 [09:02:05.914] malloc(1001) = 0x8361e20
+62. @3 [07:02:31.397] malloc(1001) = 0x8684680
+71. @3 [07:02:31.397] malloc(1001) = 0x8685250
+80. @3 [07:02:31.397] malloc(1001) = 0x8685e20
 	0x80486a3
 	0x804870f
 	0x80487cc
-63. @3 [09:02:05.914] malloc(1000) = 0x8360a70
-72. @3 [09:02:05.914] malloc(1000) = 0x8361640
-81. @3 [09:02:05.914] malloc(1000) = 0x8362210
+63. @3 [07:02:31.397] malloc(1000) = 0x8684a70
+72. @3 [07:02:31.397] malloc(1000) = 0x8685640
+81. @3 [07:02:31.397] malloc(1000) = 0x8686210
 	0x8048666
 	0x80486b8
 	0x804870f

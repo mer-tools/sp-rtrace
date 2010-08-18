@@ -30,22 +30,24 @@ set src_opts "-O -rdynamic"
 proc check_resolve_rdynamic { args } {
 	spawn sp-rtrace -p memory -P-r -s -x $::bin_dir/$::out_file
 	set index 0
+	set rc 0
 	expect {
 		-re {(?n)^\t0x[0-9a-fA-F]+ \(([^\r\n]+)\)[\r\n]$} {
 			if { ![regexp {^in (.*)$} $expect_out(1,string) match name] } {
 				fail "couldn't parse backtrace record: $expect_out(1,string)"
-				return -1
+				set rc -1
 			}
 			set out_name [lindex $args $index]
 			if { $name != $out_name } {
 				fail "expected function: $out_name, but got: $name"
-				return -1				
+				set rc -1
 			}
 			set index [expr $index + 1]
 			exp_continue
 		}
 	}
-	return 0
+	exp_wait
+	return $rc
 }
 
 proc test_resolve_rdynamic { args } {

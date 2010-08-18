@@ -34,4 +34,3 @@ implementation. The sp_rtrace_memtransfer module is used to track
 memory transfer operations. 
 
 TODO:
-File mapping and shared memory tracking modules.

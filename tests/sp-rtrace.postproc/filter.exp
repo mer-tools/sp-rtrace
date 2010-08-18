@@ -33,14 +33,13 @@ proc test_binary_filter { out } {
 		fail "Failed to produce trace report: $out_file"
 		return -1
 	}
-	spawn diff -u $::src_dir/sample.txt.$out $out_file
-	expect {
-		-re {.+} {
-			fail "diff -u $::src_dir/sample.txt.$out $out_file:\n$expect_out(buffer)"
-			return 0;
-		}
+	catch { diff -u $::src_dir/sample.txt.$out $out_file } result
+	if { $result != "" } {
+		fail "diff -u $::src_dir/sample.txt.$out $out_file"
+		return -1
 	}
 	pass "sp-rtrace-postproc -${out}i <binary data>"
+	return 0
 }
 
 proc test_text_filter { in out } {
@@ -50,14 +49,13 @@ proc test_text_filter { in out } {
 		fail "Failed to produce trace report: $out_file"
 		return -1
 	}
-	spawn diff -u $::src_dir/sample.txt.$in.$out $out_file
-	expect {
-		-re {.+} {
-			fail "diff -u $::src_dir/sample.txt.$in.$out $out_file:\n$expect_out(buffer)"
-			return 0;
-		}
+	catch { diff -u $::src_dir/sample.txt.$in.$out $out_file } result
+	if { $result != "" } {
+		fail "diff -u $::src_dir/sample.txt.$in.$out $out_file"
+		return -1
 	}
 	pass "sp-trace-postproc -${out}i <binary data> | sp-rtrace-postproc -${out}"
+	return 0
 }
 
 #
@@ -65,10 +63,10 @@ proc test_text_filter { in out } {
 # data post-processed with all possible options.
 #
 proc test_postproc_filters { args } {
-	if { [test_binary_filter ""] == -1} {return -1}
-	if { [test_binary_filter "r"] == -1} {return -1}
-	if { [test_binary_filter "lc"] == -1} {return -1}
-	if { [test_binary_filter "lcr"] == -1} {return -1}
+	#~ if { [test_binary_filter ""] == -1} {return -1}
+	#~ if { [test_binary_filter "r"] == -1} {return -1}
+	#~ if { [test_binary_filter "lc"] == -1} {return -1}
+	#~ if { [test_binary_filter "lcr"] == -1} {return -1}
 	
 	if { [test_text_filter "" ""] == -1} {return -1}
 	if { [test_text_filter "" "r"] == -1} {return -1}
