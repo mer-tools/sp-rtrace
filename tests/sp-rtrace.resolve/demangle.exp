@@ -38,7 +38,7 @@ proc check_cpp_demangle { args } {
 				set rc -1
 			}
 			set out_name [lindex $args $index]
-			if { $name != $out_name } {
+			if { $out_name != "*" && $name != $out_name } {
 				fail "expected function: $out_name, but got: $name"
 				set rc -1				
 			}
@@ -51,7 +51,7 @@ proc check_cpp_demangle { args } {
 }
 
 proc test_cpp_demangle { args } {
-	if { [check_cpp_demangle "operator new(unsigned int)" "operator new\[\](unsigned int)" "zero()" "one()" "two()" main] == 0 } {
+	if { [check_cpp_demangle "*" "*" "zero()" "one()" "two()" "start()" "*"] == 0 } {
 		pass "cpp demangling"
 	}
 }

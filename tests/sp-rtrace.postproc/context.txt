@@ -1,18 +1,4 @@
 version=1.0, arch=x86_64-linux-gnu, time=2010.8.19 00:23:00, process=, pid=5288, 
-@ 1 : first
-@ 2 : second
-: /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/bin/alloc_context_test => 0x400000-0x401000
-: /lib/libpthread-2.11.1.so => 0x7f73b6a83000-0x7f73b6a9b000
-: /lib/libdl-2.11.1.so => 0x7f73b6ca0000-0x7f73b6ca2000
-: /lib/librt-2.11.1.so => 0x7f73b6ea4000-0x7f73b6eab000
-: /lib/libc-2.11.1.so => 0x7f73b70ac000-0x7f73b7226000
-: /lib/libm-2.11.1.so => 0x7f73b742f000-0x7f73b74b1000
-: /usr/lib/libsp-rtrace1.so.1.0.0 => 0x7f73b76b2000-0x7f73b76b7000
-: /usr/lib/sp-rtrace/libsp-rtrace-memory.so.1.0.0 => 0x7f73b78b8000-0x7f73b78ba000
-: /usr/lib/sp-rtrace/libsp-rtrace-main.so.1.0.0 => 0x7f73b7bbb000-0x7f73b7bc1000
-: /lib/ld-2.11.1.so => 0x7f73b7dc4000-0x7f73b7de4000
-: [vdso] => 0x7fff917ff000-0x7fff91800000
-: [vsyscall] => 0xffffffffff600000-0xffffffffff601000
 # heap status information:
 #   heap bottom 0x21a4000
 #   heap top 0x21c5000
@@ -30,6 +16,20 @@ version=1.0, arch=x86_64-linux-gnu, time=2010.8.19 00:23:00, process=, pid=5288,
 #   top-most, releasable (via malloc_trim) space 103984
 # tracing module: main (1.0)
 # tracing module: memory (1.0)
+@ 1 : first context
+@ 2 : second context
+: /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/bin/alloc_context_test => 0x400000-0x401000
+: /lib/libpthread-2.11.1.so => 0x7f73b6a83000-0x7f73b6a9b000
+: /lib/libdl-2.11.1.so => 0x7f73b6ca0000-0x7f73b6ca2000
+: /lib/librt-2.11.1.so => 0x7f73b6ea4000-0x7f73b6eab000
+: /lib/libc-2.11.1.so => 0x7f73b70ac000-0x7f73b7226000
+: /lib/libm-2.11.1.so => 0x7f73b742f000-0x7f73b74b1000
+: /usr/lib/libsp-rtrace1.so.1.0.0 => 0x7f73b76b2000-0x7f73b76b7000
+: /usr/lib/sp-rtrace/libsp-rtrace-memory.so.1.0.0 => 0x7f73b78b8000-0x7f73b78ba000
+: /usr/lib/sp-rtrace/libsp-rtrace-main.so.1.0.0 => 0x7f73b7bbb000-0x7f73b7bc1000
+: /lib/ld-2.11.1.so => 0x7f73b7dc4000-0x7f73b7de4000
+: [vdso] => 0x7fff917ff000-0x7fff91800000
+: [vsyscall] => 0xffffffffff600000-0xffffffffff601000
 1. [01:33:33.874] malloc(1003) = 0x21a4010
 	0x400925
 	0x40098d

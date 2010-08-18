@@ -38,7 +38,7 @@ proc check_resolve_rdynamic { args } {
 				set rc -1
 			}
 			set out_name [lindex $args $index]
-			if { $name != $out_name } {
+			if { $out_name != "*" && $name != $out_name } {
 				fail "expected function: $out_name, but got: $name"
 				set rc -1
 			}
@@ -51,7 +51,7 @@ proc check_resolve_rdynamic { args } {
 }
 
 proc test_resolve_rdynamic { args } {
-	if { [check_resolve_rdynamic zero one two main] == 0 } {
+	if { [check_resolve_rdynamic zero one two start *] == 0 } {
 		pass "resolving with -rdynamic"
 	}
 }

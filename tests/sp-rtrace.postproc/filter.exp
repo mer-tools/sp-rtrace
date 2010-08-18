@@ -33,7 +33,7 @@ proc test_binary_filter { out } {
 		fail "Failed to produce trace report: $out_file"
 		return -1
 	}
-	catch { diff -u $::src_dir/sample.txt.$out $out_file } result
+	catch { exec diff -u $::src_dir/sample.txt.$out $out_file } result
 	if { $result != "" } {
 		fail "diff -u $::src_dir/sample.txt.$out $out_file"
 		return -1
@@ -49,8 +49,9 @@ proc test_text_filter { in out } {
 		fail "Failed to produce trace report: $out_file"
 		return -1
 	}
-	catch { diff -u $::src_dir/sample.txt.$in.$out $out_file } result
+	catch { exec diff -u $::src_dir/sample.txt.$in.$out $out_file } result
 	if { $result != "" } {
+		puts ">> $result"
 		fail "diff -u $::src_dir/sample.txt.$in.$out $out_file"
 		return -1
 	}

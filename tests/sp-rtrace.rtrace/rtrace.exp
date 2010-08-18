@@ -94,11 +94,11 @@ proc check_log { command header_recs mmap_recs malloc_recs free_recs {trace_dept
 #
 # Application startup tracing tests with post-processor options
 #
-proc test_startup_text { bt_depth args } {
+proc test_startup { bt_depth args } {
 	verbose "test_startup_text $args"
 	set log_file ""
 	# start test application and send it termination signal after 1 second
-	eval spawn $::src_dir/launcher.sh "$::bin_dir/$::out_file" "-o$::bin_dir" "-s" "-P-" $args 
+	eval spawn $::src_dir/launcher.sh "$::bin_dir/$::out_file" "-o$::bin_dir" "-s" $args 
 	set launcher_sid $spawn_id
  	after 1000
 	if { [exec kill -SIGUSR2 [pidof $::out_file] ] == -1 } {
@@ -107,7 +107,7 @@ proc test_startup_text { bt_depth args } {
 	
 	# text format output log file should be created
 	expect {
-		-re {(?n)^INFO: Created text log file ([^\s]+)} {
+		-re {(?n)^INFO: Created [a-z]+ log file ([^\s]+)} {
 			set log_file $expect_out(1,string)
 		}
 	}
@@ -118,39 +118,11 @@ proc test_startup_text { bt_depth args } {
 		return -1
 	}
 	# print to standard output and verify if it has at least minimum required records
-	set rc [check_log "cat $log_file" 1 2 1 1 $bt_depth]
-	file delete $log_file
-	return $rc
-}
-
-#
-# Application startup tracing tests
-#
-proc test_startup_bin { args } {
-	verbose "test_startup_bin $args"
-	set log_file ""
-	# start test application and send it termination signal after 1 second
-	eval spawn $::src_dir/launcher.sh "$::bin_dir/$::out_file" "-o$::bin_dir" "-s" $args 
-	set launcher_sid $spawn_id
- 	after 1000
-	if { [exec kill -SIGUSR2 [pidof $::out_file]] == -1 } {
-		return -1
+	if { [regexp "\-P\-" $args] } {
+		set rc [check_log "cat $log_file" 1 2 1 1 $bt_depth]
+	} else {
+		set rc [check_log "sp-rtrace-postproc -i$log_file" 1 2 1 1 $bt_depth]
 	}
-
-	# binary format output log file should be created
-	expect {
-		-re {(?n)^INFO: Opening binary log file ([^\s]+)} {
-			set log_file $expect_out(1,string)
-		}
-	}
-	exp_close -i $launcher_sid
-	exp_wait -i $launcher_sid
-	if { $log_file == "" } {
-		fail "no trace output file found"
-		return -1
-	}
-	# convert to text format and verify if it has at least minimum required records
-	set rc [check_log "sp-rtrace-postproc -i$log_file" 1 2 1 1]
 	file delete $log_file
 	return $rc
 }
@@ -172,11 +144,10 @@ proc test_startup_bin_notrace { args } {
 
 	# binary format output log file should NOT be created
 	expect {
-		-re {(?n)^INFO: Opening binary log file ([^\s]+)} {
+		-re {(?n)^INFO: Created binary log file ([^\s]+)} {
 			set log_file $expect_out(1,string)
 		}
 	}
-	exp_close -i $launcher_sid
 	exp_wait -i $launcher_sid
 
 	if { $log_file != "" } {
@@ -187,99 +158,24 @@ proc test_startup_bin_notrace { args } {
 	return 0
 }
 
-#
-# Trace toggling tests for binary output
-#
-proc test_toggle_bin { start mode } {
-	verbose "test_toggle_bin $start $mode"
-	set log_file ""
-	set files ""
-	set rc 0
-	set timeout 5
-	# start test application and send it termination signal after 1 second
-	eval spawn $::src_dir/launcher.sh "$::bin_dir/$::out_file" "-o$::bin_dir" $start $mode 
-	set launcher_sid $spawn_id
-	after 1000
-	
-	set pid [pidof $::out_file]
-	if { $pid <= 0 } {
-		fail "test_toggle_bin: failed to retrieve target process pid"
-		return -1
-	}
-	set on_sid ""
-	for { set i 1 } { $i <= 5 } { incr i } {
-		if { $start == ""} {
-			spawn sp-rtrace $mode -t $pid
-			set on_sid $spawn_id
-		} else {
-			set start ""
-		}
-		set log_file ""
-		# in managed mode the logging sp-rtrace process will be spawned by the main module -
-		# so INFO: output will be printed in the original process. While in normal mode
-		# the toggling sp-rtrace process servers also as logging process - so INFO: output
-		# will be printed in the toggling sp-rtrace process.
-		if { $mode != "" } {
-			set spawn_id $launcher_sid
-		}
-		expect {
-			-re {(?n)^INFO: Opening binary log file ([^\s]+)} {
-				set log_file $expect_out(1,string)
-			}
-		}
-		if { $log_file == "" } {
-			fail "test_toggle_bin: failed to locate binary output file"
-			return -1
-		}
-
-		after 2000
-		spawn sp-rtrace $mode -t $pid
-		expect {
-			eof {}
-		}
-		exp_wait
-		after 1000
-		if { $on_sid != "" } {
-			exp_close -i $on_sid
-			exp_wait -i $on_sid
-		}
-		lappend files $log_file
-		set rc [check_log "sp-rtrace-postproc -i$log_file" 1 2 1 1 7]
-		if { $rc == -1 } break
-	}
-	exec kill -SIGUSR2 $pid
-	exp_close -i $launcher_sid
-	exp_wait -i $launcher_sid
-	set index 0
-	verbose "Trace toggle test produced logs: $files"
-	foreach file $files {
-	#	file delete $file
-		set index [expr $index + 1]
-	}
-	if { $rc == 0 && $index < 5 } {
-		fail "test_toggle_bin: expected 5 files produced by 5 toggles, but got: $index"
-		return -1
-	}
-	return $rc
-}
 
 #
 # Trace toggling tests for text output
 #
-proc test_toggle_text { start mode } {
-	verbose "test_toggle_text $start $mode"
+proc test_toggle_trace { start mode options} {
+	verbose "test_toggle_trace $start $mode $options"
 	set log_file ""
 	set files ""
 	set rc 0
 	set timeout 5
 	# start test application and send it termination signal after 1 second
-	eval spawn $::src_dir/launcher.sh "$::bin_dir/$::out_file" "-o$::bin_dir" "-P-" $start $mode 
+	eval spawn $::src_dir/launcher.sh "$::bin_dir/$::out_file" "-o$::bin_dir" $options $start $mode 
 	set launcher_sid $spawn_id
 	after 1000
 	
 	set pid [pidof $::out_file]
 	if { $pid <= 0 } {
-		fail "test_toggle_text: failed to retrieve target process pid"
+		fail "test_toggle $start $mode $options: failed to retrieve target process pid"
 		return -1
 	}
 
@@ -291,27 +187,41 @@ proc test_toggle_text { start mode } {
 		} else {
 			set start ""
 		}
-
 		after 2000
 		set log_file ""
-		spawn sp-rtrace $mode -t $pid
+		
+		catch { exec sp-rtrace $mode -t $pid } result
+		after 1000
+
+		# in managed mode the logging sp-rtrace process will be spawned by the main module -
+		# so INFO: output will be printed in the original process. While in normal mode
+		# the toggling sp-rtrace process servers also as logging process - so INFO: output
+		# will be printed in the toggling sp-rtrace process.
+
+		if { $mode != ""} {
+			set spawn_id $launcher_sid
+		}
 		expect {
-			-re {(?n)^INFO: Created text log file ([^\s]+)} {
+			-re {(?n)^INFO: Created [a-z]+ log file ([^\s]+)} {
 				set log_file $expect_out(1,string)
 			}
 		}
-		exp_close
-		exp_wait
-		if { $on_sid != "" } {
+		if { $on_sid != ""} {
 			exp_close -i $on_sid
 			exp_wait -i $on_sid
 		}
 		if { $log_file == "" } {
-			fail "test_toggle_text: failed to locate text output file"
+			fail "test_toggle $start $mode $options: failed to locate output file"
+			exp_close -i $launcher_sid
+			exp_wait -i $launcher_sid
 			return -1
 		}
 		lappend files $log_file
-		set rc [check_log "cat $log_file" 1 2 1 1 7]
+		if { [regexp "\-P\-" $options] } {
+			set rc [check_log "cat $log_file" 1 2 1 1 8]
+		} else {
+			set rc [check_log "sp-rtrace-postproc -i$log_file" 1 2 1 1 8]
+		}
 		if { $rc == -1 } break
 	}
 	exec kill -SIGUSR2 $pid
@@ -324,7 +234,7 @@ proc test_toggle_text { start mode } {
 		set index [expr $index + 1]
 	}
 	if { $rc == 0 && $index < 5 } {
-		fail "test_toggle_text: expected 5 files produced by 5 toggles, but got: $index"
+		fail "test_toggle $start $mode $options: expected 5 files produced by 5 toggles, but got: $index"
 		return -1
 	}
 	return $rc
@@ -343,59 +253,57 @@ proc test_trace { args } {
 	}
 	
 	# startup tests with tracing enabled
-	if { [test_startup_text "" ""] == 0 } {
+	if { [test_startup "" "" "-P-"] == 0 } {
 		pass "application startup trace in normal mode with post-processing"
 	}
-	if { [test_startup_text "" "-m"] == 0 } {
+	if { [test_startup "" "-m" "-P-"] == 0 } {
 		pass "application startup trace in managed mode with post-processing"
 	}
-	if { [test_startup_bin "" ""] == 0 } {
+	if { [test_startup "" ""] == 0 } {
 		pass "application startup trace in normal mode"
 	}
-	if { [test_startup_bin "" "-m"] == 0 } {
+	if { [test_startup "" "-m"] == 0 } {
 		pass "application startup trace in managed mode"
 	}
 	
 	# trace toggling tests
-	if { [test_toggle_bin "" ""] == 0 } {
+	if { [test_toggle_trace "" "" ""] == 0 } {
 		pass "trace toggle in normal mode when started with tracing disabled"
 	}
-	if { [test_toggle_bin "-s" ""] == 0 } {
+	if { [test_toggle_trace "-s" "" ""] == 0 } {
 		pass "trace toggle in normal mode when started with tracing enabled"
 	}
-	if { [test_toggle_bin "" "-m"] == 0 } {
+	if { [test_toggle_trace "" "-m" ""] == 0 } {
 		pass "trace toggle in managed mode when started with tracing disabled"
 	}
-	if { [test_toggle_bin "-s" "-m"] == 0 } {
+	if { [test_toggle_trace "-s" "-m" ""] == 0 } {
 		pass "trace toggle in managed mode when started with tracing enabled"
 	}
-
-	# trace toggling tests (with post-processing)
-	if { [test_toggle_text "" ""] == 0 } {
+	if { [test_toggle_trace "" "" "-P-"] == 0 } {
 		pass "trace toggle in normal mode with post-processing when started with tracing disabled"
 	}
-	if { [test_toggle_text "-s" ""] == 0 } {
+	if { [test_toggle_trace "-s" "" "-P-"] == 0 } {
 		pass "trace toggle in normal mode with post-processing when started with tracing enabled"
 	}
-	if { [test_toggle_text "" "-m"] == 0 } {
+	if { [test_toggle_trace "" "-m" "-P-"] == 0 } {
 		pass "trace toggle in managed mode with post-processing when started with tracing disabled"
 	}
-	if { [test_toggle_text "-s" "-m"] == 0 } {
+	if { [test_toggle_trace "-s" "-m" "-P-"] == 0 } {
 		pass "trace toggle in managed mode with post-processing when started with tracing enabled"
 	}
 	
 
 	# backtrace depth tests
-	if { [test_startup_text 0 "-b0"] == 0 } {
+	if { [test_startup 0 "-b0" "-P-"] == 0 } {
 		pass "backtrace depth setting: 0"
 	}
-	if { [test_startup_text 2 "-b2"] == 0 } {
+	if { [test_startup 2 "-b2" "-P-"] == 0 } {
 		pass "backtrace depth setting: 2"
 	}
-	if { [test_startup_text 4 "-b4"] == 0 } {
+	if { [test_startup 4 "-b4" "-P-"] == 0 } {
 		pass "backtrace depth setting: 4"
 	}
-	if { [test_startup_text 7 "20"] == 0 } {
+	if { [test_startup 8 "-b20" "-P-"] == 0 } {
 		pass "backtrace depth setting: 20"
 	}
 	

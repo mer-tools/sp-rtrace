@@ -41,14 +41,12 @@ proc check_resolve_debug { args } {
 			}
 			set out_name [lindex $args $index]
 			set out_source $::out_file.c:[lindex $args [expr $index + 1]]
-			if { $name != $out_name } {
+			if { $out_name != "*" && $name != $out_name } {
 				fail "expected function: $out_name, but got: $name"
-				exp_close
 				set rc -1			
 			}
-			if { $source != $out_source } {
+			if { $out_source != "$::out_file.c:*" && $source != $out_source } {
 				fail "expected source location: $out_source, but got: $source"
-				exp_close
 				set rc -1			
 			}
 			set index [expr $index + 2]
@@ -60,7 +58,7 @@ proc check_resolve_debug { args } {
 }
 
 proc test_resolve_debug { args } {
-	if { [check_resolve_debug zero 34 one 40 two 45 main 50] == 0 } {
+	if { [check_resolve_debug zero 34 one 40 two 45 start 50 * *] == 0 } {
 		pass "resolving with debug symbols"
 	}
 }
