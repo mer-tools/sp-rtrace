@@ -66,7 +66,7 @@ void* three()
 	return malloc(2003);
 }
 
-int main()
+void start()
 {
 	int i;
 	for (i = 0; i < 5; i++) {
@@ -75,6 +75,11 @@ int main()
 	for (i = 0; i < 3; i++) {
 		free(two());
 	}
+}
+
+int main()
+{
+	start();
 	sleep(1);
 	return 0;
 }

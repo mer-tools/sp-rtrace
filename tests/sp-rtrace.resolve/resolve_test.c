@@ -44,9 +44,14 @@ void two()
 	one();
 }
 
-int main()
+void start()
 {
 	two();
+}
+
+int main()
+{
+	start();
 	sleep(1);
 	return 0;
 }

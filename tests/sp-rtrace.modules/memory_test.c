@@ -29,9 +29,8 @@
 
 #include <stdlib.h>
 
-int main()
+void test_memory()
 {
-
 	void* ptr = malloc(1024);
 	free(ptr);
 
@@ -40,6 +39,10 @@ int main()
 	free(ptr);
 
 	posix_memalign(&ptr, 8, 1024);
+}
 
+int main()
+{
+	test_memory();
 	return 0;
 }

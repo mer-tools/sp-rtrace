@@ -71,6 +71,14 @@ static void sigint_handler(int sig)
 	s_loop = 0;
 }
 
+void start()
+{
+	int size = 1000;
+	while (s_loop) {
+		five(size++);
+		sleep(1);
+	}
+}
 
 int main()
 {
@@ -81,10 +89,6 @@ int main()
 		fprintf(stderr, "ERROR: Failed to install SIGUSR2 handler\n");
 		return -1;
 	}
-
-	int size = 1000;
-	while (s_loop) {
-		five(size++);
-		sleep(1);
-	}
+	start();
+	return 0;
 }

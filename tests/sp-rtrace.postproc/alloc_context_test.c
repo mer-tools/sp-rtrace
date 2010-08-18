@@ -74,7 +74,7 @@ void* three()
 	return malloc(2003);
 }
 
-int main()
+void start()
 {
 	context1 = sp_rtrace_context_try_create("first context");
 	context2 = sp_rtrace_context_try_create("second context");
@@ -86,6 +86,11 @@ int main()
 	for (i = 0; i < 3; i++) {
 		free(two());
 	}
+}
+
+int main()
+{
+	start();
 	sleep(1);
 	return 0;
 }
