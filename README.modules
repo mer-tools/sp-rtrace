@@ -33,7 +33,3 @@ See sp_rtrace_memtransfer.c for simple resource tracing module
 implementation. The sp_rtrace_memtransfer module is used to track 
 memory transfer operations. 
 
-   
-TODO:
-   The main module (sp_rtrace_main) must also provide function to 
-   report function call arguments.
