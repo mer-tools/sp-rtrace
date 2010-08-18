@@ -33,9 +33,9 @@ extern int fd_out;
 /**
  * Processes data read from the input stream.
  *
- * @return
+ * @return 0 - success
  */
-void process_data();
+int process_data();
 
 
 #endif /* LISTENER_H */

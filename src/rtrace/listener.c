@@ -77,7 +77,7 @@ int flush_data()
 		if (write(fd_out, output_buffer, size) < 0) {
 			fprintf(stderr, "ERROR: failed to write to file/post-processor pipe (%s)\n",
 					strerror(errno));
-			exit (-1);
+			return -1;
 		}
 	}
 	output_buffer_head = output_buffer;
@@ -103,7 +103,7 @@ int write_data(const char* data, int size)
 	memcpy(output_buffer_head, data, size);
 	output_buffer_head += size;
 	if (output_buffer_head - output_buffer >= BUFFER_SIZE) {
-		flush_data();
+		if (flush_data() < 0) return -1;
 	}
 	return size;
 }
@@ -132,7 +132,7 @@ static long mmap_compare(rd_mmap_t* mmap, const char* name)
  * @param[in] pid   the target process identifier.
  * @return
  */
-static void scan_mmap_data()
+static int scan_mmap_data()
 {
 	char name[PATH_MAX], buffer[PATH_MAX];
 	sprintf(name, "/proc/%d/maps", rtrace_options.pid);
@@ -169,11 +169,12 @@ static void scan_mmap_data()
 				int size = ptr - name;
 				write_word(name, size - 2);
 				/* write the assembled packet to the output stream */
-				write_data(name, size);
+				if (write_data(name, size) < 0) return -1;
 			}
 		}
 		fclose(fp);
 	}
+	return 0;
 }
 
 /**
@@ -231,7 +232,7 @@ static int process_packet(const char* data, int size)
 		/* output settings updated, now the output stream can be initialized */
 		rtrace_connect_output();
 		/* write cached handshake packet after output stream has been initialized */
-		write_data(hs_buffer, hs_size);
+		if (write_data(hs_buffer, hs_size) < 0) return -1;
 	}
 	else if (type == SP_RTRACE_PROTO_PROCESS_INFO) {
 
@@ -263,7 +264,7 @@ static int process_packet(const char* data, int size)
  * Public API
  */
 
-void process_data()
+int process_data()
 {
 	char buffer[BUFFER_SIZE * 2], *ptr_in = buffer;
 	int n, offset, size;
@@ -273,12 +274,12 @@ void process_data()
 	n = read(fd_in, buffer, BUFFER_SIZE - 1);
 	if (n < 1) {
 	    fprintf(stderr, "ERROR: failed to read data from pipe\n");
-	    exit (-1);
+	    return -1;
 	}
 	offset = process_handshake(ptr_in, n);
 	if (offset <= 0) {
 		fprintf(stderr, "ERROR: handshaking packet processing failed\n");
-		exit (-1);
+		return -1;
 	}
 	n -= offset;
 	ptr_in += offset;
@@ -305,5 +306,6 @@ void process_data()
 	}
 	flush_data();
 	dlist_free(&s_mmaps, (op_unary_t)rd_mmap_free);
+	return 0;
 }
 

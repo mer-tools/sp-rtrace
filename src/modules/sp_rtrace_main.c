@@ -241,6 +241,7 @@ static int pipe_buffer_flush()
 		MSG_ERROR_CONST("ERROR: failed to write data into pipe, disabling tracing.\n");
 		enable_tracing(false);
 		sp_rtrace_options->enable = false;
+		fd_proc = 0;
 	}
 	pipe_buffer_head = pipe_buffer;
 	return size;
@@ -671,11 +672,13 @@ static void signal_toggle_tracing(int signo)
 		}
 	}
 	else {
-		write_heap_info();
-		enable_tracing(false);
-		pipe_buffer_flush();
-		close_pipe(fd_proc);
-		fd_proc = 0;
+		if (fd_proc > 0) {
+			write_heap_info();
+			enable_tracing(false);
+			pipe_buffer_flush();
+			close_pipe(fd_proc);
+			fd_proc = 0;
+		}
 	}
 }
 

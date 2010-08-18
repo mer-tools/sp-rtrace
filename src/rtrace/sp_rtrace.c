@@ -77,11 +77,13 @@ rtrace_options_t rtrace_options = {
 		.disable_timestamps = false,
 		.enable_arguments = false,
 		.postproc = NULL,
-		.toggle_signal = NULL,
+		.toggle_signal = SIGUSR1,
+		.toggle_signal_name = NULL,
 		.disable_packet_buffering = false,
 		.pid = 0,
 		.mode = MODE_UNDEFINED,
-		.pid_postproc= 0,
+		.pid_postproc = 0,
+		.output_file = NULL,
 };
 
 /**
@@ -142,6 +144,10 @@ static void display_usage()
 static void sigint_handler(int sig)
 {
 	rtrace_main_loop = 0;
+	/* send toggle signal to tracing process if the trace is active */
+	if (fd_in && rtrace_options.pid) {
+		kill(rtrace_options.pid, rtrace_options.toggle_signal);
+	}
 }
 
 /**
@@ -167,7 +173,7 @@ static void set_environment()
 	if (rtrace_options.disable_timestamps) setenv(rtrace_env_opt[OPT_DISABLE_TIMESTAMPS], OPT_ENABLE, 1);
 	if (rtrace_options.enable_arguments) setenv(rtrace_env_opt[OPT_ENABLE_ARGUMENTS], OPT_ENABLE, 1);
 	if (rtrace_options.postproc) setenv(rtrace_env_opt[OPT_POSTPROC], rtrace_options.postproc, 1);
-	if (rtrace_options.toggle_signal) setenv(rtrace_env_opt[OPT_TOGGLE_SIGNAL], rtrace_options.toggle_signal, 1);
+	if (rtrace_options.toggle_signal_name) setenv(rtrace_env_opt[OPT_TOGGLE_SIGNAL], rtrace_options.toggle_signal_name, 1);
 	if (rtrace_options.disable_packet_buffering) setenv(rtrace_env_opt[OPT_DISABLE_PACKET_BUFFERING], OPT_ENABLE, 1);
 	if (rtrace_options.start) setenv(rtrace_env_opt[OPT_START], OPT_ENABLE, 1);
 
@@ -218,7 +224,8 @@ static void free_options()
 	if (rtrace_options.audit) free(rtrace_options.audit);
 	if (rtrace_options.backtrace_depth) free(rtrace_options.backtrace_depth);
 	if (rtrace_options.postproc) free(rtrace_options.postproc);
-	if (rtrace_options.toggle_signal) free(rtrace_options.toggle_signal);
+	if (rtrace_options.toggle_signal_name) free(rtrace_options.toggle_signal_name);
+	if (rtrace_options.output_file) free(rtrace_options.output_file);
 }
 
 /**
@@ -292,14 +299,14 @@ static int open_output_file()
 	if (get_log_filename(rtrace_options.pid, dir, SP_RTRACE_BINARY_FILE_PATTERN,
 			SP_RTRACE_BINARY_FILE_EXT, path, sizeof(path)) != 0) {
 		fprintf(stderr, "ERROR: failed to make new log file name for directory %s\n", dir);
-		exit (-1);
+		return -1;
 	}
-	printf("INFO: Opening binary log file %s\n", path);
 	int fd =  open(path, O_CREAT | O_WRONLY | O_EXCL, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	if (fd == -1) {
 		fprintf(stderr, "ERROR: failed to create log file %s (%s)\n", path, strerror(errno));
-		exit (-1);
+		return -1;
 	}
+	rtrace_options.output_file = strdup_a(path);
 	return fd;
 }
 
@@ -320,7 +327,7 @@ static void create_preproc_pipe(char* pipe_path, size_t size)
 	}
 }
 
-void rtrace_connect_output()
+int rtrace_connect_output()
 {
 	if (rtrace_options.postproc) {
 		/* post-processor options detected. Spawn sp-rtrace-postproc process
@@ -332,6 +339,7 @@ void rtrace_connect_output()
 		/* Create and open binary log file */
 		fd_out = open_output_file();
 	}
+	return fd_out;
 }
 
 /**
@@ -345,6 +353,9 @@ static void disconnect_output()
 	if (rtrace_options.pid_postproc) {
 		int status;
 		waitpid(rtrace_options.pid_postproc, &status, 0);
+	}
+	else {
+		printf("INFO: Created binary log file %s\n", rtrace_options.output_file);
 	}
 }
 
@@ -386,23 +397,21 @@ static void disconnect_input(const char* pipe_path)
  * The tracing is stopped simply by sending toggle signal to the
  * target process.
  * TODO: --follow-forks option support.
- * @param[in] signum   the toggle tracing signal number.
  * @return
  */
-static void stop_tracing(int signum)
+static void stop_tracing()
 {
-	LOG("sending toggle signal to process %d", rtrace_options.pid);
-	kill(rtrace_options.pid, signum);
+	fprintf(stderr, "INFO: Tracing stopped. The log file will be created shortly.\n");
+	kill(rtrace_options.pid, rtrace_options.toggle_signal);
 }
 
 
 /**
  * Starts tracing the target process.
  *
- * @param[in] signum   the toggle tracing signal number.
  * @return
  */
-static void begin_tracing(int signum)
+static void begin_tracing()
 {
 	fprintf(stderr, "INFO: Tracing started. Trace output will be produced after "
 		   "tracing is stopped. To stop tracing either use toggle option "
@@ -411,7 +420,7 @@ static void begin_tracing(int signum)
 		/* The pre-processor is managed by the tracing module.
 		 * Simply send toggle signal and exit.
 		 */
-		kill(rtrace_options.pid, signum);
+		kill(rtrace_options.pid, rtrace_options.toggle_signal);
 	}
 	else {
 		char pipe_path[128];
@@ -422,11 +431,11 @@ static void begin_tracing(int signum)
 		 * connect_output();
 		 */
 		create_preproc_pipe(pipe_path, sizeof(pipe_path));
-		kill(rtrace_options.pid, signum);
+		kill(rtrace_options.pid, rtrace_options.toggle_signal);
 		connect_input(pipe_path);
 
 		/* start data processing */
-		process_data();
+		int rc  = process_data();
 
 		/* close data connection */
 		disconnect_output();
@@ -434,6 +443,7 @@ static void begin_tracing(int signum)
 
 		/* remove pre-processor pipe */
 		remove(pipe_path);
+		exit(rc);
 	}
 }
 
@@ -448,14 +458,14 @@ static void toggle_tracing()
 	snprintf(pipe_path, sizeof(pipe_path), SP_RTRACE_PIPE_PATTERN, rtrace_options.pid);
 
 	int signum = 0;
-	if (rtrace_options.toggle_signal) signum = atoi(rtrace_options.toggle_signal);
-	if (signum == 0) signum = SIGUSR1;
+	if (rtrace_options.toggle_signal_name) signum = atoi(rtrace_options.toggle_signal_name);
+	if (signum > 0) rtrace_options.toggle_signal = signum;
 
 	if (access(pipe_path, F_OK) == 0) {
-		stop_tracing(signum);
+		stop_tracing();
 	}
 	else {
-		begin_tracing(signum);
+		begin_tracing();
 	}
 }
 
@@ -505,10 +515,11 @@ static void start_process(char* app, char* args[])
 		 * connect_output();
 		 */
 
-		process_data();
+		int rc = process_data();
 
 		disconnect_output();
 		disconnect_input(pipe_path);
+		exit (rc);
 	}
 }
 
@@ -551,10 +562,11 @@ static void enter_listen_mode()
 	 */
 	connect_input(0);
 
-	process_data();
+	int rc = process_data();
 
 	disconnect_input(0);
 	disconnect_output();
+	exit (rc);
 }
 
 /**
@@ -748,7 +760,7 @@ int main(int argc, char* argv[])
 			break;
 
 		case 'S':
-			rtrace_options.toggle_signal = strdup_a(optarg);
+			rtrace_options.toggle_signal_name = strdup_a(optarg);
 			break;
 
 		case 'B':

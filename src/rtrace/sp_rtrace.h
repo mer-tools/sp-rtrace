@@ -58,7 +58,8 @@ typedef struct rtrace_options_t {
 	/* the post-processor options */
 	char* postproc;
 	/* signal to use to toggle the tracing */
-	char* toggle_signal;
+	char* toggle_signal_name;
+	int toggle_signal;
 	/* true if event buffering should be disabled */
 	bool disable_packet_buffering;
 	/* the target process identifier */
@@ -67,6 +68,8 @@ typedef struct rtrace_options_t {
 	int mode;
 	/* the post-processor pid */
 	int pid_postproc;
+	/* the output file name */
+	char* output_file;
 } rtrace_options_t;
 
 extern rtrace_options_t rtrace_options;
@@ -77,9 +80,9 @@ extern sig_atomic_t rtrace_main_loop;
  * Connects output descriptor either to post-processor pipe or
  * binary log file.
  *
- * @return
+ * @return  the opened output file/pipe descriptor.
  */
-void rtrace_connect_output();
+int rtrace_connect_output();
 
 #endif
 
