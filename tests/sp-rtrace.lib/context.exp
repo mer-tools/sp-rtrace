@@ -23,7 +23,7 @@
 
 set src_dir "sp-rtrace.lib"
 set out_file "context_test"
-set src_deps ""
+set src_deps "$src_dir/$out_file.c"
 set src_opts "-L$lib_dir -lsp-rtrace1 -O3"
 
 #

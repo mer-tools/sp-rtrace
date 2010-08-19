@@ -10,7 +10,7 @@ core
 tags
 
 # tests
-tests/bin
+tests/bin/*
 
 # autoconf/automake generated files
 autom4te.cache

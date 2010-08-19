@@ -24,7 +24,7 @@
 
 set src_dir "sp-rtrace.modules"
 set out_file "memory_test"
-set src_deps ""
+set src_deps "$src_dir/$out_file.c"
 set src_opts "-O0"
 
 proc test_memory_module { args } {

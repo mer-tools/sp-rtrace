@@ -92,14 +92,8 @@ proc rt_run_test { out_file } {
 proc rt_compile {src_dir out_file {src_deps ""} {src_opts ""} {target_opts "debug"} } {
 	if { [rt_is_compile_enabled] } {
 		foreach dep $src_deps {
-			lappend dep_files "../src/$dep"
+			lappend dep_files "$dep"
 		}
-		if { [regexp {c\+\+} $target_opts] } {
-			set ext ".cpp"
-		} else {
-			set ext ".c"
-		}
-		lappend dep_files "$src_dir/$out_file$ext"
 		append src_opts " -I../src -Ilib"
 		lappend target_opts "additional_flags=$src_opts"
 		

@@ -23,7 +23,7 @@
 
 set src_dir "sp-rtrace.postproc"
 set out_file "alloc_context_test"
-set src_deps ""
+set src_deps "$src_dir/$out_file.c"
 set src_opts "-g -lsp-rtrace1 -L../src/.libs"
 
 
@@ -56,11 +56,11 @@ proc test_context_filters { args } {
 	if { [test_context_filter "C3" "lc"] == -1} {return -1}
 	if { [test_context_filter "C4" "lc"] == -1} {return -1}
 
-	if { [test_context_filter "" "lcr"] == -1} {return -1}
-	if { [test_context_filter "C1" "lcr"] == -1} {return -1}
-	if { [test_context_filter "C2" "lcr"] == -1} {return -1}
-	if { [test_context_filter "C3" "lcr"] == -1} {return -1}
-	if { [test_context_filter "C4" "lcr"] == -1} {return -1}
+	#~ if { [test_context_filter "" "lcr"] == -1} {return -1}
+	#~ if { [test_context_filter "C1" "lcr"] == -1} {return -1}
+	#~ if { [test_context_filter "C2" "lcr"] == -1} {return -1}
+	#~ if { [test_context_filter "C3" "lcr"] == -1} {return -1}
+	#~ if { [test_context_filter "C4" "lcr"] == -1} {return -1}
 }
 
 #

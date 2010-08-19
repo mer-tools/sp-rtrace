@@ -23,7 +23,7 @@
 
 set src_dir "sp-rtrace.core"
 set out_file "sarray_test"
-set src_deps "rtrace-resolve/sarray.c common/utils.c"
+set src_deps "$src_dir/$out_file.c ../src/rtrace-resolve/sarray.c ../src/common/utils.c"
 set src_opts "-O3"
 
 #

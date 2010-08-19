@@ -24,7 +24,7 @@
 
 set src_dir "sp-rtrace.rtrace"
 set out_file "trace_test"
-set src_deps ""
+set src_deps "$src_dir/$out_file.c"
 set src_opts "-O0"
 
 #
@@ -148,6 +148,7 @@ proc test_startup_bin_notrace { args } {
 			set log_file $expect_out(1,string)
 		}
 	}
+	exp_close -i $launcher_sid
 	exp_wait -i $launcher_sid
 
 	if { $log_file != "" } {

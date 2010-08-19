@@ -1,20 +1,19 @@
-version=1.0, arch=x86_64-linux-gnu, time=2010.8.19 00:22:59, process=, pid=5252, 
-: /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/bin/alloc_test => 0x400000-0x401000
-: /lib/libpthread-2.11.1.so => 0x7f9601fae000-0x7f9601fc6000
-: /lib/libdl-2.11.1.so => 0x7f96021cb000-0x7f96021cd000
-: /lib/librt-2.11.1.so => 0x7f96023cf000-0x7f96023d6000
-: /lib/libc-2.11.1.so => 0x7f96025d7000-0x7f9602751000
-: /lib/libm-2.11.1.so => 0x7f960295a000-0x7f96029dc000
-: /usr/lib/sp-rtrace/libsp-rtrace-memory.so.1.0.0 => 0x7f9602bdd000-0x7f9602bdf000
-: /usr/lib/sp-rtrace/libsp-rtrace-main.so.1.0.0 => 0x7f9602ee0000-0x7f9602ee6000
-: /lib/ld-2.11.1.so => 0x7f96030e9000-0x7f9603109000
-: [vdso] => 0x7fff9b3e7000-0x7fff9b3e8000
-: [vsyscall] => 0xffffffffff600000-0xffffffffff601000
+version=1.0, arch=i486-linux-gnu, time=2010.8.19 10:26:57, process=, pid=29774, 
+: /usr/lib/sp-rtrace/libsp-rtrace-memory.so.1.0.0 => 0x110000-0x112000
+: /lib/tls/i686/cmov/libc-2.11.1.so => 0x214000-0x367000
+: /lib/tls/i686/cmov/librt-2.11.1.so => 0x36e000-0x375000
+: /usr/lib/sp-rtrace/libsp-rtrace-main.so.1.0.0 => 0x6ed000-0x6f2000
+: /lib/tls/i686/cmov/libpthread-2.11.1.so => 0x812000-0x827000
+: /lib/libgcc_s.so.1 => 0x8e8000-0x905000
+: /lib/ld-2.11.1.so => 0x966000-0x981000
+: /lib/tls/i686/cmov/libdl-2.11.1.so => 0xf82000-0xf84000
+: /lib/tls/i686/cmov/libm-2.11.1.so => 0xfd5000-0xff9000
+: /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/bin/alloc_test => 0x8048000-0x8049000
 # heap status information:
-#   heap bottom 0x1a4b000
-#   heap top 0x1a6c000
-#   lowest block 0x1a4b010
-#   highest block 0x1a529e0
+#   heap bottom 0x8e07000
+#   heap top 0x8e28000
+#   lowest block 0x8e07008
+#   highest block 0x8e0e600
 #   non-mmapped space allocated from system 135168
 #   number of free chunks 1
 #   number of fastbin blocks 0
@@ -22,68 +21,68 @@ version=1.0, arch=x86_64-linux-gnu, time=2010.8.19 00:22:59, process=, pid=5252,
 #   space in mmapped regions 0
 #   maximum total allocated space 0
 #   space available in freed fastbin blocks 0
-#   total allocated space 31184
-#   total free space 103984
-#   top-most, releasable (via malloc_trim) space 103984
+#   total allocated space 30200
+#   total free space 104968
+#   top-most, releasable (via malloc_trim) space 104968
 # tracing module: main (1.0)
 # tracing module: memory (1.0)
-1. [01:33:32.811] malloc(1003) = 0x1a4b010
-13. [01:33:32.812] malloc(1003) = 0x1a4c650
-25. [01:33:32.812] malloc(1003) = 0x1a4d640
-37. [01:33:32.812] malloc(1003) = 0x1a4e630
-49. [01:33:32.812] malloc(1003) = 0x1a4f620
-	0x4006f1 (in three at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:62)
-	0x400739 (in start at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:73)
-	0x400780 (in main at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:83)
-2. [01:33:32.812] malloc(1002) = 0x1a4ba60
-14. [01:33:32.812] malloc(1002) = 0x1a4ca50
-26. [01:33:32.812] malloc(1002) = 0x1a4da40
-38. [01:33:32.812] malloc(1002) = 0x1a4ea30
-50. [01:33:32.812] malloc(1002) = 0x1a4fa20
-	0x4006b6 (in two at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:53)
-	0x40070a (in three at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:65)
-	0x400739 (in start at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:73)
-	0x400780 (in main at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:83)
-3. [01:33:32.812] malloc(1001) = 0x1a4be60
-15. [01:33:32.812] malloc(1001) = 0x1a4ce50
-27. [01:33:32.812] malloc(1001) = 0x1a4de40
-39. [01:33:32.812] malloc(1001) = 0x1a4ee30
-51. [01:33:32.812] malloc(1001) = 0x1a4fe20
-	0x40067b (in one at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:44)
-	0x4006cf (in two at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:56)
-	0x40070a (in three at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:65)
-	0x400739 (in start at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:73)
-	0x400780 (in main at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:83)
-4. [01:33:32.812] malloc(1000) = 0x1a4c260
-16. [01:33:32.812] malloc(1000) = 0x1a4d250
-28. [01:33:32.812] malloc(1000) = 0x1a4e240
-40. [01:33:32.812] malloc(1000) = 0x1a4f230
-52. [01:33:32.812] malloc(1000) = 0x1a50220
-	0x400652 (in zero at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:36)
-	0x400694 (in one at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:47)
-	0x4006cf (in two at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:56)
-	0x40070a (in three at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:65)
-	0x400739 (in start at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:73)
-	0x400780 (in main at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:83)
-61. [01:33:32.812] malloc(1002) = 0x1a50610
-70. [01:33:32.812] malloc(1002) = 0x1a51200
-79. [01:33:32.812] malloc(1002) = 0x1a51df0
-	0x4006b6 (in two at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:53)
-	0x40075e (in start at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:76)
-	0x400780 (in main at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:83)
-62. [01:33:32.812] malloc(1001) = 0x1a50a10
-71. [01:33:32.812] malloc(1001) = 0x1a51600
-80. [01:33:32.812] malloc(1001) = 0x1a521f0
-	0x40067b (in one at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:44)
-	0x4006cf (in two at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:56)
-	0x40075e (in start at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:76)
-	0x400780 (in main at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:83)
-63. [01:33:32.812] malloc(1000) = 0x1a50e10
-72. [01:33:32.812] malloc(1000) = 0x1a51a00
-81. [01:33:32.812] malloc(1000) = 0x1a525f0
-	0x400652 (in zero at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:36)
-	0x400694 (in one at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:47)
-	0x4006cf (in two at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:56)
-	0x40075e (in start at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:76)
-	0x400780 (in main at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:83)
+1. [10:11:59.408] malloc(1003) = 0x8e07008
+13. [10:11:59.408] malloc(1003) = 0x8e08390
+25. [10:11:59.408] malloc(1003) = 0x8e09350
+37. [10:11:59.408] malloc(1003) = 0x8e0a310
+49. [10:11:59.408] malloc(1003) = 0x8e0b2d0
+	0x8048570 (in three at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:62)
+	0x80485af (in start at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:73)
+	0x80485f1 (in main at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:83)
+2. [10:11:59.408] malloc(1002) = 0x8e077c0
+14. [10:11:59.408] malloc(1002) = 0x8e08780
+26. [10:11:59.408] malloc(1002) = 0x8e09740
+38. [10:11:59.408] malloc(1002) = 0x8e0a700
+50. [10:11:59.408] malloc(1002) = 0x8e0b6c0
+	0x8048533 (in two at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:53)
+	0x8048585 (in three at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:65)
+	0x80485af (in start at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:73)
+	0x80485f1 (in main at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:83)
+3. [10:11:59.408] malloc(1001) = 0x8e07bb0
+15. [10:11:59.408] malloc(1001) = 0x8e08b70
+27. [10:11:59.408] malloc(1001) = 0x8e09b30
+39. [10:11:59.408] malloc(1001) = 0x8e0aaf0
+51. [10:11:59.409] malloc(1001) = 0x8e0bab0
+	0x80484f6 (in one at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:44)
+	0x8048548 (in two at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:56)
+	0x8048585 (in three at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:65)
+	0x80485af (in start at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:73)
+	0x80485f1 (in main at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:83)
+4. [10:11:59.408] malloc(1000) = 0x8e07fa0
+16. [10:11:59.408] malloc(1000) = 0x8e08f60
+28. [10:11:59.408] malloc(1000) = 0x8e09f20
+40. [10:11:59.408] malloc(1000) = 0x8e0aee0
+52. [10:11:59.409] malloc(1000) = 0x8e0bea0
+	0x80484c6 (in zero at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:36)
+	0x804850b (in one at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:47)
+	0x8048548 (in two at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:56)
+	0x8048585 (in three at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:65)
+	0x80485af (in start at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:73)
+	0x80485f1 (in main at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:83)
+61. [10:11:59.409] malloc(1002) = 0x8e0c290
+70. [10:11:59.409] malloc(1002) = 0x8e0ce60
+79. [10:11:59.409] malloc(1002) = 0x8e0da30
+	0x8048533 (in two at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:53)
+	0x80485cf (in start at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:76)
+	0x80485f1 (in main at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:83)
+62. [10:11:59.409] malloc(1001) = 0x8e0c680
+71. [10:11:59.409] malloc(1001) = 0x8e0d250
+80. [10:11:59.409] malloc(1001) = 0x8e0de20
+	0x80484f6 (in one at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:44)
+	0x8048548 (in two at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:56)
+	0x80485cf (in start at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:76)
+	0x80485f1 (in main at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:83)
+63. [10:11:59.409] malloc(1000) = 0x8e0ca70
+72. [10:11:59.409] malloc(1000) = 0x8e0d640
+81. [10:11:59.409] malloc(1000) = 0x8e0e210
+	0x80484c6 (in zero at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:36)
+	0x804850b (in one at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:47)
+	0x8048548 (in two at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:56)
+	0x80485cf (in start at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:76)
+	0x80485f1 (in main at /home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/sp-rtrace.postproc/alloc_test.c:83)
 # 29 blocks leaked with total size of 29039 bytes

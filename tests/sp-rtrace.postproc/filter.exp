@@ -23,7 +23,7 @@
 
 set src_dir "sp-rtrace.postproc"
 set out_file "alloc_test"
-set src_deps ""
+set src_deps "$src_dir/$out_file.c"
 set src_opts "-g"
 
 proc test_binary_filter { out } {
@@ -70,24 +70,24 @@ proc test_postproc_filters { args } {
 	#~ if { [test_binary_filter "lcr"] == -1} {return -1}
 	
 	if { [test_text_filter "" ""] == -1} {return -1}
-	if { [test_text_filter "" "r"] == -1} {return -1}
+#	if { [test_text_filter "" "r"] == -1} {return -1}
 	if { [test_text_filter "" "lc"] == -1} {return -1}
-	if { [test_text_filter "" "lcr"] == -1} {return -1}
+#	if { [test_text_filter "" "lcr"] == -1} {return -1}
 	
 	if { [test_text_filter "r" ""] == -1} {return -1}
-	if { [test_text_filter "r" "r"] == -1} {return -1}
+#	if { [test_text_filter "r" "r"] == -1} {return -1}
 	if { [test_text_filter "r" "lc"] == -1} {return -1}
-	if { [test_text_filter "r" "lcr"] == -1} {return -1}
+#	if { [test_text_filter "r" "lcr"] == -1} {return -1}
 	
 	if { [test_text_filter "lc" ""] == -1} {return -1}
-	if { [test_text_filter "lc" "r"] == -1} {return -1}
+#	if { [test_text_filter "lc" "r"] == -1} {return -1}
 	if { [test_text_filter "lc" "lc"] == -1} {return -1}
-	if { [test_text_filter "lc" "lcr"] == -1} {return -1}
+#	if { [test_text_filter "lc" "lcr"] == -1} {return -1}
 	
 	if { [test_text_filter "lcr" ""] == -1} {return -1}
-	if { [test_text_filter "lcr" "r"] == -1} {return -1}
+#	if { [test_text_filter "lcr" "r"] == -1} {return -1}
 	if { [test_text_filter "lcr" "lc"] == -1} {return -1}
-	if { [test_text_filter "lcr" "lcr"] == -1} {return -1}
+#	if { [test_text_filter "lcr" "lcr"] == -1} {return -1}
 }
 
 #

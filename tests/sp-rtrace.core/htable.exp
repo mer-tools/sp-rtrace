@@ -23,7 +23,7 @@
 
 set src_dir "sp-rtrace.core"
 set out_file "htable_test"
-set src_deps "common/dlist.c common/utils.c common/htable.c"
+set src_deps "$src_dir/$out_file.c ../src/common/dlist.c ../src/common/utils.c ../src/common/htable.c"
 set src_opts "-O3"
 
 #

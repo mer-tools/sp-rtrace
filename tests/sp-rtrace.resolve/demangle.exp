@@ -23,8 +23,8 @@
 
 
 set src_dir "sp-rtrace.resolve"
-set out_file "resolve_test"
-set src_deps ""
+set out_file "resolve_test_cpp"
+set src_deps "$src_dir/resolve_test.cpp"
 set src_opts "-O0 -rdynamic"
 
 proc check_cpp_demangle { args } {
@@ -33,7 +33,7 @@ proc check_cpp_demangle { args } {
 	set rc 0
 	expect {
 		-re {(?n)^\t0x[0-9a-fA-F]+ \(([^\r\n]+)\)[\r\n]$} {
-			if { ![regexp {^in (.*)$} $expect_out(1,string) match name] } {
+			if { ![regexp {^in (.+?)(?: at .*|)$} $expect_out(1,string) match name] } {
 				fail "couldn't parse backtrace record: $expect_out(1,string)"
 				set rc -1
 			}

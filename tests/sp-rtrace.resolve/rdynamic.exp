@@ -23,8 +23,8 @@
 
 
 set src_dir "sp-rtrace.resolve"
-set out_file "resolve_test"
-set src_deps ""
+set out_file "resolve_test_rdynamic"
+set src_deps "$src_dir/resolve_test.c"
 set src_opts "-O -rdynamic"
 
 proc check_resolve_rdynamic { args } {
@@ -33,7 +33,7 @@ proc check_resolve_rdynamic { args } {
 	set rc 0
 	expect {
 		-re {(?n)^\t0x[0-9a-fA-F]+ \(([^\r\n]+)\)[\r\n]$} {
-			if { ![regexp {^in (.*)$} $expect_out(1,string) match name] } {
+			if { ![regexp {^in (.+?)(?: at .*|)$} $expect_out(1,string) match name] } {
 				fail "couldn't parse backtrace record: $expect_out(1,string)"
 				set rc -1
 			}

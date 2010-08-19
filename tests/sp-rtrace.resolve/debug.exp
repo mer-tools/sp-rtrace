@@ -23,8 +23,8 @@
 
 
 set src_dir "sp-rtrace.resolve"
-set out_file "resolve_test"
-set src_deps ""
+set out_file "resolve_test_debug"
+set src_deps "$src_dir/resolve_test.c"
 set src_opts "-O0"
 
 proc check_resolve_debug { args } {
@@ -40,12 +40,12 @@ proc check_resolve_debug { args } {
 				return -1
 			}
 			set out_name [lindex $args $index]
-			set out_source $::out_file.c:[lindex $args [expr $index + 1]]
+			set out_source "resolve_test.c:[lindex $args [expr $index + 1]]"
 			if { $out_name != "*" && $name != $out_name } {
 				fail "expected function: $out_name, but got: $name"
 				set rc -1			
 			}
-			if { $out_source != "$::out_file.c:*" && $source != $out_source } {
+			if { $out_source != "resolve_test.c:*" && $source != $out_source } {
 				fail "expected source location: $out_source, but got: $source"
 				set rc -1			
 			}
