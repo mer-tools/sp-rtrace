@@ -34,7 +34,14 @@ rename_pattern()
 	if [ -n "$files" ]; then
 		for i in $files 
 		do
-			mv $i $(echo $i | sed "s/$pid\([.-]\)/$name\1/")
+			new_file=$(echo $i | sed "s/$pid\([.-]\)/$name\1/")
+			if [  -e "$new_file" ]; then
+				if [ -z $FORCE_OVERWRITE ]; then
+					echo "Warning: target file $new_file already exists. Renaming skipped."
+					continue
+				fi
+			fi
+			mv $i $new_file
 			count=$(($count+1))
 		done
 	fi
@@ -45,10 +52,16 @@ if [ $# -lt 2 ]; then
 	echo "Renames all (also post-processed) rtrace files"
 	echo "in the current directory from format 'PID.rtrace.*'"
 	echo "to 'NAME.rtrace.*' format."
+	echo "If --force is specified existing files (if any) will be overwritten"
 	echo
-	echo "usage: ${0##*/} <PID1> <NAME1> <PID2> <NAME2> ..."
+	echo "usage: ${0##*/} [--force] <PID1> <NAME1> <PID2> <NAME2> ..."
 	exit 1
 fi
+
+if [ "$1" = "--force" ]; then
+	FORCE_OVERWRITE=1
+	shift
+fi	
 
 count=0
 
