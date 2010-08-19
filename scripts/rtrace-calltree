@@ -1195,8 +1195,7 @@ class Options:
                     self.help(name, "unknown direction", arg)
             else:
                 self.help(name, "unknown option", arg)
-        if not self.file:
-            self.help(name, "leak report missing")
+        self.validate_input(name)
         debug(string.join(argv))
         if self.verbose:
             self.show_options()
@@ -1226,6 +1225,14 @@ class Options:
             debug("%s:" % title)
             for name in list:
                 debug("- %s" % name)
+    
+    def validate_input(self, app):
+        if not self.file:
+            self.help(app, "leak report missing")
+        fi = open(self.file, "r")
+        if ord(fi.read(1)) == 0xf0:
+            self.help(app, "input file appears to be in binary format")
+        fi.close()
     
     def bool_str(self, value):
         if value: return "yes"

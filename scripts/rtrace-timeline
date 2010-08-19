@@ -152,14 +152,21 @@ class Options:
 			elif option == "resources-per-page":
 				self.resourcesPerPage = int(value)
 			elif option == "plot":
-				self.plot = True	
-		if not self.inName:
-			self.error(name, "No input file specified")
+				self.plot = True
+		self.validate_input(name)
 		if not self.outName:
 			self.error(name, "No output file specified")
 		if not self.listener:
 			self.error(name, "No report type specified")
-			
+
+        def validate_input(self, app):
+            if not self.inName:
+                self.error(app, "No input file specified")
+            fi = open(self.inName, "r")
+            if ord(fi.read(1)) == 0xf0:
+                self.error(app, "Input file appears to be in binary format")
+            fi.close()
+
 	def error(self, name, error, arg=None):
 		"""
 		Displays error message with the usage information.
