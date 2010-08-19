@@ -175,7 +175,7 @@ typedef struct rd_fcall_t {
 	int index;
 	/* the function call type (SP_RTRACE_FTYPE_* definitions)
 	 * in sp-rtrace-proto.h */
-	unsigned char type;
+	unsigned int type;
 	/* the function call context */
 	unsigned int context;
 	/* the function call timestamp */
@@ -223,7 +223,7 @@ typedef struct rd_ftrace_t {
 	int ref_count;
 
 	/* number of frames in backtrace */
-	unsigned short nframes;
+	unsigned int nframes;
 
 	/* the frame return addresses */
 	void** frames;

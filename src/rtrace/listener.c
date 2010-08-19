@@ -45,8 +45,7 @@
 #include "common/rtrace_data.h"
 #include "common/utils.h"
 #include "common/sp_rtrace_proto.h"
-
-#include "debug_log.h"
+#include "common/debug_log.h"
 
 /* the read buffer size */
 #define BUFFER_SIZE			4096
@@ -161,13 +160,13 @@ static int scan_mmap_data()
 					dlist_add(&s_mmaps, mmap);
 				}
 				/* assemble and write MM packet */
-				char* ptr = name + 2;
-				ptr += write_word(ptr, SP_RTRACE_PROTO_MEMORY_MAP);
+				char* ptr = name + SP_RTRACE_PROTO_TYPE_SIZE;
+				ptr += write_dword(ptr, SP_RTRACE_PROTO_MEMORY_MAP);
 				ptr += write_pointer(ptr, from);
 				ptr += write_pointer(ptr, to);
 				ptr += write_string(ptr, buffer);
 				int size = ptr - name;
-				write_word(name, size - 2);
+				write_dword(name, size - SP_RTRACE_PROTO_TYPE_SIZE);
 				/* write the assembled packet to the output stream */
 				if (write_data(name, size) < 0) return -1;
 			}
@@ -212,14 +211,14 @@ static int process_handshake(const char* data, int size)
  */
 static int process_packet(const char* data, int size)
 {
-	unsigned short len, type;
+	unsigned int len, type;
 	unsigned int offset;
-	offset = read_word(data, &len);
+	offset = read_dword(data, &len);
 	len += offset;
 	if (len > size) {
 		return -1;
 	}
-	offset += read_word(data + offset, &type);
+	offset += read_dword(data + offset, &type);
 
 	//LOG("type=%c%c, size=%d", *(char*)&type, *((char*)&type + 1), len - offset);
 	if (type == SP_RTRACE_PROTO_OUTPUT_SETTINGS) {
@@ -249,7 +248,7 @@ static int process_packet(const char* data, int size)
 		read_dword(data + offset, (unsigned int*)&rtrace_options.pid);
 	}
 	else if (type == SP_RTRACE_PROTO_NEW_LIBRARY) {
-		/* NL packet is not forwarded furhter to  post-procsesor.
+		/* NL packet is not forwarded further to  post-processor.
 		 * Just scan the maps data */
 		char path[PATH_MAX];
 		read_string(data + offset, path, sizeof(path));

@@ -55,10 +55,8 @@
 #include <stdbool.h>
 #include <signal.h>
 
-#include "debug_log.h"
 #include "common/utils.h"
 #include "common/rtrace_data.h"
-#include "debug_log.h"
 #include "namecache.h"
 #include "resolver.h"
 

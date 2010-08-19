@@ -38,7 +38,7 @@
 
 #include "sp_rtrace_main.h"
 #include "common/sp_rtrace_proto.h"
-#include "debug_log.h"
+#include "common/debug_log.h"
 #include "common/utils.h"
 
 /* Module information */

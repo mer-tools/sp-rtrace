@@ -32,7 +32,6 @@
 #include "parse_text.h"
 #include "common/formatter.h"
 #include "common/utils.h"
-#include "debug_log.h"
 
 /**
  * Parses text format header.
@@ -446,7 +445,7 @@ static void read_text_data(rd_t* rd, FILE* fp)
 		dlist_add(&rd->comments, comment);
 	}
 	if (args_index) {
-		store_arguments(rd, dlist_last(&last_calls), args, args_index);
+		store_arguments(rd, RD_FCALL(dlist_last(&last_calls)), args, args_index);
 	}
 	if (bt_index) {
 		store_backtrace(rd, &last_calls, bt, bt_index);

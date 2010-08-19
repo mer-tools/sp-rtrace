@@ -148,7 +148,7 @@ proc test_startup_bin_notrace { args } {
 			set log_file $expect_out(1,string)
 		}
 	}
-	exp_close -i $launcher_sid
+#	exp_close -i $launcher_sid
 	exp_wait -i $launcher_sid
 
 	if { $log_file != "" } {

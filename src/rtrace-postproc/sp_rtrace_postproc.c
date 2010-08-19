@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <stdbool.h>
 #include <signal.h>
 #include <errno.h>
@@ -44,7 +45,6 @@
 #include "common/formatter.h"
 
 #include "rtrace_common.h"
-#include "debug_log.h"
 
 #include "sp_rtrace_postproc.h"
 #include "parse_binary.h"

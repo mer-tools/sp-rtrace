@@ -13,6 +13,8 @@ architecture.
 The handshake packet is endian independant - any system/architecture
 should be able to read/parse it and decide if it supports the specified
 protocol version/system architecture or not.
+The size of handshake packet is padded to ensure 4 byte alignment of the
+following packages.
 
 [id][size][version][archictecture]
   [id] - the binary protocol identification, 0xF0 (1 byte).
@@ -32,43 +34,48 @@ The rest of packets are endian dependent and have the following generic
 format:
 
 [size][type][data]
-  [size] - the packet length - 2 + n (2 bytes)
-  [type] - the packet type (2 bytes)
+  [size] - the packet length - 4 + n (4 bytes)
+  [type] - the packet type (4 bytes)
   [data] - the packet data (n bytes)
+
+The data members inside packets are aligned by 4 byte boundaries to prevent
+from unaligned memory access which can be problem on some architectures.
 
 
 Generic data types used in the protocol:
 
-[byte] - byte/char (1 byte)
-[word] - word/short integer (2 bytes)
+[byte] - byte/char, used only in handshake packet (1 byte)
 [dword] - dword/int (4 bytes)
 [pointer] - pointer/void * (4 or 8 bytes, depending on system architecture)
 [string] - length prefixed string [length][text]
   [length] - the string length - n (word)
-  [text] - the string data (n bytes)
+  [text] - the string data (n bytes). The text is padded with '\0' characters
+  so that the whole string size is 4 byte aligned. A special case is NULL string,
+  where [length] is zero (implying no [text] data), but the string is still padded
+  with two '\0' characters so that the whole string size is 4 byte aligned.
 
 
 The Protocol defines following packet types:
 
-1. Module information [MI]
-The module information packet is sent after handshake packet and it
-contains information about the process being traced.
+1. Process information [PI]
+The process information packet is sent when the tracing is started.
 
-[pid][name]
-  [pid] - the process id (dword)
-  [name] - the process command line (string)
+[pid][timestamp][name]
+  [pid] - process identifier (dword).
+  [timestamp] - trace starting timestamp [secs][usecs].
+    [secs] - seconds since the Epoch (dword).
+    [usecs] - microsecond since the Epoch (dword).
+  [name] - the process name (string).
+  
+  
+2. Module information [MI]
+The module information packet is sent when tracing is started.
 
+[version][name]
+  [version] - module version (dword). High word contains major version number
+             and low word - minor.
+  [name] - the module name (string).
 
-2. Header [HR]
-The header packet is sent during module initialization and it contains
-module version and name. 
-
-[version][module]
-  [version] - protocol version [major][minor]
-    [major]  - major version (byte)
-    [minor]  - minor version (byte)
-  [module] - module name (string)
-   
    
 3. Memory mapping [MM]
 The memory mapping packets contains start/end addresses and names of the
@@ -95,7 +102,7 @@ Function call packet is sent when a function call has been done.
 [timestamp][context][type][name][id][size]
   [timestamp] - the timestamp containing milliseconds since midnight(?) (dword).
   [context] - the call context (dword)
-  [type] - the call type (allocation/deallocation/copying) (byte)
+  [type] - the call type (allocation/deallocation/copying) (dword)
   [name] - the function name (string)
   [id] - the resource identifier (pointer)
   [size] - the resource size (integer)
@@ -106,7 +113,7 @@ The backtrace packet is sent after function call packet. It contains
 stack trace of the last function call.
 
 [nframes][address][address]...[address]
-   [nframes] - number of addresses (word)
+   [nframes] - number of addresses (dword)
    [address] - return address from the corresponding stack frame (pointer)
 
 
@@ -115,7 +122,7 @@ The function arguments packet is an optional packet which could be sent after FC
 packets. It contains detalized information about function arguments.
 
   [number][value][value]...[value]
-    [number] - the number of function arguments (byte)
+    [number] - the number of function arguments (dword)
     [value] - a function argument [type][data]
       [type] - the value type - int, string, pointer etc (byte)
       [data] - the value data - dependant on the value type (n bytes)
@@ -155,32 +162,13 @@ was called during the trace.
 	   of the heap (dword).
   
   
-10. Process information [PI]
-The process information packet is sent when the tracing is started.
 
-[pid][timestamp][name]
-  [pid] - process identifier (dword).
-  [timestamp] - trace starting timestamp [secs][usecs].
-    [secs] - seconds since the Epoch (dword).
-    [usecs] - microsecond since the Epoch (dword).
-  [name] - the process name (string).
-  
-  
-11. Module information [MI]
-The module information packet is sent when tracing is started.
-
-[version][name]
-  [version] - module version [major][minor]
-    [major]  - major version (byte).
-    [minor]  - minor version (byte).
-  [name] - the module name (string).
-
-12. Output settings [OS]
+10. Output settings [OS]
 The output settings packet contains post-processor options and output
 directory path. This packet is used to pass the post-processor options
 back to the sp-rtrace when it's used in toggle mode to enable tracing.
 The OS packet is not stored on disk or passed to post-processor.
 
 [path][options]
-  [path] - the output directory
-  [options] - the post-processor options
+  [path] - the output directory (string)
+  [options] - the post-processor options (string)

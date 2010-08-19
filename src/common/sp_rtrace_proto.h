@@ -35,19 +35,22 @@
 #include <string.h>
 #include <stdio.h>
 
-#define SP_RTRACE_PROTO_PACKET_TYPE(h, l) (h | (l << 8))
+#include "common/debug_log.h"
+
+
+#define SP_RTRACE_PROTO_PACKET_TYPE(b1, b2, b3, b4) (b1 | (b2 << 8) | (b2 << 16) | (b2 << 24))
 
 /* packet types */
-#define SP_RTRACE_PROTO_MODULE_INFO        SP_RTRACE_PROTO_PACKET_TYPE('M', 'I')
-#define SP_RTRACE_PROTO_MEMORY_MAP         SP_RTRACE_PROTO_PACKET_TYPE('M', 'M')
-#define SP_RTRACE_PROTO_CONTEXT_REGISTRY   SP_RTRACE_PROTO_PACKET_TYPE('C', 'R')
-#define SP_RTRACE_PROTO_FUNCTION_CALL      SP_RTRACE_PROTO_PACKET_TYPE('F', 'C')
-#define SP_RTRACE_PROTO_BACKTRACE          SP_RTRACE_PROTO_PACKET_TYPE('B', 'T')
-#define SP_RTRACE_PROTO_FUNCTION_ARGS      SP_RTRACE_PROTO_PACKET_TYPE('F', 'A')
-#define SP_RTRACE_PROTO_PROCESS_INFO       SP_RTRACE_PROTO_PACKET_TYPE('P', 'I')
-#define SP_RTRACE_PROTO_NEW_LIBRARY        SP_RTRACE_PROTO_PACKET_TYPE('N', 'L')
-#define SP_RTRACE_PROTO_HEAP_INFO          SP_RTRACE_PROTO_PACKET_TYPE('H', 'I')
-#define SP_RTRACE_PROTO_OUTPUT_SETTINGS    SP_RTRACE_PROTO_PACKET_TYPE('O', 'S')
+#define SP_RTRACE_PROTO_MODULE_INFO        SP_RTRACE_PROTO_PACKET_TYPE('M', 'I', 'N', 'F')
+#define SP_RTRACE_PROTO_MEMORY_MAP         SP_RTRACE_PROTO_PACKET_TYPE('M', 'M', 'A', 'P')
+#define SP_RTRACE_PROTO_CONTEXT_REGISTRY   SP_RTRACE_PROTO_PACKET_TYPE('C', 'T', 'X', 'R')
+#define SP_RTRACE_PROTO_FUNCTION_CALL      SP_RTRACE_PROTO_PACKET_TYPE('C', 'A', 'L', 'L')
+#define SP_RTRACE_PROTO_BACKTRACE          SP_RTRACE_PROTO_PACKET_TYPE('B', 'T', 'R', 'C')
+#define SP_RTRACE_PROTO_FUNCTION_ARGS      SP_RTRACE_PROTO_PACKET_TYPE('A', 'R', 'G', 'S')
+#define SP_RTRACE_PROTO_PROCESS_INFO       SP_RTRACE_PROTO_PACKET_TYPE('P', 'I', 'N', 'F')
+#define SP_RTRACE_PROTO_NEW_LIBRARY        SP_RTRACE_PROTO_PACKET_TYPE('N', 'L', 'I', 'B')
+#define SP_RTRACE_PROTO_HEAP_INFO          SP_RTRACE_PROTO_PACKET_TYPE('H', 'I', 'N', 'F')
+#define SP_RTRACE_PROTO_OUTPUT_SETTINGS    SP_RTRACE_PROTO_PACKET_TYPE('O', 'C', 'F', 'G')
 
 /* call type for FC packets */
 #define SP_RTRACE_FTYPE_UNDEF          0
@@ -71,6 +74,23 @@
  *  Data reading functions.
  */
 
+/* data alignment for binary packages */
+#define SP_RTRACE_PROTO_ALIGN	4
+/* adjust size to be aligned according to the binary packget alignment */
+#define SP_RTRACE_PROTO_ALIGN_SIZE(size) 	size += (SP_RTRACE_PROTO_ALIGN - (size & (SP_RTRACE_PROTO_ALIGN - 1))) & (SP_RTRACE_PROTO_ALIGN - 1)
+/* size of the packet type field */
+#define SP_RTRACE_PROTO_TYPE_SIZE		 4
+
+/* optional alignment check for protocol data write/read helpers */
+#if defined(ALIGN_CHECK) && defined(DEBUG_INFO)
+ #define SP_RTRACE_PROTO_CHECK_ALIGNMENT(value) \
+		if ((unsigned long)value & (SP_RTRACE_PROTO_ALIGN - 1)) { \
+			LOG("WARNING, alignment check failed on %p\n", (void*)value);\
+		}
+#else
+ #define SP_RTRACE_PROTO_CHECK_ALIGNMENT(value)
+#endif
+
 /**
  * Reads byte from binary stream.
  *
@@ -84,18 +104,6 @@ static inline int read_byte(const char* ptr, unsigned char* value)
 	return sizeof(char);
 }
 
-/**
- * Reads word from binary stream.
- *
- * @param[in] ptr     the binary stream.
- * @param[out] value  the output value.
- * @return            the number of bytes read.
- */
-static inline int read_word(const char* ptr, unsigned short* value)
-{
-	*value = *(short*)ptr;
-	return sizeof(short);
-}
 
 /**
  * Reads double word from binary stream.
@@ -106,9 +114,26 @@ static inline int read_word(const char* ptr, unsigned short* value)
  */
 static inline int read_dword(const char* ptr, unsigned int* value)
 {
+	SP_RTRACE_PROTO_CHECK_ALIGNMENT(ptr);
 	*value = *(int*)ptr;
 	return sizeof(int);
 }
+
+
+/**
+ * Reads word from binary stream.
+ *
+ * This function is used only internally, by read_string* functions.
+ * @param[in] ptr     the binary stream.
+ * @param[out] value  the output value.
+ * @return            the number of bytes read.
+ */
+static inline int read_word(const char* ptr, unsigned short* value)
+{
+	*value = *(unsigned short*)ptr;
+	return sizeof(short);
+}
+
 
 /**
  * Reads pointer value from binary stream.
@@ -119,6 +144,7 @@ static inline int read_dword(const char* ptr, unsigned int* value)
  */
 static inline int read_pointer(const char* ptr, void** value)
 {
+	SP_RTRACE_PROTO_CHECK_ALIGNMENT(ptr);
 	*value = *(void**)ptr;
 	return sizeof(void*);
 }
@@ -135,12 +161,16 @@ static inline int read_pointer(const char* ptr, void** value)
  */
 static inline int read_string(const char* ptr, char* value, int size)
 {
+	SP_RTRACE_PROTO_CHECK_ALIGNMENT(ptr);
 	unsigned short len = 0;
 	ptr += read_word(ptr, &len);
 	if (len >= size) return -EINVAL;
-	memcpy(value, ptr, len);
-	value[len] = '\0';
-	return len + sizeof(short);
+	if (len) {
+		memcpy(value, ptr, len);
+		value[len] = '\0';
+		return len + sizeof(short);
+	}
+	return SP_RTRACE_PROTO_TYPE_SIZE;
 }
 
 /**
@@ -153,16 +183,17 @@ static inline int read_string(const char* ptr, char* value, int size)
  */
 static inline int read_stringa(const char* ptr, char** value)
 {
+	SP_RTRACE_PROTO_CHECK_ALIGNMENT(ptr);
 	unsigned short len = 0;
 	ptr += read_word(ptr, &len);
 	*value = malloc(len + 1);
 	if (!*value) {
-		fprintf(stderr, "ERROR: read_strina: failed to allocate %d bytes of memory\n", len + 1);
+		fprintf(stderr, "ERROR: read_stringa: failed to allocate %d bytes of memory\n", len + 1);
 		exit (-1);
 	}
 	memcpy(*value, ptr, len);
 	(*value)[len] = '\0';
-	return len + sizeof(short);
+	return len ? len + sizeof(short) : SP_RTRACE_PROTO_TYPE_SIZE;
 }
 
 
@@ -200,18 +231,6 @@ static inline size_t write_byte(char* ptr, unsigned char value)
 	return sizeof(char);
 }
 
-/**
- * Writes word value into binary stream.
- *
- * @param[out] ptr   the binary stream.
- * @param[in] value  the value to write.
- * @return           the number of bytes written.
- */
-static inline size_t write_word(char* ptr, unsigned short value)
-{
-	*(short*)ptr = value;
-	return sizeof(short);
-}
 
 /**
  * Writes double word value into binary stream.
@@ -222,6 +241,7 @@ static inline size_t write_word(char* ptr, unsigned short value)
  */
 static inline size_t write_dword(char* ptr, unsigned int value)
 {
+	SP_RTRACE_PROTO_CHECK_ALIGNMENT(ptr);
 	*(int*)ptr = value;
 	return sizeof(int);
 }
@@ -235,6 +255,7 @@ static inline size_t write_dword(char* ptr, unsigned int value)
  */
 static inline size_t write_pointer(char* ptr, void* value)
 {
+	SP_RTRACE_PROTO_CHECK_ALIGNMENT(ptr);
 	*(void**)ptr = value;
 	return sizeof(void*);
 }
@@ -249,6 +270,7 @@ static inline size_t write_pointer(char* ptr, void* value)
  */
 static size_t write_string(char* ptr, const char* str)
 {
+	SP_RTRACE_PROTO_CHECK_ALIGNMENT(ptr);
 	if (str) {
 		short* psize = (short*)ptr;
 		ptr += 2;
@@ -256,11 +278,16 @@ static size_t write_string(char* ptr, const char* str)
 			*ptr++ = *str++;
 		}
 		int size = ptr - (char*)psize;
+		/* pad the string wihth '\0' to ensure aligment of the whole package */
+		while (size & (SP_RTRACE_PROTO_ALIGN - 1)) {
+			size++;
+			*ptr++ = '\0';
+		}
 		*psize = size - 2;
 		return size;
 	}
 	else {
-		return write_word(ptr, 0);
+		return write_dword(ptr, 0);
 	}
 }
 

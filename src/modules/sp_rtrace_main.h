@@ -111,4 +111,6 @@ void sp_rtrace_store_heap_info();
 int sp_rtrace_write_context_registry(int context_id, const char* name);
 
 
+int sp_rtrace_write_function_args(int args, char** values);
+
 #endif

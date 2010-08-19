@@ -34,7 +34,6 @@
 #include "common/sp_rtrace_proto.h"
 
 #include "parse_binary.h"
-#include "debug_log.h"
 #include "common/utils.h"
 
 /* the read buffer size */
@@ -78,6 +77,7 @@ static rd_hshake_t* read_handshake_packet(rd_t* rd, const char* data, int size)
  */
 static rd_context_t* read_packet_CT(const char* data, int size)
 {
+	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
 	rd_context_t* context = (rd_context_t*)dlist_create_node(sizeof(rd_context_t));
 	data += read_dword(data, &context->id);
 	read_stringa(data, &context->name);
@@ -93,6 +93,8 @@ static rd_context_t* read_packet_CT(const char* data, int size)
  */
 static rd_mmap_t* read_packet_MM(const char* data, int size)
 {
+	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
+
 	rd_mmap_t* fmap = (rd_mmap_t*)dlist_create_node(sizeof(rd_mmap_t));
 	data += read_pointer(data, &fmap->from);
 	data += read_pointer(data, &fmap->to);
@@ -109,6 +111,8 @@ static rd_mmap_t* read_packet_MM(const char* data, int size)
  */
 static rd_pinfo_t* read_packet_PI(const char* data, int size)
 {
+	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
+
 	rd_pinfo_t* info = (rd_pinfo_t*)malloc_a(sizeof(rd_pinfo_t));
 	data += read_dword(data, &info->pid);
 
@@ -132,9 +136,13 @@ static rd_pinfo_t* read_packet_PI(const char* data, int size)
  */
 static rd_minfo_t* read_packet_MI(const char* data, int size)
 {
+	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
+
 	rd_minfo_t* info = (rd_minfo_t*)dlist_create_node(sizeof(rd_minfo_t));
-    data += read_byte(data, &info->vmajor);
-    data += read_byte(data, &info->vminor);
+	unsigned int version;
+	data += read_dword(data, &version);
+	info->vmajor = version >> 16;
+	info->vminor = version & 0xFFFF;
     read_stringa(data, &info->name);
 	return info;
 }
@@ -148,11 +156,13 @@ static rd_minfo_t* read_packet_MI(const char* data, int size)
  */
 static rd_fcall_t* read_packet_FC(const char* data, int size)
 {
+	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
+
     rd_fcall_t* call = (rd_fcall_t*)dlist_create_node(sizeof(rd_fcall_t));
     call->index = call_index++;
     data += read_dword(data, &call->context);
     data += read_dword(data, &call->timestamp);
-    data += read_byte(data, &call->type);
+    data += read_dword(data, &call->type);
     data += read_stringa(data, &call->name);
     data += read_dword(data, (unsigned int*)&call->res_size);
     read_pointer(data, &call->res_id);
@@ -172,9 +182,11 @@ static rd_fcall_t* read_packet_FC(const char* data, int size)
  */
 static rd_ftrace_t* read_packet_BT(const char* data, int size)
 {
+	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
+
     rd_ftrace_t* trace = (rd_ftrace_t*)htable_create_node(sizeof(rd_ftrace_t));
     trace->ref_count = 0;
-    data += read_word(data, &trace->nframes);
+    data += read_dword(data, &trace->nframes);
     trace->frames = (void**)malloc_a(sizeof(void*) * trace->nframes);
     memcpy(trace->frames, data, sizeof(void*) * trace->nframes);
     /* binary packets can't contain resolved address names */
@@ -217,16 +229,16 @@ static int read_generic_packet(rd_t* rd, const char* data, int size)
 	if (size < 2) return -1;
 
 	static rd_fcall_t* fcall_prev = NULL;
-	unsigned short len, type;
+	unsigned int len, type;
 
 	/* check if the buffer has at least one full packet */
-	int offset = read_word(data, &len);
+	int offset = read_dword(data, &len);
 	len += offset;
 	if (len > size) {
 		return -1;
 	}
 	/* read packet type */
-	offset += read_word(data + offset, &type);
+	offset += read_dword(data + offset, &type);
 	data += offset;
 	int data_len = len - offset;
 
@@ -292,11 +304,15 @@ static int read_generic_packet(rd_t* rd, const char* data, int size)
  */
 static void read_binary_data(rd_t* rd, int fd)
 {
-	char buffer[BUFFER_SIZE * 2], *ptr_in = buffer;
+	/* point ptr_in at the second byte in buffer, as the first
+	 * one is supposed to be taken by the binary protocol identification
+	 * byte, read earlier. This is done to keep the packet alignment.
+	 */
+	char buffer[BUFFER_SIZE * 2], *ptr_in = buffer + 1;
 	int n, data_len, size;
 
 	/* read and process the handshake packet */
-	n = read(fd, buffer, BUFFER_SIZE - 1);
+	n = read(fd, ptr_in, BUFFER_SIZE - 1);
 	data_len = *(unsigned char*)ptr_in++;
 	if (data_len >= n || (rd->hshake = read_handshake_packet(rd, ptr_in, data_len)) == NULL) {
 		/* A handshake packet fragmentation is a sign of error,

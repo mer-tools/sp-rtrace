@@ -27,7 +27,6 @@
 
 #include "rtrace_env.h"
 #include "common/utils.h"
-#include "debug_log.h"
 
 /**
  * pre-processor long option list

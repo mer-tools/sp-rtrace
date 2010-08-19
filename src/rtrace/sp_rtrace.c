@@ -50,7 +50,7 @@
 #include "common/sp_rtrace_proto.h"
 #include "common/utils.h"
 #include "common/rtrace_data.h"
-#include "debug_log.h"
+#include "common/debug_log.h"
 
 /* Application exit condition, set by SIGINT */
 sig_atomic_t rtrace_main_loop = 1;

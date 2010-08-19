@@ -50,7 +50,7 @@ Description: Debug symbols for resource consumption tracing toolset.
 Package: sp-rtrace-visualize
 Section: utils
 Architecture: any
-Depends: sp-rtrace, python, graphviz
+Depends: sp-rtrace, python, graphviz, gnuplot
 Recommends: gnuplot
 Description: Post-processing/visualization scripts for rtrace format files.
  This package contains various post-processing and visualization scripts
