@@ -441,7 +441,7 @@ class Rtrace:
         # format: at <source file>:<line nro>
         self.gdb_src_pattern = re.compile(".* at ([^ :]+):([0-9]+)")
         # format: in <function name> ()
-        self.gdb_fun_pattern = re.compile(".*\(in ([^ )]+).*\)")
+        self.gdb_fun_pattern = re.compile(".*\(in (.+?)( at .*|)\)$")
         # format: from <library/binary file>
         self.gdb_lib_pattern = re.compile(".* from (\S+)$")
         # format: <address> <resolve data>
