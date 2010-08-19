@@ -123,9 +123,8 @@ packets. It contains detalized information about function arguments.
 
   [number][value][value]...[value]
     [number] - the number of function arguments (dword)
-    [value] - a function argument [type][data]
-      [type] - the value type - int, string, pointer etc (byte)
-      [data] - the value data - dependant on the value type (n bytes)
+    [arg1][arg2]...[argN] - function argument list
+      [argX] - the function argument X (string)
 
 
 8. New library [NL]

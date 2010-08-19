@@ -1,4 +1,4 @@
-sp-rtrace test suite
+sp-rtrace testsuite
 
 By default the testsuite is compiled and executed with make check.
 To allow easier testing on embeded devices it's possible to separate
@@ -8,7 +8,6 @@ compile and test process with the following environment variables:
   
 The test suite requires dejagnu package.
   
-
 Running tests on a device:
 1) Compile the package: dpkg-buildpackge -rfakeroot -b 
 2) Compile test applications by executing RT_DISABLE_TEST=1 make check
@@ -17,8 +16,30 @@ Running tests on a device:
 4) Increse max pty count on device: echo 8 > /proc/sys/kernel/pty/max
 5) Run testsuite by executing RT_DISABLE_COMPILE=1 runtest --tool=sp-rtrace
 
+Directory structure:
+lib - common files used by test cases
 
+sp-rtrace.core - test cases for internal data containers. Contains tests
+  of dlist_t, htable_t, sarray_t data structures and related API.
+  
+sp-rtrace.lib - test cases for libsp-rtrace1 shared library. Contains 
+  tests of context and formatter API
 
+sp-rtrace.modules - test cases for tracing modules. Contains tracked 
+  function coverage tests for memory and memtransfer modules.
+  
+sp-rtrace.postproc - test cases for post-processing options. Contains 
+  tests of various post-processing options applied to a provided trace file.
+  
+sp-rtrace.resolve - test cases for symbol resolving. Contains basic
+  tests of resolving backtraces of applications compiled with and 
+  without debug symbols and c++ name demangling.
+  
+sp-rtrace.rtrace - test cases for process launching and trace toggling. 
+  Contains tests of starting/toggling target processes with trace
+  enabled/disabled at start with/without post-processing options in 
+  managed/normal mode.
+  
 
 
 
