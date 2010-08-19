@@ -52,6 +52,11 @@ if [ -z $(which join) ]; then
 	exit
 fi
 
+if [ ! -r "$1" ]; then
+	echo "ERROR: can't access file: $1"
+	exit 1
+fi
+
 # tempfile is a Debian utility
 if [ -z $(which tempfile) ]; then
 	echo "ERROR: cannot find 'tempfile' utility!"
@@ -69,7 +74,7 @@ tmp2=$(tempfile -s $suffix)
 
 count_allocs ()
 {	
-	sp-rtrace-postproc -lc -i $1 | egrep '^[0-9]+\. ' | sed 's/^[^(]\+(\([0-9]\+\)).*/\1/' | sort -n |uniq -c |sed -e 's/^ *//' 
+	sp-rtrace-postproc -lc -i $1 | egrep '^[0-9]+\. ' | sed 's/^[^(]\+(\([0-9]\+\)).*/\1/' | sed -e 's/^ *//' | sort -n | uniq -c   
 }
 
 count_allocs $1 > $tmp1
@@ -77,6 +82,11 @@ filename1=${1##*/}
 shift
 
 for file in $*; do
+	if [ ! -r "$1" ]; then
+		echo "ERROR: can't access file: $1"
+		continue
+	fi
+
 	filename2=${file##*/}
 	header="    Size   Delta   ($filename1 -> $filename2 block count)"
 	echo "$header"
