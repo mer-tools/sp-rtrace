@@ -2,6 +2,7 @@ debian/tmp/usr/bin/sp-rtrace*
 debian/tmp/usr/lib/libsp-rtrace-main.so* /usr/lib/sp-rtrace/
 debian/tmp/usr/lib/libsp-rtrace-memory.so* /usr/lib/sp-rtrace/
 debian/tmp/usr/lib/libsp-rtrace-memtransfer.so* /usr/lib/sp-rtrace/
+debian/tmp/usr/lib/libsp-rtrace-memshared.so* /usr/lib/sp-rtrace/
 debian/tmp/usr/bin/rtrace-allocmap
 debian/tmp/usr/bin/rtrace-allocmap-animate
 debian/tmp/usr/bin/rtrace-rename

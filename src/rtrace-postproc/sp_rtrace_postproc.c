@@ -66,6 +66,7 @@ postproc_options_t postproc_options = {
 	.filter_context = 0,
 	.compare_leaks = 0,
 	.pid_resolve = 0,
+	.filter_module = 0,
 };
 
 /**
@@ -97,7 +98,8 @@ static void display_usage()
 			"  -l           - filter out matching allocs & frees i.e. list only 'leaks'.\n"
 			"  -c           - compress trace by joining identical backtraces.\n"
 			"  -r           - resolve function addresses in backtraces.\n"
-			"  -C <context> - filter by context <context>.\n"
+			"  -C <mask>    - filter by context id <mask>.\n"
+			"  -M <mask>    - filter by module id <mask>.\n"
 			"  -s <order>   - sort leaks by the specified order -\n"
 			"                 size, size-asc, count, count-asc.\n"
 			"  -h           - this help page.\n"
@@ -238,13 +240,14 @@ int main(int argc, char* argv[])
 			 {"remove-args", 0, 0, 'a'},
 			 {"resolve", 0, 0, 'r'},
 			 {"context", 1, 0, 'C'},
+			 {"module", 1, 0, 'M'},
 			 {"help", 0, 0, 'h'},
 			 {0, 0, 0, 0}
 	};
 	/* parse command line options */
 	int opt;
 
-	while ( (opt = getopt_long(argc, argv, "i:o:f:cs:ahrlC:", long_options, NULL)) != -1) {
+	while ( (opt = getopt_long(argc, argv, "i:o:f:cs:ahrlC:M:", long_options, NULL)) != -1) {
 		switch(opt) {
 		case 'h':
 			display_usage();
@@ -287,7 +290,14 @@ int main(int argc, char* argv[])
 
 		case 'C':
 			if (sscanf(optarg, "%x", &postproc_options.filter_context) != 1) {
-				fprintf(stderr, "ERROR: invalid context id: %s\n", optarg);
+				fprintf(stderr, "ERROR: invalid context mask: %s\n", optarg);
+				exit (-1);
+			}
+			break;
+
+		case 'M':
+			if (sscanf(optarg, "%x", &postproc_options.filter_module) != 1) {
+				fprintf(stderr, "ERROR: invalid module mask: %s\n", optarg);
 				exit (-1);
 			}
 			break;
@@ -346,7 +356,12 @@ int main(int argc, char* argv[])
 		exit (-1);
 	}
 
+
 	/* apply selected post-processing options */
+	if (postproc_options.filter_module) {
+		filter_module(rd);
+	}
+
 	if (postproc_options.filter_leaks) {
 		filter_leaks(rd);
 	}

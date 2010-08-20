@@ -114,6 +114,7 @@ sp_rtrace_options_t* sp_rtrace_options = &rtrace_main_options;
  */
 typedef struct rtrace_module_t {
     const char* name;
+    int id;
     unsigned char vmajor;
     unsigned char vminor;
 	sp_rtrace_enable_tracing_t enable;
@@ -345,144 +346,7 @@ static int write_module_info(const char* name, unsigned char major, unsigned cha
 }
 
 
-/**
- * Writes module memory mapping packet into processor pipe.
- *
- * @param[in] from    the start memory address.
- * @param[in] to      the end memory address.
- * @param[in] name    the mapped module name.
- * @return            the number of bytes written.
- */
-int sp_rtrace_write_memory_map(void* from, void* to, const char* name)
-{
-	if (!sp_rtrace_options->enable) return 0;
-	char* buffer = pipe_buffer_lock(), *ptr = buffer + SP_RTRACE_PROTO_TYPE_SIZE;
-	ptr += write_dword(ptr, SP_RTRACE_PROTO_MEMORY_MAP);
-	ptr += write_pointer(ptr, from);
-	ptr += write_pointer(ptr, to);
-	ptr += write_string(ptr, name);
-	int size = ptr - buffer;
-	write_dword(buffer, size - SP_RTRACE_PROTO_TYPE_SIZE);
-	pipe_buffer_unlock(buffer, size);
-	return size;
-}
 
-
-/*
- * Public API implementation
- */
-
-int sp_rtrace_write_context_registry(int context_id, const char* name)
-{
-	if (!sp_rtrace_options->enable) return 0;
-	char* buffer = pipe_buffer_lock(), *ptr = buffer + SP_RTRACE_PROTO_TYPE_SIZE;
-	ptr += write_dword(ptr, SP_RTRACE_PROTO_CONTEXT_REGISTRY);
-	ptr += write_dword(ptr, context_id);
-	ptr += write_string(ptr, name);
-	int size = ptr - buffer;
-	write_dword(buffer, size - SP_RTRACE_PROTO_TYPE_SIZE);
-	pipe_buffer_unlock(buffer, size);
-	return size;
-}
-
-
-int sp_rtrace_write_function_call(int type, const char* name, size_t res_size, void* id)
-{
-	if (!sp_rtrace_options->enable) return 0;
-	int size = 0;
-	int nframes = 0;
-	void* bt_frames[256];
-
-	if (sp_rtrace_options->backtrace_depth) {
-		int bt_depth = sp_rtrace_options->backtrace_depth + BT_SKIP_TOP + BT_SKIP_BOTTOM;
-		if (bt_depth > sizeof(bt_frames) / sizeof(bt_frames[0])) {
-			bt_depth = sizeof(bt_frames) / sizeof(bt_frames[0]);
-		}
-		/* backtrace() function could trigger tracked function calls.
-		 * lock those functions for other threads while using the standard
-		 * functions for the current thread  */
-		int tid = pthread_self();
-		if (tid == backtrace_lock) {
-			fprintf(stderr, "ERROR: infinite recursion detected backtrace() calling %s()\n", name);
-			exit (-1);
-		}
-		while (__sync_bool_compare_and_swap(&backtrace_lock, 0, tid));
-		nframes = backtrace(bt_frames, bt_depth);
-		backtrace_lock = 0;
-	}
-	char* buffer = pipe_buffer_lock(), *ptr = buffer + SP_RTRACE_PROTO_TYPE_SIZE;
-
-	/* write FC packet */
-	ptr += write_dword(ptr, SP_RTRACE_PROTO_FUNCTION_CALL);
-	ptr += write_dword(ptr, sp_context_mask);
-
-	int timestamp = 0;
-	if (sp_rtrace_options->enable_timestamps) {
-		struct timespec ts;
-		if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0) {
-			timestamp = ts.tv_nsec / 1000000 + ts.tv_sec % (60 * 60 * 24) * 1000;
-		}
-	}
-	ptr += write_dword(ptr, timestamp);
-	ptr += write_dword(ptr, type);
-	ptr += write_string(ptr, name);
-	ptr += write_dword(ptr, res_size);
-	ptr += write_pointer(ptr, id);
-	size = ptr - buffer;
-	write_dword(buffer, size - SP_RTRACE_PROTO_TYPE_SIZE);
-
-	/* write BT packet */
-	/* strip the unnecessary frames from the top and bottom */
-	if (nframes > BT_SKIP_TOP + BT_SKIP_BOTTOM) {
-		int i;
-		nframes -= BT_SKIP_TOP + BT_SKIP_BOTTOM;
-		if (nframes > sp_rtrace_options->backtrace_depth) {
-			nframes = sp_rtrace_options->backtrace_depth;
-		}
-		ptr += write_dword(ptr, sizeof(int) * 2 + sizeof(void*) * nframes);
-		ptr += write_dword(ptr, SP_RTRACE_PROTO_BACKTRACE);
-		ptr += write_dword(ptr, nframes);
-		for (i = BT_SKIP_TOP; i < nframes + BT_SKIP_TOP; i++) {
-			ptr += write_pointer(ptr, bt_frames[i]);
-		}
-		size += ptr - buffer - size;
-	}
-	else {
-		/* write empty backtrace packet */
-		ptr += write_dword(ptr, sizeof(int) * 2);
-		ptr += write_dword(ptr, SP_RTRACE_PROTO_BACKTRACE);
-		ptr += write_dword(ptr, 0);
-		size += ptr - buffer - size;
-	}
-	pipe_buffer_unlock(buffer, size);
-	return size;
-}
-
-int sp_rtrace_register_module(const char* name, unsigned char vmajor, unsigned char vminor, sp_rtrace_enable_tracing_t enable_func)
-{
-	if (rtrace_module_index >= sizeof(rtrace_modules) / sizeof(rtrace_modules[0])) {
-		return -ENOMEM;
-	}
-	rtrace_module_t* module = &rtrace_modules[rtrace_module_index++];
-	module->enable = enable_func;
-	module->vmajor = vmajor;
-	module->vminor = vminor;
-    module->name =name;
-
-	/* If the tracing has been already enabled,
-	 * enable module and write it's information packet */
-	if (sp_rtrace_options->enable) {
-		enable_tracing(true);
-		write_module_info(name, vmajor, vminor);
-	}
-	return rtrace_module_index;
-}
-
-
-void sp_rtrace_store_heap_info()
-{
-	heap_info = mallinfo();
-}
 /*
  *
  */
@@ -680,6 +544,141 @@ static void signal_toggle_tracing(int signo)
 			fd_proc = 0;
 		}
 	}
+}
+
+
+/*
+ * Public API implementation
+ */
+
+int sp_rtrace_write_context_registry(int context_id, const char* name)
+{
+	if (!sp_rtrace_options->enable) return 0;
+	char* buffer = pipe_buffer_lock(), *ptr = buffer + SP_RTRACE_PROTO_TYPE_SIZE;
+	ptr += write_dword(ptr, SP_RTRACE_PROTO_CONTEXT_REGISTRY);
+	ptr += write_dword(ptr, context_id);
+	ptr += write_string(ptr, name);
+	int size = ptr - buffer;
+	write_dword(buffer, size - SP_RTRACE_PROTO_TYPE_SIZE);
+	pipe_buffer_unlock(buffer, size);
+	return size;
+}
+
+
+int sp_rtrace_write_function_call(int moduleid, int type, const char* name, size_t res_size, void* id, char** args)
+{
+	if (!sp_rtrace_options->enable) return 0;
+	int size = 0;
+	int nframes = 0;
+	void* bt_frames[256];
+
+	if (sp_rtrace_options->backtrace_depth) {
+		int bt_depth = sp_rtrace_options->backtrace_depth + BT_SKIP_TOP + BT_SKIP_BOTTOM;
+		if (bt_depth > sizeof(bt_frames) / sizeof(bt_frames[0])) {
+			bt_depth = sizeof(bt_frames) / sizeof(bt_frames[0]);
+		}
+		/* backtrace() function could trigger tracked function calls.
+		 * lock those functions for other threads while using the standard
+		 * functions for the current thread  */
+		int tid = pthread_self();
+		if (tid == backtrace_lock) {
+			fprintf(stderr, "ERROR: infinite recursion detected backtrace() calling %s()\n", name);
+			exit (-1);
+		}
+		while (__sync_bool_compare_and_swap(&backtrace_lock, 0, tid));
+		nframes = backtrace(bt_frames, bt_depth);
+		backtrace_lock = 0;
+	}
+	char* buffer = pipe_buffer_lock(), *ptr = buffer + SP_RTRACE_PROTO_TYPE_SIZE;
+
+	/* write FC packet */
+	ptr += write_dword(ptr, SP_RTRACE_PROTO_FUNCTION_CALL);
+
+	/* don't write module id if only single module is registered */
+	if (rtrace_module_index <= 1) moduleid = 0;
+	ptr += write_dword(ptr, moduleid);
+	ptr += write_dword(ptr, sp_context_mask);
+
+	int timestamp = 0;
+	if (sp_rtrace_options->enable_timestamps) {
+		struct timespec ts;
+		if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0) {
+			timestamp = ts.tv_nsec / 1000000 + ts.tv_sec % (60 * 60 * 24) * 1000;
+		}
+	}
+	ptr += write_dword(ptr, timestamp);
+	ptr += write_dword(ptr, type);
+	ptr += write_string(ptr, name);
+	ptr += write_dword(ptr, res_size);
+	ptr += write_pointer(ptr, id);
+	size = ptr - buffer;
+	write_dword(buffer, size - SP_RTRACE_PROTO_TYPE_SIZE);
+
+	/* write FA packet */
+	if (args) {
+		char* psize = ptr;
+		ptr += SP_RTRACE_PROTO_TYPE_SIZE;
+		ptr += write_dword(ptr, SP_RTRACE_PROTO_BACKTRACE);
+		char* arg = *args;
+		while (arg) {
+			ptr += write_string(ptr, arg);
+		}
+		size = ptr - psize;
+		write_dword(psize, size - SP_RTRACE_PROTO_TYPE_SIZE);
+	}
+
+	/* write BT packet */
+	/* strip the unnecessary frames from the top and bottom */
+	if (nframes > BT_SKIP_TOP + BT_SKIP_BOTTOM) {
+		int i;
+		nframes -= BT_SKIP_TOP + BT_SKIP_BOTTOM;
+		if (nframes > sp_rtrace_options->backtrace_depth) {
+			nframes = sp_rtrace_options->backtrace_depth;
+		}
+		ptr += write_dword(ptr, sizeof(int) * 2 + sizeof(void*) * nframes);
+		ptr += write_dword(ptr, SP_RTRACE_PROTO_BACKTRACE);
+		ptr += write_dword(ptr, nframes);
+		for (i = BT_SKIP_TOP; i < nframes + BT_SKIP_TOP; i++) {
+			ptr += write_pointer(ptr, bt_frames[i]);
+		}
+		size += ptr - buffer - size;
+	}
+	else {
+		/* write empty backtrace packet */
+		ptr += write_dword(ptr, sizeof(int) * 2);
+		ptr += write_dword(ptr, SP_RTRACE_PROTO_BACKTRACE);
+		ptr += write_dword(ptr, 0);
+		size += ptr - buffer - size;
+	}
+	pipe_buffer_unlock(buffer, size);
+	return size;
+}
+
+int sp_rtrace_register_module(const char* name, unsigned char vmajor, unsigned char vminor, sp_rtrace_enable_tracing_t enable_func)
+{
+	if (rtrace_module_index >= sizeof(rtrace_modules) / sizeof(rtrace_modules[0])) {
+		return -ENOMEM;
+	}
+	rtrace_module_t* module = &rtrace_modules[rtrace_module_index];
+	module->enable = enable_func;
+	module->vmajor = vmajor;
+	module->vminor = vminor;
+    module->name = name;
+    module->id = (1 << rtrace_module_index++);
+
+	/* If the tracing has been already enabled,
+	 * enable module and write it's information packet */
+	if (sp_rtrace_options->enable) {
+		enable_tracing(true);
+		write_module_info(name, vmajor, vminor);
+	}
+	return module->id;
+}
+
+
+void sp_rtrace_store_heap_info()
+{
+	heap_info = mallinfo();
 }
 
 static void trace_main_init(void) __attribute__((constructor));

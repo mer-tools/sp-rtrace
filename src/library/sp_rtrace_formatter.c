@@ -74,6 +74,7 @@ void sp_rtrace_print_call(FILE* fp, int index, unsigned int context, unsigned in
 {
 	const rd_fcall_t call = {
 			.index = index,
+			.module_id = 0,
 			.context = context,
 			.timestamp = timestamp,
 			.type = res_size ? SP_RTRACE_FTYPE_ALLOC : SP_RTRACE_FTYPE_FREE,

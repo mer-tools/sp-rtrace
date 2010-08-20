@@ -81,7 +81,10 @@ void free_fres_rec(fres_t* res)
  */
 static long res_compare(const fres_t* res1, const fres_t* res2)
 {
-	return res1->call->res_id - res2->call->res_id;
+	if (res1->call->module_id == res2->call->module_id) {
+		return res1->call->res_id - res2->call->res_id;
+	}
+	return res1->call->module_id - res2->call->module_id;
 }
 
 /**
@@ -95,6 +98,11 @@ static long res_hash(const fres_t* res)
 {
 	unsigned long hash = 0;
 	unsigned long value = (unsigned long)res->call->res_id;
+	while (value) {
+		hash ^= value & ((1 << 16) - 1);
+		value >>= 3;
+	}
+	value = res->call->module_id;
 	while (value) {
 		hash ^= value & ((1 << 16) - 1);
 		value >>= 3;
@@ -158,7 +166,7 @@ static long fcall_remove_freed(rd_fcall_t* call, void* data)
 
 
 /**
- * Removes function call record if its context doesn't match filtering context.
+ * Removes function call record if its context doesn't match filtering mask.
  *
  * @param[in] call   the function call record to check.
  * @param[in] data   the rtrace data.
@@ -167,6 +175,21 @@ static long fcall_remove_freed(rd_fcall_t* call, void* data)
 static void fcall_filter_context(rd_fcall_t* call, rd_t* rd)
 {
 	if (! (call->context & postproc_options.filter_context)) {
+		rd_fcall_remove(rd, call);
+	}
+}
+
+
+/**
+ * Removes function call record if its module id doesn't match filtering mask.
+ *
+ * @param[in] call   the function call record to check.
+ * @param[in] data   the rtrace data.
+ * @return
+ */
+static void fcall_filter_module(rd_fcall_t* call, rd_t* rd)
+{
+	if (! (call->module_id & postproc_options.filter_module)) {
 		rd_fcall_remove(rd, call);
 	}
 }
@@ -214,6 +237,11 @@ void filter_leaks(rd_t* rd)
 void filter_context(rd_t* rd)
 {
 	dlist_foreach2(&rd->calls, (op_binary_t)fcall_filter_context, (void*)rd);
+}
+
+void filter_module(rd_t* rd)
+{
+	dlist_foreach2(&rd->calls, (op_binary_t)fcall_filter_module, (void*)rd);
 }
 
 

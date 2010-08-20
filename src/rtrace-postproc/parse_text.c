@@ -164,6 +164,7 @@ static void* parse_function_call(char* line)
 	int timestamp = 0;
 	void *res_id, *res_size;
 	char name[512], *ptr = line, delim, function_type;
+	int module_id = 0;
 	/* parse index field <index>. */
 	if (sscanf(ptr, "%d%c", &index, &delim) != 2 || delim != '.') return NULL;
 	/* move cursor beyond index field */
@@ -171,9 +172,18 @@ static void* parse_function_call(char* line)
 	if (!ptr) return NULL;
 	ptr++;
 
+	/* parse optional module id */
+	if (sscanf(ptr, ":%x", &module_id) == 1) {
+		/* module id was parsed successfully. Move cursor to next field */
+		ptr = strchr(ptr, ':');
+		ptr = strchr(ptr, ' ');
+		if (!ptr) return NULL;
+		ptr++;
+	}
+
 	/* parse optional context mask */
 	if (sscanf(ptr, "@%x", &context) == 1) {
-		/* context mask was parsed successfully. Move cursor beyond context mask */
+		/* context mask was parsed successfully. Move cursor to next field */
 		ptr = strchr(ptr, '@');
 		ptr = strchr(ptr, ' ');
 		if (!ptr) return NULL;
@@ -214,6 +224,7 @@ static void* parse_function_call(char* line)
 	}
 	rd_fcall_t* call = dlist_create_node(sizeof(rd_fcall_t));
 	call->index = index;
+	call->module_id = module_id;
 	call->type = function_type;
 	call->context = context;
 	call->name = strdup_a(name);

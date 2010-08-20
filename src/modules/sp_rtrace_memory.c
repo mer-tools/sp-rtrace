@@ -52,6 +52,9 @@ static sp_rtrace_module_info_t module_info = {
 				       "and free functions.",
 };
 
+/* the module identifier assigned by main module */
+static int module_id = 0;
+
 
 /* Internal allocation function emulation heap.
  *
@@ -244,7 +247,7 @@ static void* trace_malloc(size_t size)
 	backtrace_lock = 0;
 
 	if (rc) {
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, "malloc", size, rc);
+		sp_rtrace_write_function_call(module_id, SP_RTRACE_FTYPE_ALLOC, "malloc", size, rc, NULL);
 		sp_rtrace_store_heap_info();
 	}
 	return rc;
@@ -257,7 +260,7 @@ static void* trace_calloc(size_t nmemb, size_t size)
 	backtrace_lock = 0;
 
 	if (rc) {
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, "calloc", nmemb * size, rc);
+		sp_rtrace_write_function_call(module_id, SP_RTRACE_FTYPE_ALLOC, "calloc", nmemb * size, rc, NULL);
 		sp_rtrace_store_heap_info();
 	}
 	return rc;
@@ -269,11 +272,11 @@ static void* trace_realloc(void* ptr, size_t size)
 	/* if allocation was successful or the requested size was 0,
 	 *  and the old pointer was not NULL - register old pointer freeing */
 	if ((rc || !size) && ptr) {
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, "realloc", 0, ptr);
+		sp_rtrace_write_function_call(module_id, SP_RTRACE_FTYPE_FREE, "realloc", 0, ptr, NULL);
 	}
 	/* if allocation was successful register new pointer allocation */
 	if (rc) {
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, "realloc", size, rc);
+		sp_rtrace_write_function_call(module_id, SP_RTRACE_FTYPE_ALLOC, "realloc", size, rc, NULL);
 		sp_rtrace_store_heap_info();
 	}
 	return rc;
@@ -283,7 +286,7 @@ static int trace_posix_memalign(void **memptr, size_t alignment, size_t size)
 {
 	int rc = trace_off.posix_memalign(memptr, alignment, size);
 	if (rc == 0) {
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, "posix_memalign", size, *memptr);
+		sp_rtrace_write_function_call(module_id, SP_RTRACE_FTYPE_ALLOC, "posix_memalign", size, *memptr, NULL);
 		sp_rtrace_store_heap_info();
 	}
 	return rc;
@@ -295,7 +298,7 @@ static void trace_free(void* ptr)
 	/* unlock backtrace after the original function has been called */
 	backtrace_lock = 0;
 
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, "free", 0, ptr);
+	sp_rtrace_write_function_call(module_id, SP_RTRACE_FTYPE_FREE, "free", 0, ptr, NULL);
 	sp_rtrace_store_heap_info();
 }
 
@@ -386,7 +389,7 @@ static void trace_memory_init(void)
 	LOG("initializing %s (%d.%d)", module_info.name, module_info.version_major, module_info.version_minor);
 	trace_initialize();
 
-	sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
+	module_id = sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
 }
 
 static void trace_memory_fini(void)

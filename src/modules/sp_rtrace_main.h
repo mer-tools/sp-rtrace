@@ -66,13 +66,15 @@ extern volatile sig_atomic_t backtrace_lock;
 /**
  * Writes function call packet into processor pipe.
  *
+ * @param[in] moduleid the source module identifier (returned by sp_rtrace_register_module).
  * @param[in] type     the function call type (0 - unknown, 1 - deallocation, 2 - allocation)
  * @param[in] name     the function name.
  * @param[in] size     the resource size.
  * @param[in] id       the resource identifier.
+ * @param[in] args     the function argument array, ending with NULL. Optional.
  * @return             the number of bytes written.
  */
-int sp_rtrace_write_function_call(int type, const char* name, size_t size, void* id);
+int sp_rtrace_write_function_call(int moduleid, int type, const char* name, size_t size, void* id, char** args);
 
 
 typedef void (*sp_rtrace_enable_tracing_t)(bool);
@@ -89,7 +91,7 @@ typedef void (*sp_rtrace_enable_tracing_t)(bool);
  * @param[in] vmajor        the module version major number.
  * @param[in] vminor        the module version minor number.
  * @param[in] enable_func   the trace enabling/disabling function.
- * @return                  Number of registered modules, -ENOMEM if too many modules are registered.
+ * @return                  Id of the registered module or 0 if too many modules are registered.
  */
 int sp_rtrace_register_module(const char* name, unsigned char vmajor, unsigned char vminor, sp_rtrace_enable_tracing_t enable_func);
 
@@ -110,7 +112,5 @@ void sp_rtrace_store_heap_info();
  */
 int sp_rtrace_write_context_registry(int context_id, const char* name);
 
-
-int sp_rtrace_write_function_args(int args, char** values);
 
 #endif

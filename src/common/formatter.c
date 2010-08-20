@@ -68,6 +68,9 @@ int formatter_write_fcall(const rd_fcall_t*  call, FILE* fp)
 	char buffer[1024], *ptr = buffer;
 
 	ptr += sprintf(ptr, "%d. ", call->index);
+	if (call->module_id) {
+		ptr += sprintf(ptr, ":%x ", (int)call->module_id);
+	}
 	if (call->context) {
 		ptr += sprintf(ptr, "@%x ", (int)call->context);
 	}

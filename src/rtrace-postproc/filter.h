@@ -57,12 +57,20 @@ void filter_leaks(rd_t* rd);
 
 
 /**
- * Filters out allocations with not matching contexts.
+ * Filters allocations with matching contexts.
  *
  * @param[in] rd   the resource trace data storage.
  * @return
  */
 void filter_context(rd_t* rd);
+
+/**
+ * Filters allocations with matching module identifiers.
+ *
+ * @param[in] rd   the resource trace data storage.
+ * @return
+ */
+void filter_module(rd_t* rd);
 
 
 /**

@@ -46,11 +46,13 @@ during post-processing and resolving.
 4. Allocation report
    Contains information about resource (memory, file descriptors, GObjects) 
    allocation. 
-     <index>. [@<context id>] \[<timestamp>\] <function name>(<resource size>) 
+     <index>. [:<module id>] [@<context id>] \[<timestamp>\] <function name>(<resource size>) 
              = <resource id>
      <bactrace>
    Where:
      <index>         - the allocation/deallocation report index.
+	 <module id>     - an optional event source module id (omitted if a single
+                       tracing module is used)	 
      <context id>    - an optional context id (omitted if no contexts are set
                        during the allocation).
      <timestamp>     - optional timestmap, absent if the header 'timestamps' 

@@ -173,6 +173,8 @@ typedef struct rd_fcall_t {
     dlist_node_t node;
 	/* the function index */
 	int index;
+	/* source module identifier */
+	int module_id;
 	/* the function call type (SP_RTRACE_FTYPE_* definitions)
 	 * in sp-rtrace-proto.h */
 	unsigned int type;
@@ -186,7 +188,6 @@ typedef struct rd_fcall_t {
 	void* res_id;
 	/* the associated (allocated) resource size */
 	int res_size;
-
 	/* the function call backtrace */
 	struct rd_ftrace_t* trace;
 

@@ -160,6 +160,7 @@ static rd_fcall_t* read_packet_FC(const char* data, int size)
 
     rd_fcall_t* call = (rd_fcall_t*)dlist_create_node(sizeof(rd_fcall_t));
     call->index = call_index++;
+    data += read_dword(data, &call->module_id);
     data += read_dword(data, &call->context);
     data += read_dword(data, &call->timestamp);
     data += read_dword(data, &call->type);
@@ -195,6 +196,29 @@ static rd_ftrace_t* read_packet_BT(const char* data, int size)
     dlist_init(&trace->calls);
     return trace;
 }
+
+/**
+ * Reads function arguments packet.
+ *
+ * @param[in] data   the binary data.
+ * @param[in] size   the data size.
+ * @return           the function trace record.
+ */
+static rd_ftrace_t* read_packet_FA(const char* data, int size)
+{
+	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
+
+	rd_fargs_t* args = (rd_fargs_t*)malloc_a(sizeof(rd_fargs_t));
+	int argc, i;
+	data += read_dword(data, &argc);
+	args->args = (char**)malloc_a(sizeof(char*) * (argc + 1));
+	for (i = 0; i < argc; i++) {
+		data += read_stringa(data, &args->args[i]);
+	}
+	args->args[i] = NULL;
+    return args;
+}
+
 
 static rd_hinfo_t* read_packet_HI(const char* data, int size)
 {
@@ -246,10 +270,12 @@ static int read_generic_packet(rd_t* rd, const char* data, int size)
 	switch (type) {
 		case SP_RTRACE_PROTO_MEMORY_MAP: {
 			dlist_add(&rd->mmaps, read_packet_MM(data, data_len));
+		    fcall_prev = NULL;
 			break;
 		}
 		case SP_RTRACE_PROTO_CONTEXT_REGISTRY: {
 			dlist_add(&rd->contexts, read_packet_CT(data, data_len));
+		    fcall_prev = NULL;
 			break;
 		}
 		case SP_RTRACE_PROTO_FUNCTION_CALL: {
@@ -266,31 +292,38 @@ static int read_generic_packet(rd_t* rd, const char* data, int size)
 				rd_fcall_set_ftrace(rd, fcall_prev, trace);
 			}
 			else {
-				fprintf(stderr, "WARNING: a backtrace packet did not follow function call packet\n");
+				fprintf(stderr, "WARNING: a backtrace packet did not follow function call/function argument packet\n");
 			}
+		    fcall_prev = NULL;
             break;
 		}
 		case SP_RTRACE_PROTO_FUNCTION_ARGS: {
-			/* TODO: */
+			if (fcall_prev) {
+				fcall_prev->args = read_packet_FA(data, data_len);
+			}
+			else {
+				fprintf(stderr, "WARNING: a function argument packet did not follow function call packet\n");
+			}
 			break;
 		}
 		case SP_RTRACE_PROTO_PROCESS_INFO: {
 			rd->pinfo = read_packet_PI(data, data_len);
+		    fcall_prev = NULL;
 			break;
 		}
 		case SP_RTRACE_PROTO_MODULE_INFO: {
 			dlist_add(&rd->minfo, read_packet_MI(data, data_len));
+		    fcall_prev = NULL;
 			break;
 		}
 		case SP_RTRACE_PROTO_HEAP_INFO: {
 			rd->hinfo = read_packet_HI(data, data_len);
+		    fcall_prev = NULL;
 			break;
 		}
 		default:
+		    fcall_prev = NULL;
 			break;
-	}
-	if (type != SP_RTRACE_PROTO_FUNCTION_CALL) {
-	    fcall_prev = NULL;
 	}
 	return len;
 }

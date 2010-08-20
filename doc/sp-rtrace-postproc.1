@@ -46,8 +46,11 @@ redirecting output to it. If --output-dir option is set, post-processor
 generates appropriate output file name and passes it to the resolver with 
 -o option. Otherwise the resolved data will be written to standard output.
 .TP
-\fI--context\fP <context> (\fI-C\fP <context>)
-Filters out function call records not matching the specified context mask.
+\fI--context\fP <mask> (\fI-C\fP <mask>)
+Filters function call records matching the specified context id mask.
+.TP
+\fI--module\fP <mask> (\fI-M\fP <mask>)
+Filters function call records matching the specified module id mask.
 .TP
 \fI--sort\fP <order> (\fI-s\fP <order>)
 Sets the backtrace sorting order for --compress and --filter-leaks 

@@ -1,6 +1,8 @@
 *.o
 *~
 *.swp
+*.la
+*.lo
 src/.libs
 src/sp-rtrace
 src/sp-rtrace-postproc
