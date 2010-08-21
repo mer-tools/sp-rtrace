@@ -10,6 +10,8 @@ src/sp-rtrace-resolve
 src/sp-rtrace-allocmap
 core
 tags
+aux
+build-stamp
 
 # tests
 tests/bin/*

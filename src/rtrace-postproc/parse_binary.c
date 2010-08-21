@@ -140,6 +140,7 @@ static rd_minfo_t* read_packet_MI(const char* data, int size)
 
 	rd_minfo_t* info = (rd_minfo_t*)dlist_create_node(sizeof(rd_minfo_t));
 	unsigned int version;
+	data += read_dword(data, &info->id);
 	data += read_dword(data, &version);
 	info->vmajor = version >> 16;
 	info->vminor = version & 0xFFFF;

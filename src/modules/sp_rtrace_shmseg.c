@@ -1,3 +1,4 @@
+
 /*
  * This file is part of sp-rtrace package.
  *
@@ -24,12 +25,12 @@
 
 
 /**
- * @file sp_rtrace_memshared.c
+ * @file sp_rtrace_shmseg.c
  *
- * Shared memory tracking module implementation.
+ * Shared memory segment tracking module implementation.
  *
- * This module tracks allocations of the shared memory segments with
- * shmget and their destruction.
+ * This module tracks shared memory segment creation and destruction by the
+ * current process.
  */
 
 #include <stdlib.h>
@@ -38,7 +39,7 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/types.h>
-
+#include <unistd.h>
 
 #include "sp_rtrace_main.h"
 #include "common/sp_rtrace_proto.h"
@@ -50,10 +51,10 @@ static sp_rtrace_module_info_t module_info = {
 		.type = MODULE_TYPE_PRELOAD,
 		.version_major = 1,
 		.version_minor = 0,
-		.name = "memshared",
-		.description = "Shared memory segment creation/destruction tracing module. "
-				       "Tracks shared memory segment creation with shmget function and "
-				       "their destruction.",
+		.name = "shmseg",
+		.description = "Shared memory segment tracking module. "
+				       "Tracks shared memory segment creation and destruction by "
+				       "the current process.",
 };
 
 /* the module identifier assigned by main module */
@@ -67,7 +68,7 @@ static int module_id = 0;
  * function.
  */
 
-#define HASH_BITS  15
+#define HASH_BITS  8
 #define HASH_SIZE  (1 << HASH_BITS)
 #define HASH_MASK  (HASH_SIZE - 1)
 
@@ -80,7 +81,8 @@ typedef struct {
 	const void* addr;
 	/* the shared memory segment id */
 	int shmid;
-} map_t;
+} addrmap_t;
+
 static htable_t addr2shmid;
 
 
@@ -94,7 +96,7 @@ static htable_t addr2shmid;
  *                   0 - the backtraces are equal.
  *                  >0 - the first backtrace is 'greater' than second.
  */
-static long compare_nodes(const map_t* node1, const map_t* node2)
+static long addrmap_compare_nodes(const addrmap_t* node1, const addrmap_t* node2)
 {
 	return node1->addr - node2->addr;
 }
@@ -105,7 +107,7 @@ static long compare_nodes(const map_t* node1, const map_t* node2)
  * @param[in] res   the mapping node.
  * @return          the hash value.
  */
-static long calc_node_hash(const map_t* node)
+static long addrmap_calc_node_hash(const addrmap_t* node)
 {
 	unsigned long hash = 0;
 	unsigned long value = (unsigned long)node->addr;
@@ -179,14 +181,35 @@ static void trace_initialize()
 int trace_shmget(key_t key, size_t size, int shmflg)
 {
 	int rc = trace_off.shmget(key, size, shmflg);
-	sp_rtrace_write_function_call(module_id, SP_RTRACE_FTYPE_ALLOC, "shmget", size, rc, NULL);
+	if (rc != -1 && (shmflg & IPC_CREAT)) {
+		sp_rtrace_write_function_call(module_id, SP_RTRACE_FTYPE_ALLOC, "shmget", size, (void*)(long)rc, NULL);
+	}
 	return rc;
 }
 
 int trace_shmctl(int shmid, int cmd, struct shmid_ds *buf)
 {
+	/* check if the segment was allocated by current process
+	 * and read it's attachment counter if so */
+	int nattach = -1;
+
+	/* if the IPC_RMID command was issued, first read segment attachment
+	 * count. We are interested only in segments created by current process */
+	if (cmd == IPC_RMID) {
+		struct shmid_ds ds;
+		if (trace_off.shmctl(shmid, IPC_STAT, &ds) == 0) {
+			if (ds.shm_cpid == getpid()) {
+				nattach = ds.shm_nattch;
+			}
+		}
+	}
 	int rc = trace_off.shmctl(shmid, cmd, buf);
-	sp_rtrace_write_function_call(module_id, SP_RTRACE_FTYPE_ALLOC, "shmctl", 1, rc, NULL);
+	if (rc != -1 && nattach == 0) {
+		/* IPC_RMID command issued to segment with attachment counter 0.
+		 * This means that the segment is getting destroyed. It was created
+		 * by current process, so report its deallocation. */
+		sp_rtrace_write_function_call(module_id, SP_RTRACE_FTYPE_FREE, "shmctl", 0, (void*)(long)shmid, NULL);
+	}
 	return rc;
 }
 
@@ -194,26 +217,45 @@ void* trace_shmat(int shmid, const void *shmaddr, int shmflg)
 {
 	void* rc = trace_off.shmat(shmid, shmaddr, shmflg);
 	if (rc) {
-		/* store addr->shmid mapping */
-		map_t* node = htable_create_node(sizeof(map_t));
-		node->shmid = shmid;
-		node->addr = rc;
-		node = htable_store(&addr2shmid, (void*)node);
-		if (node) {
-			/* TODO: Warning about overwriting already existing address ?
-			 * In theory it shouldn't happen, but who knows... */
-			free(node);
+		/* check if the segment was created by current process */
+		struct shmid_ds ds;
+		if (trace_off.shmctl(shmid, IPC_STAT, &ds) == 0 && ds.shm_cpid == getpid()) {
+			/* store addr->shmid mapping */
+			addrmap_t* node = htable_create_node(sizeof(addrmap_t));
+			node->shmid = shmid;
+			node->addr = rc;
+			node = htable_store(&addr2shmid, (void*)node);
+			if (node) {
+				/* TODO: Warning about overwriting already existing address ?
+				 * In theory it shouldn't happen, but who knows... */
+				free(node);
+			}
 		}
-		sp_rtrace_write_function_call(module_id, SP_RTRACE_FTYPE_ALLOC, "shmat", 1, rc, NULL);
 	}
 	return rc;
 }
 
 int trace_shmdt(const void *shmaddr)
 {
+	int nattach = -1;
+	int shmid = 0;
+	addrmap_t node = {.addr = shmaddr};
+	addrmap_t* pnode = (addrmap_t*)htable_find(&addr2shmid, (void*)&node);
+	if (pnode != NULL) {
+		shmid = pnode->shmid;
+		/* if segment is marked for destruction, read its attachment counter */
+		struct shmid_ds ds;
+		if (trace_off.shmctl(shmid, IPC_STAT, &ds) == 0 && ds.shm_perm.mode & SHM_DEST) {
+			nattach = ds.shm_nattch;
+		}
+		htable_remove(&addr2shmid, (void*)pnode);
+		free(pnode);
+	}
 	int rc = trace_off.shmdt(shmaddr);
-	if (rc == 0) {
-		sp_rtrace_write_function_call(module_id, SP_RTRACE_FTYPE_FREE, "shdt", 0, shmaddr, NULL);
+	/* if the segment was marked for removal it should be destroyed after detaching the
+	 * last address. */
+	if (rc == 0 && nattach == 1) {
+		sp_rtrace_write_function_call(module_id, SP_RTRACE_FTYPE_FREE, "shdt", 0, shmid, NULL);
 	}
 	return rc;
 }
@@ -295,22 +337,16 @@ static void trace_shmem_fini(void) __attribute__((destructor));
 static void trace_shmem_init(void)
 {
 	LOG("initializing %s (%d.%d)", module_info.name, module_info.version_major, module_info.version_minor);
-	htable_init(&addr2shmid, HASH_SIZE, (op_unary_t)calc_node_hash, (op_binary_t)compare_nodes);
+	htable_init(&addr2shmid, HASH_SIZE, (op_unary_t)addrmap_calc_node_hash, (op_binary_t)addrmap_compare_nodes);
 	trace_initialize();
 
 	module_id = sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
 }
 
 
-static long dump_mapping(map_t* node)
-{
-	fprintf(stderr, "%p -> 0x%x\n", node->addr, node->shmid);
-}
-
 static void trace_shmem_fini(void)
 {
 	enable_tracing(false);
-//	htable_foreach(&addr2shmid, (op_unary_t)dump_mapping);
 	htable_free(&addr2shmid, (op_unary_t)free);
 	LOG("fini");
 }

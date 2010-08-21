@@ -74,7 +74,7 @@ extern volatile sig_atomic_t backtrace_lock;
  * @param[in] args     the function argument array, ending with NULL. Optional.
  * @return             the number of bytes written.
  */
-int sp_rtrace_write_function_call(int moduleid, int type, const char* name, size_t size, void* id, char** args);
+int sp_rtrace_write_function_call(int moduleid, int type, const char* name, size_t size, const void* id, char** args);
 
 
 typedef void (*sp_rtrace_enable_tracing_t)(bool);

@@ -41,7 +41,7 @@
  */
 static int write_module_info(rd_minfo_t* minfo, FILE* fp)
 {
-	formatter_printf(fp, "# tracing module: %s (%d.%d)\n", minfo->name, minfo->vmajor, minfo->vminor);
+	formatter_printf(fp, "# tracing module: [%x] %s (%d.%d)\n", minfo->id, minfo->name, minfo->vmajor, minfo->vminor);
 	return 0;
 }
 

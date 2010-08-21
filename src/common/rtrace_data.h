@@ -96,6 +96,8 @@ void rd_pinfo_free(rd_pinfo_t* pinfo);
 typedef struct rd_minfo_t {
     /* double linked list support */
     dlist_node_t node;
+    /* module id */
+    unsigned int id;
     /* module information record data */
 	unsigned char vmajor;
 	unsigned char vminor;
@@ -174,7 +176,7 @@ typedef struct rd_fcall_t {
 	/* the function index */
 	int index;
 	/* source module identifier */
-	int module_id;
+	unsigned int module_id;
 	/* the function call type (SP_RTRACE_FTYPE_* definitions)
 	 * in sp-rtrace-proto.h */
 	unsigned int type;

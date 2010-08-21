@@ -1,6 +1,7 @@
 
 lib_LTLIBRARIES = libsp-rtrace1.la libsp-rtrace-main.la \
-	libsp-rtrace-memory.la libsp-rtrace-memtransfer.la libsp-rtrace-memshared.la
+	libsp-rtrace-memory.la libsp-rtrace-memtransfer.la \
+	libsp-rtrace-shmaddr.la libsp-rtrace-shmseg.la
 
 libsp_rtrace1_la_SOURCES = library/sp_rtrace_context.c library/sp_rtrace_formatter.c \
 	common/formatter.c common/dlist.c common/htable.c common/utils.c common/rtrace_data.c
@@ -22,11 +23,15 @@ libsp_rtarce_memtransfer_la_CGLAGS = -rdynamic
 libsp_rtrace_memtransfer_la_LDFLAGS = -version-info $(VERSION_MAJOR):$(VERSION_MINOR)
 libsp_rtrace_memtransfer_la_LIBADD = -ldl 
 
-libsp_rtrace_memshared_la_SOURCES = modules/sp_rtrace_memshared.c common/htable.c common/dlist.c
-libsp_rtarce_memshared_la_CGLAGS = -rdynamic
-libsp_rtrace_memshared_la_LDFLAGS = -version-info $(VERSION_MAJOR):$(VERSION_MINOR)
-libsp_rtrace_memshared_la_LIBADD = -ldl 
+libsp_rtrace_shmaddr_la_SOURCES = modules/sp_rtrace_shmaddr.c
+libsp_rtarce_shmaddr_la_CGLAGS = -rdynamic
+libsp_rtrace_shmaddr_la_LDFLAGS = -version-info $(VERSION_MAJOR):$(VERSION_MINOR)
+libsp_rtrace_shmaddr_la_LIBADD = -ldl 
 
+libsp_rtrace_shmseg_la_SOURCES = modules/sp_rtrace_shmseg.c common/htable.c common/dlist.c
+libsp_rtarce_shmseg_la_CGLAGS = -rdynamic
+libsp_rtrace_shmseg_la_LDFLAGS = -version-info $(VERSION_MAJOR):$(VERSION_MINOR)
+libsp_rtrace_shmseg_la_LIBADD = -ldl 
 
 bin_PROGRAMS = sp-rtrace sp-rtrace-postproc sp-rtrace-resolve sp-rtrace-allocmap
 

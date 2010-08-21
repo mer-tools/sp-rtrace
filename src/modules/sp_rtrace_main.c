@@ -327,16 +327,18 @@ static void get_proc_name(char* out, size_t size)
 /**
  * Writes module info packet into processor pipe.
  *
+ * @param[in] id      the module id.
  * @param[in] name    the module name.
  * @param[in] major   the module version number (major).
  * @param[in] minor   the module version number (minor).
  * @return            the number of bytes written.
  */
-static int write_module_info(const char* name, unsigned char major, unsigned char minor)
+static int write_module_info(int id, const char* name, unsigned char major, unsigned char minor)
 {
     if (!sp_rtrace_options->enable) return 0;
     char* buffer = pipe_buffer_lock(), *ptr = buffer + SP_RTRACE_PROTO_TYPE_SIZE;
     ptr += write_dword(ptr, SP_RTRACE_PROTO_MODULE_INFO);
+    ptr += write_dword(ptr, id);
     ptr += write_dword(ptr, (major << 16) | minor);
     ptr += write_string(ptr, name);
     int size = ptr - buffer;
@@ -491,10 +493,10 @@ static void write_initial_data()
 	write_handshake(SP_RTRACE_PROTO_VERSION_MAJOR, SP_RTRACE_PROTO_VERSION_MINOR, BUILD_ARCH);
 	write_output_settings(sp_rtrace_options->output_dir, sp_rtrace_options->postproc);
 	write_process_info();
-	write_module_info(module_info.name, module_info.version_major, module_info.version_minor);
+	write_module_info(0, module_info.name, module_info.version_major, module_info.version_minor);
 	for (i = 0; i < rtrace_module_index; i++) {
 	    rtrace_module_t* module = &rtrace_modules[i];
-	    write_module_info(module->name, module->vmajor, module->vminor);
+	    write_module_info(module->id, module->name, module->vmajor, module->vminor);
     }
 	write_new_library("*");
 	pipe_buffer_flush();
@@ -565,7 +567,7 @@ int sp_rtrace_write_context_registry(int context_id, const char* name)
 }
 
 
-int sp_rtrace_write_function_call(int moduleid, int type, const char* name, size_t res_size, void* id, char** args)
+int sp_rtrace_write_function_call(int moduleid, int type, const char* name, size_t res_size, const void* id, char** args)
 {
 	if (!sp_rtrace_options->enable) return 0;
 	int size = 0;
@@ -618,11 +620,16 @@ int sp_rtrace_write_function_call(int moduleid, int type, const char* name, size
 	if (args) {
 		char* psize = ptr;
 		ptr += SP_RTRACE_PROTO_TYPE_SIZE;
-		ptr += write_dword(ptr, SP_RTRACE_PROTO_BACKTRACE);
-		char* arg = *args;
-		while (arg) {
+		ptr += write_dword(ptr, SP_RTRACE_PROTO_FUNCTION_ARGS);
+		char* pargs = ptr;
+		ptr += sizeof(int);
+		int argc = 0;
+		while (*args) {
+			char* arg = *args++;
 			ptr += write_string(ptr, arg);
+			++argc;
 		}
+		write_dword(pargs, argc);
 		size = ptr - psize;
 		write_dword(psize, size - SP_RTRACE_PROTO_TYPE_SIZE);
 	}
@@ -670,7 +677,7 @@ int sp_rtrace_register_module(const char* name, unsigned char vmajor, unsigned c
 	 * enable module and write it's information packet */
 	if (sp_rtrace_options->enable) {
 		enable_tracing(true);
-		write_module_info(name, vmajor, vminor);
+		write_module_info(module->id, name, vmajor, vminor);
 	}
 	return module->id;
 }
