@@ -122,12 +122,32 @@ static void* parse_context_registry(char* line)
 	rd_context_t* context = NULL;
 	char name[512];
 	unsigned int id;
-	if (sscanf(line, "@ %x : %s", &id, name) == 2) {
+	if (sscanf(line, "@ %x : %[^\n]", &id, name) == 2) {
 		context = dlist_create_node(sizeof(rd_context_t));
 		context->id = id;
 		context->name = strdup_a(name);
 	}
 	return context;
+}
+
+/**
+ * Parses resource registry record.
+ *
+ * @param[in] line   the line to parse.
+ * @return           the resource registry record,
+ *                   or NULL if parsing failed (not a resource registry record).
+ */
+static void* parse_resource_registry(char* line)
+{
+	rd_resource_t* resource = NULL;
+	char name[512];
+	unsigned int id;
+	if (sscanf(line, "& %x : %[^\n]", &id, name) == 2) {
+		resource = dlist_create_node(sizeof(rd_resource_t));
+		resource->id = id;
+		resource->name = strdup_a(name);
+	}
+	return resource;
 }
 
 
@@ -164,7 +184,7 @@ static void* parse_function_call(char* line)
 	int timestamp = 0;
 	void *res_id, *res_size;
 	char name[512], *ptr = line, delim, function_type;
-	int module_id = 0;
+	int res_type = 0;
 	/* parse index field <index>. */
 	if (sscanf(ptr, "%d%c", &index, &delim) != 2 || delim != '.') return NULL;
 	/* move cursor beyond index field */
@@ -173,9 +193,9 @@ static void* parse_function_call(char* line)
 	ptr++;
 
 	/* parse optional module id */
-	if (sscanf(ptr, ":%x", &module_id) == 1) {
+	if (sscanf(ptr, "&%x", &res_type) == 1) {
 		/* module id was parsed successfully. Move cursor to next field */
-		ptr = strchr(ptr, ':');
+		ptr = strchr(ptr, '&');
 		ptr = strchr(ptr, ' ');
 		if (!ptr) return NULL;
 		ptr++;
@@ -224,7 +244,7 @@ static void* parse_function_call(char* line)
 	}
 	rd_fcall_t* call = dlist_create_node(sizeof(rd_fcall_t));
 	call->index = index;
-	call->module_id = module_id;
+	call->res_type = res_type;
 	call->type = function_type;
 	call->context = context;
 	call->name = strdup_a(name);
@@ -332,7 +352,7 @@ static bool parse_arguments(char* line, char** parg)
  * @param[in] size   the number of function arguments.
  * @return
  */
-static void store_arguments(rd_t* rd, rd_fcall_t* call, char** args, int size)
+static void store_call_arguments(rd_fcall_t* call, char** args, int size)
 {
 	rd_fargs_t* fargs = (rd_fargs_t*)malloc_a(sizeof(rd_fargs_t));
 	fargs->args = malloc_a(sizeof(char*) * size + 1);
@@ -399,6 +419,14 @@ static void read_text_data(rd_t* rd, FILE* fp)
 			}
 			continue;
 		}
+		/* if args_index is set at this place, it means that parser finished
+		 * to process all function argument records belonging to the last call
+		 * and thus a function argument data object created and stored.
+		 */
+		if (args_index) {
+			store_call_arguments(RD_FCALL(dlist_last(&last_calls)), args, args_index);
+			args_index = 0;
+		}
 		/* if bt_index is set at this place, it means that parser finished
 		 * to process all trace records belonging to single backtrace and
 		 * thus a backtrace data object can be created and stored.
@@ -406,14 +434,6 @@ static void read_text_data(rd_t* rd, FILE* fp)
 		if (bt_index) {
 			store_backtrace(rd, &last_calls, bt, bt_index);
 			bt_index = 0;
-		}
-		/* if args_index is set at this place, it means that parser finished
-		 * to process all function argument records belonging to the last call
-		 * and thus a function argument data object created and stored.
-		 */
-		if (args_index) {
-			store_arguments(rd, RD_FCALL(dlist_last(&last_calls)), args, args_index);
-			args_index = 0;
 		}
 
 		/* check if the line contains function call record */
@@ -447,6 +467,12 @@ static void read_text_data(rd_t* rd, FILE* fp)
 			dlist_add(&rd->contexts, data);
 			continue;
 		}
+		/* check if the line contains resource registry record */
+		data = parse_resource_registry(line);
+		if (data) {
+			dlist_add(&rd->resources, data);
+			continue;
+		}
 		/* otherwise assume that line contains comment record */
 		rd_comment_t* comment = dlist_create_node(sizeof(rd_comment_t));
 		comment->index = comment_index;
@@ -456,7 +482,7 @@ static void read_text_data(rd_t* rd, FILE* fp)
 		dlist_add(&rd->comments, comment);
 	}
 	if (args_index) {
-		store_arguments(rd, RD_FCALL(dlist_last(&last_calls)), args, args_index);
+		store_call_arguments(RD_FCALL(dlist_last(&last_calls)), args, args_index);
 	}
 	if (bt_index) {
 		store_backtrace(rd, &last_calls, bt, bt_index);

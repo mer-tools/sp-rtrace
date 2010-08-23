@@ -309,7 +309,7 @@ RT_CASE(remove_node)
 	for (i = 0; i < RT_SIZEOF(template_in); i++) {
 		node_t* node = htable_find(&table, &template_in[i]);
 		RT_ASSERT(node != NULL);
-		htable_remove(&table, node);
+		htable_remove_node(node);
 		RT_ASSERT_EX(verify_if_not_contains(&table, template_in[0].id, template_in[0].text) == RT_OK, "(%d:%s)", template_in[0].id, template_in[0].text);
 		free_node(node);
 

@@ -141,7 +141,7 @@ static void display_usage()
  * Stops data processing and exits application.
  * @param sig
  */
-static void sigint_handler(int sig)
+static void sigint_handler(int sig __attribute((unused)))
 {
 	rtrace_main_loop = 0;
 	/* send toggle signal to tracing process if the trace is active */
@@ -155,7 +155,7 @@ static void sigint_handler(int sig)
  * or post-processor was terminated.
  * @param sig
  */
-static void sigchld_handler(int sig)
+static void sigchld_handler(int sig __attribute((unused)))
 {
 	rtrace_main_loop = 0;
 }
@@ -263,7 +263,7 @@ static int open_postproc_pipe()
 			argv[argc++] = output_dir;
 		}
 		/* break argument string into separate arguments */
-		while (argc < sizeof(argv) / sizeof(argv[0]) - 1) {
+		while (argc < (int)sizeof(argv) / (int)sizeof(argv[0]) - 1) {
 			argv[argc++] = ptr;
 			ptr = strchr(ptr, ' ');
 			if (!ptr) break;

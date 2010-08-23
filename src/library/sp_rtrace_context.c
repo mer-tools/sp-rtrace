@@ -41,16 +41,16 @@ static void (*exit_context)(int context_id);
  * Empty context functions. Used when the original context implementation
  * functions are not available.
  */
-static int empty_create_context(const char* name)
+static int empty_create_context(const char* name __attribute((unused)))
 {
 	return 0;
 }
 
-static void empty_enter_context(int context_id)
+static void empty_enter_context(int context_id __attribute((unused)))
 {
 }
 
-static void empty_exit_context(int context_id)
+static void empty_exit_context(int context_id __attribute((unused)))
 {
 }
 

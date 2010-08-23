@@ -49,7 +49,7 @@ static int call_index = 1;
  * @param[in] size   the data size.
  * @return           the number of bytes processed.
  */
-static rd_hshake_t* read_handshake_packet(rd_t* rd, const char* data, int size)
+static rd_hshake_t* read_handshake_packet(const char* data)
 {
 	/* reset the function call index as handshake packet means parsing new data */
 	call_index = 1;
@@ -75,7 +75,7 @@ static rd_hshake_t* read_handshake_packet(rd_t* rd, const char* data, int size)
  * @param[in] size   the data size.
  * @return           the context registry record.
  */
-static rd_context_t* read_packet_CT(const char* data, int size)
+static rd_context_t* read_packet_CR(const char* data)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
 	rd_context_t* context = (rd_context_t*)dlist_create_node(sizeof(rd_context_t));
@@ -84,6 +84,24 @@ static rd_context_t* read_packet_CT(const char* data, int size)
 	return context;
 }
 
+
+/**
+ * Reads resource registry packet.
+ *
+ * @param[in] data   the binary data.
+ * @param[in] size   the data size.
+ * @return           the resource registry record.
+ */
+static rd_resource_t* read_packet_RR(const char* data)
+{
+	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
+	rd_resource_t* res = (rd_resource_t*)dlist_create_node(sizeof(rd_resource_t));
+	data += read_dword(data, &res->id);
+	read_stringa(data, &res->name);
+	return res;
+}
+
+
 /**
  * Reads memory mapping packet.
  *
@@ -91,7 +109,7 @@ static rd_context_t* read_packet_CT(const char* data, int size)
  * @param[in] size   the data size.
  * @return           the memory mapping record.
  */
-static rd_mmap_t* read_packet_MM(const char* data, int size)
+static rd_mmap_t* read_packet_MM(const char* data)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
 
@@ -109,7 +127,7 @@ static rd_mmap_t* read_packet_MM(const char* data, int size)
  * @param[in] size   the data size.
  * @return           the process info record.
  */
-static rd_pinfo_t* read_packet_PI(const char* data, int size)
+static rd_pinfo_t* read_packet_PI(const char* data)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
 
@@ -134,7 +152,7 @@ static rd_pinfo_t* read_packet_PI(const char* data, int size)
  * @param[in] size   the data size.
  * @return           the module info record.
  */
-static rd_minfo_t* read_packet_MI(const char* data, int size)
+static rd_minfo_t* read_packet_MI(const char* data)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
 
@@ -155,13 +173,13 @@ static rd_minfo_t* read_packet_MI(const char* data, int size)
  * @param[in] size   the data size.
  * @return           the function call record.
  */
-static rd_fcall_t* read_packet_FC(const char* data, int size)
+static rd_fcall_t* read_packet_FC(const char* data)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
 
     rd_fcall_t* call = (rd_fcall_t*)dlist_create_node(sizeof(rd_fcall_t));
     call->index = call_index++;
-    data += read_dword(data, &call->module_id);
+    data += read_dword(data, &call->res_type);
     data += read_dword(data, &call->context);
     data += read_dword(data, &call->timestamp);
     data += read_dword(data, &call->type);
@@ -182,7 +200,7 @@ static rd_fcall_t* read_packet_FC(const char* data, int size)
  * @param[in] size   the data size.
  * @return           the function trace record.
  */
-static rd_ftrace_t* read_packet_BT(const char* data, int size)
+static rd_ftrace_t* read_packet_BT(const char* data)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
 
@@ -205,12 +223,12 @@ static rd_ftrace_t* read_packet_BT(const char* data, int size)
  * @param[in] size   the data size.
  * @return           the function trace record.
  */
-static rd_ftrace_t* read_packet_FA(const char* data, int size)
+static rd_fargs_t* read_packet_FA(const char* data)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
 
 	rd_fargs_t* args = (rd_fargs_t*)malloc_a(sizeof(rd_fargs_t));
-	int argc, i;
+	unsigned int argc, i;
 	data += read_dword(data, &argc);
 	args->args = (char**)malloc_a(sizeof(char*) * (argc + 1));
 	for (i = 0; i < argc; i++) {
@@ -221,7 +239,7 @@ static rd_ftrace_t* read_packet_FA(const char* data, int size)
 }
 
 
-static rd_hinfo_t* read_packet_HI(const char* data, int size)
+static rd_hinfo_t* read_packet_HI(const char* data)
 {
 	rd_hinfo_t* hinfo = (rd_hinfo_t*)calloc_a(1, sizeof(rd_hinfo_t));
 
@@ -259,33 +277,37 @@ static int read_generic_packet(rd_t* rd, const char* data, int size)
 	/* check if the buffer has at least one full packet */
 	int offset = read_dword(data, &len);
 	len += offset;
-	if (len > size) {
+	if ((int)len > size) {
 		return -1;
 	}
 	/* read packet type */
 	offset += read_dword(data + offset, &type);
 	data += offset;
-	int data_len = len - offset;
 
 	/* process packet depending on its type */
 	switch (type) {
 		case SP_RTRACE_PROTO_MEMORY_MAP: {
-			dlist_add(&rd->mmaps, read_packet_MM(data, data_len));
+			dlist_add(&rd->mmaps, read_packet_MM(data));
 		    fcall_prev = NULL;
 			break;
 		}
 		case SP_RTRACE_PROTO_CONTEXT_REGISTRY: {
-			dlist_add(&rd->contexts, read_packet_CT(data, data_len));
+			dlist_add(&rd->contexts, read_packet_CR(data));
+		    fcall_prev = NULL;
+			break;
+		}
+		case SP_RTRACE_PROTO_RESOURCE_REGISTRY: {
+			dlist_add(&rd->resources, read_packet_RR(data));
 		    fcall_prev = NULL;
 			break;
 		}
 		case SP_RTRACE_PROTO_FUNCTION_CALL: {
-            fcall_prev = read_packet_FC(data, data_len);
+            fcall_prev = read_packet_FC(data);
             dlist_add(&rd->calls, fcall_prev);
             break;
         }
 		case SP_RTRACE_PROTO_BACKTRACE: {
-            rd_ftrace_t* trace = read_packet_BT(data, data_len);
+            rd_ftrace_t* trace = read_packet_BT(data);
 			/* check if function call record for this backtrace has been processed.
 			 * It should have been a record processed right before this one.
 			 */
@@ -300,7 +322,7 @@ static int read_generic_packet(rd_t* rd, const char* data, int size)
 		}
 		case SP_RTRACE_PROTO_FUNCTION_ARGS: {
 			if (fcall_prev) {
-				fcall_prev->args = read_packet_FA(data, data_len);
+				fcall_prev->args = read_packet_FA(data);
 			}
 			else {
 				fprintf(stderr, "WARNING: a function argument packet did not follow function call packet\n");
@@ -308,17 +330,17 @@ static int read_generic_packet(rd_t* rd, const char* data, int size)
 			break;
 		}
 		case SP_RTRACE_PROTO_PROCESS_INFO: {
-			rd->pinfo = read_packet_PI(data, data_len);
+			rd->pinfo = read_packet_PI(data);
 		    fcall_prev = NULL;
 			break;
 		}
 		case SP_RTRACE_PROTO_MODULE_INFO: {
-			dlist_add(&rd->minfo, read_packet_MI(data, data_len));
+			dlist_add(&rd->minfo, read_packet_MI(data));
 		    fcall_prev = NULL;
 			break;
 		}
 		case SP_RTRACE_PROTO_HEAP_INFO: {
-			rd->hinfo = read_packet_HI(data, data_len);
+			rd->hinfo = read_packet_HI(data);
 		    fcall_prev = NULL;
 			break;
 		}
@@ -348,7 +370,7 @@ static void read_binary_data(rd_t* rd, int fd)
 	/* read and process the handshake packet */
 	n = read(fd, ptr_in, BUFFER_SIZE - 1);
 	data_len = *(unsigned char*)ptr_in++;
-	if (data_len >= n || (rd->hshake = read_handshake_packet(rd, ptr_in, data_len)) == NULL) {
+	if (data_len >= n || (rd->hshake = read_handshake_packet(ptr_in)) == NULL) {
 		/* A handshake packet fragmentation is a sign of error,
 		 * as the handshake packet size is less than 256 bytes
 		 * and it's the first packet written into pipe. So in

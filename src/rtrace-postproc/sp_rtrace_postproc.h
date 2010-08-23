@@ -45,7 +45,7 @@ typedef struct postproc_options_t {
 	bool remove_args;
 	bool resolve;
 	int filter_context;
-	int filter_module;
+	int filter_resource;
 	op_binary_t compare_leaks;
 	int pid_resolve;
 } postproc_options_t;

@@ -67,14 +67,17 @@ extern volatile sig_atomic_t backtrace_lock;
  * Writes function call packet into processor pipe.
  *
  * @param[in] moduleid the source module identifier (returned by sp_rtrace_register_module).
- * @param[in] type     the function call type (0 - unknown, 1 - deallocation, 2 - allocation)
- * @param[in] name     the function name.
+ * @param[in] type     the function call type (see SP_RTRACE_FTYPE_* defines in sp_rtrace_proto.h).
+ * @param[in] res_type the resource type identifier returned by sp_rtrace_register_resource().
+ * @param[in] name     the function name. Note that the name must be reference to preallocated
+ *                     string (either static or dynamic), which must not be freed until the module
+ *                     is unloaded.
  * @param[in] size     the resource size.
  * @param[in] id       the resource identifier.
  * @param[in] args     the function argument array, ending with NULL. Optional.
  * @return             the number of bytes written.
  */
-int sp_rtrace_write_function_call(int moduleid, int type, const char* name, size_t size, const void* id, char** args);
+int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* name, size_t size, const void* id, char** args);
 
 
 typedef void (*sp_rtrace_enable_tracing_t)(bool);
@@ -91,9 +94,25 @@ typedef void (*sp_rtrace_enable_tracing_t)(bool);
  * @param[in] vmajor        the module version major number.
  * @param[in] vminor        the module version minor number.
  * @param[in] enable_func   the trace enabling/disabling function.
- * @return                  Id of the registered module or 0 if too many modules are registered.
+ * @return                  the module id or 0 if module registry is full.
  */
-int sp_rtrace_register_module(const char* name, unsigned char vmajor, unsigned char vminor, sp_rtrace_enable_tracing_t enable_func);
+unsigned int sp_rtrace_register_module(const char* name, unsigned char vmajor, unsigned char vminor,
+		sp_rtrace_enable_tracing_t enable_func);
+
+
+/**
+ * Registers resource type.
+ *
+ * During initialization phase every module must register resources
+ * it's going to track. This allows to identify the resource types
+ * when multiple modules are used or a single module tracks multiple
+ * resource types.
+ * @param[in] name     the resource name. Note that the name must be reference to preallocated
+ *                     string (either static or dynamic), which must not be freed until the module
+ *                     is unloaded.
+ * @return             the resource type id or 0 if resource registry is full.
+ */
+unsigned int sp_rtrace_register_resource(const char* name);
 
 /**
  * Stores current heap information (mallinf()) so it can be sent to pre-processor

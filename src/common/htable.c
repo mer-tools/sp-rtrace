@@ -86,7 +86,7 @@ void* htable_find(htable_t* ht, void* data)
 	return node;
 }
 
-void htable_remove(htable_t* ht, void* node)
+void htable_remove_node(void* node)
 {
 	htable_node_t* tnode = (htable_node_t*)node;
 	if (tnode->bucket) {

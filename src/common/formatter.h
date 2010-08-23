@@ -105,6 +105,16 @@ int formatter_write_ftrace(const rd_ftrace_t* trace, FILE* fp);
  */
 int formatter_write_context(const rd_context_t* context, FILE* fp);
 
+
+/**
+ * Writes resource registry record.
+ *
+ * @param[in] resource  the resource data.
+ * @param[in] fp        the output stream.
+ * @return              0 - success.
+ */
+int formatter_write_resource(const rd_resource_t* resource, FILE* fp);
+
 /**
  * Writes comment record.
  *

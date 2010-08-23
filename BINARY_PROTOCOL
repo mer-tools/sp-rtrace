@@ -101,9 +101,9 @@ sp_context_create function. It contains context id and name.
 5. Function call [FC]
 Function call packet is sent when a function call has been done.
 
-[module id][timestamp][context][type][name][id][size]
-  [module id] - the source module id. 0 if only one tracing module is used.
+[timestamp][resource type][context][type][name][id][size]
   [timestamp] - the timestamp containing milliseconds since midnight(?) (dword).
+  [resource type] - the resource type id. 0 if only one resource type is tracked.
   [context] - the call context (dword)
   [type] - the call type (allocation/deallocation/copying) (dword)
   [name] - the function name (string)
@@ -174,3 +174,14 @@ The OS packet is not stored on disk or passed to post-processor.
 [path][options]
   [path] - the output directory (string)
   [options] - the post-processor options (string)
+
+11. Resource registry [RR]
+The resource registry packet contains resource type id and name. If multiple
+resource types are being tracked, then resource id is used to identify
+the tracked resource type in function call records.
+
+[id][name]
+  [id] - the resource type id (dword)
+  [name] - the resource type name (string)
+  
+  

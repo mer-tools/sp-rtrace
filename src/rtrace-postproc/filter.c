@@ -41,6 +41,8 @@ typedef struct fres_t {
 	htable_node_t node;
 	/* the associated function call */
 	rd_fcall_t* call;
+	/* resource reference counter */
+	int ref_count;
 } fres_t;
 
 
@@ -81,10 +83,10 @@ void free_fres_rec(fres_t* res)
  */
 static long res_compare(const fres_t* res1, const fres_t* res2)
 {
-	if (res1->call->module_id == res2->call->module_id) {
+	if (res1->call->res_type == res2->call->res_type) {
 		return res1->call->res_id - res2->call->res_id;
 	}
-	return res1->call->module_id - res2->call->module_id;
+	return res1->call->res_type - res2->call->res_type;
 }
 
 /**
@@ -102,7 +104,7 @@ static long res_hash(const fres_t* res)
 		hash ^= value & ((1 << 16) - 1);
 		value >>= 3;
 	}
-	value = res->call->module_id;
+	value = res->call->res_type;
 	while (value) {
 		hash ^= value & ((1 << 16) - 1);
 		value >>= 3;
@@ -128,35 +130,37 @@ static long res_hash(const fres_t* res)
 static long fcall_remove_freed(rd_fcall_t* call, void* data)
 {
 	fres_index_t* index = (fres_index_t*)data;
+	fres_t find_res = {.call = call};
+    fres_t* res = htable_find(&index->table, &find_res);
 
     if (call->type == SP_RTRACE_FTYPE_ALLOC) {
-    	/* create resource index record */
-        fres_t* new_res = (fres_t*)calloc_a(1, sizeof(fres_t));
-        new_res->call = call;
-        /* store the created record into resource index table */
-        fres_t* old_res = htable_store(&index->table, new_res);
-        /* not NULL old_res means that the index table already had resource
-         * with the specified id. This is abnormal situation, as no
-         * two resources should have the same id. */
-        if (old_res) {
-        	fprintf(stderr, "WARNING: duplicate resource identifiers detected (id=%p, index=%d)\n",
-        			call->res_id, call->index);
-        	free_fres_rec(old_res);
-        }
+    	if (res) {
+    		res->ref_count++;
+			rd_fcall_remove(index->rd, call);
+    	}
+    	else {
+    		/* create resource index record */
+			fres_t* new_res = (fres_t*)calloc_a(1, sizeof(fres_t));
+			new_res->call = call;
+			new_res->ref_count = 1;
+			/* store the created record into resource index table */
+			htable_store(&index->table, new_res);
+    	}
     }
     else if (call->type == SP_RTRACE_FTYPE_FREE) {
     	/* create resource template for htable_find function. As the
     	 * compare function of resource hash table uses only call->res
     	 * id value, setting the .call field is enough for lookups */
-        fres_t new_res = {.call = call};
-        fres_t* old_res = htable_find(&index->table, &new_res);
-        if (old_res) {
-        	/* The resource allocation record found. Remove the record
-        	 * from function call list and free it. Also remove and
-        	 * free the resource index record */
-            htable_remove(&index->table, (htable_node_t*)old_res);
-            rd_fcall_remove(index->rd, old_res->call);
-            free_fres_rec(old_res);
+        if (res) {
+        	res->ref_count--;
+        	if (res->ref_count == 0) {
+				/* The resource allocation record found. Remove the record
+				 * from function call list and free it. Also remove and
+				 * free the resource index record */
+				htable_remove_node((htable_node_t*)res);
+				rd_fcall_remove(index->rd, res->call);
+				free_fres_rec(res);
+        	}
         }
         /* deallocation call record is always removed */
         rd_fcall_remove(index->rd, call);
@@ -189,7 +193,7 @@ static void fcall_filter_context(rd_fcall_t* call, rd_t* rd)
  */
 static void fcall_filter_module(rd_fcall_t* call, rd_t* rd)
 {
-	if (! (call->module_id & postproc_options.filter_module)) {
+	if (! (call->res_type & postproc_options.filter_resource)) {
 		rd_fcall_remove(rd, call);
 	}
 }
@@ -255,8 +259,12 @@ void find_lowhigh_blocks(rd_t* rd)
 long sum_leaks(rd_fcall_t* call, leak_data_t* leaks)
 {
 	if (call->type == SP_RTRACE_FTYPE_ALLOC) {
-		leaks->count++;
-		leaks->total_size += call->res_size;
+		/* Resource type 0 is used when only when one resource type is present, to
+		 * hide the resource types in call reports. In reality the resource type
+		 * is 1	 */
+		leak_data_t* leak = &leaks[call->res_type ? ffs(call->res_type) - 1 : 0];
+		leak->count++;
+		leak->total_size += call->res_size;
 	}
 	return 0;
 }

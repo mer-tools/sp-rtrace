@@ -68,8 +68,8 @@ int formatter_write_fcall(const rd_fcall_t*  call, FILE* fp)
 	char buffer[1024], *ptr = buffer;
 
 	ptr += sprintf(ptr, "%d. ", call->index);
-	if (call->module_id) {
-		ptr += sprintf(ptr, ":%x ", (int)call->module_id);
+	if (call->res_type) {
+		ptr += sprintf(ptr, "&%x ", (int)call->res_type);
 	}
 	if (call->context) {
 		ptr += sprintf(ptr, "@%x ", (int)call->context);
@@ -118,6 +118,11 @@ int formatter_write_context(const rd_context_t* context, FILE* fp)
 	return 0;
 }
 
+int formatter_write_resource(const rd_resource_t* resource, FILE* fp)
+{
+	fprintf(fp, "& %x : %s\n", (int)resource->id, resource->name);
+	return 0;
+}
 
 int formatter_write_fargs(const rd_fargs_t* args, FILE* fp)
 {

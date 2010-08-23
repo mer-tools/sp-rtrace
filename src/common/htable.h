@@ -113,11 +113,10 @@ void* htable_find(htable_t* ht, void* data);
  *
  * Note that the node itself is not freed - the user is responsible for
  * node allocation/freeing.
- * @param[in] ht    the hash table.
  * @param[in] node  the template node, containing data to search for.
  * @return
  */
-void htable_remove(htable_t* ht, void* node);
+void htable_remove_node(void* node);
 
 
 /**

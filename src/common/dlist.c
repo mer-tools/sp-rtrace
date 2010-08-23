@@ -173,6 +173,9 @@ void dlist_foreach2(dlist_t* list, op_binary_t do_what, void* data)
 
 dlist_node_t* dlist_foreach_in(dlist_t* list, dlist_node_t* from, op_unary_t do_while, op_unary_t do_what)
 {
+	if (from == NULL) {
+		from = dlist_first(list);
+	}
 	while (from && do_while(from)) {
 	    dlist_node_t* node = from;
 	    from = from->next;
@@ -185,6 +188,9 @@ dlist_node_t* dlist_foreach_in(dlist_t* list, dlist_node_t* from, op_unary_t do_
 dlist_node_t* dlist_foreach2_in(dlist_t* list, dlist_node_t* from,
 		op_binary_t do_while, void* data_while, op_binary_t do_what, void* data_what)
 {
+	if (from == NULL) {
+		from = dlist_first(list);
+	}
 	while (from && do_while(from, data_while)) {
 	    dlist_node_t* node = from;
 	    from = from->next;

@@ -164,6 +164,31 @@ void rd_context_free(rd_context_t* context);
 
 
 /**
+ * Resource registry data structure.
+ *
+ * Used to store RR packet.
+ */
+typedef struct rd_resource_t {
+    /* double linked list support */
+    dlist_node_t node;
+	/* the resource type id */
+	unsigned int id;
+	/* the resource type name */
+	char* name;
+} rd_resource_t;
+
+#define RD_RESOURCE(x) ((rd_resource_t*)x)
+
+/**
+ * Frees context registry data.
+ *
+ * @param[in] context   the data to free.
+ * @return
+ */
+void rd_resource_free(rd_resource_t* resource);
+
+
+/**
  * Function call data.
  *
  * Used to store FC and optionally FA packets.
@@ -176,7 +201,7 @@ typedef struct rd_fcall_t {
 	/* the function index */
 	int index;
 	/* source module identifier */
-	unsigned int module_id;
+	unsigned int res_type;
 	/* the function call type (SP_RTRACE_FTYPE_* definitions)
 	 * in sp-rtrace-proto.h */
 	unsigned int type;
@@ -361,6 +386,8 @@ typedef struct rd_t {
 	dlist_t comments;
 	/* heap information data (optional) */
 	rd_hinfo_t* hinfo;
+	/* resource registry */
+	dlist_t resources;
 } rd_t;
 
 

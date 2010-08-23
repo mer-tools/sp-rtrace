@@ -34,7 +34,7 @@
  */
 
 
-#define MSG_ERROR_CONST(text)  if (write(STDERR_FILENO, text, sizeof(text)));
+#define MSG_ERROR_CONST(text)  if (write(STDERR_FILENO, text, sizeof(text))) {};
 
 /**
  * Creates new log file path.

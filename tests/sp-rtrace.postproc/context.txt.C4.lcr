@@ -1,15 +1,17 @@
-version=1.0, arch=i486-linux-gnu, time=2010.8.19 10:26:58, process=, pid=29810, 
-@ 1 : first
-@ 2 : second
-: /lib/tls/i686/cmov/libc-2.11.1.so => 0x110000-0x263000
-: /usr/lib/sp-rtrace/libsp-rtrace-memory.so.1.0.0 => 0x26e000-0x270000
-: /lib/tls/i686/cmov/libpthread-2.11.1.so => 0x372000-0x387000
-: /lib/libgcc_s.so.1 => 0x38b000-0x3a8000
-: /usr/lib/libsp-rtrace1.so.1.0.0 => 0x44d000-0x44f000
-: /lib/tls/i686/cmov/librt-2.11.1.so => 0x525000-0x52c000
-: /lib/ld-2.11.1.so => 0x5f5000-0x610000
-: /lib/tls/i686/cmov/libm-2.11.1.so => 0x738000-0x75c000
-: /lib/tls/i686/cmov/libdl-2.11.1.so => 0x800000-0x802000
-: /usr/lib/sp-rtrace/libsp-rtrace-main.so.1.0.0 => 0xf06000-0xf0b000
+version=1.0, arch=i486-linux-gnu, time=2010.8.23 15:30:42, process=, pid=19074, 
+@ 1 : first context
+@ 2 : second context
+& 1 : memory
+: /lib/tls/i686/cmov/libdl-2.11.1.so => 0x110000-0x112000
+: /usr/lib/sp-rtrace/libsp-rtrace-memory.so.1.0.0 => 0x241000-0x243000
+: /lib/tls/i686/cmov/libc-2.11.1.so => 0x3c7000-0x51a000
+: /lib/tls/i686/cmov/libpthread-2.11.1.so => 0x60f000-0x624000
+: /usr/lib/sp-rtrace/libsp-rtrace-main.so.1.0.0 => 0x7dc000-0x7e1000
+: /lib/tls/i686/cmov/librt-2.11.1.so => 0x91d000-0x924000
+: /lib/libgcc_s.so.1 => 0xa28000-0xa45000
+: /lib/tls/i686/cmov/libm-2.11.1.so => 0xcd6000-0xcfa000
+: /lib/ld-2.11.1.so => 0xe2e000-0xe49000
+: /usr/lib/libsp-rtrace1.so.1.0.0 => 0xe58000-0xe5c000
 : /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/bin/alloc_context_test => 0x8048000-0x8049000
-# 0 blocks leaked with total size of 0 bytes
+# Resource - memory:
+# 0 block(s) leaked with total size of 0 bytes

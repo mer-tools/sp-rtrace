@@ -58,7 +58,12 @@ static sp_rtrace_module_info_t module_info = {
 };
 
 /* the module identifier assigned by main module */
-static int module_id = 0;
+static int res_segment = 0;
+static int res_address = 0;
+
+
+#define IPC_64  0x0100  /* New version (support 32-bit UIDs, bigger
+                            message sizes, etc. */
 
 /*
  * Mapped address to segment id mapping support.
@@ -138,7 +143,7 @@ typedef struct trace_t {
 
 
 /* original function references */
-static trace_t trace_off = {0};
+static trace_t trace_off;
 /* tracing function references */
 static trace_t trace_on;
 
@@ -182,7 +187,7 @@ int trace_shmget(key_t key, size_t size, int shmflg)
 {
 	int rc = trace_off.shmget(key, size, shmflg);
 	if (rc != -1 && (shmflg & IPC_CREAT)) {
-		sp_rtrace_write_function_call(module_id, SP_RTRACE_FTYPE_ALLOC, "shmget", size, (void*)(long)rc, NULL);
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_segment, "shmget", size, (void*)(long)rc, NULL);
 	}
 	return rc;
 }
@@ -197,7 +202,7 @@ int trace_shmctl(int shmid, int cmd, struct shmid_ds *buf)
 	 * count. We are interested only in segments created by current process */
 	if (cmd == IPC_RMID) {
 		struct shmid_ds ds;
-		if (trace_off.shmctl(shmid, IPC_STAT, &ds) == 0) {
+		if (trace_off.shmctl(shmid, IPC_STAT | IPC_64, &ds) == 0) {
 			if (ds.shm_cpid == getpid()) {
 				nattach = ds.shm_nattch;
 			}
@@ -208,7 +213,7 @@ int trace_shmctl(int shmid, int cmd, struct shmid_ds *buf)
 		/* IPC_RMID command issued to segment with attachment counter 0.
 		 * This means that the segment is getting destroyed. It was created
 		 * by current process, so report its deallocation. */
-		sp_rtrace_write_function_call(module_id, SP_RTRACE_FTYPE_FREE, "shmctl", 0, (void*)(long)shmid, NULL);
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_segment, "shmctl", 0, (void*)(long)shmid, NULL);
 	}
 	return rc;
 }
@@ -216,24 +221,38 @@ int trace_shmctl(int shmid, int cmd, struct shmid_ds *buf)
 void* trace_shmat(int shmid, const void *shmaddr, int shmflg)
 {
 	void* rc = trace_off.shmat(shmid, shmaddr, shmflg);
-	if (rc) {
-		/* check if the segment was created by current process */
+	int size = 1;
+	if (rc != (void*)-1) {
 		struct shmid_ds ds;
-		if (trace_off.shmctl(shmid, IPC_STAT, &ds) == 0 && ds.shm_cpid == getpid()) {
-			/* store addr->shmid mapping */
-			addrmap_t* node = htable_create_node(sizeof(addrmap_t));
-			node->shmid = shmid;
-			node->addr = rc;
-			node = htable_store(&addr2shmid, (void*)node);
-			if (node) {
-				/* TODO: Warning about overwriting already existing address ?
-				 * In theory it shouldn't happen, but who knows... */
-				free(node);
+		/* use segment information as memory attachment parameters */
+		char arg1[100], arg2[100];
+		char* args[] = {arg1, NULL, NULL};
+		sprintf(arg1, "shmid=0x%x", shmid);
+
+		if (trace_off.shmctl(shmid, IPC_STAT | IPC_64, &ds) == 0) {
+			sprintf(arg2, "shmid::shm_cpid=%d", ds.shm_cpid);
+			args[1] = arg2;
+			size = ds.shm_segsz;
+
+			/* check if the segment was created by current process */
+			if (ds.shm_cpid == getpid()) {
+				/* store addr->shmid mapping */
+				addrmap_t* node = htable_create_node(sizeof(addrmap_t));
+				node->shmid = shmid;
+				node->addr = rc;
+				node = htable_store(&addr2shmid, (void*)node);
+				if (node) {
+					/* TODO: Warning about overwriting already existing address ?
+					 * In theory it shouldn't happen, but who knows... */
+					free(node);
+				}
 			}
 		}
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_address, "shmat", size, rc, args);
 	}
 	return rc;
 }
+
 
 int trace_shmdt(const void *shmaddr)
 {
@@ -245,17 +264,23 @@ int trace_shmdt(const void *shmaddr)
 		shmid = pnode->shmid;
 		/* if segment is marked for destruction, read its attachment counter */
 		struct shmid_ds ds;
-		if (trace_off.shmctl(shmid, IPC_STAT, &ds) == 0 && ds.shm_perm.mode & SHM_DEST) {
+		if (trace_off.shmctl(shmid, IPC_STAT | IPC_64, &ds) == 0 && ds.shm_perm.mode & SHM_DEST) {
 			nattach = ds.shm_nattch;
 		}
-		htable_remove(&addr2shmid, (void*)pnode);
+		htable_remove_node((void*)pnode);
 		free(pnode);
 	}
 	int rc = trace_off.shmdt(shmaddr);
-	/* if the segment was marked for removal it should be destroyed after detaching the
-	 * last address. */
-	if (rc == 0 && nattach == 1) {
-		sp_rtrace_write_function_call(module_id, SP_RTRACE_FTYPE_FREE, "shdt", 0, shmid, NULL);
+
+	if (rc == 0) {
+		/* report shared memory detachment */
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_address, "shdt", 0, shmaddr, NULL);
+
+		/* if the segment was marked for removal it should be destroyed after detaching the
+		 * last address. */
+		if (nattach == 1) {
+			sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_segment, "shdt", 0, (void*)shmid, NULL);
+		}
 	}
 	return rc;
 }
@@ -340,7 +365,9 @@ static void trace_shmem_init(void)
 	htable_init(&addr2shmid, HASH_SIZE, (op_unary_t)addrmap_calc_node_hash, (op_binary_t)addrmap_compare_nodes);
 	trace_initialize();
 
-	module_id = sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
+	sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
+	res_segment = sp_rtrace_register_resource("shared memory segment");
+	res_address = sp_rtrace_register_resource("attached address");
 }
 
 

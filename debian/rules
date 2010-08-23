@@ -12,10 +12,10 @@
 DEB_HOST_GNU_TYPE   ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
 DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 
-CFLAGS = -g -Wall -Wno-unused-function 
+CFLAGS = -g -Wall -Wno-unused-function
+#-Werror -Wextra
 #-DDEBUG_INFO 
 #-DALIGN_CHECK 
-#-Werror
 
 ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
 	CFLAGS += -O0

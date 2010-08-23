@@ -62,6 +62,13 @@ void rd_context_free(rd_context_t* context)
 	free(context);
 }
 
+
+void rd_resource_free(rd_resource_t* resource)
+{
+	if (resource->name) free(resource->name);
+	free(resource);
+}
+
 void rd_fcall_free(rd_fcall_t* call)
 {
 	if (call->name) free(call->name);
@@ -72,7 +79,7 @@ void rd_ftrace_free(rd_ftrace_t* trace)
 {
 	if (trace->frames) free(trace->frames);
 	if (trace->resolved_names) {
-		int i;
+		unsigned int i;
 		for (i = 0; i < trace->nframes; i++) {
 			if (trace->resolved_names[i]) {
 				free(trace->resolved_names[i]);
@@ -172,6 +179,7 @@ rd_t* rd_create()
 	dlist_init(&rd->contexts);
 	dlist_init(&rd->minfo);
 	dlist_init(&rd->comments);
+	dlist_init(&rd->resources);
 	htable_init(&rd->ftraces, HASH_SIZE, (op_unary_t)bt_hash, (op_binary_t)bt_compare);
 	dlist_init(&rd->mmaps);
 	/* initialize single records */
@@ -192,6 +200,7 @@ void rd_free(rd_t* data)
 	dlist_free(&data->minfo, (op_unary_t)rd_minfo_free);
 	dlist_free(&data->comments, (op_unary_t)rd_comment_free);
 	dlist_free(&data->mmaps, (op_unary_t)rd_mmap_free);
+	dlist_free(&data->resources, (op_unary_t)rd_resource_free);
 
 	/* free single records */
 	if (data->hshake) rd_hashake_free(data->hshake);

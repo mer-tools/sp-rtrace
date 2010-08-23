@@ -277,7 +277,7 @@ static void mmap_cleanup_tmp_files(rs_mmap_t* mmap)
  */
 static void do_resolve(FILE *fpin, FILE *fpout)
 {
-	rs_cache_t rs = {};
+	rs_cache_t rs;
 	rs_cache_init(&rs);
 	char line[4096];
 
@@ -384,7 +384,7 @@ static void resolve()
  *
  * @param sig
  */
-static void sigint_handler(int sig)
+static void sigint_handler(int sig __attribute((unused)))
 {
 }
 

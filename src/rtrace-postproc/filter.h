@@ -85,6 +85,9 @@ void find_lowhigh_blocks(rd_t* rd);
 /**
  * Sums memory leaks (allocated but not freed memory).
  *
+ * The leaks are summed separately for every resource type.
+ * And stored in the leaks[] array in the order the resources
+ * are registered.
  * @param[in] call   the function call data.
  * @param[in] leaks  the leak summary data.
  * @return

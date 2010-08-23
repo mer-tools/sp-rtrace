@@ -66,7 +66,7 @@ postproc_options_t postproc_options = {
 	.filter_context = 0,
 	.compare_leaks = 0,
 	.pid_resolve = 0,
-	.filter_module = 0,
+	.filter_resource = 0,
 };
 
 /**
@@ -99,7 +99,7 @@ static void display_usage()
 			"  -c           - compress trace by joining identical backtraces.\n"
 			"  -r           - resolve function addresses in backtraces.\n"
 			"  -C <mask>    - filter by context id <mask>.\n"
-			"  -M <mask>    - filter by module id <mask>.\n"
+			"  -R <mask>    - filter by resource type <mask>.\n"
 			"  -s <order>   - sort leaks by the specified order -\n"
 			"                 size, size-asc, count, count-asc.\n"
 			"  -h           - this help page.\n"
@@ -207,7 +207,7 @@ static void write_rtrace_log(rd_t* rd)
  *
  * @param sig
  */
-static void sigint_handler(int sig)
+static void sigint_handler(int sig __attribute((unused)))
 {
 }
 
@@ -240,14 +240,14 @@ int main(int argc, char* argv[])
 			 {"remove-args", 0, 0, 'a'},
 			 {"resolve", 0, 0, 'r'},
 			 {"context", 1, 0, 'C'},
-			 {"module", 1, 0, 'M'},
+			 {"resource", 1, 0, 'R'},
 			 {"help", 0, 0, 'h'},
 			 {0, 0, 0, 0}
 	};
 	/* parse command line options */
 	int opt;
 
-	while ( (opt = getopt_long(argc, argv, "i:o:f:cs:ahrlC:M:", long_options, NULL)) != -1) {
+	while ( (opt = getopt_long(argc, argv, "i:o:f:cs:ahrlC:R:", long_options, NULL)) != -1) {
 		switch(opt) {
 		case 'h':
 			display_usage();
@@ -295,9 +295,9 @@ int main(int argc, char* argv[])
 			}
 			break;
 
-		case 'M':
-			if (sscanf(optarg, "%x", &postproc_options.filter_module) != 1) {
-				fprintf(stderr, "ERROR: invalid module mask: %s\n", optarg);
+		case 'R':
+			if (sscanf(optarg, "%x", &postproc_options.filter_resource) != 1) {
+				fprintf(stderr, "ERROR: invalid resource type mask: %s\n", optarg);
 				exit (-1);
 			}
 			break;
@@ -358,7 +358,7 @@ int main(int argc, char* argv[])
 
 
 	/* apply selected post-processing options */
-	if (postproc_options.filter_module) {
+	if (postproc_options.filter_resource) {
 		filter_module(rd);
 	}
 

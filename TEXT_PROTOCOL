@@ -46,13 +46,13 @@ during post-processing and resolving.
 4. Allocation report
    Contains information about resource (memory, file descriptors, GObjects) 
    allocation. 
-     <index>. [:<module id>] [@<context id>] \[<timestamp>\] <function name>(<resource size>) 
+     <index>. [%<resource type>] [@<context id>] \[<timestamp>\] <function name>(<resource size>) 
              = <resource id>
      <bactrace>
    Where:
      <index>         - the allocation/deallocation report index.
-	 <module id>     - an optional event source module id (omitted if a single
-                       tracing module is used)	 
+     <resource type> - an optional resource type idomitted if only one resource
+                       type is being tracked). 
      <context id>    - an optional context id (omitted if no contexts are set
                        during the allocation).
      <timestamp>     - optional timestmap, absent if the header 'timestamps' 
@@ -112,8 +112,7 @@ during post-processing and resolving.
       @ <context id> : <context name>
     Where:
       <context id>      - the allocation context id (context id basically is 
-                          number of the bit value to be set in allocation record
-                          context).
+                          bit value to be set in allocation record context).
       <context name>    - user friendly context name.
     
 8. Function argument list
@@ -129,4 +128,12 @@ during post-processing and resolving.
                           structure and array values.
 			  
 			  
+7. Context registry
+    Contains information about tracked resource types. The resource types are
+    used to identify resources when multiple modules or a mudule, tracking
+    multiple resources is used.
+      @ <resource type id> : <resource type name>
+    Where:
+      <resource type id>      - the resource type id 
+      <resource type name>    - the resource type name.
 			  

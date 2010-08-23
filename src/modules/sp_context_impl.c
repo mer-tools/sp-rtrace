@@ -47,7 +47,7 @@ char sp_context_registry[SP_CONTEXT_REGISTRY_SIZE][SP_CONTEXT_NAME_SIZE];
 unsigned int sp_context_create(const char* name)
 {
 	int index = sync_fetch_and_add(&sp_context_index, 1);
-	if (index >= SP_CONTEXT_REGISTRY_SIZE) {
+	if (index >= (int)SP_CONTEXT_REGISTRY_SIZE) {
 		--sp_context_index;
 		return 0;
 	}

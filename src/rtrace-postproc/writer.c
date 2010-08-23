@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "writer.h"
 #include "filter.h"
@@ -140,11 +141,11 @@ static void write_heap_information(FILE* fp, rd_hinfo_t* hinfo)
 	formatter_printf(fp, "#   heap top %p\n", hinfo->heap_top);
 	formatter_printf(fp, "#   lowest block %p\n", hinfo->lowest_block);
 	formatter_printf(fp, "#   highest block %p\n", hinfo->highest_block);
-	formatter_printf(fp, "#   non-mmapped space allocated from system %d\n", hinfo->arena);
+	formatter_printf(fp, "#   non-mapped space allocated from system %d\n", hinfo->arena);
 	formatter_printf(fp, "#   number of free chunks %d\n", hinfo->ordblks);
 	formatter_printf(fp, "#   number of fastbin blocks %d\n", hinfo->smblks);
-	formatter_printf(fp, "#   number of mmapped regions %d\n", hinfo->hblks);
-	formatter_printf(fp, "#   space in mmapped regions %d\n", hinfo->hblkhd);
+	formatter_printf(fp, "#   number of mapped regions %d\n", hinfo->hblks);
+	formatter_printf(fp, "#   space in mapped regions %d\n", hinfo->hblkhd);
 	formatter_printf(fp, "#   maximum total allocated space %d\n", hinfo->usmblks);
 	formatter_printf(fp, "#   space available in freed fastbin blocks %d\n", hinfo->fsmblks);
 	formatter_printf(fp, "#   total allocated space %d\n", hinfo->uordblks);
@@ -152,6 +153,18 @@ static void write_heap_information(FILE* fp, rd_hinfo_t* hinfo)
 	formatter_printf(fp, "#   top-most, releasable (via malloc_trim) space %d\n", hinfo->keepcost);
 }
 
+typedef struct {
+	FILE* fp;
+	leak_data_t leaks[32];
+} leaks_t;
+
+static void write_leaks(rd_resource_t* res, leaks_t* leaks)
+{
+	formatter_printf(leaks->fp, "# Resource - %s:\n", res->name);
+	int index = ffs(res->id) - 1;
+	formatter_printf(leaks->fp, "# %d block(s) leaked with total size of %d bytes\n", leaks->leaks[index].count, leaks->leaks[index].total_size);
+
+}
 
 /*
  * Public API
@@ -159,9 +172,10 @@ static void write_heap_information(FILE* fp, rd_hinfo_t* hinfo)
 
 void write_leak_summary(fmt_data_t* fmt)
 {
-	leak_data_t leaks = {0};
-	dlist_foreach2(&fmt->rd->calls, (op_binary_t)sum_leaks, &leaks);
-	formatter_printf(fmt->fp, "# %d blocks leaked with total size of %d bytes\n", leaks.count, leaks.total_size);
+	leaks_t leaks = {.fp = fmt->fp};
+	dlist_foreach2(&fmt->rd->calls, (op_binary_t)sum_leaks, leaks.leaks);
+
+	dlist_foreach2(&fmt->rd->resources, (op_binary_t)write_leaks, &leaks);
 }
 
 
@@ -194,6 +208,9 @@ void write_trace_environment(fmt_data_t* fmt)
 
 	/* write context registry */
 	dlist_foreach2(&fmt->rd->contexts, (op_binary_t)formatter_write_context, fmt->fp);
+
+	/* write resource registry */
+	dlist_foreach2(&fmt->rd->resources, (op_binary_t)formatter_write_resource, fmt->fp);
 
 	/* write memory mapping data */
 	dlist_foreach2(&fmt->rd->mmaps, (op_binary_t)formatter_write_mmap, fmt->fp);
