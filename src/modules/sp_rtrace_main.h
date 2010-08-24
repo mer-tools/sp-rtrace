@@ -77,7 +77,7 @@ extern volatile sig_atomic_t backtrace_lock;
  * @param[in] args     the function argument array, ending with NULL. Optional.
  * @return             the number of bytes written.
  */
-int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* name, size_t size, const void* id, char** args);
+int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* name, size_t size, void* id, char** args);
 
 
 typedef void (*sp_rtrace_enable_tracing_t)(bool);
@@ -107,12 +107,14 @@ unsigned int sp_rtrace_register_module(const char* name, unsigned char vmajor, u
  * it's going to track. This allows to identify the resource types
  * when multiple modules are used or a single module tracks multiple
  * resource types.
- * @param[in] name     the resource name. Note that the name must be reference to preallocated
- *                     string (either static or dynamic), which must not be freed until the module
- *                     is unloaded.
+ * Note that the resource type and desc values must refer to preallocated
+ * strings (either static or dynamic), which must not be freed until the module
+ * is unloaded.
+ * @param[in] type     the resource type.
+ * @param[in] desc     the resource description.
  * @return             the resource type id or 0 if resource registry is full.
  */
-unsigned int sp_rtrace_register_resource(const char* name);
+unsigned int sp_rtrace_register_resource(const char* type, const char* desc);
 
 /**
  * Stores current heap information (mallinf()) so it can be sent to pre-processor

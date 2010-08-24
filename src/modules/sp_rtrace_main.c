@@ -129,7 +129,8 @@ static int rtrace_module_index = 0;
  * Resource type registry
  */
 typedef struct {
-	const char* name;
+	const char* type;
+	const char* desc;
 	int id;
 } rtrace_resource_t;
 
@@ -359,13 +360,14 @@ static int write_module_info(int id, const char* name, unsigned char major, unsi
 }
 
 
-static int write_resource_registry(int id, const char* name)
+static int write_resource_registry(int id, const char* type, const char* desc)
 {
 	if (!sp_rtrace_options->enable) return 0;
 	char* buffer = pipe_buffer_lock(), *ptr = buffer + SP_RTRACE_PROTO_TYPE_SIZE;
 	ptr += write_dword(ptr, SP_RTRACE_PROTO_RESOURCE_REGISTRY);
 	ptr += write_dword(ptr, id);
-	ptr += write_string(ptr, name);
+	ptr += write_string(ptr, type);
+	ptr += write_string(ptr, desc);
 	int size = ptr - buffer;
 	write_dword(buffer, size - SP_RTRACE_PROTO_TYPE_SIZE);
 	pipe_buffer_unlock(buffer, size);
@@ -526,7 +528,7 @@ static void write_initial_data()
 	/* write resource registry records */
 	for (i = 0; i < rtrace_resource_index; i++) {
 	    rtrace_resource_t* resource = &rtrace_resources[i];
-	    write_resource_registry(resource->id, resource->name);
+	    write_resource_registry(resource->id, resource->type, resource->desc);
     }
 
 	write_new_library("*");
@@ -598,7 +600,7 @@ int sp_rtrace_write_context_registry(int context_id, const char* name)
 }
 
 
-int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* name, size_t res_size, const void* id, char** args)
+int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* name, size_t res_size, void* id, char** args)
 {
 	if (!sp_rtrace_options->enable) return 0;
 	int size = 0;
@@ -713,16 +715,17 @@ unsigned int sp_rtrace_register_module(const char* name, unsigned char vmajor, u
 	return module->id;
 }
 
-unsigned int sp_rtrace_register_resource(const char* name)
+unsigned int sp_rtrace_register_resource(const char* type, const char* desc)
 {
 	if (rtrace_resource_index >= sizeof(rtrace_resources) / sizeof(rtrace_resources[0])) {
-		return 0;
+		return -1;
 	}
 	rtrace_resource_t* resource = &rtrace_resources[rtrace_resource_index];
-    resource->name = name;
-    resource->id = (1 << rtrace_resource_index++);
+    resource->type = type;
+    resource->desc = desc;
+    resource->id = ++rtrace_resource_index;
 	if (sp_rtrace_options->enable) {
-		write_resource_registry(resource->id, name);
+		write_resource_registry(resource->id, type, desc);
 	}
 	return resource->id;
 }

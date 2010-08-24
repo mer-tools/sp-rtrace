@@ -97,7 +97,9 @@ static rd_resource_t* read_packet_RR(const char* data)
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
 	rd_resource_t* res = (rd_resource_t*)dlist_create_node(sizeof(rd_resource_t));
 	data += read_dword(data, &res->id);
-	read_stringa(data, &res->name);
+	data += read_stringa(data, &res->type);
+	read_stringa(data, &res->desc);
+	res->hide = false;
 	return res;
 }
 
@@ -176,10 +178,14 @@ static rd_minfo_t* read_packet_MI(const char* data)
 static rd_fcall_t* read_packet_FC(const char* data)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
-
     rd_fcall_t* call = (rd_fcall_t*)dlist_create_node(sizeof(rd_fcall_t));
     call->index = call_index++;
-    data += read_dword(data, &call->res_type);
+    /* read resource id into res_type field. A reference to the resource
+     * type data will be properly stored after returning from this function */
+    unsigned int res_type;
+    data += read_dword(data, &res_type);
+    call->res_type = (void*)res_type;
+    /* */
     data += read_dword(data, &call->context);
     data += read_dword(data, &call->timestamp);
     data += read_dword(data, &call->type);
@@ -268,6 +274,7 @@ static rd_hinfo_t* read_packet_HI(const char* data)
  */
 static int read_generic_packet(rd_t* rd, const char* data, int size)
 {
+	static rd_resource_t* res_index[33];
 	/* first check if the packet contains enough data to read size value */
 	if (size < 2) return -1;
 
@@ -297,13 +304,16 @@ static int read_generic_packet(rd_t* rd, const char* data, int size)
 			break;
 		}
 		case SP_RTRACE_PROTO_RESOURCE_REGISTRY: {
-			dlist_add(&rd->resources, read_packet_RR(data));
+			rd_resource_t* res = read_packet_RR(data);
+			dlist_add(&rd->resources, res);
+			res_index[res->id] = res;
 		    fcall_prev = NULL;
 			break;
 		}
 		case SP_RTRACE_PROTO_FUNCTION_CALL: {
             fcall_prev = read_packet_FC(data);
             dlist_add(&rd->calls, fcall_prev);
+            fcall_prev->res_type = res_index[(long)fcall_prev->res_type];
             break;
         }
 		case SP_RTRACE_PROTO_BACKTRACE: {

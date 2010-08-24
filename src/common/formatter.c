@@ -68,9 +68,6 @@ int formatter_write_fcall(const rd_fcall_t*  call, FILE* fp)
 	char buffer[1024], *ptr = buffer;
 
 	ptr += sprintf(ptr, "%d. ", call->index);
-	if (call->res_type) {
-		ptr += sprintf(ptr, "&%x ", (int)call->res_type);
-	}
 	if (call->context) {
 		ptr += sprintf(ptr, "@%x ", (int)call->context);
 	}
@@ -83,12 +80,15 @@ int formatter_write_fcall(const rd_fcall_t*  call, FILE* fp)
 		usecs %= 1000;
 		ptr += sprintf(ptr, "[%02d:%02d:%02d.%03d] ", hours, minutes, seconds, usecs);
 	}
-	ptr += sprintf(ptr, "%s(", call->name);
+	ptr += sprintf(ptr, "%s", call->name);
+	if (call->res_type && !call->res_type->hide) {
+		ptr += sprintf(ptr, "<%s>", call->res_type->type);
+	}
 	if (call->type == SP_RTRACE_FTYPE_ALLOC) {
-		ptr += sprintf(ptr, "%d) = %p", call->res_size, call->res_id);
+		ptr += sprintf(ptr, "(%d) = %p", call->res_size, call->res_id);
 	}
 	else {
-		ptr += sprintf(ptr, "%p)", call->res_id);
+		ptr += sprintf(ptr, "(%p)", call->res_id);
 	}
 	*ptr++ = '\n';
 	fwrite(buffer, 1, ptr - buffer, fp);
@@ -120,7 +120,7 @@ int formatter_write_context(const rd_context_t* context, FILE* fp)
 
 int formatter_write_resource(const rd_resource_t* resource, FILE* fp)
 {
-	fprintf(fp, "& %x : %s\n", (int)resource->id, resource->name);
+	fprintf(fp, "<%x> : %s (%s)\n", 1 << ((int)resource->id - 1), resource->type, resource->desc);
 	return 0;
 }
 

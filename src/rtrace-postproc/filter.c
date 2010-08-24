@@ -86,7 +86,15 @@ static long res_compare(const fres_t* res1, const fres_t* res2)
 	if (res1->call->res_type == res2->call->res_type) {
 		return res1->call->res_id - res2->call->res_id;
 	}
-	return res1->call->res_type - res2->call->res_type;
+	if (!res1->call->res_type) {
+		fprintf(stderr, "WARNING: resource type is not set for record #%d\n", res1->call->index);
+		return -1;
+	}
+	if (!res2->call->res_type) {
+		fprintf(stderr, "WARNING: resource type is not set for record #%d\n", res1->call->index);
+		return 1;
+	}
+	return res1->call->res_type->id - res2->call->res_type->id;
 }
 
 /**
@@ -104,10 +112,12 @@ static long res_hash(const fres_t* res)
 		hash ^= value & ((1 << 16) - 1);
 		value >>= 3;
 	}
-	value = res->call->res_type;
-	while (value) {
-		hash ^= value & ((1 << 16) - 1);
-		value >>= 3;
+	if (res->call->res_type) {
+		value = res->call->res_type->id;
+		while (value) {
+			hash ^= value & ((1 << 16) - 1);
+			value >>= 3;
+		}
 	}
 	return hash;
 }
@@ -191,9 +201,9 @@ static void fcall_filter_context(rd_fcall_t* call, rd_t* rd)
  * @param[in] data   the rtrace data.
  * @return
  */
-static void fcall_filter_module(rd_fcall_t* call, rd_t* rd)
+static void fcall_filter_resource(rd_fcall_t* call, rd_t* rd)
 {
-	if (! (call->res_type & postproc_options.filter_resource)) {
+	if (call->res_type && !(call->res_type->id & postproc_options.filter_resource)) {
 		rd_fcall_remove(rd, call);
 	}
 }
@@ -217,6 +227,32 @@ static void fcall_find_lowhigh_blocks(rd_fcall_t* call, rd_hinfo_t* hinfo)
 	}
 }
 
+/**
+ * Removes context records not matching the specified context filter.
+ *
+ * @param[in] context  the context to check.
+ * @param[in] list     the context list.
+ */
+static void context_filter_mask(rd_context_t* context, dlist_t* list)
+{
+	if (! (context->id & postproc_options.filter_context) ) {
+		dlist_remove(list, (void*)context);
+	}
+}
+
+/**
+ * Removes resource type records not matching the specified resource filter.
+ *
+ * @param[in] resource  the resource to check.
+ * @param[in] list      the resource list.
+ */
+static void resource_filter_mask(rd_resource_t* resource, dlist_t* list)
+{
+	if (! (resource->id & postproc_options.filter_resource) ) {
+		dlist_remove(list, (void*)resource);
+	}
+}
+
 /*
  * Public API
  */
@@ -237,17 +273,27 @@ void filter_leaks(rd_t* rd)
 	htable_free(&index.table, (op_unary_t)free_fres_rec);
 }
 
-
 void filter_context(rd_t* rd)
 {
+	dlist_foreach2(&rd->contexts, (op_binary_t)context_filter_mask, (void*)&rd->contexts);
 	dlist_foreach2(&rd->calls, (op_binary_t)fcall_filter_context, (void*)rd);
 }
 
-void filter_module(rd_t* rd)
+void filter_resource(rd_t* rd)
 {
-	dlist_foreach2(&rd->calls, (op_binary_t)fcall_filter_module, (void*)rd);
+	dlist_foreach2(&rd->resources, (op_binary_t)resource_filter_mask, (void*)&rd->resources);
+	dlist_foreach2(&rd->calls, (op_binary_t)fcall_filter_resource, (void*)rd);
 }
 
+void update_resource_visibility(rd_t* rd)
+{
+	if (dlist_first(&rd->resources) && dlist_first(&rd->resources) == dlist_last(&rd->resources)) {
+		/* if only one resource is present, reset its index and hide it */
+		rd_resource_t* res = (rd_resource_t*)dlist_first(&rd->resources);
+		res->hide = true;
+		res->id = 1;
+	}
+}
 
 void find_lowhigh_blocks(rd_t* rd)
 {

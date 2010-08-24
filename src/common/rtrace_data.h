@@ -173,8 +173,12 @@ typedef struct rd_resource_t {
     dlist_node_t node;
 	/* the resource type id */
 	unsigned int id;
-	/* the resource type name */
-	char* name;
+	/* the resource type */
+	char* type;
+	/* the resource description */
+	char* desc;
+	/* flag to hide resource from call records */
+	bool hide;
 } rd_resource_t;
 
 #define RD_RESOURCE(x) ((rd_resource_t*)x)
@@ -200,8 +204,6 @@ typedef struct rd_fcall_t {
     dlist_node_t node;
 	/* the function index */
 	int index;
-	/* source module identifier */
-	unsigned int res_type;
 	/* the function call type (SP_RTRACE_FTYPE_* definitions)
 	 * in sp-rtrace-proto.h */
 	unsigned int type;
@@ -211,6 +213,8 @@ typedef struct rd_fcall_t {
 	unsigned int timestamp;
 	/* the function name */
 	char* name;
+	/* the resource type */
+	rd_resource_t* res_type;
 	/* the associated (allocated/freed) resource identifier */
 	void* res_id;
 	/* the associated (allocated) resource size */

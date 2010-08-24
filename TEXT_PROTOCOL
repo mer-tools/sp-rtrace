@@ -46,18 +46,18 @@ during post-processing and resolving.
 4. Allocation report
    Contains information about resource (memory, file descriptors, GObjects) 
    allocation. 
-     <index>. [%<resource type>] [@<context id>] \[<timestamp>\] <function name>(<resource size>) 
-             = <resource id>
+     <index>. [@<context id>] \[<timestamp>\] <function name>\<<resource type>\>
+	         (<resource size>) = <resource id>
      <bactrace>
    Where:
      <index>         - the allocation/deallocation report index.
-     <resource type> - an optional resource type idomitted if only one resource
-                       type is being tracked). 
      <context id>    - an optional context id (omitted if no contexts are set
                        during the allocation).
      <timestamp>     - optional timestmap, absent if the header 'timestamps' 
                        option is set to 'no' (in HH:MM:SS.ssssss format).
      <function name> - the function name, allocator of the resource.
+     <resource type> - an optional resource type idomitted if only one resource
+                       type is being tracked). 
      <resourse size> - the size of the allocated resource (whenerver it's 
                        possible to calculate).
      <resource id>   - the resource identifier returned by allocator function
@@ -71,7 +71,7 @@ during post-processing and resolving.
 5. Deallocation report
    Contains information about resource (memory, file descriptors, GObjects)
    freeing. 
-   <index>. [@<context id>] \[<timestamp>\] <function name>(<resource id>)
+   <index>. [@<context id>] \[<timestamp>\] <function name>\<<resource type>\>(<resource id>)
    <arguments>  
    <bactrace>
    Where:
@@ -81,6 +81,8 @@ during post-processing and resolving.
      <timestamp>     - optional timestmap, absent if the header 'timestamps'
                        option is set to 'no' (in HH:MM:SS.ssssss format).
      <function name> - the function name, allocator of the resource.
+     <resource type> - an optional resource type idomitted if only one resource
+                       type is being tracked). 
      <resource id>   - the resource identifier returned by allocator function 
                        and used to uniquely identify the allocated resource (in
                        hexadecimal format 0x...).
@@ -128,12 +130,14 @@ during post-processing and resolving.
                           structure and array values.
 			  
 			  
-7. Context registry
+9. Resource registry
     Contains information about tracked resource types. The resource types are
     used to identify resources when multiple modules or a mudule, tracking
     multiple resources is used.
-      @ <resource type id> : <resource type name>
+      \<<id>\> : <type> (<desc>) 
     Where:
-      <resource type id>      - the resource type id 
-      <resource type name>    - the resource type name.
+      <id>    - the resource id.
+	  <type>  - the resource type name.
+	  <desc>  - the resourec type description.
+			  
 			  

@@ -65,7 +65,8 @@ void rd_context_free(rd_context_t* context)
 
 void rd_resource_free(rd_resource_t* resource)
 {
-	if (resource->name) free(resource->name);
+	if (resource->type) free(resource->type);
+	if (resource->desc) free(resource->desc);
 	free(resource);
 }
 

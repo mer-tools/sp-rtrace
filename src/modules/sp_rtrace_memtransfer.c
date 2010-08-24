@@ -760,7 +760,7 @@ static void trace_memory_init(void)
 {
 	trace_initialize();
 	sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
-	resource_id = sp_rtrace_register_resource("memory_transfer");
+	resource_id = sp_rtrace_register_resource("memtransfer", "memory transfer operations in bytes");
 }
 
 static void trace_memory_fini(void)

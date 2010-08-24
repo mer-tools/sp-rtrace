@@ -1,15 +1,14 @@
-version=1.0, arch=i486-linux-gnu, time=2010.8.23 15:30:42, process=, pid=19074, 
-@ 1 : first context
-@ 2 : second context
-& 1 : memory
-: /lib/tls/i686/cmov/libdl-2.11.1.so => 0x110000-0x112000
-: /usr/lib/sp-rtrace/libsp-rtrace-memory.so.1.0.0 => 0x241000-0x243000
-: /lib/tls/i686/cmov/libc-2.11.1.so => 0x3c7000-0x51a000
-: /lib/tls/i686/cmov/libpthread-2.11.1.so => 0x60f000-0x624000
-: /usr/lib/sp-rtrace/libsp-rtrace-main.so.1.0.0 => 0x7dc000-0x7e1000
-: /lib/tls/i686/cmov/librt-2.11.1.so => 0x91d000-0x924000
-: /lib/libgcc_s.so.1 => 0xa28000-0xa45000
-: /lib/tls/i686/cmov/libm-2.11.1.so => 0xcd6000-0xcfa000
-: /lib/ld-2.11.1.so => 0xe2e000-0xe49000
-: /usr/lib/libsp-rtrace1.so.1.0.0 => 0xe58000-0xe5c000
-: /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/bin/alloc_context_test => 0x8048000-0x8049000
+version=1.0, arch=x86_64-linux-gnu, time=2010.8.24 18:40:31, process=, pid=31323, 
+<1> : memory (memory allocation in bytes)
+: /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/bin/alloc_context_test => 0x400000-0x401000
+: /lib/libpthread-2.11.1.so => 0x7f6434d0b000-0x7f6434d23000
+: /lib/libdl-2.11.1.so => 0x7f6434f28000-0x7f6434f2a000
+: /lib/librt-2.11.1.so => 0x7f643512c000-0x7f6435133000
+: /lib/libc-2.11.1.so => 0x7f6435334000-0x7f64354ae000
+: /lib/libm-2.11.1.so => 0x7f64356b7000-0x7f6435739000
+: /usr/lib/libsp-rtrace1.so.1.0.0 => 0x7f643593a000-0x7f643593f000
+: /usr/lib/sp-rtrace/libsp-rtrace-memory.so.1.0.0 => 0x7f6435b40000-0x7f6435b42000
+: /usr/lib/sp-rtrace/libsp-rtrace-main.so.1.0.0 => 0x7f6435e43000-0x7f6435e49000
+: /lib/ld-2.11.1.so => 0x7f643604c000-0x7f643606c000
+: [vdso] => 0x7fff0d7ff000-0x7fff0d800000
+: [vsyscall] => 0xffffffffff600000-0xffffffffff601000

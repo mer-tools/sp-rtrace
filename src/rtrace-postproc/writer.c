@@ -160,7 +160,7 @@ typedef struct {
 
 static void write_leaks(rd_resource_t* res, leaks_t* leaks)
 {
-	formatter_printf(leaks->fp, "# Resource - %s:\n", res->name);
+	formatter_printf(leaks->fp, "# Resource - %s (%s):\n", res->type, res->desc);
 	int index = ffs(res->id) - 1;
 	formatter_printf(leaks->fp, "# %d block(s) leaked with total size of %d bytes\n", leaks->leaks[index].count, leaks->leaks[index].total_size);
 

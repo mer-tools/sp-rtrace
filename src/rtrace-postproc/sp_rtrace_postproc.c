@@ -359,7 +359,7 @@ int main(int argc, char* argv[])
 
 	/* apply selected post-processing options */
 	if (postproc_options.filter_resource) {
-		filter_module(rd);
+		filter_resource(rd);
 	}
 
 	if (postproc_options.filter_leaks) {
@@ -372,6 +372,8 @@ int main(int argc, char* argv[])
 	if (rd->hinfo) {
 		find_lowhigh_blocks(rd);
 	}
+	update_resource_visibility(rd);
+
 	/* write resulting output */
 	write_rtrace_log(rd);
 

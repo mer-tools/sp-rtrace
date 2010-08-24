@@ -62,7 +62,7 @@ static int res_segment = 0;
 static int res_address = 0;
 
 
-#define IPC_64  0x0100  /* New version (support 32-bit UIDs, bigger
+#define IPC_64  0x00  /* New version (support 32-bit UIDs, bigger
                             message sizes, etc. */
 
 /*
@@ -366,8 +366,8 @@ static void trace_shmem_init(void)
 	trace_initialize();
 
 	sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
-	res_segment = sp_rtrace_register_resource("shared memory segment");
-	res_address = sp_rtrace_register_resource("attached address");
+	res_segment = sp_rtrace_register_resource("shmseg", "shared memory segment");
+	res_address = sp_rtrace_register_resource("shmaddr", "shared memory attachments");
 }
 
 

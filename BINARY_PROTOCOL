@@ -182,6 +182,8 @@ the tracked resource type in function call records.
 
 [id][name]
   [id] - the resource type id (dword)
-  [name] - the resource type name (string)
+  [type] - the resource type (string)
+  [desc] - the resource desription (string)
+  
   
   

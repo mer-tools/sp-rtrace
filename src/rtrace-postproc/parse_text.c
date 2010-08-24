@@ -140,12 +140,14 @@ static void* parse_context_registry(char* line)
 static void* parse_resource_registry(char* line)
 {
 	rd_resource_t* resource = NULL;
-	char name[512];
+	char type[512], desc[512];
 	unsigned int id;
-	if (sscanf(line, "& %x : %[^\n]", &id, name) == 2) {
+	if (sscanf(line, "<%x> : %[^ ] (%[^)])", &id, type, desc) == 3) {
 		resource = dlist_create_node(sizeof(rd_resource_t));
 		resource->id = id;
-		resource->name = strdup_a(name);
+		resource->type = strdup_a(type);
+		resource->desc = strdup_a(desc);
+		resource->hide = false;
 	}
 	return resource;
 }
@@ -179,27 +181,19 @@ static long hex2dec(long hex)
  */
 static void* parse_function_call(char* line)
 {
+	static char res_type_name[512];
 	int index, context = 0;
 	int hours, minutes, seconds, mseconds;
 	int timestamp = 0;
 	void *res_id, *res_size;
 	char name[512], *ptr = line, delim, function_type;
-	int res_type = 0;
+	char* res_type;
 	/* parse index field <index>. */
 	if (sscanf(ptr, "%d%c", &index, &delim) != 2 || delim != '.') return NULL;
 	/* move cursor beyond index field */
 	ptr = strchr(ptr, ' ');
 	if (!ptr) return NULL;
 	ptr++;
-
-	/* parse optional module id */
-	if (sscanf(ptr, "&%x", &res_type) == 1) {
-		/* module id was parsed successfully. Move cursor to next field */
-		ptr = strchr(ptr, '&');
-		ptr = strchr(ptr, ' ');
-		if (!ptr) return NULL;
-		ptr++;
-	}
 
 	/* parse optional context mask */
 	if (sscanf(ptr, "@%x", &context) == 1) {
@@ -217,10 +211,25 @@ static void* parse_function_call(char* line)
 		if (!ptr) return NULL;
 		ptr++;
 	}
-	int n = sscanf(ptr, "%[^(](%p) = %p", name, &res_size, &res_id);
+	if (sscanf(ptr, "%[^(<]", name) != 1) {
+		return NULL;
+	}
+	ptr += strlen(name);
+	if (*ptr == '<') {
+		if (sscanf(ptr, "<%[^>]>", res_type_name) == 0) {
+			return NULL;
+		}
+		ptr = strchr(ptr, '(');
+		if (!ptr) return NULL;
+		res_type = res_type_name;
+	}
+	else {
+		res_type = NULL;
+	}
+	int n = sscanf(ptr, "(%p) = %p", &res_size, &res_id);
 	switch (n) {
 		/* deallocation record <function>(<resource id>) */
-		case 2: {
+		case 1: {
 			/* resource id was parsed as size, and size must be 0. Swap. */
 			res_id = res_size;
 			res_size = 0;
@@ -229,7 +238,7 @@ static void* parse_function_call(char* line)
 		}
 
 		/* allocation record <function>(<size>) = <resource id> */
-		case 3: {
+		case 2: {
 			/* size was in decimal format, but we parsed it as hex value.
 			 * Convert back to hex format */
 			res_size = (void**)hex2dec((long int)res_size);
@@ -244,7 +253,11 @@ static void* parse_function_call(char* line)
 	}
 	rd_fcall_t* call = dlist_create_node(sizeof(rd_fcall_t));
 	call->index = index;
-	call->res_type = res_type;
+	/* temporary assign the resource type name to res_type field. After returning
+	 * from this function the correct resource type structure will be found and
+	 * assigned instead. */
+	call->res_type = (void*)res_type;
+
 	call->type = function_type;
 	call->context = context;
 	call->name = strdup_a(name);
@@ -362,6 +375,14 @@ static void store_call_arguments(rd_fcall_t* call, char** args, int size)
 }
 
 /**
+ * Compare operation for resource lookup.
+ */
+static long compare_resource(rd_resource_t* res, const char* type)
+{
+	return !strcmp(res->type, type);
+}
+
+/**
  * Reads and parses text format trace log.
  *
  * @param[in] rd   the resource trace data container.
@@ -439,6 +460,18 @@ static void read_text_data(rd_t* rd, FILE* fp)
 		/* check if the line contains function call record */
 		data = parse_function_call(line);
 		if (data) {
+			/* The res_type field temporary has the resource type name string assigned.
+			 * Lookup the resource record and correctly assign to it. */
+			if (RD_FCALL(data)->res_type) {
+				RD_FCALL(data)->res_type = dlist_find(&rd->resources, (void*)RD_FCALL(data)->res_type,
+						(op_binary_t)compare_resource);
+			}
+			else {
+				/* If resource type was not set in text log, it means only one resource type is present.
+				 * So assign the first (and only) resource to call record. */
+				RD_FCALL(data)->res_type = (rd_resource_t*)dlist_first(&rd->resources);
+			}
+
 			dlist_add(&rd->calls, data);
 			ref_node_t* ref = (ref_node_t*)dlist_create_node(sizeof(ref_node_t));
 			ref->ref = data;

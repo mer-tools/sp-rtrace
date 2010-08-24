@@ -57,7 +57,7 @@ void filter_leaks(rd_t* rd);
 
 
 /**
- * Filters allocations with matching contexts.
+ * Filters allocations with contexts matching the specified context filter.
  *
  * @param[in] rd   the resource trace data storage.
  * @return
@@ -65,12 +65,12 @@ void filter_leaks(rd_t* rd);
 void filter_context(rd_t* rd);
 
 /**
- * Filters allocations with matching module identifiers.
+ * Filters allocations with resource types matching the specified resource filter.
  *
  * @param[in] rd   the resource trace data storage.
  * @return
  */
-void filter_module(rd_t* rd);
+void filter_resource(rd_t* rd);
 
 
 /**
@@ -94,6 +94,14 @@ void find_lowhigh_blocks(rd_t* rd);
  */
 long sum_leaks(rd_fcall_t* call, leak_data_t* leaks);
 
+
+/**
+ * Checks if only one resource type is present and sets
+ * hide flag if necessary.
+ *
+ * @param[in] rd   the resource trace data storage.
+ */
+void update_resource_visibility(rd_t* rd);
 
 
 #endif /* FILTER_H*/
