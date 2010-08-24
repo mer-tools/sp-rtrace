@@ -89,7 +89,9 @@ binary-arch: build install
 #	dh_installinfo
 	dh_installman
 	dh_link
-	dh_strip --dbg-package=sp-rtrace --dbg-package=libsp-rtrace1-1
+#	dh_strip --dbg-package=sp-rtrace --dbg-package=libsp-rtrace1-1
+	dh_strip --dbg-package=sp-rtrace-dbg -Xlibsp-rtrace1-1
+	dh_strip --dbg-package=libsp-rtrace1-1-dbg
 	dh_compress
 	dh_fixperms
 #	dh_perl
