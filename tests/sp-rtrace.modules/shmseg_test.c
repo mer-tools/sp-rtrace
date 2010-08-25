@@ -22,27 +22,50 @@
  */
 
 /**
- * @file memory_test.c
+ * @file shmseg_test.c
  *
- * Test application for memory tracking module (memory) coverage.
+ * Test application for shared memory segment tracking module (shmseg) coverage.
  */
 
 #include <stdlib.h>
 
-void test_memory()
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <sys/types.h>
+
+void zero()
 {
-	void* ptr = malloc(1024);
-	free(ptr);
+	int shmid = shmget(ftok("sp-rtrace/tests/shmseg_test", 1), 1024, IPC_CREAT | 0666);
+	if (shmid != -1) {
+		void *ptr = shmat(shmid, NULL, 0);
+		void *ptr2 = shmat(shmid, NULL, 0);
 
-	ptr = calloc(1, 1024);
-	ptr = realloc(ptr, 2048);
-	free(ptr);
+		shmctl(shmid, IPC_RMID, NULL);
 
-	posix_memalign(&ptr, 8, 1024);
+		if (ptr != (void*)-1) {
+			shmdt(ptr);
+		}
+		if (ptr2 != (void*)-1) {
+			shmdt(ptr2);
+		}
+	}
 }
+
+void one()
+{
+	zero();
+}
+
+void two()
+{
+	one();
+}
+
 
 int main()
 {
-	test_memory();
+	two();
+	sleep(1);
 	return 0;
 }
+

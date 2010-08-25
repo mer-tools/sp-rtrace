@@ -144,7 +144,7 @@ static void* parse_resource_registry(char* line)
 	unsigned int id;
 	if (sscanf(line, "<%x> : %[^ ] (%[^)])", &id, type, desc) == 3) {
 		resource = dlist_create_node(sizeof(rd_resource_t));
-		resource->id = id;
+		resource->id = ffs(id);
 		resource->type = strdup_a(type);
 		resource->desc = strdup_a(desc);
 		resource->hide = false;
@@ -379,7 +379,7 @@ static void store_call_arguments(rd_fcall_t* call, char** args, int size)
  */
 static long compare_resource(rd_resource_t* res, const char* type)
 {
-	return !strcmp(res->type, type);
+	return strcmp(res->type, type);
 }
 
 /**

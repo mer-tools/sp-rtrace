@@ -141,11 +141,16 @@ proc test_startup_bin_notrace { args } {
 	if { [exec kill -SIGUSR2 [pidof $::out_file]] == -1 } {
 		return -1
 	}
-
+	
+	set spawn_id $launcher_sid
 	# binary format output log file should NOT be created
 	expect {
 		-re {(?n)^INFO: Created binary log file ([^\s]+)} {
 			set log_file $expect_out(1,string)
+		}
+		
+		timeout {
+			exp_close -i $launcher_sid
 		}
 	}
 #	exp_close -i $launcher_sid

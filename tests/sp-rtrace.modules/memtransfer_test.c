@@ -23,7 +23,7 @@
 /**
  * @file memtransfer_test.c
  *
- * Test application for memtransfer module tracking coverage.
+ * Test application for memory transfer tracking module (memtransfer) coverage.
  */
 #define _GNU_SOURCE
 

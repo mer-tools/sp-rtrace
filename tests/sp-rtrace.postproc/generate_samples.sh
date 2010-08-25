@@ -114,8 +114,44 @@ sp-rtrace-postproc -C2 -lci $LOG_SAMPLE > $LOG_SAMPLE.C2.lc
 sp-rtrace-postproc -C3 -lci $LOG_SAMPLE > $LOG_SAMPLE.C3.lc
 sp-rtrace-postproc -C4 -lci $LOG_SAMPLE > $LOG_SAMPLE.C4.lc
 
-sp-rtrace-postproc  -lcri $LOG_SAMPLE > $LOG_SAMPLE..lcr
-sp-rtrace-postproc -C1 -lcri $LOG_SAMPLE > $LOG_SAMPLE.C1.lcr
-sp-rtrace-postproc -C2 -lcri $LOG_SAMPLE > $LOG_SAMPLE.C2.lcr
-sp-rtrace-postproc -C3 -lcri $LOG_SAMPLE > $LOG_SAMPLE.C3.lcr
-sp-rtrace-postproc -C4 -lcri $LOG_SAMPLE > $LOG_SAMPLE.C4.lcr
+#~ sp-rtrace-postproc  -lcri $LOG_SAMPLE > $LOG_SAMPLE..lcr
+#~ sp-rtrace-postproc -C1 -lcri $LOG_SAMPLE > $LOG_SAMPLE.C1.lcr
+#~ sp-rtrace-postproc -C2 -lcri $LOG_SAMPLE > $LOG_SAMPLE.C2.lcr
+#~ sp-rtrace-postproc -C3 -lcri $LOG_SAMPLE > $LOG_SAMPLE.C3.lcr
+#~ sp-rtrace-postproc -C4 -lcri $LOG_SAMPLE > $LOG_SAMPLE.C4.lcr
+
+#
+# resource filtering samples
+#
+#
+TARGET=../bin/shmseg_test
+
+if [ ! -f $TARGET ]; then
+	echo "The test application $TARGET is not present"
+	exit 1
+fi
+
+sp-rtrace -s -p shmseg -x $TARGET
+
+LOG_RAW=$(ls *.rtrace)
+if [ -z "$LOG_RAW" ]; then
+	echo "Failed to generate binary log file."
+	exit 1
+fi
+
+LOG_RAW=$(ls *.rtrace)
+LOG_SAMPLE="resource.txt"
+
+sp-rtrace-postproc -i $LOG_RAW > $LOG_SAMPLE
+rm $LOG_RAW
+
+sp-rtrace-postproc  -i $LOG_SAMPLE > $LOG_SAMPLE..
+sp-rtrace-postproc -R1 -i $LOG_SAMPLE > $LOG_SAMPLE.R1.
+sp-rtrace-postproc -R2 -i $LOG_SAMPLE > $LOG_SAMPLE.R2.
+sp-rtrace-postproc -R3 -i $LOG_SAMPLE > $LOG_SAMPLE.R3.
+
+sp-rtrace-postproc  -lci $LOG_SAMPLE > $LOG_SAMPLE..lc
+sp-rtrace-postproc -R1 -lci $LOG_SAMPLE > $LOG_SAMPLE.R1.lc
+sp-rtrace-postproc -R2 -lci $LOG_SAMPLE > $LOG_SAMPLE.R2.lc
+sp-rtrace-postproc -R3 -lci $LOG_SAMPLE > $LOG_SAMPLE.R3.lc
+

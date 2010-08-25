@@ -61,9 +61,12 @@ static sp_rtrace_module_info_t module_info = {
 static int res_segment = 0;
 static int res_address = 0;
 
-
-#define IPC_64  0x00  /* New version (support 32-bit UIDs, bigger
-                            message sizes, etc. */
+#
+#ifdef __amd64__
+ #define IPC_64  0x00
+#else
+ #define IPC_64 	  0x100
+#endif
 
 /*
  * Mapped address to segment id mapping support.
@@ -274,12 +277,12 @@ int trace_shmdt(const void *shmaddr)
 
 	if (rc == 0) {
 		/* report shared memory detachment */
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_address, "shdt", 0, shmaddr, NULL);
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_address, "shmdt", 0, shmaddr, NULL);
 
 		/* if the segment was marked for removal it should be destroyed after detaching the
 		 * last address. */
 		if (nattach == 1) {
-			sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_segment, "shdt", 0, (void*)shmid, NULL);
+			sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_segment, "shmdt", 0, (void*)shmid, NULL);
 		}
 	}
 	return rc;

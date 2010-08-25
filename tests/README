@@ -1,4 +1,5 @@
 sp-rtrace testsuite
+===================
 
 By default the testsuite is compiled and executed with make check.
 To allow easier testing on embeded devices it's possible to separate
@@ -7,8 +8,14 @@ compile and test process with the following environment variables:
   RT_DISABLE_TEST - set to 1 to disable test execution.
   
 The test suite requires dejagnu package.
+
+sp-rtrace.postproc/generate_samples.sh script regenerates sample
+logs used in post-procesor testing. To generate them:
+1) run make check with testing disabled,
+2) run the generate_samples.sh script from sp-rtrace.postproc dir.
   
 Running tests on a device:
+==========================
 1) Compile the package: dpkg-buildpackge -rfakeroot -b 
 2) Compile test applications by executing RT_DISABLE_TEST=1 make check
    in tests directory
@@ -17,6 +24,7 @@ Running tests on a device:
 5) Run testsuite by executing RT_DISABLE_COMPILE=1 runtest --tool=sp-rtrace
 
 Directory structure:
+====================
 lib - common files used by test cases
 
 sp-rtrace.core - test cases for internal data containers. Contains tests

@@ -151,7 +151,7 @@ proc pidof { name } {
 proc test_module { module args } {
 	eval spawn sp-rtrace -p $module -P- -s -x $::bin_dir/$::out_file
 	expect {
-		-re {(?n)^[0-9]+\. \[[^\]]+\] ([^\(]+)\([0-9a-fA-Fx]+\)} {
+		-re {(?n)^[0-9]+\. \[[^\]]+\] ([^\(<]+)(?:<[^>]+>)?\([0-9a-fA-Fx]+\)} {
 			if { [info exists tracked($expect_out(1,string))] } {
 				set value [expr $tracked($expect_out(1,string)) + 1]
 			} else {
@@ -162,11 +162,14 @@ proc test_module { module args } {
 		}
 	}
 	exp_wait
-	foreach name $args {
-		if { ![info exists tracked($name)] } {
-			fail "$module module: function $name"
-		} else {
+	
+	foreach pattern $args {
+		set count ""
+		regexp {^([^:]+)(?:\:(.*)|)$} $pattern match name count
+		if { [info exists tracked($name)] } {
 			pass "$module module: function $name"
+		} else {
+			fail "$module module: function $name"
 		}
 	}
 }

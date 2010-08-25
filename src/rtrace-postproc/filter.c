@@ -203,7 +203,7 @@ static void fcall_filter_context(rd_fcall_t* call, rd_t* rd)
  */
 static void fcall_filter_resource(rd_fcall_t* call, rd_t* rd)
 {
-	if (call->res_type && !(call->res_type->id & postproc_options.filter_resource)) {
+	if (call->res_type && !( (1 << (call->res_type->id - 1)) & postproc_options.filter_resource)) {
 		rd_fcall_remove(rd, call);
 	}
 }
@@ -248,7 +248,7 @@ static void context_filter_mask(rd_context_t* context, dlist_t* list)
  */
 static void resource_filter_mask(rd_resource_t* resource, dlist_t* list)
 {
-	if (! (resource->id & postproc_options.filter_resource) ) {
+	if (! ( (1 << (resource->id - 1)) & postproc_options.filter_resource) ) {
 		dlist_remove(list, (void*)resource);
 	}
 }
@@ -308,7 +308,7 @@ long sum_leaks(rd_fcall_t* call, leak_data_t* leaks)
 		/* Resource type 0 is used when only when one resource type is present, to
 		 * hide the resource types in call reports. In reality the resource type
 		 * is 1	 */
-		leak_data_t* leak = &leaks[call->res_type ? ffs(call->res_type) - 1 : 0];
+		leak_data_t* leak = &leaks[call->res_type ? call->res_type->id - 1 : 0];
 		leak->count++;
 		leak->total_size += call->res_size;
 	}

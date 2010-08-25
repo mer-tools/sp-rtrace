@@ -630,7 +630,6 @@ int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* n
 	ptr += write_dword(ptr, SP_RTRACE_PROTO_FUNCTION_CALL);
 
 	/* don't write module id if only single module is registered */
-	if (rtrace_resource_index <= 1) res_type = 0;
 	ptr += write_dword(ptr, res_type);
 	ptr += write_dword(ptr, sp_context_mask);
 
