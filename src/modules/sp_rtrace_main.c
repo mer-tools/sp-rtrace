@@ -286,10 +286,10 @@ static void pipe_buffer_unlock(const char* ptr, int size)
 	/* writes the data into pipe either if  the send buffer
 	 * (which is half of the allocated pipe buffer) is full.
 	 */
-	if (!sp_rtrace_options->enable_packet_buffering || ptr + size > pipe_buffer + BUFFER_SIZE) {
+	if (ptr + size > pipe_buffer + BUFFER_SIZE) {
 		pipe_buffer_flush();
 		/* move the last packet to the beginning of pipe buffer */
-		while (pipe_buffer_head - pipe_buffer < size) {
+		while (pipe_buffer_head  <  pipe_buffer + size) {
 			*pipe_buffer_head++ = *ptr++;
 		}
 	}
@@ -629,7 +629,6 @@ int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* n
 	/* write FC packet */
 	ptr += write_dword(ptr, SP_RTRACE_PROTO_FUNCTION_CALL);
 
-	/* don't write module id if only single module is registered */
 	ptr += write_dword(ptr, res_type);
 	ptr += write_dword(ptr, sp_context_mask);
 

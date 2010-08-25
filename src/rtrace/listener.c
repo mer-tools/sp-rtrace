@@ -92,7 +92,7 @@ int flush_data()
  * @param[in] size    the number of bytes to write.
  * @return            the number of bytes written.
  */
-int write_data(const char* data, int size)
+static int write_data(const char* data, int size)
 {
 	/* write directly to the output stream if the event buffering is disabled */
 	if (rtrace_options.disable_packet_buffering) {
@@ -201,6 +201,7 @@ static int process_handshake(const char* data, int size)
 	hs_size = len;
 	return len;
 }
+#include "common/sp_rtrace_proto.h"
 
 /**
  * Processes generic packet.
@@ -213,6 +214,10 @@ static int process_packet(const char* data, int size)
 {
 	unsigned int len, type;
 	unsigned int offset;
+
+	if (size < sizeof(int)) {
+		return -1;
+	}
 	offset = read_dword(data, &len);
 	len += offset;
 	if ((int)len > size) {
@@ -220,7 +225,7 @@ static int process_packet(const char* data, int size)
 	}
 	offset += read_dword(data + offset, &type);
 
-	//LOG("type=%c%c, size=%d", *(char*)&type, *((char*)&type + 1), len - offset);
+//	LOG("type=%c%c, size=%d", *(char*)&type, *((char*)&type + 1), len - offset);
 	if (type == SP_RTRACE_PROTO_OUTPUT_SETTINGS) {
 		char value[PATH_MAX];
 		offset += read_string(data + offset, value, PATH_MAX);
@@ -296,7 +301,7 @@ int process_data()
 		/* move the incomplete packet to the beginning of buffer */
 		memmove(buffer, ptr_in, n);
 		/* read new data chunk into buffer */
-		int nbytes = read(fd_in, buffer + n, BUFFER_SIZE - 1);
+		int nbytes = read(fd_in, buffer + n, BUFFER_SIZE);
 		if (nbytes <= 0 || !rtrace_main_loop) {
 			break;
 		}
