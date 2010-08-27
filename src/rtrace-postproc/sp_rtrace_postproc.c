@@ -63,7 +63,7 @@ postproc_options_t postproc_options = {
 	.compress = false,
 	.remove_args = false,
 	.resolve = false,
-	.filter_context = 0,
+	.filter_context = -1,
 	.compare_leaks = 0,
 	.pid_resolve = 0,
 	.filter_resource = 0,
@@ -366,7 +366,7 @@ int main(int argc, char* argv[])
 		filter_leaks(rd);
 	}
 
-	if (postproc_options.filter_context) {
+	if (postproc_options.filter_context != -1) {
 		filter_context(rd);
 	}
 	if (rd->hinfo) {

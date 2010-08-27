@@ -103,12 +103,14 @@ sp-rtrace-postproc -i $LOG_RAW > $LOG_SAMPLE
 rm $LOG_RAW
 
 sp-rtrace-postproc  -i $LOG_SAMPLE > $LOG_SAMPLE..
+sp-rtrace-postproc -C0 -i $LOG_SAMPLE > $LOG_SAMPLE.C0.
 sp-rtrace-postproc -C1 -i $LOG_SAMPLE > $LOG_SAMPLE.C1.
 sp-rtrace-postproc -C2 -i $LOG_SAMPLE > $LOG_SAMPLE.C2.
 sp-rtrace-postproc -C3 -i $LOG_SAMPLE > $LOG_SAMPLE.C3.
 sp-rtrace-postproc -C4 -i $LOG_SAMPLE > $LOG_SAMPLE.C4.
 
 sp-rtrace-postproc  -lci $LOG_SAMPLE > $LOG_SAMPLE..lc
+sp-rtrace-postproc -C0 -lci $LOG_SAMPLE > $LOG_SAMPLE.C0.lc
 sp-rtrace-postproc -C1 -lci $LOG_SAMPLE > $LOG_SAMPLE.C1.lc
 sp-rtrace-postproc -C2 -lci $LOG_SAMPLE > $LOG_SAMPLE.C2.lc
 sp-rtrace-postproc -C3 -lci $LOG_SAMPLE > $LOG_SAMPLE.C3.lc

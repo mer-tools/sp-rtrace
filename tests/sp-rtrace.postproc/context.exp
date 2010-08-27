@@ -45,12 +45,14 @@ proc test_context_filter { context postproc } {
 
 proc test_context_filters { args } {
 	if { [test_context_filter "" ""] == -1} {return -1}
+	if { [test_context_filter "C0" ""] == -1} {return -1}
 	if { [test_context_filter "C1" ""] == -1} {return -1}
 	if { [test_context_filter "C2" ""] == -1} {return -1}
 	if { [test_context_filter "C3" ""] == -1} {return -1}
 	if { [test_context_filter "C4" ""] == -1} {return -1}
 
 	if { [test_context_filter "" "lc"] == -1} {return -1}
+	if { [test_context_filter "C0" "lc"] == -1} {return -1}
 	if { [test_context_filter "C1" "lc"] == -1} {return -1}
 	if { [test_context_filter "C2" "lc"] == -1} {return -1}
 	if { [test_context_filter "C3" "lc"] == -1} {return -1}
