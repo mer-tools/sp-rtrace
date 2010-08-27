@@ -230,10 +230,10 @@ void* trace_shmat(int shmid, const void *shmaddr, int shmflg)
 		/* use segment information as memory attachment parameters */
 		char arg1[100], arg2[100];
 		char* args[] = {arg1, NULL, NULL};
-		sprintf(arg1, "shmid=0x%x", shmid);
+		sprintf(arg1, "id=0x%x", shmid);
 
 		if (trace_off.shmctl(shmid, IPC_STAT | IPC_64, &ds) == 0) {
-			sprintf(arg2, "shmid::shm_cpid=%d", ds.shm_cpid);
+			sprintf(arg2, "cpid=%d", ds.shm_cpid);
 			args[1] = arg2;
 			size = ds.shm_segsz;
 
