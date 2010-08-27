@@ -44,6 +44,7 @@
 #define PRINT_CONTEXT		"context"
 #define PRINT_COMMENT		"comment"
 #define PRINT_ARGS			"args"
+#define PRINT_RESOURCE		"resource"
 
 enum {
 	HEADER_VERSION,
@@ -66,6 +67,7 @@ enum {
 	CALL_NAME,
 	CALL_RES_SIZE,
 	CALL_RES_ID,
+	CALL_RES_TYPE,
 };
 
 enum {
@@ -78,6 +80,14 @@ enum {
 	CONTEXT_ID,
 	CONTEXT_NAME,
 };
+
+enum {
+	RESOURCE_ID,
+	RESOURCE_TYPE,
+	RESOURCE_DESC,
+};
+
+
 
 /**
  * Prints header record.
@@ -133,6 +143,7 @@ static void print_mmap(char* argv[])
  *   $4 - function name
  *   $5 - resource size(allocation)/id(deallocation)
  *   $6 - resource id, empty string for deallocation records
+ *   $7 - resource type name, empty string if the resource type should be omitted.
  * @param argv
  */
 static void print_call(char* argv[])
@@ -146,8 +157,9 @@ static void print_call(char* argv[])
 	int res_size = atoi(argv[CALL_RES_SIZE]);
 	void* res_id = NULL;
 	sscanf(argv[CALL_RES_ID], "%p", &res_id);
+	char* res_type = *argv[CALL_RES_TYPE] ? argv[CALL_RES_TYPE] : NULL;
 
-	sp_rtrace_print_call(stdout, index, context, timestamp, argv[CALL_NAME], res_size, res_id);
+	sp_rtrace_print_call(stdout, index, context, timestamp, argv[CALL_NAME], res_size, res_id, res_type);
 }
 
 /**
@@ -210,7 +222,7 @@ static void print_trace_step(char* argv[])
  *
  * Arguments:
  *   $1 - context id
- *   $2 - contex name
+ *   $2 - context name
  *
  * @param argv
  */
@@ -219,6 +231,23 @@ static void print_context(char* argv[])
 	int context_id = 0;
 	sscanf(argv[CONTEXT_ID], "%x", &context_id);
 	sp_rtrace_print_context(stdout, context_id, argv[CONTEXT_NAME]);
+}
+
+/**
+ * Prints resource registry record
+ *
+ * Arguments:
+ *   $1 - resource id
+ *   $2 - resource type
+ *   $3 - resource description
+ *
+ * @param argv
+ */
+static void print_resource(char* argv[])
+{
+	int res_id = 0;
+	sscanf(argv[RESOURCE_ID], "%x", &res_id);
+	sp_rtrace_print_resource(stdout, res_id, argv[RESOURCE_TYPE], argv[RESOURCE_DESC]);
 }
 
 
@@ -286,6 +315,9 @@ int main(int argc, char* argv[])
 		}
 		else if (!strcmp(argv[1], PRINT_ARGS)) {
 			print_args(&argv[2]);
+		}
+		else if (!strcmp(argv[1], PRINT_RESOURCE)) {
+			print_resource(&argv[2]);
 		}
 	}
 	return 0;

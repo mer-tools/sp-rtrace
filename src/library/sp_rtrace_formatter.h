@@ -68,10 +68,11 @@ void sp_rtrace_print_mmap(FILE* fp, const char* module, void* from, void* to);
  * @param[in] name       the function name.
  * @param[in] res_size   the allocated resource size. Set 0 to specify deallocation call.
  * @param[in] res_id     the resource identifier.
+ * @param[in] res_type   the resource type name (can be NULL).
  * @return
  */
 void sp_rtrace_print_call(FILE* fp, int index, unsigned int context, unsigned int timestamp,
-		const char* name, int res_size, void* res_id);
+		const char* name, int res_size, void* res_id, const char* res_type);
 
 
 /**
@@ -104,6 +105,18 @@ void sp_rtrace_print_trace_step(FILE* fp, void* addr, const char* resolved);
  * @return
  */
 void sp_rtrace_print_context(FILE* fp, unsigned int id, const char* name);
+
+
+/**
+ * Prints resource registry record.
+ *
+ * @param[in] fp    the output stream.
+ * @param[in] id    the resource identifier.
+ * @param[in] type  the resource type.
+ * @param[in] desc  the resource description.
+ * @return
+ */
+void sp_rtrace_print_resource(FILE* fp, unsigned int id, const char* type, const char* desc);
 
 /**
  * Prints comment.

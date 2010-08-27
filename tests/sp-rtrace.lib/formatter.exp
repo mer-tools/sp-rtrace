@@ -103,17 +103,18 @@ proc check_print_mmap { module from to } {
 	return 0
 }
 
-proc check_print_call { index context timestamp name res_size res_id } {
+proc check_print_call { index context timestamp name res_size res_id res_type} {
 	set out_index ""
 	set out_context ""
 	set out_timestamp ""
 	set out_name ""
 	set out_res_size ""
 	set out_res_id ""
+	set out_res_type ""
 
-	spawn $::bin_dir/$::out_file call $index $context $timestamp $name $res_size $res_id
+	spawn $::bin_dir/$::out_file call $index $context $timestamp $name $res_size $res_id $res_type
 	expect {
-		-re {([0-9]+)\.(?: @([0-9a-fA-F]+)|)(?: \[([^\]]+)\]|) ([^\(]+)\(([^\)]+)\)(?: = (0x[0-9a-fA-F]+)|)} {
+		-re {([0-9]+)\.(?: @([0-9a-fA-F]+)|)(?: \[([^\]]+)\]|) ([^\(\<]+)(?:\<([^>]+)\>|)\(([^\)]+)\)(?: = (0x[0-9a-fA-F]+)|)} {
 			set out_index $expect_out(1,string)
 			if { [info exists expect_out(2,string)] } {
 				set out_context $expect_out(2,string)
@@ -122,11 +123,14 @@ proc check_print_call { index context timestamp name res_size res_id } {
 				set out_timestamp $expect_out(3,string)
 			}
 			set out_name $expect_out(4,string)
-			if { [info exists expect_out(6,string)] } {
-				set out_res_size $expect_out(5,string)
-				set out_res_id $expect_out(6,string)
+			if { [info exists expect_out(5,string)] } {
+				set out_res_type $expect_out(5,string)
+			}
+			if { [info exists expect_out(7,string)] } {
+				set out_res_size $expect_out(6,string)
+				set out_res_id $expect_out(7,string)
 			} else {
-				set out_res_id $expect_out(5,string)
+				set out_res_id $expect_out(6,string)
 			}
 		} 
 	}
@@ -146,6 +150,10 @@ proc check_print_call { index context timestamp name res_size res_id } {
 	}
 	if { $out_name != $name } {
 		fail "Wrong call name. Expected '$name', got '$out_name'"
+		return -1
+	}
+	if { $out_res_type != $res_type } {
+		fail "Wrong call resource type. Expected '$res_type', got '$out_res_type'"
 		return -1
 	}
 	if { $out_res_size != $res_size } {
@@ -290,6 +298,38 @@ proc check_print_argument { args } {
 	return $rc
 }
 
+
+proc check_print_resource { id type desc } {
+	
+	set rc 0
+	set out_type ""
+	set out_id ""
+	set out_desc ""
+	spawn $::bin_dir/$::out_file resource $id $type $desc
+	expect {
+		-re {(?n)^\<([0-9a-fA-F]+)\> : ([^ ]+) \(([^\n\r]+)\)\s*$} {
+			set out_id $expect_out(1,string)
+			set out_type $expect_out(2,string)
+			set out_desc $expect_out(3,string)
+		}
+	}
+	if {  $id != $out_id } {
+		fail "Wrong resource id. Expected '$id', got '$out_id'"
+		set rc -1
+	}
+	if {  $type != $out_type } {
+		fail "Wrong resource type. Expected '$type', got '$out_type'"
+		set rc 0
+	}
+	if {  $desc != $out_desc } {
+		fail "Wrong resource desription. Expected '$desc', got '$out_desc'"
+		set rc 0
+	}
+	exp_close
+	exp_wait
+	return $rc
+}
+
 #
 # Test cases
 #
@@ -306,16 +346,20 @@ proc test_print_mmap { args } {
 
 proc test_print_call { args } {
 	# resource allocation record checks
-	if { [check_print_call "1" "" "12:34:56.789" "malloc" "100" "0xc0de0001"] == -1 } {return -1}
-	if { [check_print_call "1" "8" "12:34:56.789" "malloc" "100" "0xc0de0001"] == -1 } {return -1}
-	if { [check_print_call "1" "" "" "malloc" "100" "0xc0de0001"] == -1 } {return -1}
-	if { [check_print_call "1" "9" "" "malloc" "100" "0xc0de0001"] == -1 } {return -1}
+	if { [check_print_call "1" "" "12:34:56.789" "malloc" "100" "0xc0de0001" ""] == -1 } {return -1}
+	if { [check_print_call "1" "8" "12:34:56.789" "malloc" "100" "0xc0de0001" ""] == -1 } {return -1}
+	if { [check_print_call "1" "" "" "malloc" "100" "0xc0de0001" ""] == -1 } {return -1}
+	if { [check_print_call "1" "9" "" "malloc" "100" "0xc0de0001" ""] == -1 } {return -1}
 
 	# resource deallocation record checks
-	if { [check_print_call "1" "" "12:34:56.789" "free" "" "0xc0de0001"] == -1 } {return -1}
-	if { [check_print_call "1" "8" "12:34:56.789" "free" "" "0xc0de0001"] == -1 } {return -1}
-	if { [check_print_call "1" "" "" "free" "" "0xc0de0001"] == -1 } {return -1}
-	if { [check_print_call "1" "9" "" "free" "" "0xc0de0001"] == -1 } {return -1}
+	if { [check_print_call "1" "" "12:34:56.789" "free" "" "0xc0de0001" ""] == -1 } {return -1}
+	if { [check_print_call "1" "8" "12:34:56.789" "free" "" "0xc0de0001" ""] == -1 } {return -1}
+	if { [check_print_call "1" "" "" "free" "" "0xc0de0001" ""] == -1 } {return -1}
+	if { [check_print_call "1" "9" "" "free" "" "0xc0de0001" ""] == -1 } {return -1}
+
+	# resource type checks
+	if { [check_print_call "1" "9" "" "malloc" "100" "0xc0de0001" "shmseg"] == -1 } {return -1}
+	if { [check_print_call "1" "9" "" "malloc" "100" "0xc0de0001" "shmaddr"] == -1 } {return -1}
 
 	pass "sp_rtrace_print_call"
 }
@@ -360,6 +404,12 @@ proc test_print_argument { args } {
 	pass "sp_rtrace_print_arg"
 }
 
+proc test_print_resource { args } {
+	if { [check_print_resource "1" "shmseg" "shared memory segment tracking"] == -1} {return -1}
+	if { [check_print_resource "2" "shmaddr" "shared memory attachment tracking"] == -1} {return -1}
+
+	pass "sp_rtrace_print_context"
+}
 
 #
 #
@@ -376,6 +426,7 @@ if { $result == "" } {
 	rt_test test_print_context
 	rt_test test_print_comment
 	rt_test test_print_argument
+	rt_test test_print_resource
 
 } else {
 	fail  "failed to compile $src_dir/$out_file.c:\n $result"
