@@ -368,7 +368,7 @@ static bool parse_arguments(char* line, char** parg)
 static void store_call_arguments(rd_fcall_t* call, char** args, int size)
 {
 	rd_fargs_t* fargs = (rd_fargs_t*)malloc_a(sizeof(rd_fargs_t));
-	fargs->args = malloc_a(sizeof(char*) * size + 1);
+	fargs->args = malloc_a(sizeof(char*) * (size + 1));
 	memcpy(fargs->args, args, sizeof(char*) * size);
 	fargs->args[size] = NULL;
 	call->args = fargs;
@@ -445,7 +445,7 @@ static void read_text_data(rd_t* rd, FILE* fp)
 		 * and thus a function argument data object created and stored.
 		 */
 		if (args_index) {
-			store_call_arguments(RD_FCALL(dlist_last(&last_calls)), args, args_index);
+			store_call_arguments(REF_NODE(dlist_last(&last_calls))->ref, args, args_index);
 			args_index = 0;
 		}
 		/* if bt_index is set at this place, it means that parser finished
@@ -515,7 +515,7 @@ static void read_text_data(rd_t* rd, FILE* fp)
 		dlist_add(&rd->comments, comment);
 	}
 	if (args_index) {
-		store_call_arguments(RD_FCALL(dlist_last(&last_calls)), args, args_index);
+		store_call_arguments(REF_NODE(dlist_last(&last_calls))->ref, args, args_index);
 	}
 	if (bt_index) {
 		store_backtrace(rd, &last_calls, bt, bt_index);
