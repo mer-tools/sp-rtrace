@@ -320,7 +320,7 @@ static int open_output_file()
  */
 static void create_preproc_pipe(char* pipe_path, size_t size)
 {
-	snprintf(pipe_path, size, SP_RTRACE_PIPE_PATTERN, rtrace_options.pid);
+	snprintf(pipe_path, size, SP_RTRACE_PIPE_PATTERN "%d", rtrace_options.pid);
 	if (mkfifo(pipe_path, 0666) != 0) {
 		fprintf(stderr, "ERROR: Failed to create named pipe %s\n", pipe_path);
 		exit (-1);
@@ -455,7 +455,7 @@ static void begin_tracing()
 static void toggle_tracing()
 {
 	char pipe_path[128];
-	snprintf(pipe_path, sizeof(pipe_path), SP_RTRACE_PIPE_PATTERN, rtrace_options.pid);
+	snprintf(pipe_path, sizeof(pipe_path), SP_RTRACE_PIPE_PATTERN "%d", rtrace_options.pid);
 
 	int signum = 0;
 	if (rtrace_options.toggle_signal_name) signum = atoi(rtrace_options.toggle_signal_name);
@@ -488,7 +488,7 @@ static void start_process(char* app, char* args[])
 	if (rtrace_options.pid == 0) {
 		if (rtrace_options.start) {
 			char pipe_path[128];
-			snprintf(pipe_path, sizeof(pipe_path), SP_RTRACE_PIPE_PATTERN, getpid());
+			snprintf(pipe_path, sizeof(pipe_path), SP_RTRACE_PIPE_PATTERN "%d", getpid());
 			int spin = 0;
 			while (access(pipe_path, W_OK)) {
 				usleep(100000);

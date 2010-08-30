@@ -86,8 +86,8 @@ static sp_rtrace_options_t rtrace_main_options = {
 	.enable = false,
 	.manage_preproc = false,
 	.enable_packet_buffering = true,
-	.output_dir = NULL,
-	.postproc = NULL,
+	.output_dir = {0},
+	.postproc = {0},
 };
 
 sp_rtrace_options_t* sp_rtrace_options = &rtrace_main_options;
@@ -517,7 +517,8 @@ static void write_initial_data()
 
 	pipe_buffer_reset();
 	write_handshake(SP_RTRACE_PROTO_VERSION_MAJOR, SP_RTRACE_PROTO_VERSION_MINOR, BUILD_ARCH);
-	write_output_settings(sp_rtrace_options->output_dir, sp_rtrace_options->postproc);
+	write_output_settings(*sp_rtrace_options->output_dir ? sp_rtrace_options->output_dir : NULL,
+				*sp_rtrace_options->postproc ? sp_rtrace_options->postproc : NULL);
 	write_process_info();
 	write_module_info(0, module_info.name, module_info.version_major, module_info.version_minor);
 	/* write MI packets for all tracing modules */
@@ -581,6 +582,64 @@ static void signal_toggle_tracing(int signo)
 	}
 }
 
+/**
+ * Copies at most size bytes from string src to dst including
+ * the trailing null byte.
+ *
+ * @param[in] dst   the destination buffer.
+ * @param[in] src   the source buffer.
+ * @param[in] size  size of the destination buffer.
+ * @return          a pointer to the terminating null in dst.
+ */
+static char* _stpncpy(char* dst, const char* src, int size)
+{
+	char* tail = dst;
+	while ( dst - tail < size - 1 && (*dst = *src)) {
+		dst++;
+		src++;
+	}
+	*dst = '\0';
+	return dst;
+}
+
+/**
+ * Converts string to an integer value.
+ * @param str
+ * @return
+ */
+static int _atoi(const char* str)
+{
+	int value = 0;
+	while (*str && *str >= '0' && *str <= '9') {
+		value = value * 10 + *str++ - '0';
+	}
+	return value;
+}
+
+/**
+ * Converts integer value to a string.
+ *
+ * @param[in] buffer  the output buffer.
+ * @param[in] value   the value to convert.
+ * @return            the output buffer.
+ */
+static char* _itoa(char* buffer, int value)
+{
+	char tmp[16], *ptr = tmp;
+	char* ptr_buffer = buffer;
+
+	while (true) {
+		*ptr = value % 10 + '0';
+		value /= 10;
+		if (value == 0) break;
+		ptr++;
+	}
+	do {
+		*ptr_buffer++ = *ptr--;
+	} while (ptr >= tmp);
+	*ptr_buffer = '\0';
+	return buffer;
+}
 
 /*
  * Public API implementation
@@ -734,6 +793,77 @@ void sp_rtrace_store_heap_info()
 	heap_info = mallinfo();
 }
 
+void sp_rtrace_initialize()
+{
+	static volatile int initialize_lock = 0;
+	if (__sync_bool_compare_and_swap(&initialize_lock, 0, 1)) {
+		LOG("initializing... (pid=%d)", getpid());
+		/* reset the scratchbox preload configuration */
+		if (query_scratchbox()) {
+			unlink("/etc/ld.so.preload");
+		}
+
+		/* get the pre-processor named pipe name */
+		char* ptr = _stpncpy(pipe_path, SP_RTRACE_PIPE_PATTERN, sizeof(pipe_path));
+		_itoa(ptr, getpid());
+
+		/* read backtrace depth */
+		const char* env_backtrace_depth = getenv(rtrace_env_opt[OPT_BACKTRACE_DEPTH]);
+		if (env_backtrace_depth && *env_backtrace_depth) {
+			sp_rtrace_options->backtrace_depth = _atoi(env_backtrace_depth);
+			LOG("backtrace_depth=%d", sp_rtrace_options->backtrace_depth);
+		}
+
+		/* read timestamp option */
+		const char* env_disable_timestamps = getenv(rtrace_env_opt[OPT_DISABLE_TIMESTAMPS]);
+		if (env_disable_timestamps && *env_disable_timestamps == '1') {
+			sp_rtrace_options->enable_timestamps = false;
+			LOG("enable_timestamps=%d", sp_rtrace_options->enable_timestamps);
+		}
+
+		/* read disable packet buffering option */
+		const char* env_disable_packet_buffering = getenv(rtrace_env_opt[OPT_DISABLE_PACKET_BUFFERING]);
+		if (env_disable_packet_buffering && *env_disable_packet_buffering == '1') {
+			sp_rtrace_options->enable_packet_buffering = false;
+			LOG("enable_packet_buffering=%d", sp_rtrace_options->enable_packet_buffering);
+		}
+
+		/* read manage-preproc option */
+		const char* env_manage_preproc = getenv(rtrace_env_opt[OPT_MANAGE_PREPROC]);
+		if (env_manage_preproc && *env_manage_preproc == '1') {
+			sp_rtrace_options->manage_preproc = true;
+			LOG("manage_preproc=%d", sp_rtrace_options->manage_preproc);
+		}
+
+		/* read post-processor options */
+		const char* env_postproc = getenv(rtrace_env_opt[OPT_POSTPROC]);
+		if (env_postproc) {
+			_stpncpy(sp_rtrace_options->postproc, env_postproc, sizeof(sp_rtrace_options->postproc));
+			LOG("posptproc=%s", sp_rtrace_options->postproc);
+		}
+
+		/* read output directory option */
+		const char* env_output_dir = getenv(rtrace_env_opt[OPT_OUTPUT_DIR]);
+		if (env_output_dir) {
+			_stpncpy(sp_rtrace_options->output_dir, env_output_dir, sizeof(sp_rtrace_options->output_dir));
+			LOG("output_dir=%s", sp_rtrace_options->output_dir);
+		}
+
+		/* read tracing enable option */
+		const char* env_enable = getenv(rtrace_env_opt[OPT_START]);
+		if (env_enable && *env_enable == '1') {
+			sp_rtrace_options->enable = true;
+		}
+
+		if (sp_rtrace_options->enable) {
+			fd_proc = open_pipe();
+			write_initial_data();
+			enable_tracing(true);
+		}
+
+	}
+}
+
 static void trace_main_init(void) __attribute__((constructor));
 static void trace_main_fini(void) __attribute__((destructor));
 
@@ -742,18 +872,12 @@ static void trace_main_fini(void) __attribute__((destructor));
  */
 static void trace_main_init(void)
 {
-	LOG("initializing... (pid=%d)", getpid());
-	/* reset the scratchbox preload configuration */
-	if (query_scratchbox()) {
-		remove("/etc/ld.so.preload");
-	}
+	sp_rtrace_initialize();
+
 	/* cache the heap bottom address */
 	heap_bottom = sbrk(0);
 
 	int toggle_signal = SIGUSR1;
-
-	/* get the pre-processor named pipe name */
-	sprintf(pipe_path, SP_RTRACE_PIPE_PATTERN, getpid());
 
 	/* read toggle signal number */
 	const char* env_toggle_signal = getenv(rtrace_env_opt[OPT_TOGGLE_SIGNAL]);
@@ -763,65 +887,11 @@ static void trace_main_init(void)
 		LOG("toggle_signal=%d", toggle_signal);
 	}
 
-	/* read backtrace depth */
-	const char* env_backtrace_depth = getenv(rtrace_env_opt[OPT_BACKTRACE_DEPTH]);
-	if (env_backtrace_depth && *env_backtrace_depth) {
-		sp_rtrace_options->backtrace_depth = atoi(env_backtrace_depth);
-		LOG("backtrace_depth=%d", sp_rtrace_options->backtrace_depth);
-	}
-
-	/* read timestamp option */
-	const char* env_disable_timestamps = getenv(rtrace_env_opt[OPT_DISABLE_TIMESTAMPS]);
-	if (env_disable_timestamps && *env_disable_timestamps == '1') {
-		sp_rtrace_options->enable_timestamps = false;
-		LOG("enable_timestamps=%d", sp_rtrace_options->enable_timestamps);
-	}
-
-	/* read disable packet buffering option */
-	const char* env_disable_packet_buffering = getenv(rtrace_env_opt[OPT_DISABLE_PACKET_BUFFERING]);
-	if (env_disable_packet_buffering && *env_disable_packet_buffering == '1') {
-		sp_rtrace_options->enable_packet_buffering = false;
-		LOG("enable_packet_buffering=%d", sp_rtrace_options->enable_packet_buffering);
-	}
-
-	/* read manage-preproc option */
-	const char* env_manage_preproc = getenv(rtrace_env_opt[OPT_MANAGE_PREPROC]);
-	if (env_manage_preproc && *env_manage_preproc == '1') {
-		sp_rtrace_options->manage_preproc = true;
-		LOG("manage_preproc=%d", sp_rtrace_options->manage_preproc);
-	}
-
-	/* read post-processor options */
-	const char* env_postproc = getenv(rtrace_env_opt[OPT_POSTPROC]);
-	if (env_postproc) {
-		sp_rtrace_options->postproc = strdup_a(env_postproc);
-		LOG("posptproc=%s", sp_rtrace_options->postproc);
-	}
-
-	/* read output directory option */
-	const char* env_output_dir = getenv(rtrace_env_opt[OPT_OUTPUT_DIR]);
-	if (env_output_dir) {
-		sp_rtrace_options->output_dir = strdup_a(env_output_dir);
-		LOG("output_dir=%s", sp_rtrace_options->output_dir);
-	}
-
 	struct sigaction sa = {.sa_handler = signal_toggle_tracing};
 	sigemptyset(&sa.sa_mask);
 	if (sigaction(toggle_signal, &sa, NULL) == -1) {
 		fprintf(stderr, "ERROR: failed to set signal %d\n", toggle_signal);
 		exit (-1);
-	}
-
-	/* read tracing enable option */
-	const char* env_enable = getenv(rtrace_env_opt[OPT_START]);
-	if (env_enable && *env_enable == '1') {
-		sp_rtrace_options->enable = true;
-	}
-
-	if (sp_rtrace_options->enable) {
-		fd_proc = open_pipe();
-		write_initial_data();
-		enable_tracing(true);
 	}
 }
 

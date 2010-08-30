@@ -41,6 +41,9 @@
 #include "common/debug_log.h"
 #include "common/utils.h"
 
+
+//#define MSG(text) {	char buffer[] = ">>>" text "\n"; if(write(STDERR_FILENO, buffer, sizeof(buffer))){}; }
+
 /* Module information */
 static sp_rtrace_module_info_t module_info = {
 		.type = MODULE_TYPE_PRELOAD,
@@ -65,7 +68,7 @@ static int resource_id = 0;
  *   chunkX - the allocated memory chunk X.
  */
 
-#define EMU_HEAP_SIZE       1024 * 1024
+#define EMU_HEAP_SIZE       1024 * 4
 #define EMU_HEAP_ALIGN      8
 static char emu_heap[EMU_HEAP_SIZE] = { 0 };
 static char* emu_heap_tail = emu_heap;
@@ -94,9 +97,11 @@ static trace_t trace_off;
 static trace_t trace_on;
 /* target function emulation (local implementation) */
 static trace_t trace_emu;
+/* target function initializers */
+static trace_t trace_init;
 
 /* Runtime function references */
-static trace_t* trace_rt = &trace_emu;
+static trace_t* trace_rt = &trace_init;
 
 /**
  * Enables/disables tracing.
@@ -116,13 +121,27 @@ static void enable_tracing(bool value)
  */
 static void trace_initialize()
 {
-	trace_off.malloc = (malloc_t) dlsym(RTLD_NEXT, "malloc");
-	trace_off.free = (free_t) dlsym(RTLD_NEXT, "free");
-	trace_off.calloc = (calloc_t) dlsym(RTLD_NEXT, "calloc");
-	trace_off.realloc = (realloc_t) dlsym(RTLD_NEXT, "realloc");
-	trace_off.posix_memalign = (posix_memalign_t) dlsym(RTLD_NEXT, "posix_memalign");
+	static bool is_initialized = false;
+	if (!is_initialized) {
+		LOG("initializing %s (%d.%d)", module_info.name, module_info.version_major, module_info.version_minor);
 
-	enable_tracing(false);
+		trace_rt = &trace_emu;
+
+		trace_off.malloc = (malloc_t) dlsym(RTLD_NEXT, "malloc");
+		trace_off.free = (free_t) dlsym(RTLD_NEXT, "free");
+		trace_off.calloc = (calloc_t) dlsym(RTLD_NEXT, "calloc");
+		trace_off.realloc = (realloc_t) dlsym(RTLD_NEXT, "realloc");
+		trace_off.posix_memalign = (posix_memalign_t) dlsym(RTLD_NEXT, "posix_memalign");
+
+		enable_tracing(false);
+
+		sp_rtrace_initialize();
+
+		sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
+		resource_id = sp_rtrace_register_resource("memory", "memory allocation in bytes");
+
+		is_initialized = true;
+	}
 }
 
 /*
@@ -141,7 +160,6 @@ static void* emu_alloc_mem(size_t size, size_t align)
 
 	/* check if the requested size is not outside internal heap limits */
 	if (new_ptr + size >= emu_heap + EMU_HEAP_SIZE) {
-		MSG_ERROR_CONST("ERROR: internal allocation emulation heap exceeded limits.\n");
 		exit(-1);
 	}
 	/* point heap tail to the new chunk size value location */
@@ -215,6 +233,14 @@ static void* emu_realloc(void* ptr, size_t size)
 }
 
 static trace_t trace_emu = {
+	.malloc = emu_malloc,
+	.calloc = emu_calloc,
+	.realloc = emu_realloc,
+	.posix_memalign = emu_posix_memalign,
+	.free = emu_free,
+};
+
+static trace_t trace_off = {
 	.malloc = emu_malloc,
 	.calloc = emu_calloc,
 	.realloc = emu_realloc,
@@ -310,6 +336,49 @@ static trace_t trace_on = {
 	.free = trace_free,
 };
 
+
+
+/*
+ * Initialization functions
+ */
+
+static void* init_malloc(size_t size)
+{
+	trace_initialize();
+	return trace_rt->malloc(size);
+}
+
+static void* init_calloc(size_t nmemb, size_t size)
+{
+	trace_initialize();
+	return trace_rt->calloc(nmemb, size);
+}
+
+static int init_posix_memalign(void **memptr, size_t alignment, size_t size)
+{
+	trace_initialize();
+	return trace_rt->posix_memalign(memptr, alignment, size);
+}
+
+static void init_free(void* ptr)
+{
+	trace_initialize();
+	trace_rt->free(ptr);
+}
+
+static void* init_realloc(void* ptr, size_t size)
+{
+	trace_initialize();
+	return trace_rt->realloc(ptr, size);
+}
+
+static trace_t trace_init = {
+	.malloc = init_malloc,
+	.calloc = init_calloc,
+	.realloc = init_realloc,
+	.posix_memalign = init_posix_memalign,
+	.free = init_free,
+};
 /*
  * Target functions.
  */
@@ -386,11 +455,7 @@ static void trace_memory_fini(void) __attribute__((destructor));
 
 static void trace_memory_init(void)
 {
-	LOG("initializing %s (%d.%d)", module_info.name, module_info.version_major, module_info.version_minor);
 	trace_initialize();
-
-	sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
-	resource_id = sp_rtrace_register_resource("memory", "memory allocation in bytes");
 }
 
 static void trace_memory_fini(void)
