@@ -56,7 +56,7 @@ during post-processing and resolving.
      <timestamp>     - optional timestmap, absent if the header 'timestamps' 
                        option is set to 'no' (in HH:MM:SS.ssssss format).
      <function name> - the function name, allocator of the resource.
-     <resource type> - an optional resource type idomitted if only one resource
+     <resource type> - an optional resource type id (omitted if only one resource
                        type is being tracked). 
      <resourse size> - the size of the allocated resource (whenerver it's 
                        possible to calculate).
@@ -138,6 +138,4 @@ during post-processing and resolving.
     Where:
       <id>    - the resource id.
 	  <type>  - the resource type name.
-	  <desc>  - the resourec type description.
-			  
-			  
+	  <desc>  - the resource type description.
