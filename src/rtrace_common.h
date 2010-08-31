@@ -47,7 +47,7 @@
 #define SP_RTRACE_RESOLVER         "sp-rtrace-resolve"
 
 /* event pre-processor named pipe path template */
-#define SP_RTRACE_PIPE_PATTERN      "/tmp/rtrace-%d"
+#define SP_RTRACE_PIPE_PATTERN      "/tmp/rtrace-"
 
 /* the text file pattern, %d - pid */
 #define SP_RTRACE_TEXT_FILE_PATTERN   "%d"

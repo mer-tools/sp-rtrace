@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <signal.h>
+#include <limits.h>
 
 /**
  * @file sp_rtrace_main.h
@@ -54,8 +55,8 @@ typedef struct sp_rtrace_options_t {
 	bool enable;
 	bool manage_preproc;
 	bool enable_packet_buffering;
-	char* output_dir;
-	char* postproc;
+	char output_dir[PATH_MAX];
+	char postproc[PATH_MAX];
 } sp_rtrace_options_t;
 
 extern sp_rtrace_options_t* sp_rtrace_options;
@@ -132,6 +133,12 @@ void sp_rtrace_store_heap_info();
  * @return                the number of bytes written.
  */
 int sp_rtrace_write_context_registry(int context_id, const char* name);
+
+
+/**
+ * Initializes the tracing.
+ */
+void sp_rtrace_initialize();
 
 
 #endif
