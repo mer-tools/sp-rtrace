@@ -659,7 +659,7 @@ int sp_rtrace_write_context_registry(int context_id, const char* name)
 }
 
 
-int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* name, size_t res_size, void* id, char** args)
+int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* name, size_t res_size, void* id, const char** args)
 {
 	if (!sp_rtrace_options->enable) return 0;
 	int size = 0;
@@ -715,7 +715,7 @@ int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* n
 		ptr += sizeof(int);
 		int argc = 0;
 		while (*args) {
-			char* arg = *args++;
+			const char* arg = *args++;
 			ptr += write_string(ptr, arg);
 			++argc;
 		}
@@ -902,6 +902,7 @@ static void trace_main_fini(void)
 			write_heap_info();
 		}
 		pipe_buffer_flush();
+		enable_tracing(false);
 		close_pipe(fd_proc);
 	}
 }
