@@ -487,7 +487,7 @@ static void start_process(char* app, char* args[])
 	}
 	if (rtrace_options.pid == 0) {
 		if (rtrace_options.start) {
-			char pipe_path[128];
+			char pipe_path[sizeof(SP_RTRACE_PIPE_PATTERN) + 16];
 			snprintf(pipe_path, sizeof(pipe_path), SP_RTRACE_PIPE_PATTERN "%d", getpid());
 			int spin = 0;
 			while (access(pipe_path, W_OK)) {
@@ -799,10 +799,10 @@ int main(int argc, char* argv[])
 		case MODE_EXECUTE: {
 			LOG("Switching to process launch mode");
 			if (rtrace_options.manage_preproc) {
-				start_process_managed(optarg, argv + optind);
+				start_process_managed(optarg, argv + optind - 1);
 			}
 			else {
-				start_process(optarg, argv + optind);
+				start_process(optarg, argv + optind - 1);
 			}
 			break;
 		}

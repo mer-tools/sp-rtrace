@@ -202,7 +202,7 @@ static int map_dirty_address(unsigned long address, size_t size, int run)
 		}
 		return 1;
 	}
-	fprintf(stderr, "Got a invalid address 0x%lx or size %d\n",
+	fprintf(stderr, "Got a invalid address 0x%lx or size %lu\n",
 		heap_base + address, size);
 	return 0;
 }
@@ -412,7 +412,7 @@ int main(int argc, const char *argv[])
 			continue;
 		}
 
-		args = sscanf(buf, "0x%lx %u\n", &address, &size);
+		args = sscanf(buf, "0x%lx %lu\n", &address, &size);
 		if (args != 2) {
 			usage(*argv, buf, "Unknown value");
 		}
@@ -442,7 +442,7 @@ int main(int argc, const char *argv[])
 
 	/* output the used pages */
 	used = map_output();
-	printf("Parsed %d unfreed allocations (largest being %d bytes),\n"
+	printf("Parsed %d unfreed allocations (largest being %lu bytes),\n"
 	       "residing on %d pages.  If highest allocation is next to\n"
 	       "trim limit, it's blocking freeing of memory.\n",
 	       count, largest, used);

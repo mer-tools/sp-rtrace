@@ -60,11 +60,14 @@ static int res_fd = 0;
 typedef int (*open_t)(const char* pathname, int flags, ...);
 typedef int (*close_t)(int fd);
 typedef int (*dup2_t)(int oldfd, int newfd);
+typedef int (*socket_t)(int domain, int type, int protocol);
+
 
 typedef struct {
 	open_t open;
 	close_t close;
 	dup2_t dup2;
+	socket_t socket;
 } trace_file_t;
 
 /* original function references */
@@ -103,6 +106,7 @@ static void trace_initialize()
 		trace_off.open = (open_t)dlsym(RTLD_NEXT, "open");
 		trace_off.close = (close_t)dlsym(RTLD_NEXT, "close");
 		trace_off.dup2 = (dup2_t)dlsym(RTLD_NEXT, "dup2");
+		trace_off.socket = (socket_t)dlsym(RTLD_NEXT, "socket");
 
 		enable_tracing(false);
 
@@ -161,10 +165,26 @@ static int trace_dup2(int oldfd, int newfd)
 	return rc;
 }
 
+static int trace_socket(int domain, int type, int protocol)
+{
+	int rc = trace_off.socket(domain, type, protocol);
+	if (rc != -1) {
+		char arg1[64], arg2[64], arg3[64];
+		const char* args[] = {arg1, arg2, arg3, NULL};
+		sprintf(arg1, "domain:0x%x", domain);
+		sprintf(arg2, "type:0x%x", type);
+		sprintf(arg3, "protocol:0x%x", protocol);
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fd, "socket", 1, (void*)(long)rc, args);
+	}
+	return rc;
+}
+
+
 static trace_file_t trace_on = {
 	.open = trace_open,
 	.close = trace_close,
 	.dup2 = trace_dup2,
+	.socket = trace_socket,
 };
 
 
@@ -195,6 +215,10 @@ int dup2(int oldfd, int newfd)
 	return trace_rt->dup2(oldfd, newfd);
 }
 
+int socket(int domain, int type, int protocol)
+{
+	return trace_rt->socket(domain, type, protocol);
+}
 /*
  * Initialization functions.
  */
@@ -227,10 +251,17 @@ static int init_dup2(int oldfd, int newfd)
 	return trace_rt->dup2(oldfd, newfd);
 }
 
+static int init_socket(int domain, int type, int protocol)
+{
+	trace_initialize();
+	return trace_rt->socket(domain, type, protocol);
+}
+
 static trace_file_t trace_init = {
 	.open = init_open,
 	.close = init_close,
 	.dup2 = init_dup2,
+	.socket = init_socket,
 };
 
 /* */

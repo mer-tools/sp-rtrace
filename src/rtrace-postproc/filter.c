@@ -188,7 +188,7 @@ static long fcall_remove_freed(rd_fcall_t* call, void* data)
  */
 static void fcall_filter_context(rd_fcall_t* call, rd_t* rd)
 {
-	if (postproc_options.filter_context && !(call->context & postproc_options.filter_context) ||
+	if ( (postproc_options.filter_context && !(call->context & postproc_options.filter_context)) ||
 			(!postproc_options.filter_context && call->context) ) {
 		rd_fcall_remove(rd, call);
 	}

@@ -215,7 +215,7 @@ static int process_packet(const char* data, int size)
 	unsigned int len, type;
 	unsigned int offset;
 
-	if (size < sizeof(int)) {
+	if (size < (int)sizeof(int)) {
 		return -1;
 	}
 	offset = read_dword(data, &len);

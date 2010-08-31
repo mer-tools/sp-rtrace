@@ -184,7 +184,7 @@ static rd_fcall_t* read_packet_FC(const char* data)
      * type data will be properly stored after returning from this function */
     unsigned int res_type;
     data += read_dword(data, &res_type);
-    call->res_type = (void*)res_type;
+    call->res_type = (void*)(long)res_type;
     /* */
     data += read_dword(data, &call->context);
     data += read_dword(data, &call->timestamp);

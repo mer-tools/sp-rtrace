@@ -72,12 +72,11 @@ void sp_rtrace_print_mmap(FILE* fp, const char* module, void* from, void* to)
 void sp_rtrace_print_call(FILE* fp, int index, unsigned int context, unsigned int timestamp,
 		const char* name, int res_size, void* res_id, const char* res_type)
 {
-	const rd_resource_t resource = {
+	rd_resource_t resource = {
 			.type = (char*)res_type,
 	};
 	const rd_fcall_t call = {
 			.index = index,
-			.res_type = 0,
 			.context = context,
 			.timestamp = timestamp,
 			.type = res_size ? SP_RTRACE_FTYPE_ALLOC : SP_RTRACE_FTYPE_FREE,
@@ -117,7 +116,7 @@ void sp_rtrace_print_context(FILE* fp, unsigned int id, const char* name)
 
 void sp_rtrace_print_resource(FILE* fp, unsigned int id, const char* type, const char* desc)
 {
-	const rd_resource_t resource = {.id = id, .type = type, .desc = desc};
+	rd_resource_t resource = {.id = id, .type = (char*)type, .desc = (char*)desc};
 	formatter_write_resource(&resource, fp);
 }
 

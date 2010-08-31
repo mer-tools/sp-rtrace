@@ -254,10 +254,10 @@ static inline size_t write_dword(char* ptr, unsigned int value)
  * @param[in] value  the value to write.
  * @return           the number of bytes written.
  */
-static inline size_t write_pointer(char* ptr, void* value)
+static inline size_t write_pointer(char* ptr, const void* value)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(ptr);
-	*(void**)ptr = value;
+	*(const void**)ptr = value;
 	return sizeof(void*);
 }
 

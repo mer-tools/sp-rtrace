@@ -243,7 +243,7 @@ void* trace_shmat(int shmid, const void *shmaddr, int shmflg)
 		struct shmid_ds ds;
 		/* use segment information as memory attachment parameters */
 		char arg1[100], arg2[100];
-		char* args[] = {arg1, NULL, NULL};
+		const char* args[] = {arg1, NULL, NULL};
 		sprintf(arg1, "id=0x%x", shmid);
 
 		if (trace_off.shmctl(shmid, IPC_STAT | IPC_64, &ds) == 0) {
@@ -296,7 +296,7 @@ int trace_shmdt(const void *shmaddr)
 		/* if the segment was marked for removal it should be destroyed after detaching the
 		 * last address. */
 		if (nattach == 1) {
-			sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_segment, "shmdt", 0, (void*)shmid, NULL);
+			sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_segment, "shmdt", 0, (void*)(long)shmid, NULL);
 		}
 	}
 	return rc;

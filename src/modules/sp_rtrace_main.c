@@ -67,7 +67,7 @@ static sp_rtrace_module_info_t module_info = {
 static int fd_proc = 0;
 
 /*  pre-processor pipe path */
-static char pipe_path[128];
+static char pipe_path[sizeof(SP_RTRACE_PIPE_PATTERN) + 16];
 
 /* backtrace lock for thread synchronization */
 volatile sig_atomic_t backtrace_lock = 0;
@@ -122,7 +122,7 @@ typedef struct rtrace_module_t {
 
 /* trace submodules */
 static rtrace_module_t rtrace_modules[16];
-static int rtrace_module_index = 0;
+static unsigned int rtrace_module_index = 0;
 
 
 /*
@@ -136,7 +136,7 @@ typedef struct {
 
 
 static rtrace_resource_t rtrace_resources[32];
-static int rtrace_resource_index = 0;
+static unsigned int rtrace_resource_index = 0;
 
 /**
  * Enables/disables tracing.
@@ -145,7 +145,7 @@ static int rtrace_resource_index = 0;
  */
 static void enable_tracing(bool value)
 {
-	int i;
+	unsigned int i;
 	for (i = 0; i < rtrace_module_index; i++) {
 		rtrace_modules[i].enable(value);
 	}
@@ -513,7 +513,7 @@ static int write_new_library(const char* library)
  */
 static void write_initial_data()
 {
-    int i;
+    unsigned int i;
 
 	pipe_buffer_reset();
 	write_handshake(SP_RTRACE_PROTO_VERSION_MAJOR, SP_RTRACE_PROTO_VERSION_MINOR, BUILD_ARCH);
@@ -560,7 +560,7 @@ void* dlopen(const char* library, int flag)
 /**
  * SIGUSR1 handler. Enables/disables tracing
  */
-static void signal_toggle_tracing(int signo)
+static void signal_toggle_tracing(int signo __attribute((unused)))
 {
 	LOG("enable=%d\n",  !sp_rtrace_options->enable);
 	sp_rtrace_options->enable = !sp_rtrace_options->enable;
@@ -659,7 +659,7 @@ int sp_rtrace_write_context_registry(int context_id, const char* name)
 }
 
 
-int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* name, size_t res_size, void* id, const char** args)
+int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* name, size_t res_size, const void* id, const char** args)
 {
 	if (!sp_rtrace_options->enable) return 0;
 	int size = 0;
@@ -667,7 +667,7 @@ int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* n
 	void* bt_frames[256];
 
 	if (sp_rtrace_options->backtrace_depth) {
-		int bt_depth = sp_rtrace_options->backtrace_depth + BT_SKIP_TOP + BT_SKIP_BOTTOM;
+		unsigned int bt_depth = sp_rtrace_options->backtrace_depth + BT_SKIP_TOP + BT_SKIP_BOTTOM;
 		if (bt_depth > sizeof(bt_frames) / sizeof(bt_frames[0])) {
 			bt_depth = sizeof(bt_frames) / sizeof(bt_frames[0]);
 		}

@@ -160,6 +160,7 @@ static void* emu_alloc_mem(size_t size, size_t align)
 
 	/* check if the requested size is not outside internal heap limits */
 	if (new_ptr + size >= emu_heap + EMU_HEAP_SIZE) {
+		fprintf(stderr, "ERROR: Internal heap allocation limit (%d) exceeded\n", EMU_HEAP_SIZE);
 		exit(-1);
 	}
 	/* point heap tail to the new chunk size value location */
@@ -416,9 +417,9 @@ void* realloc(void* ptr, size_t size)
 		if (ptr_new && ptr) {
 			char* dptr = (char*) ptr_new;
 			char* sptr = (char*) ptr;
-			int chunk_size = *(int*)((char*)ptr - 4);
+			unsigned int chunk_size = *(int*)((char*)ptr - 4);
 			if (size > chunk_size) size = chunk_size;
-			while ((long)dptr < (long)ptr_new + size) {
+			while ((unsigned long)dptr < (unsigned long)ptr_new + size) {
 				*dptr++ = *sptr++;
 			}
 			emu_free(ptr);
