@@ -149,7 +149,7 @@ typedef struct trace_t {
 static trace_t trace_off;
 /* tracing function references */
 static trace_t trace_on;
-
+/* tracing function initializers */
 static trace_t trace_init;
 
 /* Runtime function references */
@@ -174,12 +174,26 @@ static void enable_tracing(bool value)
  */
 static void trace_initialize()
 {
-	trace_off.shmget = (shmget_t)dlsym(RTLD_NEXT, "shmget");
-	trace_off.shmctl = (shmctl_t)dlsym(RTLD_NEXT, "shmctl");
-	trace_off.shmdt = (shmdt_t)dlsym(RTLD_NEXT, "shmdt");
-	trace_off.shmat = (shmat_t)dlsym(RTLD_NEXT, "shmat");
+	static bool is_initialized = false;
+	if (!is_initialized) {
+		LOG("initializing %s (%d.%d)", module_info.name, module_info.version_major, module_info.version_minor);
+		htable_init(&addr2shmid, HASH_SIZE, (op_unary_t)addrmap_calc_node_hash, (op_binary_t)addrmap_compare_nodes);
 
-	enable_tracing(false);
+		trace_off.shmget = (shmget_t)dlsym(RTLD_NEXT, "shmget");
+		trace_off.shmctl = (shmctl_t)dlsym(RTLD_NEXT, "shmctl");
+		trace_off.shmdt = (shmdt_t)dlsym(RTLD_NEXT, "shmdt");
+		trace_off.shmat = (shmat_t)dlsym(RTLD_NEXT, "shmat");
+
+		enable_tracing(false);
+
+		sp_rtrace_initialize();
+
+		sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
+		res_segment = sp_rtrace_register_resource("shmseg", "shared memory segment");
+		res_address = sp_rtrace_register_resource("shmaddr", "shared memory attachments");
+
+		is_initialized = true;
+	}
 }
 
 /*
@@ -327,25 +341,25 @@ int shmdt(const void *shmaddr)
 static int init_shmget(key_t key, size_t size, int shmflg)
 {
 	trace_initialize();
-	return trace_off.shmget(key, size, shmflg);
+	return trace_rt->shmget(key, size, shmflg);
 }
 
 static int init_shmctl(int shmid, int cmd, struct shmid_ds *buf)
 {
 	trace_initialize();
-	return trace_off.shmctl(shmid, cmd, buf);
+	return trace_rt->shmctl(shmid, cmd, buf);
 }
 
 static void* init_shmat(int shmid, const void *shmaddr, int shmflg)
 {
 	trace_initialize();
-	return trace_off.shmat(shmid, shmaddr, shmflg);
+	return trace_rt->shmat(shmid, shmaddr, shmflg);
 }
 
 static int init_shmdt(const void *shmaddr)
 {
 	trace_initialize();
-	return trace_off.shmdt(shmaddr);
+	return trace_rt->shmdt(shmaddr);
 }
 
 static trace_t trace_init = {
@@ -364,13 +378,7 @@ static void trace_shmem_fini(void) __attribute__((destructor));
 
 static void trace_shmem_init(void)
 {
-	LOG("initializing %s (%d.%d)", module_info.name, module_info.version_major, module_info.version_minor);
-	htable_init(&addr2shmid, HASH_SIZE, (op_unary_t)addrmap_calc_node_hash, (op_binary_t)addrmap_compare_nodes);
 	trace_initialize();
-
-	sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
-	res_segment = sp_rtrace_register_resource("shmseg", "shared memory segment");
-	res_address = sp_rtrace_register_resource("shmaddr", "shared memory attachments");
 }
 
 
