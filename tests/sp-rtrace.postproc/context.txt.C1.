@@ -1,22 +1,21 @@
-version=1.0, arch=i486-linux-gnu, time=2010.8.27 10:47:16, process=, pid=4024, 
+version=1.0, arch=i486-linux-gnu, time=2010.9.1 14:56:50, process=../bin/alloc_context_test, pid=960, 
 @ 1 : first context
 <1> : memory (memory allocation in bytes)
-: /lib/tls/i686/cmov/libc-2.11.1.so => 0x110000-0x263000
-: /lib/tls/i686/cmov/libdl-2.11.1.so => 0x2fd000-0x2ff000
-: /usr/lib/libsp-rtrace1.so.1.0.0 => 0x784000-0x788000
-: /lib/libgcc_s.so.1 => 0x800000-0x81d000
-: /lib/tls/i686/cmov/libm-2.11.1.so => 0x9cb000-0x9ef000
-: /usr/lib/sp-rtrace/libsp-rtrace-memory.so.1.0.0 => 0xb67000-0xb69000
-: /lib/ld-2.11.1.so => 0xc84000-0xc9f000
-: /lib/tls/i686/cmov/librt-2.11.1.so => 0xd02000-0xd09000
-: /usr/lib/sp-rtrace/libsp-rtrace-main.so.1.0.0 => 0xe1d000-0xe22000
-: /lib/tls/i686/cmov/libpthread-2.11.1.so => 0xec2000-0xed7000
-: /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace-1.0/tests/bin/alloc_context_test => 0x8048000-0x8049000
+: /lib/tls/i686/cmov/libpthread-2.11.1.so => 0x3ed000-0x402000
+: /lib/ld-2.11.1.so => 0x533000-0x54e000
+: /usr/lib/libsp-rtrace1.so.1.0.0 => 0x93c000-0x940000
+: /lib/tls/i686/cmov/libc-2.11.1.so => 0x9ee000-0xb41000
+: /lib/tls/i686/cmov/libm-2.11.1.so => 0xcd3000-0xcf7000
+: /lib/tls/i686/cmov/libdl-2.11.1.so => 0xda0000-0xda2000
+: /lib/tls/i686/cmov/librt-2.11.1.so => 0xdcc000-0xdd3000
+: /usr/lib/sp-rtrace/libsp-rtrace-memory.so.1.0.0 => 0xf80000-0xf82000
+: /usr/lib/sp-rtrace/libsp-rtrace-main.so.1.0.0 => 0xfdf000-0xfe4000
+: /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_context_test => 0x8048000-0x8049000
 # heap status information:
-#   heap bottom 0x8c86000
-#   heap top 0x8ca7000
-#   lowest block 0x8c86008
-#   highest block 0x8c8d600
+#   heap bottom 0x80bc000
+#   heap top 0x80dd000
+#   lowest block 0x80bc008
+#   highest block 0x80c3600
 #   non-mapped space allocated from system 135168
 #   number of free chunks 1
 #   number of fastbin blocks 0
@@ -29,198 +28,198 @@ version=1.0, arch=i486-linux-gnu, time=2010.8.27 10:47:16, process=, pid=4024,
 #   top-most, releasable (via malloc_trim) space 104968
 # tracing module: [0] main (1.0)
 # tracing module: [1] memory (1.0)
-3. @3 [17:28:52.557] malloc(1001) = 0x8c86bb0
+3. @3 [14:19:42.480] malloc(1001) = 0x80bcbb0
 	0x80486a3
 	0x804870f
 	0x8048759
 	0x80487a5
 	0x80487e7
-4. @3 [17:28:52.557] malloc(1000) = 0x8c86fa0
+4. @3 [14:19:42.480] malloc(1000) = 0x80bcfa0
 	0x8048666
 	0x80486b8
 	0x804870f
 	0x8048759
 	0x80487a5
 	0x80487e7
-5. @3 [17:28:52.557] malloc(2000) = 0x8c87390
+5. @3 [14:19:42.480] malloc(2000) = 0x80bd390
 	0x8048682
 	0x80486b8
 	0x804870f
 	0x8048759
 	0x80487a5
 	0x80487e7
-6. @3 [17:28:52.557] free(0x8c87390)
+6. @3 [14:19:42.480] free(0x80bd390)
 	0x80486c0
 	0x804870f
 	0x8048759
 	0x80487a5
 	0x80487e7
-15. @3 [17:28:52.557] malloc(1001) = 0x8c87b70
+15. @3 [14:19:42.480] malloc(1001) = 0x80bdb70
 	0x80486a3
 	0x804870f
 	0x8048759
 	0x80487a5
 	0x80487e7
-16. @3 [17:28:52.557] malloc(1000) = 0x8c87f60
+16. @3 [14:19:42.480] malloc(1000) = 0x80bdf60
 	0x8048666
 	0x80486b8
 	0x804870f
 	0x8048759
 	0x80487a5
 	0x80487e7
-17. @3 [17:28:52.557] malloc(2000) = 0x8c88350
+17. @3 [14:19:42.480] malloc(2000) = 0x80be350
 	0x8048682
 	0x80486b8
 	0x804870f
 	0x8048759
 	0x80487a5
 	0x80487e7
-18. @3 [17:28:52.557] free(0x8c88350)
+18. @3 [14:19:42.480] free(0x80be350)
 	0x80486c0
 	0x804870f
 	0x8048759
 	0x80487a5
 	0x80487e7
-27. @3 [17:28:52.558] malloc(1001) = 0x8c88b30
+27. @3 [14:19:42.480] malloc(1001) = 0x80beb30
 	0x80486a3
 	0x804870f
 	0x8048759
 	0x80487a5
 	0x80487e7
-28. @3 [17:28:52.558] malloc(1000) = 0x8c88f20
+28. @3 [14:19:42.480] malloc(1000) = 0x80bef20
 	0x8048666
 	0x80486b8
 	0x804870f
 	0x8048759
 	0x80487a5
 	0x80487e7
-29. @3 [17:28:52.558] malloc(2000) = 0x8c89310
+29. @3 [14:19:42.480] malloc(2000) = 0x80bf310
 	0x8048682
 	0x80486b8
 	0x804870f
 	0x8048759
 	0x80487a5
 	0x80487e7
-30. @3 [17:28:52.558] free(0x8c89310)
+30. @3 [14:19:42.480] free(0x80bf310)
 	0x80486c0
 	0x804870f
 	0x8048759
 	0x80487a5
 	0x80487e7
-39. @3 [17:28:52.558] malloc(1001) = 0x8c89af0
+39. @3 [14:19:42.480] malloc(1001) = 0x80bfaf0
 	0x80486a3
 	0x804870f
 	0x8048759
 	0x80487a5
 	0x80487e7
-40. @3 [17:28:52.558] malloc(1000) = 0x8c89ee0
+40. @3 [14:19:42.480] malloc(1000) = 0x80bfee0
 	0x8048666
 	0x80486b8
 	0x804870f
 	0x8048759
 	0x80487a5
 	0x80487e7
-41. @3 [17:28:52.558] malloc(2000) = 0x8c8a2d0
+41. @3 [14:19:42.480] malloc(2000) = 0x80c02d0
 	0x8048682
 	0x80486b8
 	0x804870f
 	0x8048759
 	0x80487a5
 	0x80487e7
-42. @3 [17:28:52.558] free(0x8c8a2d0)
+42. @3 [14:19:42.480] free(0x80c02d0)
 	0x80486c0
 	0x804870f
 	0x8048759
 	0x80487a5
 	0x80487e7
-51. @3 [17:28:52.558] malloc(1001) = 0x8c8aab0
+51. @3 [14:19:42.480] malloc(1001) = 0x80c0ab0
 	0x80486a3
 	0x804870f
 	0x8048759
 	0x80487a5
 	0x80487e7
-52. @3 [17:28:52.558] malloc(1000) = 0x8c8aea0
+52. @3 [14:19:42.480] malloc(1000) = 0x80c0ea0
 	0x8048666
 	0x80486b8
 	0x804870f
 	0x8048759
 	0x80487a5
 	0x80487e7
-53. @3 [17:28:52.558] malloc(2000) = 0x8c8b290
+53. @3 [14:19:42.480] malloc(2000) = 0x80c1290
 	0x8048682
 	0x80486b8
 	0x804870f
 	0x8048759
 	0x80487a5
 	0x80487e7
-54. @3 [17:28:52.558] free(0x8c8b290)
+54. @3 [14:19:42.480] free(0x80c1290)
 	0x80486c0
 	0x804870f
 	0x8048759
 	0x80487a5
 	0x80487e7
-62. @3 [17:28:52.558] malloc(1001) = 0x8c8b680
+62. @3 [14:19:42.480] malloc(1001) = 0x80c1680
 	0x80486a3
 	0x804870f
 	0x80487c5
 	0x80487e7
-63. @3 [17:28:52.558] malloc(1000) = 0x8c8ba70
+63. @3 [14:19:42.480] malloc(1000) = 0x80c1a70
 	0x8048666
 	0x80486b8
 	0x804870f
 	0x80487c5
 	0x80487e7
-64. @3 [17:28:52.558] malloc(2000) = 0x8c8be60
+64. @3 [14:19:42.480] malloc(2000) = 0x80c1e60
 	0x8048682
 	0x80486b8
 	0x804870f
 	0x80487c5
 	0x80487e7
-65. @3 [17:28:52.558] free(0x8c8be60)
+65. @3 [14:19:42.480] free(0x80c1e60)
 	0x80486c0
 	0x804870f
 	0x80487c5
 	0x80487e7
-71. @3 [17:28:52.558] malloc(1001) = 0x8c8c250
+71. @3 [14:19:42.480] malloc(1001) = 0x80c2250
 	0x80486a3
 	0x804870f
 	0x80487c5
 	0x80487e7
-72. @3 [17:28:52.558] malloc(1000) = 0x8c8c640
+72. @3 [14:19:42.480] malloc(1000) = 0x80c2640
 	0x8048666
 	0x80486b8
 	0x804870f
 	0x80487c5
 	0x80487e7
-73. @3 [17:28:52.558] malloc(2000) = 0x8c8ca30
+73. @3 [14:19:42.480] malloc(2000) = 0x80c2a30
 	0x8048682
 	0x80486b8
 	0x804870f
 	0x80487c5
 	0x80487e7
-74. @3 [17:28:52.558] free(0x8c8ca30)
+74. @3 [14:19:42.480] free(0x80c2a30)
 	0x80486c0
 	0x804870f
 	0x80487c5
 	0x80487e7
-80. @3 [17:28:52.558] malloc(1001) = 0x8c8ce20
+80. @3 [14:19:42.480] malloc(1001) = 0x80c2e20
 	0x80486a3
 	0x804870f
 	0x80487c5
 	0x80487e7
-81. @3 [17:28:52.558] malloc(1000) = 0x8c8d210
+81. @3 [14:19:42.480] malloc(1000) = 0x80c3210
 	0x8048666
 	0x80486b8
 	0x804870f
 	0x80487c5
 	0x80487e7
-82. @3 [17:28:52.558] malloc(2000) = 0x8c8d600
+82. @3 [14:19:42.480] malloc(2000) = 0x80c3600
 	0x8048682
 	0x80486b8
 	0x804870f
 	0x80487c5
 	0x80487e7
-83. @3 [17:28:52.558] free(0x8c8d600)
+83. @3 [14:19:42.480] free(0x80c3600)
 	0x80486c0
 	0x804870f
 	0x80487c5

@@ -1,4 +1,3 @@
-
 /*
  * This file is part of sp-rtrace package.
  *
@@ -33,8 +32,11 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/socket.h>
 #include <dlfcn.h>
 #include <stdarg.h>
+#include <unistd.h>
+#include <pthread.h>
 
 #include "sp_rtrace_main.h"
 #include "common/sp_rtrace_proto.h"
@@ -53,6 +55,14 @@ static sp_rtrace_module_info_t module_info = {
 static int res_fp = 0;
 static int res_fd = 0;
 
+#ifndef F_GETOWN_EX
+ #define F_GETOWN_EX	16
+#endif
+
+#ifndef F_SETOWN_EX
+ #define F_SETOWN_EX	15
+#endif
+
  /*
   * file module function set
   */
@@ -61,13 +71,37 @@ typedef int (*open_t)(const char* pathname, int flags, ...);
 typedef int (*close_t)(int fd);
 typedef int (*dup2_t)(int oldfd, int newfd);
 typedef int (*socket_t)(int domain, int type, int protocol);
+typedef FILE* (*fopen_t)(const char *path, const char *mode);
+typedef FILE* (*fdopen_t)(int fd, const char *mode);
+typedef FILE* (*freopen_t)(const char *path, const char *mode, FILE *stream);
+typedef int (*fclose_t)(FILE *fp);
+typedef int (*fcloseall_t)(void);
+typedef int (*creat_t)(const char *pathname, mode_t mode);
+typedef int (*accept_t)(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+typedef int (*dup_t)(int oldfd);
+typedef int (*fcntl_t)(int fd, int cmd, ...);
+typedef int (*socketpair_t)(int domain, int type, int protocol, int sv[2]);
+typedef int (*inotify_init_t)(void);
+typedef int (*pipe_t)(int pipefd[2]);
 
 
 typedef struct {
+	fopen_t fopen;
+	fdopen_t fdopen;
+	freopen_t freopen;
+	fclose_t fclose;
+	fcloseall_t fcloseall;
 	open_t open;
 	close_t close;
 	dup2_t dup2;
 	socket_t socket;
+	creat_t creat;
+	accept_t accept;
+	dup_t dup;
+	fcntl_t fcntl;
+	socketpair_t socketpair;
+	inotify_init_t inotify_init;
+	pipe_t pipe;
 } trace_file_t;
 
 /* original function references */
@@ -107,6 +141,18 @@ static void trace_initialize()
 		trace_off.close = (close_t)dlsym(RTLD_NEXT, "close");
 		trace_off.dup2 = (dup2_t)dlsym(RTLD_NEXT, "dup2");
 		trace_off.socket = (socket_t)dlsym(RTLD_NEXT, "socket");
+		trace_off.fopen = (fopen_t)dlsym(RTLD_NEXT, "fopen");
+		trace_off.fdopen = (fdopen_t)dlsym(RTLD_NEXT, "fdopen");
+		trace_off.freopen = (freopen_t)dlsym(RTLD_NEXT, "freopen");
+		trace_off.fclose = (fclose_t)dlsym(RTLD_NEXT, "fclose");
+		trace_off.fcloseall = (fcloseall_t)dlsym(RTLD_NEXT, "fcloseall");
+		trace_off.creat = (creat_t)dlsym(RTLD_NEXT, "creat");
+		trace_off.accept = (accept_t)dlsym(RTLD_NEXT, "accept");
+		trace_off.dup = (dup_t)dlsym(RTLD_NEXT, "dup");
+		trace_off.fcntl = (fcntl_t)dlsym(RTLD_NEXT, "fcntl");
+		trace_off.socketpair = (socketpair_t)dlsym(RTLD_NEXT, "socketpair");
+		trace_off.inotify_init = (inotify_init_t)dlsym(RTLD_NEXT, "inotify_init");
+		trace_off.pipe = (pipe_t)dlsym(RTLD_NEXT, "pipe");
 
 		enable_tracing(false);
 
@@ -136,6 +182,8 @@ static int trace_open(const char* pathname, int flags, ...)
 	else {
 		rc = trace_off.open(pathname, flags);
 	}
+	backtrace_lock = 0;
+
 	if (rc != -1) {
 		char arg2[16];
 		const char *args[] = {pathname, arg2, NULL};
@@ -149,6 +197,7 @@ static int trace_open(const char* pathname, int flags, ...)
 static int trace_close(int fd)
 {
 	int rc = trace_off.close(fd);
+	backtrace_lock = 0;
 	if (rc != -1) {
 		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_fd, "close", 0, (void*)(long)fd, NULL);
 	}
@@ -179,35 +228,218 @@ static int trace_socket(int domain, int type, int protocol)
 	return rc;
 }
 
+static FILE *trace_fopen(const char *path, const char *mode)
+{
+	FILE* rc = trace_off.fopen(path, mode);
+	if (rc) {
+		const char* args[] = {path, mode, NULL};
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fp, "fopen", 1, rc, args);
+	}
+	return rc;
+}
+
+static FILE *trace_fdopen(int fd, const char *mode)
+{
+	FILE* rc = trace_off.fdopen(fd, mode);
+	if (rc) {
+		char arg1[32];
+		const char* args[] = {arg1, mode, NULL};
+		sprintf(arg1, "fd:0x%x", fd);
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_fd, "fdopen", 0, (void*)(long)fd, NULL);
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fp, "fdopen", 1, rc, args);
+	}
+	return rc;
+}
+
+static FILE *trace_freopen(const char *path, const char *mode, FILE *stream)
+{
+	FILE* rc = trace_off.freopen(path, mode, stream);
+	if (rc) {
+		const char* args[] = {path, mode, NULL};
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_fp, "freopen", 0, stream, NULL);
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fp, "freopen", 1, rc, args);
+	}
+	return rc;
+}
+
+static int trace_fclose(FILE *fp)
+{
+	int rc = trace_off.fclose(fp);
+	if (rc == 0) {
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_fp, "fclose", 0, fp, NULL);
+	}
+	return rc;
+}
+
+static int trace_fcloseall()
+{
+	int rc = trace_off.fcloseall();
+	if (rc == 0) {
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_fp, "fcloseall", 0, (void*)(unsigned long)-1, NULL);
+	}
+	return rc;
+}
+
+static int trace_creat(const char *pathname, mode_t mode)
+{
+	int rc = trace_off.creat(pathname, mode);
+	if (rc != -1) {
+		char arg2[32];
+		const char* args[] = {pathname, arg2, NULL};
+		sprintf(arg2, "mode:0x%x", mode);
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fd, "creat", 1, (void*)(long)rc, args);
+	}
+	return rc;
+}
+
+static int trace_accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
+{
+	int rc = trace_off.accept(sockfd, addr, addrlen);
+	if (rc != -1) {
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fd, "accept", 1, (void*)(long)rc, NULL);
+	}
+	return rc;
+}
+
+static int trace_dup(int oldfd)
+{
+	int rc = trace_off.dup(oldfd);
+	if (rc != -1) {
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fd, "dup", 1, (void*)(long)rc, NULL);
+	}
+	return rc;
+}
+
+static int trace_fcntl(int fd, int cmd, ...)
+{
+	int rc;
+	switch (cmd) {
+		case F_DUPFD:
+		case F_DUPFD_CLOEXEC:
+		case F_SETFD:
+		case F_SETFL:
+		case F_SETLK:
+		case F_SETLKW:
+		case F_GETLK:
+		case F_SETOWN:
+		case F_GETOWN_EX:
+		case F_SETOWN_EX:
+		case F_SETSIG:
+		case F_SETLEASE:
+		case F_NOTIFY:
+//		case F_SETPIPE_SZ:
+		{
+			va_list args;
+			va_start(args, cmd);
+			long newfd = va_arg(args, long);
+			va_end(args);
+			rc = trace_off.fcntl(fd, cmd, newfd);
+			if ( (cmd == F_DUPFD || cmd == F_DUPFD_CLOEXEC) && rc != -1) {
+				sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_fd, "fcntl", 1, (void*)(long)newfd, NULL);
+				sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fd, "fcntl", 1, (void*)(long)rc, NULL);
+			}
+			break;
+		}
+
+		default: {
+			rc = trace_off.fcntl(fd, cmd);
+			break;
+		}
+	}
+
+	return rc;
+}
+
+static int trace_socketpair(int domain, int type, int protocol, int sv[2])
+{
+	int rc = trace_off.socketpair(domain, type, protocol, sv);
+	if (rc != -1) {
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fd, "socketpair", 1, (void*)(long)sv[0], NULL);
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fd, "socketpair", 1, (void*)(long)sv[1], NULL);
+	}
+	return rc;
+}
+
+static int trace_inotify_init(void)
+{
+	int rc = trace_off.inotify_init();
+	if (rc != -1) {
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fd, "inotify_init", 1, (void*)(long)rc, NULL);
+	}
+	return rc;
+}
+
+static int trace_pipe(int pipefd[2])
+{
+	int rc = trace_off.pipe(pipefd);
+	if (rc != -1) {
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fd, "pipe", 1, (void*)(long)pipefd[0], NULL);
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fd, "pipe", 1, (void*)(long)pipefd[1], NULL);
+	}
+	return rc;
+}
+
 
 static trace_file_t trace_on = {
 	.open = trace_open,
 	.close = trace_close,
 	.dup2 = trace_dup2,
 	.socket = trace_socket,
+	.fopen = trace_fopen,
+	.fdopen = trace_fdopen,
+	.freopen = trace_freopen,
+	.fclose = trace_fclose,
+	.fcloseall = trace_fcloseall,
+	.creat = trace_creat,
+	.accept = trace_accept,
+	.dup = trace_dup,
+	.fcntl = trace_fcntl,
+	.socketpair = trace_socketpair,
+	.inotify_init = trace_inotify_init,
+	.pipe = trace_pipe,
 };
 
 
 /* target functions */
 int open(const char* pathname, int flags, ...)
 {
+	/* synchronize allocation functions used by backtrace */
+	int tid = pthread_self();
+
 	int rc;
 	if (flags & O_CREAT) {
 		va_list args;
 		va_start(args, flags);
+		if (backtrace_lock == tid) {
+			return trace_off.open(pathname, flags, va_arg(args, int));
+		}
+		while (__sync_bool_compare_and_swap(&backtrace_lock, 0, tid));
 		rc = trace_rt->open(pathname, flags, va_arg(args, int));
 		va_end(args);
 	}
 	else {
+		if (backtrace_lock == tid) {
+			return trace_off.open(pathname, flags);
+		}
+		while (__sync_bool_compare_and_swap(&backtrace_lock, 0, tid));
 		rc = trace_rt->open(pathname, flags);
 	}
+	backtrace_lock = 0;
 	return rc;
 }
 
 
 int close(int fd)
 {
-	return trace_rt->close(fd);
+	/* synchronize allocation functions used by backtrace */
+	int tid = pthread_self();
+	if (backtrace_lock == tid) {
+		return trace_off.close(fd);
+	}
+	while (__sync_bool_compare_and_swap(&backtrace_lock, 0, tid));
+	int rc = trace_rt->close(fd);
+	backtrace_lock = 0;
+	return rc;
 }
 
 int dup2(int oldfd, int newfd)
@@ -219,6 +451,96 @@ int socket(int domain, int type, int protocol)
 {
 	return trace_rt->socket(domain, type, protocol);
 }
+
+FILE *fopen(const char *path, const char *mode)
+{
+	return trace_rt->fopen(path, mode);
+}
+
+FILE *fdopen(int fd, const char *mode)
+{
+	return trace_rt->fdopen(fd, mode);
+}
+
+FILE *freopen(const char *path, const char *mode, FILE *stream)
+{
+	return trace_rt->freopen(path, mode, stream);
+}
+
+int fclose(FILE *fp)
+{
+	return trace_rt->fclose(fp);
+}
+
+int fcloseall()
+{
+	return trace_rt->fcloseall();
+}
+
+int creat(const char *pathname, mode_t mode)
+{
+	return trace_rt->creat(pathname, mode);
+}
+
+int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
+{
+	return trace_rt->accept(sockfd, addr, addrlen);
+}
+
+int dup(int oldfd)
+{
+	return trace_rt->dup(oldfd);
+}
+
+int fcntl(int fd, int cmd, ...)
+{
+	int rc;
+	switch (cmd) {
+		case F_DUPFD:
+		case F_DUPFD_CLOEXEC:
+		case F_SETFD:
+		case F_SETFL:
+		case F_SETLK:
+		case F_SETLKW:
+		case F_GETLK:
+		case F_SETOWN:
+		case F_GETOWN_EX:
+		case F_SETOWN_EX:
+		case F_SETSIG:
+		case F_SETLEASE:
+		case F_NOTIFY:
+//		case F_SETPIPE_SZ:
+		{
+			va_list args;
+			va_start(args, cmd);
+			rc = trace_rt->fcntl(fd, cmd, va_arg(args, long));
+			va_end(args);
+			break;
+		}
+
+		default: {
+			rc = trace_rt->fcntl(fd, cmd);
+			break;
+		}
+	}
+	return rc;
+}
+
+int socketpair(int domain, int type, int protocol, int sv[2])
+{
+	return trace_rt->socketpair(domain, type, protocol, sv);
+}
+
+int inotify_init(void)
+{
+	return trace_rt->inotify_init();
+}
+
+int pipe(int pipefd[2])
+{
+	return trace_rt->pipe(pipefd);
+}
+
 /*
  * Initialization functions.
  */
@@ -257,11 +579,126 @@ static int init_socket(int domain, int type, int protocol)
 	return trace_rt->socket(domain, type, protocol);
 }
 
+static FILE *init_fopen(const char *path, const char *mode)
+{
+	trace_initialize();
+	return trace_rt->fopen(path, mode);
+}
+
+static FILE *init_fdopen(int fd, const char *mode)
+{
+	trace_initialize();
+	return trace_rt->fdopen(fd, mode);
+}
+
+static FILE *init_freopen(const char *path, const char *mode, FILE *stream)
+{
+	trace_initialize();
+	return trace_rt->freopen(path, mode, stream);
+}
+
+static int init_fclose(FILE *fp)
+{
+	trace_initialize();
+	return trace_rt->fclose(fp);
+}
+
+static int init_fcloseall()
+{
+	trace_initialize();
+	return trace_rt->fcloseall();
+}
+
+static int init_creat(const char *pathname, mode_t mode)
+{
+	trace_initialize();
+	return trace_rt->creat(pathname, mode);
+}
+
+static int init_accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
+{
+	trace_initialize();
+	return trace_rt->accept(sockfd, addr, addrlen);
+}
+
+static int init_dup(int oldfd)
+{
+	trace_initialize();
+	return trace_rt->dup(oldfd);
+}
+
+
+static int init_fcntl(int fd, int cmd, ...)
+{
+	trace_initialize();
+	int rc;
+	switch (cmd) {
+		case F_DUPFD:
+		case F_DUPFD_CLOEXEC:
+		case F_SETFD:
+		case F_SETFL:
+		case F_SETLK:
+		case F_SETLKW:
+		case F_GETLK:
+		case F_SETOWN:
+		case F_GETOWN_EX:
+		case F_SETOWN_EX:
+		case F_SETSIG:
+		case F_SETLEASE:
+		case F_NOTIFY:
+//		case F_SETPIPE_SZ:
+		{
+			va_list args;
+			va_start(args, cmd);
+			rc = trace_rt->fcntl(fd, cmd, va_arg(args, long));
+			va_end(args);
+			break;
+		}
+
+		default: {
+			rc = trace_rt->fcntl(fd, cmd);
+			break;
+		}
+	}
+	return rc;
+}
+
+static int init_socketpair(int domain, int type, int protocol, int sv[2])
+{
+	trace_initialize();
+	return trace_rt->socketpair(domain, type, protocol, sv);
+}
+
+static int init_inotify_init(void)
+{
+	trace_initialize();
+	return trace_rt->inotify_init();
+}
+
+static int init_pipe(int pipefd[2])
+{
+	trace_initialize();
+	return trace_rt->pipe(pipefd);
+}
+
+
 static trace_file_t trace_init = {
 	.open = init_open,
 	.close = init_close,
 	.dup2 = init_dup2,
 	.socket = init_socket,
+	.fopen = init_fopen,
+	.fdopen = init_fdopen,
+	.freopen = init_freopen,
+	.fclose = init_fclose,
+	.fcloseall = init_fcloseall,
+	.creat = init_creat,
+	.accept = init_accept,
+	.dup = init_dup,
+	.fcntl = init_fcntl,
+	.socketpair = init_socketpair,
+	.inotify_init = init_inotify_init,
+	.pipe = init_pipe,
 };
 
 /* */

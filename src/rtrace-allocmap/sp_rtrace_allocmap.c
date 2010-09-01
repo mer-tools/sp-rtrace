@@ -203,7 +203,7 @@ static int map_dirty_address(unsigned long address, size_t size, int run)
 		return 1;
 	}
 	fprintf(stderr, "Got a invalid address 0x%lx or size %lu\n",
-		heap_base + address, size);
+		heap_base + address, (unsigned long)size);
 	return 0;
 }
 
@@ -312,7 +312,7 @@ int main(int argc, const char *argv[])
 	unsigned long address, keepcost = 0, heap_top = 0, heap_base_new = 0;
 	unsigned long heap_low = 0, heap_high = 0;
 	int i, count, args, used, allocs, psize;
-	size_t size, largest;
+	unsigned long size, largest;
 	int run = '0';	/* first run */
 
 	/* parse args */

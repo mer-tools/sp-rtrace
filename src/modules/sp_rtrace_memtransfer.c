@@ -180,6 +180,8 @@ static void trace_initialize()
 	if (!is_initialized) {
 		LOG("initializing %s (%d.%d)", module_info.name, module_info.version_major, module_info.version_minor);
 
+		fprintf(stderr, "%s\n", __func__);
+
 		trace_off.strcpy = (strcpy_t)dlsym(RTLD_NEXT, "strcpy");
 		trace_off.mempcpy = (mempcpy_t)dlsym(RTLD_NEXT, "mempcpy");
 		trace_off.memmove = (memmove_t)dlsym(RTLD_NEXT, "memmove");
@@ -208,11 +210,6 @@ static void trace_initialize()
 		trace_off.wcsdup = (wcsdup_t)dlsym(RTLD_NEXT, "wcsdup");
 
 		enable_tracing(false);
-
-		sp_rtrace_initialize();
-
-		sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
-		resource_id = sp_rtrace_register_resource("memtransfer", "memory transfer operations in bytes");
 
 		is_initialized = true;
 	}
@@ -771,6 +768,11 @@ static void trace_memory_fini(void) __attribute__((destructor));
 static void trace_memory_init(void)
 {
 	trace_initialize();
+
+	sp_rtrace_initialize();
+
+	sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
+	resource_id = sp_rtrace_register_resource("memtransfer", "memory transfer operations in bytes");
 }
 
 static void trace_memory_fini(void)

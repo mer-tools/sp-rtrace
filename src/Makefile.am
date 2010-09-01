@@ -31,7 +31,7 @@ libsp_rtrace_shmseg_la_LIBADD = -ldl
 libsp_rtrace_file_la_SOURCES = modules/sp_rtrace_file.c 
 libsp_rtarce_file_la_CGLAGS = -rdynamic
 libsp_rtrace_file_la_LDFLAGS = -version-info $(VERSION_MAJOR):$(VERSION_MINOR)
-libsp_rtrace_file_la_LIBADD = -ldl 
+libsp_rtrace_file_la_LIBADD = -ldl -lpthread 
 
 bin_PROGRAMS = sp-rtrace sp-rtrace-postproc sp-rtrace-resolve sp-rtrace-allocmap
 

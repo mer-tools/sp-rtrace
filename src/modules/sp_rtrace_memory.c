@@ -150,7 +150,7 @@ static void trace_initialize()
 static void* emu_alloc_mem(size_t size, size_t align)
 {
 	/* get unaligned address of the next free block */
-	int chunk_size = *(int*)emu_heap_tail;
+	unsigned int chunk_size = *(unsigned int*)emu_heap_tail;
 	char* new_ptr = emu_heap_tail + chunk_size + sizeof(int);
 	/* adjust address to comply requested alignment */
 	size_t offset = (unsigned long)new_ptr & (align - 1);
@@ -211,7 +211,7 @@ static void emu_free(void* ptr)
 static void* emu_realloc(void* ptr, size_t size)
 {
 	unsigned int chunk_size = 0;
-	if (ptr) chunk_size = *(int*) (ptr - 4);
+	if (ptr) chunk_size = *(unsigned int*) (ptr - 4);
 
 	emu_free(ptr);
 	void* ptr_new = emu_alloc_mem(size, EMU_HEAP_ALIGN);
@@ -325,8 +325,10 @@ static void trace_free(void* ptr)
 	/* unlock backtrace after the original function has been called */
 	backtrace_lock = 0;
 
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, resource_id, "free", 0, ptr, NULL);
-	sp_rtrace_store_heap_info();
+	if (ptr) {
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, resource_id, "free", 0, ptr, NULL);
+		sp_rtrace_store_heap_info();
+	}
 }
 
 static trace_t trace_on = {
@@ -417,7 +419,7 @@ void* realloc(void* ptr, size_t size)
 		if (ptr_new && ptr) {
 			char* dptr = (char*) ptr_new;
 			char* sptr = (char*) ptr;
-			unsigned int chunk_size = *(int*)((char*)ptr - 4);
+			unsigned int chunk_size = *(unsigned int*)((char*)ptr - 4);
 			if (size > chunk_size) size = chunk_size;
 			while ((unsigned long)dptr < (unsigned long)ptr_new + size) {
 				*dptr++ = *sptr++;

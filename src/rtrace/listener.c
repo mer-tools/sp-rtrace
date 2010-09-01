@@ -210,7 +210,7 @@ static int process_handshake(const char* data, int size)
  * @param[in] size   the size of binary data stream.
  * @return           the number of bytes processed.
  */
-static int process_packet(const char* data, int size)
+static int process_packet(const char* data, size_t size)
 {
 	unsigned int len, type;
 	unsigned int offset;
@@ -220,7 +220,7 @@ static int process_packet(const char* data, int size)
 	}
 	offset = read_dword(data, &len);
 	len += offset;
-	if ((int)len > size) {
+	if (len > size) {
 		return -1;
 	}
 	offset += read_dword(data + offset, &type);
