@@ -26,10 +26,10 @@
 
 /**
  * @file sp_rtrace_context.h
- * Client side api for call context implementation.
+ * Resource tracing client side API for call context implementation.
  *
  * The sp_context_try_* functions tries to locate the context library
- * sp_contex_* functions and call them. If the original function
+ * sp_context_* functions and call them. If the original function
  * can't be located an empty (dummy) function is used instead.
  * This way the call context mechanism will be used when the
  * context library is available, but will not affect program
@@ -37,7 +37,7 @@
  */
 
 /**
- * Tries to load and call sp_context_create function.
+ * Tries to load and call sp_context_create() function.
  *
  * This function creates a new call context with the specified
  * name and returns its identifier. The context API supports maximum of
@@ -49,7 +49,7 @@
 int sp_rtrace_context_try_create(const char* name);
 
 /**
- * Tries to load and call sp_context_enter function.
+ * Tries to load and call sp_context_enter() function.
  *
  * This function activates the specified call context, which will be reported
  * in all consequent function call traces until deactivated.
@@ -59,7 +59,7 @@ int sp_rtrace_context_try_create(const char* name);
 void sp_rtrace_context_try_enter(int context_id);
 
 /**
- * Tries to load and call sp_context_exit function.
+ * Tries to load and call sp_context_exit() function.
  *
  * This function deactivates the specified call context so it will not be reported
  * in function call traces anymore.
