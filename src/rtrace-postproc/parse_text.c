@@ -517,7 +517,7 @@ static void read_text_data(rd_t* rd, FILE* fp)
 	if (args_index) {
 		store_call_arguments(REF_NODE(dlist_last(&last_calls))->ref, args, args_index);
 	}
-	if (bt_index) {
+	if (dlist_first(&last_calls)) {
 		store_backtrace(rd, &last_calls, bt, bt_index);
 	}
 
