@@ -180,8 +180,6 @@ static void trace_initialize()
 	if (!is_initialized) {
 		LOG("initializing %s (%d.%d)", module_info.name, module_info.version_major, module_info.version_minor);
 
-		fprintf(stderr, "%s\n", __func__);
-
 		trace_off.strcpy = (strcpy_t)dlsym(RTLD_NEXT, "strcpy");
 		trace_off.mempcpy = (mempcpy_t)dlsym(RTLD_NEXT, "mempcpy");
 		trace_off.memmove = (memmove_t)dlsym(RTLD_NEXT, "memmove");

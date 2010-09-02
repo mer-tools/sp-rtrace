@@ -543,7 +543,7 @@ void* (*dlopen_rt)(const char*, int);
 
 void* dlopen_init(const char* library, int flag) {
 	dlopen_rt = dlsym(RTLD_NEXT, "dlopen");
-	return dlopen_rt(library, flag);
+	return dlopen(library, flag);
 }
 
 void* (*dlopen_rt)(const char*, int) = dlopen_init;

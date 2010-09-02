@@ -55,6 +55,8 @@ static sp_rtrace_module_info_t module_info = {
 static int res_fp = 0;
 static int res_fd = 0;
 
+
+/* required for glibc < v2.11 */
 #ifndef F_GETOWN_EX
  #define F_GETOWN_EX	16
 #endif
