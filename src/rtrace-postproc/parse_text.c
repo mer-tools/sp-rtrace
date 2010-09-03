@@ -377,9 +377,9 @@ static void store_call_arguments(rd_fcall_t* call, char** args, int size)
 /**
  * Compare operation for resource lookup.
  */
-static long compare_resource(rd_resource_t* res, const char* type)
+static long compare_resource(rd_resource_t* res, rd_resource_t* template)
 {
-	return strcmp(res->type, type);
+	return strcmp(res->type, template->type);
 }
 
 /**
@@ -461,10 +461,11 @@ static void read_text_data(rd_t* rd, FILE* fp)
 		data = parse_function_call(line);
 		if (data) {
 			/* The res_type field temporary has the resource type name string assigned.
-			 * Lookup the resource record and correctly assign to it. */
+			 * Lookup the resource record and correctly assign to it.
+			 * The resource type name is stored in a static buffer, so it must be left unfreed */
 			if (RD_FCALL(data)->res_type) {
-				RD_FCALL(data)->res_type = dlist_find(&rd->resources, (void*)RD_FCALL(data)->res_type,
-						(op_binary_t)compare_resource);
+				rd_resource_t resource = {.type = (char*)RD_FCALL(data)->res_type};
+				RD_FCALL(data)->res_type = dlist_find(&rd->resources, (void*)&resource,	(op_binary_t)compare_resource);
 			}
 			else {
 				/* If resource type was not set in text log, it means only one resource type is present.
@@ -503,7 +504,12 @@ static void read_text_data(rd_t* rd, FILE* fp)
 		/* check if the line contains resource registry record */
 		data = parse_resource_registry(line);
 		if (data) {
-			dlist_add(&rd->resources, data);
+			if (!dlist_find(&rd->resources, data, (op_binary_t)compare_resource)) {
+				dlist_add(&rd->resources, data);
+			}
+			else {
+				rd_resource_free((rd_resource_t*)data);
+			}
 			continue;
 		}
 		/* otherwise assume that line contains comment record */

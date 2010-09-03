@@ -573,6 +573,7 @@ static void signal_toggle_tracing(int signo __attribute((unused)))
 	}
 	else {
 		if (fd_proc > 0) {
+			write_new_library("*");
 			write_heap_info();
 			enable_tracing(false);
 			pipe_buffer_flush();
@@ -899,6 +900,7 @@ static void trace_main_fini(void)
 {
 	if (fd_proc > 0) {
 		if (sp_rtrace_options->enable) {
+			write_new_library("*");
 			write_heap_info();
 		}
 		pipe_buffer_flush();
