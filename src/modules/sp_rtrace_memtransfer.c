@@ -25,7 +25,7 @@
 /**
  * @file sp_rtrace_memtransfer.c
  *
- * Memory transfer tracing module (libsp-rtrace-memtransfer.so) implementation.
+ * memtransfer transfer tracing module (libsp-rtrace-memtransfer.so) implementation.
  *
  */
 
@@ -34,8 +34,13 @@
 #include <dlfcn.h>
 #include <string.h>
 #include <wchar.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <execinfo.h>
 
 #include "sp_rtrace_main.h"
+#include "sp_rtrace_module.h"
+
 #include "common/sp_rtrace_proto.h"
 
 #ifdef strdup
@@ -76,8 +81,8 @@ static sp_rtrace_module_info_t module_info = {
 		.version_major = 1,
 		.version_minor = 0,
 		.name = "memtransfer",
-		.description = "Memory transfer tracing module. "
-				       "Tracks calls of the functions that results in changing memory "
+		.description = "memtransfer transfer tracing module. "
+				       "Tracks calls of the functions that results in changing memtransfer "
 				       "blocks (strcpy, memmove, memset etc).",
 };
 
@@ -155,6 +160,8 @@ static trace_t trace_init;
 /* Runtime function references */
 static trace_t* trace_rt = &trace_init;
 
+/* Initialization runtime function references */
+static trace_t* trace_init_rt = &trace_off;
 
 /**
  * Enables/disables tracing.
@@ -168,7 +175,6 @@ static void enable_tracing(bool value)
 }
 
 
-
 /**
  * Initializes original function references.
  *
@@ -176,40 +182,50 @@ static void enable_tracing(bool value)
  */
 static void trace_initialize()
 {
-	static bool is_initialized = false;
-	if (!is_initialized) {
-		LOG("initializing %s (%d.%d)", module_info.name, module_info.version_major, module_info.version_minor);
+	static int init_mode = MODULE_UNINITIALIZED;
+	switch (init_mode) {
+		case MODULE_UNINITIALIZED: {
+			trace_off.strcpy = (strcpy_t)dlsym(RTLD_NEXT, "strcpy");
+			trace_off.mempcpy = (mempcpy_t)dlsym(RTLD_NEXT, "mempcpy");
+			trace_off.memmove = (memmove_t)dlsym(RTLD_NEXT, "memmove");
+			trace_off.memcpy = (memcpy_t)dlsym(RTLD_NEXT, "memcpy");
+			trace_off.memset = (memset_t)dlsym(RTLD_NEXT, "memset");
+			trace_off.strncpy = (strncpy_t)dlsym(RTLD_NEXT, "strncpy");
+			trace_off.stpcpy = (stpcpy_t)dlsym(RTLD_NEXT, "stpcpy");
+			trace_off.strcat = (strcat_t)dlsym(RTLD_NEXT, "strcat");
+			trace_off.strncat = (strncat_t)dlsym(RTLD_NEXT, "strncat");
+			trace_off.bcopy = (bcopy_t)dlsym(RTLD_NEXT, "bcopy");
+			trace_off.bzero = (bzero_t)dlsym(RTLD_NEXT, "bzero");
+			trace_off.strdup = (strdup_t)dlsym(RTLD_NEXT, "strdup");
+			trace_off.strndup = (strndup_t)dlsym(RTLD_NEXT, "strndup");
+			trace_off.strdupa = (strdupa_t)dlsym(RTLD_NEXT, "strdupa");
+			trace_off.strndupa = (strndupa_t)dlsym(RTLD_NEXT, "strndupa");
+			trace_off.wmemcpy = (wmemcpy_t)dlsym(RTLD_NEXT, "wmemcpy");
+			trace_off.wmempcpy = (wmempcpy_t)dlsym(RTLD_NEXT, "wmempcpy");
+			trace_off.wmemmove = (wmemmove_t)dlsym(RTLD_NEXT, "wmemmove");
+			trace_off.wmemset = (wmemset_t)dlsym(RTLD_NEXT, "wmemset");
+			trace_off.wcscpy = (wcscpy_t)dlsym(RTLD_NEXT, "wcscpy");
+			trace_off.wcsncpy = (wcsncpy_t)dlsym(RTLD_NEXT, "wcsncpy");
+			trace_off.wcpcpy = (wcpcpy_t)dlsym(RTLD_NEXT, "wcpcpy");
+			trace_off.wcpncpy = (wcpncpy_t)dlsym(RTLD_NEXT, "wcpncpy");
+			trace_off.wcscat = (wcscat_t)dlsym(RTLD_NEXT, "wcscat");
+			trace_off.wcsncat = (wcsncat_t)dlsym(RTLD_NEXT, "wcsncat");
+			trace_off.wcsdup = (wcsdup_t)dlsym(RTLD_NEXT, "wcsdup");
+			init_mode = MODULE_LOADED;
 
-		trace_off.strcpy = (strcpy_t)dlsym(RTLD_NEXT, "strcpy");
-		trace_off.mempcpy = (mempcpy_t)dlsym(RTLD_NEXT, "mempcpy");
-		trace_off.memmove = (memmove_t)dlsym(RTLD_NEXT, "memmove");
-		trace_off.memcpy = (memcpy_t)dlsym(RTLD_NEXT, "memcpy");
-		trace_off.memset = (memset_t)dlsym(RTLD_NEXT, "memset");
-		trace_off.strncpy = (strncpy_t)dlsym(RTLD_NEXT, "strncpy");
-		trace_off.stpcpy = (stpcpy_t)dlsym(RTLD_NEXT, "stpcpy");
-		trace_off.strcat = (strcat_t)dlsym(RTLD_NEXT, "strcat");
-		trace_off.strncat = (strncat_t)dlsym(RTLD_NEXT, "strncat");
-		trace_off.bcopy = (bcopy_t)dlsym(RTLD_NEXT, "bcopy");
-		trace_off.bzero = (bzero_t)dlsym(RTLD_NEXT, "bzero");
-		trace_off.strdup = (strdup_t)dlsym(RTLD_NEXT, "strdup");
-		trace_off.strndup = (strndup_t)dlsym(RTLD_NEXT, "strndup");
-		trace_off.strdupa = (strdupa_t)dlsym(RTLD_NEXT, "strdupa");
-		trace_off.strndupa = (strndupa_t)dlsym(RTLD_NEXT, "strndupa");
-		trace_off.wmemcpy = (wmemcpy_t)dlsym(RTLD_NEXT, "wmemcpy");
-		trace_off.wmempcpy = (wmempcpy_t)dlsym(RTLD_NEXT, "wmempcpy");
-		trace_off.wmemmove = (wmemmove_t)dlsym(RTLD_NEXT, "wmemmove");
-		trace_off.wmemset = (wmemset_t)dlsym(RTLD_NEXT, "wmemset");
-		trace_off.wcscpy = (wcscpy_t)dlsym(RTLD_NEXT, "wcscpy");
-		trace_off.wcsncpy = (wcsncpy_t)dlsym(RTLD_NEXT, "wcsncpy");
-		trace_off.wcpcpy = (wcpcpy_t)dlsym(RTLD_NEXT, "wcpcpy");
-		trace_off.wcpncpy = (wcpncpy_t)dlsym(RTLD_NEXT, "wcpncpy");
-		trace_off.wcscat = (wcscat_t)dlsym(RTLD_NEXT, "wcscat");
-		trace_off.wcsncat = (wcsncat_t)dlsym(RTLD_NEXT, "wcsncat");
-		trace_off.wcsdup = (wcsdup_t)dlsym(RTLD_NEXT, "wcsdup");
+			LOG("module loaded: %s (%d.%d)", module_info.name, module_info.version_major, module_info.version_minor);
+		}
 
-		enable_tracing(false);
+		case MODULE_LOADED: {
+			if (sp_rtrace_initialize()) {
+				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
+				resource_id = sp_rtrace_register_resource("memtransfer", "memtransfer transfer operations in bytes");
+				trace_init_rt = trace_rt;
+				init_mode = MODULE_READY;
 
-		is_initialized = true;
+				LOG("module ready: %s (%d.%d)", module_info.name, module_info.version_major, module_info.version_minor);
+			}
+		}
 	}
 }
 
@@ -434,6 +450,7 @@ static trace_t trace_on = {
  * Target functions.
  */
 
+
 char* strcpy(char* dst, const char* src)
 {
 	return trace_rt->strcpy(dst, src);
@@ -458,6 +475,7 @@ void* memset(void *s, int c, size_t n)
 {
 	return trace_rt->memset(s, c, n);
 }
+
 
 char* strncpy(char *dest, const char *src, size_t n)
 {
@@ -564,7 +582,6 @@ wchar_t* wcsdup(const wchar_t *s)
 	return trace_rt->wcsdup(s);
 }
 
-
 /*
  * Initialization functions.
  */
@@ -572,158 +589,157 @@ wchar_t* wcsdup(const wchar_t *s)
 static char* init_strcpy(char* dst, const char* src)
 {
 	trace_initialize();
-	return trace_rt->strcpy(dst, src);
+	return trace_init_rt->strcpy(dst, src);
 }
-
 
 static void* init_mempcpy(void *dest, const void *src, size_t n)
 {
 	trace_initialize();
-	return trace_rt->mempcpy(dest, src, n);
+	return trace_init_rt->mempcpy(dest, src, n);
 }
 
 static void* init_memmove(void *dest, const void *src, size_t n)
 {
 	trace_initialize();
-	return trace_rt->memmove(dest, src, n);
+	return trace_init_rt->memmove(dest, src, n);
 }
 
 static void* init_memcpy(void *dest, const void *src, size_t n)
 {
 	trace_initialize();
-	return trace_rt->memcpy(dest, src, n);
+	return trace_init_rt->memcpy(dest, src, n);
 }
 
 static void* init_memset(void *s, int c, size_t n)
 {
 	trace_initialize();
-	return trace_rt->memset(s, c, n);
+	return trace_init_rt->memset(s, c, n);
 }
 
 static char* init_strncpy(char *dest, const char *src, size_t n)
 {
 	trace_initialize();
-	return trace_rt->strncpy(dest, src, n);
+	return trace_init_rt->strncpy(dest, src, n);
 }
 
 static char* init_stpcpy(char *dest, const char *src)
 {
 	trace_initialize();
-	return trace_rt->stpcpy(dest, src);
+	return trace_init_rt->stpcpy(dest, src);
 }
 
 static char* init_strcat(char *dest, const char *src)
 {
 	trace_initialize();
-	return trace_rt->strcat(dest, src);
+	return trace_init_rt->strcat(dest, src);
 }
 
 static char* init_strncat(char *dest, const char *src, size_t n)
 {
 	trace_initialize();
-	return trace_rt->strncat(dest, src, n);
+	return trace_init_rt->strncat(dest, src, n);
 }
 
 static void init_bcopy(const void *src, void *dest, size_t n)
 {
 	trace_initialize();
-	return trace_rt->bcopy(src, dest, n);
+	return trace_init_rt->bcopy(src, dest, n);
 }
 
 static void init_bzero(void *s, size_t n)
 {
 	trace_initialize();
-	return trace_rt->bzero(s, n);
+	return trace_init_rt->bzero(s, n);
 }
 
 static char* init_strdup(const char *s)
 {
 	trace_initialize();
-	return trace_rt->strdup(s);
+	return trace_init_rt->strdup(s);
 }
 
 static char* init_strndup(const char *s, size_t n)
 {
 	trace_initialize();
-	return trace_rt->strndup(s, n);
+	return trace_init_rt->strndup(s, n);
 }
 
 static char* init_strdupa(const char *s)
 {
 	trace_initialize();
-	return trace_rt->strdupa(s);
+	return trace_init_rt->strdupa(s);
 }
 
 static char* init_strndupa(const char *s, size_t n)
 {
 	trace_initialize();
-	return trace_rt->strndupa(s, n);
+	return trace_init_rt->strndupa(s, n);
 }
 
 static wchar_t* init_wmemcpy(wchar_t *dest, const wchar_t *src, size_t n)
 {
 	trace_initialize();
-	return trace_rt->wmemcpy(dest, src, n);
+	return trace_init_rt->wmemcpy(dest, src, n);
 }
 
 static wchar_t* init_wmempcpy(wchar_t *dest, const wchar_t *src, size_t n)
 {
 	trace_initialize();
-	return trace_rt->wmempcpy(dest, src, n);
+	return trace_init_rt->wmempcpy(dest, src, n);
 }
 
 static wchar_t* init_wmemmove(wchar_t* dest, const wchar_t* src, size_t b)
 {
 	trace_initialize();
-	return trace_rt->wmemmove(dest, src, b);
+	return trace_init_rt->wmemmove(dest, src, b);
 }
 
 static wchar_t* init_wmemset(wchar_t *s, wchar_t c, size_t n)
 {
 	trace_initialize();
-	return trace_rt->wmemset(s, c, n);
+	return trace_init_rt->wmemset(s, c, n);
 }
 
 static wchar_t* init_wcscpy(wchar_t *dest, const wchar_t *src)
 {
 	trace_initialize();
-	return trace_rt->wcscpy(dest, src);
+	return trace_init_rt->wcscpy(dest, src);
 }
 
 static wchar_t* init_wcsncpy(wchar_t *dest, const wchar_t *src, size_t n)
 {
 	trace_initialize();
-	return trace_rt->wcsncpy(dest, src, n);
+	return trace_init_rt->wcsncpy(dest, src, n);
 }
 
 static wchar_t* init_wcpcpy(wchar_t *dest, const wchar_t *src)
 {
 	trace_initialize();
-	return trace_rt->wcpcpy(dest, src);
+	return trace_init_rt->wcpcpy(dest, src);
 }
 
 static wchar_t* init_wcpncpy(wchar_t *dest, const wchar_t *src, size_t n)
 {
 	trace_initialize();
-	return trace_rt->wcpncpy(dest, src, n);
+	return trace_init_rt->wcpncpy(dest, src, n);
 }
 
 static wchar_t* init_wcscat(wchar_t *dest, const wchar_t *src)
 {
 	trace_initialize();
-	return trace_rt->wcscat(dest, src);
+	return trace_init_rt->wcscat(dest, src);
 }
 
 static wchar_t* init_wcsncat(wchar_t *dest, const wchar_t *src, size_t n)
 {
 	trace_initialize();
-	return trace_rt->wcsncat(dest, src, n);
+	return trace_init_rt->wcsncat(dest, src, n);
 }
 
 static wchar_t* init_wcsdup(const wchar_t *s)
 {
 	trace_initialize();
-	return trace_rt->wcsdup(s);
+	return trace_init_rt->wcsdup(s);
 }
 
 
@@ -760,20 +776,15 @@ static trace_t trace_init = {
  *
  */
 
-static void trace_memory_init(void) __attribute__((constructor));
-static void trace_memory_fini(void) __attribute__((destructor));
+static void trace_memtransfer_init(void) __attribute__((constructor));
+static void trace_memtransfer_fini(void) __attribute__((destructor));
 
-static void trace_memory_init(void)
+static void trace_memtransfer_init(void)
 {
 	trace_initialize();
-
-	sp_rtrace_initialize();
-
-	sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
-	resource_id = sp_rtrace_register_resource("memtransfer", "memory transfer operations in bytes");
 }
 
-static void trace_memory_fini(void)
+static void trace_memtransfer_fini(void)
 {
 	enable_tracing(false);
 	LOG("fini");

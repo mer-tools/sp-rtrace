@@ -167,6 +167,7 @@ static void sigchld_handler(int sig __attribute((unused)))
  */
 static void set_environment()
 {
+	setenv(SP_RTRACE_READY, OPT_ENABLE, 1);
 	if (rtrace_options.output_dir) setenv(rtrace_env_opt[OPT_OUTPUT_DIR], rtrace_options.output_dir, 1);
 	if (rtrace_options.manage_preproc) setenv(rtrace_env_opt[OPT_MANAGE_PREPROC], OPT_ENABLE, 1);
 	if (rtrace_options.backtrace_depth) setenv(rtrace_env_opt[OPT_BACKTRACE_DEPTH], rtrace_options.backtrace_depth, 1);

@@ -39,6 +39,8 @@
 #include <pthread.h>
 
 #include "sp_rtrace_main.h"
+#include "sp_rtrace_module.h"
+
 #include "common/sp_rtrace_proto.h"
 
 /* Module information */
@@ -104,18 +106,20 @@ typedef struct {
 	socketpair_t socketpair;
 	inotify_init_t inotify_init;
 	pipe_t pipe;
-} trace_file_t;
+} trace_t;
 
 /* original function references */
-static trace_file_t trace_off;
+static trace_t trace_off;
 /* tracing function references */
-static trace_file_t trace_on;
+static trace_t trace_on;
 /* tracing function initializers */
-static trace_file_t trace_init;
+static trace_t trace_init;
 
 /* Runtime function references */
-static trace_file_t* trace_rt = &trace_init;
+static trace_t* trace_rt = &trace_init;
 
+/* Initialization runtime function references */
+static trace_t* trace_init_rt = &trace_off;
 
 /**
  * Enables/disables tracing.
@@ -135,39 +139,43 @@ static void enable_tracing(bool value)
  */
 static void trace_initialize()
 {
-	static bool is_initialized = false;
-	if (!is_initialized) {
-		LOG("initializing %s (%d.%d)", module_info.name, module_info.version_major, module_info.version_minor);
+	static int init_mode = MODULE_UNINITIALIZED;
+	switch (init_mode) {
+		case MODULE_UNINITIALIZED: {
+			trace_off.open = (open_t)dlsym(RTLD_NEXT, "open");
+			trace_off.close = (close_t)dlsym(RTLD_NEXT, "close");
+			trace_off.dup2 = (dup2_t)dlsym(RTLD_NEXT, "dup2");
+			trace_off.socket = (socket_t)dlsym(RTLD_NEXT, "socket");
+			trace_off.fopen = (fopen_t)dlsym(RTLD_NEXT, "fopen");
+			trace_off.fdopen = (fdopen_t)dlsym(RTLD_NEXT, "fdopen");
+			trace_off.freopen = (freopen_t)dlsym(RTLD_NEXT, "freopen");
+			trace_off.fclose = (fclose_t)dlsym(RTLD_NEXT, "fclose");
+			trace_off.fcloseall = (fcloseall_t)dlsym(RTLD_NEXT, "fcloseall");
+			trace_off.creat = (creat_t)dlsym(RTLD_NEXT, "creat");
+			trace_off.accept = (accept_t)dlsym(RTLD_NEXT, "accept");
+			trace_off.dup = (dup_t)dlsym(RTLD_NEXT, "dup");
+			trace_off.fcntl = (fcntl_t)dlsym(RTLD_NEXT, "fcntl");
+			trace_off.socketpair = (socketpair_t)dlsym(RTLD_NEXT, "socketpair");
+			trace_off.inotify_init = (inotify_init_t)dlsym(RTLD_NEXT, "inotify_init");
+			trace_off.pipe = (pipe_t)dlsym(RTLD_NEXT, "pipe");
+			init_mode = MODULE_LOADED;
 
-		trace_off.open = (open_t)dlsym(RTLD_NEXT, "open");
-		trace_off.close = (close_t)dlsym(RTLD_NEXT, "close");
-		trace_off.dup2 = (dup2_t)dlsym(RTLD_NEXT, "dup2");
-		trace_off.socket = (socket_t)dlsym(RTLD_NEXT, "socket");
-		trace_off.fopen = (fopen_t)dlsym(RTLD_NEXT, "fopen");
-		trace_off.fdopen = (fdopen_t)dlsym(RTLD_NEXT, "fdopen");
-		trace_off.freopen = (freopen_t)dlsym(RTLD_NEXT, "freopen");
-		trace_off.fclose = (fclose_t)dlsym(RTLD_NEXT, "fclose");
-		trace_off.fcloseall = (fcloseall_t)dlsym(RTLD_NEXT, "fcloseall");
-		trace_off.creat = (creat_t)dlsym(RTLD_NEXT, "creat");
-		trace_off.accept = (accept_t)dlsym(RTLD_NEXT, "accept");
-		trace_off.dup = (dup_t)dlsym(RTLD_NEXT, "dup");
-		trace_off.fcntl = (fcntl_t)dlsym(RTLD_NEXT, "fcntl");
-		trace_off.socketpair = (socketpair_t)dlsym(RTLD_NEXT, "socketpair");
-		trace_off.inotify_init = (inotify_init_t)dlsym(RTLD_NEXT, "inotify_init");
-		trace_off.pipe = (pipe_t)dlsym(RTLD_NEXT, "pipe");
+			LOG("module loaded: %s (%d.%d)", module_info.name, module_info.version_major, module_info.version_minor);
+		}
 
-		enable_tracing(false);
+		case MODULE_LOADED: {
+			if (sp_rtrace_initialize()) {
+				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
+				res_fd = sp_rtrace_register_resource("fd", "file descriptor");
+				res_fp = sp_rtrace_register_resource("fp", "file pointer");
+				trace_init_rt = trace_rt;
+				init_mode = MODULE_READY;
 
-		sp_rtrace_initialize();
-
-		sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
-		res_fd = sp_rtrace_register_resource("fd", "file descriptor");
-		res_fp = sp_rtrace_register_resource("fp", "file pointer");
-
-		is_initialized = true;
+				LOG("module ready: %s (%d.%d)", module_info.name, module_info.version_major, module_info.version_minor);
+			}
+		}
 	}
 }
-
 
 /*
  * tracing functions
@@ -382,7 +390,7 @@ static int trace_pipe(int pipefd[2])
 }
 
 
-static trace_file_t trace_on = {
+static trace_t trace_on = {
 	.open = trace_open,
 	.close = trace_close,
 	.dup2 = trace_dup2,
@@ -403,44 +411,31 @@ static trace_file_t trace_on = {
 
 
 /* target functions */
+
 int open(const char* pathname, int flags, ...)
 {
-	/* synchronize allocation functions used by backtrace */
-	int tid = pthread_self();
-
 	int rc;
 	if (flags & O_CREAT) {
+		int mode;
 		va_list args;
 		va_start(args, flags);
-		if (backtrace_lock == tid) {
-			return trace_off.open(pathname, flags, va_arg(args, int));
-		}
-		while (__sync_bool_compare_and_swap(&backtrace_lock, 0, tid));
-		rc = trace_rt->open(pathname, flags, va_arg(args, int));
+		mode = va_arg(args, int);
 		va_end(args);
+		BT_RETURN_IF_LOCKED(trace_off.open(pathname, flags, mode));
+		BT_LOCK_AND_EXECUTE(rc = trace_rt->open(pathname, flags, va_arg(args, int)));
 	}
 	else {
-		if (backtrace_lock == tid) {
-			return trace_off.open(pathname, flags);
-		}
-		while (__sync_bool_compare_and_swap(&backtrace_lock, 0, tid));
-		rc = trace_rt->open(pathname, flags);
+		BT_RETURN_IF_LOCKED(trace_off.open(pathname, flags));
+		BT_LOCK_AND_EXECUTE(rc = trace_rt->open(pathname, flags));
 	}
-	backtrace_lock = 0;
 	return rc;
 }
-
 
 int close(int fd)
 {
 	/* synchronize allocation functions used by backtrace */
-	int tid = pthread_self();
-	if (backtrace_lock == tid) {
-		return trace_off.close(fd);
-	}
-	while (__sync_bool_compare_and_swap(&backtrace_lock, 0, tid));
-	int rc = trace_rt->close(fd);
-	backtrace_lock = 0;
+	BT_RETURN_IF_LOCKED(trace_off.close(fd));
+	BT_LOCK_AND_EXECUTE(int rc = trace_rt->close(fd));
 	return rc;
 }
 
@@ -504,6 +499,8 @@ int fcntl(int fd, int cmd, ...)
 		case F_SETFL:
 		case F_SETLK:
 		case F_SETLKW:
+		case F_SETLK64:
+		case F_SETLKW64:
 		case F_GETLK:
 		case F_SETOWN:
 		case F_GETOWN_EX:
@@ -520,9 +517,19 @@ int fcntl(int fd, int cmd, ...)
 			break;
 		}
 
-		default: {
+		case F_GETFD:
+		case F_GETFL:
+		case F_GETOWN:
+		case F_GETSIG:
+		case F_GETLEASE:
+		{
 			rc = trace_rt->fcntl(fd, cmd);
 			break;
+		}
+
+		default: {
+			fprintf(stderr, "ERROR: Unknown fcntl command: %d (%x)\n", cmd, cmd);
+			exit (-1);
 		}
 	}
 	return rc;
@@ -553,11 +560,11 @@ static int init_open(const char* pathname, int flags, ...)
 	if (flags & O_CREAT) {
 		va_list args;
 		va_start(args, flags);
-		rc = trace_rt->open(pathname, flags, va_arg(args, int));
+		rc = trace_init_rt->open(pathname, flags, va_arg(args, int));
 		va_end(args);
 	}
 	else {
-		rc = trace_rt->open(pathname, flags);
+		rc = trace_init_rt->open(pathname, flags);
 	}
 	return rc;
 }
@@ -566,67 +573,67 @@ static int init_open(const char* pathname, int flags, ...)
 static int init_close(int fd)
 {
 	trace_initialize();
-	return trace_rt->close(fd);
+	return trace_init_rt->close(fd);
 }
 
 static int init_dup2(int oldfd, int newfd)
 {
 	trace_initialize();
-	return trace_rt->dup2(oldfd, newfd);
+	return trace_init_rt->dup2(oldfd, newfd);
 }
 
 static int init_socket(int domain, int type, int protocol)
 {
 	trace_initialize();
-	return trace_rt->socket(domain, type, protocol);
+	return trace_init_rt->socket(domain, type, protocol);
 }
 
 static FILE *init_fopen(const char *path, const char *mode)
 {
 	trace_initialize();
-	return trace_rt->fopen(path, mode);
+	return trace_init_rt->fopen(path, mode);
 }
 
 static FILE *init_fdopen(int fd, const char *mode)
 {
 	trace_initialize();
-	return trace_rt->fdopen(fd, mode);
+	return trace_init_rt->fdopen(fd, mode);
 }
 
 static FILE *init_freopen(const char *path, const char *mode, FILE *stream)
 {
 	trace_initialize();
-	return trace_rt->freopen(path, mode, stream);
+	return trace_init_rt->freopen(path, mode, stream);
 }
 
 static int init_fclose(FILE *fp)
 {
 	trace_initialize();
-	return trace_rt->fclose(fp);
+	return trace_init_rt->fclose(fp);
 }
 
 static int init_fcloseall()
 {
 	trace_initialize();
-	return trace_rt->fcloseall();
+	return trace_init_rt->fcloseall();
 }
 
 static int init_creat(const char *pathname, mode_t mode)
 {
 	trace_initialize();
-	return trace_rt->creat(pathname, mode);
+	return trace_init_rt->creat(pathname, mode);
 }
 
 static int init_accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
 {
 	trace_initialize();
-	return trace_rt->accept(sockfd, addr, addrlen);
+	return trace_init_rt->accept(sockfd, addr, addrlen);
 }
 
 static int init_dup(int oldfd)
 {
 	trace_initialize();
-	return trace_rt->dup(oldfd);
+	return trace_init_rt->dup(oldfd);
 }
 
 
@@ -652,13 +659,13 @@ static int init_fcntl(int fd, int cmd, ...)
 		{
 			va_list args;
 			va_start(args, cmd);
-			rc = trace_rt->fcntl(fd, cmd, va_arg(args, long));
+			rc = trace_init_rt->fcntl(fd, cmd, va_arg(args, long));
 			va_end(args);
 			break;
 		}
 
 		default: {
-			rc = trace_rt->fcntl(fd, cmd);
+			rc = trace_init_rt->fcntl(fd, cmd);
 			break;
 		}
 	}
@@ -668,23 +675,23 @@ static int init_fcntl(int fd, int cmd, ...)
 static int init_socketpair(int domain, int type, int protocol, int sv[2])
 {
 	trace_initialize();
-	return trace_rt->socketpair(domain, type, protocol, sv);
+	return trace_init_rt->socketpair(domain, type, protocol, sv);
 }
 
 static int init_inotify_init(void)
 {
 	trace_initialize();
-	return trace_rt->inotify_init();
+	return trace_init_rt->inotify_init();
 }
 
 static int init_pipe(int pipefd[2])
 {
 	trace_initialize();
-	return trace_rt->pipe(pipefd);
+	return trace_init_rt->pipe(pipefd);
 }
 
 
-static trace_file_t trace_init = {
+static trace_t trace_init = {
 	.open = init_open,
 	.close = init_close,
 	.dup2 = init_dup2,

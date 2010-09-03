@@ -37,6 +37,7 @@
 #include <pthread.h>
 
 #include "sp_rtrace_main.h"
+#include "sp_rtrace_module.h"
 #include "common/sp_rtrace_proto.h"
 #include "common/debug_log.h"
 #include "common/utils.h"
@@ -103,6 +104,9 @@ static trace_t trace_init;
 /* Runtime function references */
 static trace_t* trace_rt = &trace_init;
 
+/* Initialization runtime function references */
+static trace_t* trace_init_rt = &trace_off;
+
 /**
  * Enables/disables tracing.
  *
@@ -121,26 +125,30 @@ static void enable_tracing(bool value)
  */
 static void trace_initialize()
 {
-	static bool is_initialized = false;
-	if (!is_initialized) {
-		LOG("initializing %s (%d.%d)", module_info.name, module_info.version_major, module_info.version_minor);
+	static int init_mode = MODULE_UNINITIALIZED;
+	switch (init_mode) {
+		case MODULE_UNINITIALIZED: {
+			trace_rt = &trace_emu;
+			trace_off.malloc = (malloc_t) dlsym(RTLD_NEXT, "malloc");
+			trace_off.free = (free_t) dlsym(RTLD_NEXT, "free");
+			trace_off.calloc = (calloc_t) dlsym(RTLD_NEXT, "calloc");
+			trace_off.realloc = (realloc_t) dlsym(RTLD_NEXT, "realloc");
+			trace_off.posix_memalign = (posix_memalign_t) dlsym(RTLD_NEXT, "posix_memalign");
+			init_mode = MODULE_LOADED;
 
-		trace_rt = &trace_emu;
+			LOG("module loaded: %s (%d.%d)", module_info.name, module_info.version_major, module_info.version_minor);
+		}
 
-		trace_off.malloc = (malloc_t) dlsym(RTLD_NEXT, "malloc");
-		trace_off.free = (free_t) dlsym(RTLD_NEXT, "free");
-		trace_off.calloc = (calloc_t) dlsym(RTLD_NEXT, "calloc");
-		trace_off.realloc = (realloc_t) dlsym(RTLD_NEXT, "realloc");
-		trace_off.posix_memalign = (posix_memalign_t) dlsym(RTLD_NEXT, "posix_memalign");
+		case MODULE_LOADED: {
+			if (sp_rtrace_initialize()) {
+				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
+				resource_id = sp_rtrace_register_resource("memory", "memory allocation in bytes");
+				trace_init_rt = trace_rt;
+				init_mode = MODULE_READY;
 
-		enable_tracing(false);
-
-		sp_rtrace_initialize();
-
-		sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
-		resource_id = sp_rtrace_register_resource("memory", "memory allocation in bytes");
-
-		is_initialized = true;
+				LOG("module ready: %s (%d.%d)", module_info.name, module_info.version_major, module_info.version_minor);
+			}
+		}
 	}
 }
 
@@ -348,31 +356,31 @@ static trace_t trace_on = {
 static void* init_malloc(size_t size)
 {
 	trace_initialize();
-	return trace_rt->malloc(size);
+	return trace_init_rt->malloc(size);
 }
 
 static void* init_calloc(size_t nmemb, size_t size)
 {
 	trace_initialize();
-	return trace_rt->calloc(nmemb, size);
+	return trace_init_rt->calloc(nmemb, size);
 }
 
 static int init_posix_memalign(void **memptr, size_t alignment, size_t size)
 {
 	trace_initialize();
-	return trace_rt->posix_memalign(memptr, alignment, size);
+	return trace_init_rt->posix_memalign(memptr, alignment, size);
 }
 
 static void init_free(void* ptr)
 {
 	trace_initialize();
-	trace_rt->free(ptr);
+	trace_init_rt->free(ptr);
 }
 
 static void* init_realloc(void* ptr, size_t size)
 {
 	trace_initialize();
-	return trace_rt->realloc(ptr, size);
+	return trace_init_rt->realloc(ptr, size);
 }
 
 static trace_t trace_init = {
@@ -389,26 +397,16 @@ static trace_t trace_init = {
 void* malloc(size_t size)
 {
 	/* synchronize allocation functions used by backtrace */
-	int tid = pthread_self();
-	if (backtrace_lock == tid) {
-		return trace_off.malloc(size);
-	}
-	while (__sync_bool_compare_and_swap(&backtrace_lock, 0, tid));
-	void* ptr = trace_rt->malloc(size);
-	backtrace_lock = 0;
+	BT_RETURN_IF_LOCKED(trace_off.malloc(size));
+	BT_LOCK_AND_EXECUTE(void* ptr = trace_rt->malloc(size));
 	return ptr;
 }
 
 void *calloc(size_t nmemb, size_t size)
 {
 	/* synchronize allocation functions used by backtrace */
-	int tid = pthread_self();
-	if (backtrace_lock == tid) {
-		return trace_off.calloc(nmemb, size);
-	}
-	while (__sync_bool_compare_and_swap(&backtrace_lock, 0, tid));
-	void* ptr = trace_rt->calloc(nmemb, size);
-	backtrace_lock = 0;
+	BT_RETURN_IF_LOCKED(trace_off.calloc(nmemb, size));
+	BT_LOCK_AND_EXECUTE(void* ptr = trace_rt->calloc(nmemb, size));
 	return ptr;
 }
 
@@ -443,14 +441,8 @@ void free(void* ptr)
 		return;
 	}
 	/* synchronize allocation functions used by backtrace */
-	int tid = pthread_self();
-	if (backtrace_lock == tid) {
-		trace_off.free(ptr);
-		return;
-	}
-	while (__sync_bool_compare_and_swap(&backtrace_lock, 0, tid));
-	trace_rt->free(ptr);
-	backtrace_lock = 0;
+	BT_RETURN_IF_LOCKED(trace_off.free(ptr));
+	BT_LOCK_AND_EXECUTE(trace_rt->free(ptr));
 }
 
 static void trace_memory_init(void) __attribute__((constructor));

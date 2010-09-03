@@ -42,6 +42,7 @@
 #include <unistd.h>
 
 #include "sp_rtrace_main.h"
+#include "sp_rtrace_module.h"
 #include "common/sp_rtrace_proto.h"
 #include "common/htable.h"
 
@@ -155,6 +156,9 @@ static trace_t trace_init;
 /* Runtime function references */
 static trace_t* trace_rt = &trace_init;
 
+/* Initialization runtime function references */
+static trace_t* trace_init_rt = &trace_off;
+
 /**
  * Enables/disables tracing.
  *
@@ -174,25 +178,30 @@ static void enable_tracing(bool value)
  */
 static void trace_initialize()
 {
-	static bool is_initialized = false;
-	if (!is_initialized) {
-		LOG("initializing %s (%d.%d)", module_info.name, module_info.version_major, module_info.version_minor);
-		htable_init(&addr2shmid, HASH_SIZE, (op_unary_t)addrmap_calc_node_hash, (op_binary_t)addrmap_compare_nodes);
+	static int init_mode = MODULE_UNINITIALIZED;
+	switch (init_mode) {
+		case MODULE_UNINITIALIZED: {
+			htable_init(&addr2shmid, HASH_SIZE, (op_unary_t)addrmap_calc_node_hash, (op_binary_t)addrmap_compare_nodes);
+			trace_off.shmget = (shmget_t)dlsym(RTLD_NEXT, "shmget");
+			trace_off.shmctl = (shmctl_t)dlsym(RTLD_NEXT, "shmctl");
+			trace_off.shmdt = (shmdt_t)dlsym(RTLD_NEXT, "shmdt");
+			trace_off.shmat = (shmat_t)dlsym(RTLD_NEXT, "shmat");
+			init_mode = MODULE_LOADED;
 
-		trace_off.shmget = (shmget_t)dlsym(RTLD_NEXT, "shmget");
-		trace_off.shmctl = (shmctl_t)dlsym(RTLD_NEXT, "shmctl");
-		trace_off.shmdt = (shmdt_t)dlsym(RTLD_NEXT, "shmdt");
-		trace_off.shmat = (shmat_t)dlsym(RTLD_NEXT, "shmat");
+			LOG("module loaded: %s (%d.%d)", module_info.name, module_info.version_major, module_info.version_minor);
+		}
 
-		enable_tracing(false);
+		case MODULE_LOADED: {
+			if (sp_rtrace_initialize()) {
+				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
+				res_segment = sp_rtrace_register_resource("shmseg", "shared memory segment");
+				res_address = sp_rtrace_register_resource("shmaddr", "shared memory attachments");
+				trace_init_rt = trace_rt;
+				init_mode = MODULE_READY;
 
-		sp_rtrace_initialize();
-
-		sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
-		res_segment = sp_rtrace_register_resource("shmseg", "shared memory segment");
-		res_address = sp_rtrace_register_resource("shmaddr", "shared memory attachments");
-
-		is_initialized = true;
+				LOG("module ready: %s (%d.%d)", module_info.name, module_info.version_major, module_info.version_minor);
+			}
+		}
 	}
 }
 
@@ -341,25 +350,25 @@ int shmdt(const void *shmaddr)
 static int init_shmget(key_t key, size_t size, int shmflg)
 {
 	trace_initialize();
-	return trace_rt->shmget(key, size, shmflg);
+	return trace_init_rt->shmget(key, size, shmflg);
 }
 
 static int init_shmctl(int shmid, int cmd, struct shmid_ds *buf)
 {
 	trace_initialize();
-	return trace_rt->shmctl(shmid, cmd, buf);
+	return trace_init_rt->shmctl(shmid, cmd, buf);
 }
 
 static void* init_shmat(int shmid, const void *shmaddr, int shmflg)
 {
 	trace_initialize();
-	return trace_rt->shmat(shmid, shmaddr, shmflg);
+	return trace_init_rt->shmat(shmid, shmaddr, shmflg);
 }
 
 static int init_shmdt(const void *shmaddr)
 {
 	trace_initialize();
-	return trace_rt->shmdt(shmaddr);
+	return trace_init_rt->shmdt(shmaddr);
 }
 
 static trace_t trace_init = {

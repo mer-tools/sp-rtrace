@@ -95,11 +95,11 @@ sp_rtrace_options_t* sp_rtrace_options = &rtrace_main_options;
 
 /* unnecessary backtrace frames that can be stripped */
 #ifdef __arm__
- #define BT_SKIP_TOP      4
+ #define BT_SKIP_TOP       4
 #else
  #define BT_SKIP_TOP       3
 #endif
-#define BT_SKIP_BOTTOM   2
+#define BT_SKIP_BOTTOM     0
 
 
 /*
@@ -763,11 +763,11 @@ unsigned int sp_rtrace_register_module(const char* name, unsigned char vmajor, u
 	module->vminor = vminor;
     module->name = name;
     module->id = (1 << rtrace_module_index++);
+    module->enable(sp_rtrace_options->enable);
 
 	/* If the tracing has been already enabled,
-	 * enable module and write it's information packet */
+	 *  write module info packet for the registered module */
 	if (sp_rtrace_options->enable) {
-		enable_tracing(true);
 		write_module_info(module->id, name, vmajor, vminor);
 	}
 	return module->id;
@@ -794,10 +794,18 @@ void sp_rtrace_store_heap_info()
 	heap_info = mallinfo();
 }
 
-void sp_rtrace_initialize()
+bool sp_rtrace_initialize()
 {
 	static volatile int initialize_lock = 0;
 	if (__sync_bool_compare_and_swap(&initialize_lock, 0, 1)) {
+		/* first check if the environment is ready */
+		const char* env_ready = getenv(SP_RTRACE_READY);
+		if (!env_ready) {
+			/* environment options aren't accessible (yet) */
+			initialize_lock = 0;
+			return false;
+		}
+
 		LOG("initializing... (pid=%d)", getpid());
 		/* reset the scratchbox preload configuration */
 		if (query_scratchbox()) {
@@ -861,8 +869,9 @@ void sp_rtrace_initialize()
 			write_initial_data();
 			enable_tracing(true);
 		}
-
+		return true;
 	}
+	return false;
 }
 
 static void trace_main_init(void) __attribute__((constructor));

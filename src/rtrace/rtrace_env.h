@@ -42,6 +42,9 @@
 
 #define OPT_ENABLE    "1"
 
+/* set by sp-rtrace to indicate that the environment options are set */
+#define SP_RTRACE_READY    "SP_RTRACE_READY"
+
 /**
  * pre-processor(sp-rtrace) option index.
  */

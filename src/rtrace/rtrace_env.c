@@ -139,6 +139,18 @@ char *rtrace_env_opt[] = {
 		 */
 		"SP_RTRACE_DISABLE_PACKET_BUFFERING",
 		/**
+		 * --execute
+		 */
+		NULL,
+		/**
+		 * --list
+		 */
+		NULL,
+		/**
+		 * --listen
+		 */
+		NULL,
+		/**
 		 * --help
 		 */
 		NULL,

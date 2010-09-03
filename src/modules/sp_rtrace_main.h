@@ -61,9 +61,6 @@ typedef struct sp_rtrace_options_t {
 
 extern sp_rtrace_options_t* sp_rtrace_options;
 
-/* backtrace synchronization variable, used in functions that are called by backtrace() */
-extern volatile sig_atomic_t backtrace_lock;
-
 /**
  * Writes function call packet into processor pipe.
  *
@@ -137,8 +134,11 @@ int sp_rtrace_write_context_registry(int context_id, const char* name);
 
 /**
  * Initializes the tracing.
+ *
+ * @return   true - the initialization was successful.
+ *           false - the initialization failed.
  */
-void sp_rtrace_initialize();
+bool sp_rtrace_initialize();
 
 
 #endif
