@@ -49,7 +49,7 @@
  * @return              0 - success
  *                      -EINVAL - failed to find log file name.
  */
-int get_log_filename(int pid, const char* dir, const char* pattern, const char* ext, char* path, size_t size);
+int get_log_filename(int pid, const char* dir, const char* pattern, char* path, size_t size);
 
 /**
  * Exits with appropriate error message.

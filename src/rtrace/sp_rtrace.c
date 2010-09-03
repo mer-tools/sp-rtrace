@@ -297,8 +297,7 @@ static int open_output_file()
 	/* if (dir == NULL) dir = getenv("HOME"); */
 	if (dir == NULL) dir = default_dir;
 
-	if (get_log_filename(rtrace_options.pid, dir, SP_RTRACE_BINARY_FILE_PATTERN,
-			SP_RTRACE_BINARY_FILE_EXT, path, sizeof(path)) != 0) {
+	if (get_log_filename(rtrace_options.pid, dir, SP_RTRACE_BINARY_FILE_PATTERN, path, sizeof(path)) != 0) {
 		fprintf(stderr, "ERROR: failed to make new log file name for directory %s\n", dir);
 		return -1;
 	}

@@ -49,13 +49,11 @@
 /* event pre-processor named pipe path template */
 #define SP_RTRACE_PIPE_PATTERN      "/tmp/rtrace-"
 
-/* the text file pattern, %d - pid */
-#define SP_RTRACE_TEXT_FILE_PATTERN   "%d"
-#define SP_RTRACE_TEXT_FILE_EXT       ".rtrace.txt"
+/* the text file pattern, %d-%d - <pid>-<index> */
+#define SP_RTRACE_TEXT_FILE_PATTERN   "%d-%d.rtrace.txt"
 
-/* the binary file pattern, %d - pid */
-#define SP_RTRACE_BINARY_FILE_PATTERN   "%d"
-#define SP_RTRACE_BINARY_FILE_EXT       ".rtrace"
+/* the binary file pattern,  %d-%d - <pid>-<index> */
+#define SP_RTRACE_BINARY_FILE_PATTERN   "%d-%d.rtrace"
 
 #ifndef INSTALL_DIR
  #define INSTALL_DIR "/usr"

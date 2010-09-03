@@ -147,8 +147,7 @@ static void write_rtrace_log(rd_t* rd)
 	 * Otherwise write to standard output */
 	if (postproc_options.output_dir) {
 		char path[PATH_MAX];
-		if (get_log_filename(rd->pinfo->pid, postproc_options.output_dir,
-				SP_RTRACE_TEXT_FILE_PATTERN, SP_RTRACE_TEXT_FILE_EXT, path, sizeof(path)) != 0) {
+		if (get_log_filename(rd->pinfo->pid, postproc_options.output_dir, SP_RTRACE_TEXT_FILE_PATTERN, path, sizeof(path)) != 0) {
 			fprintf(stderr, "ERROR: failed to make new log file name for directory %s\n", postproc_options.output_dir);
 			exit (-1);
 		}

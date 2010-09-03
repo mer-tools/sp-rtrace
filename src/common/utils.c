@@ -34,19 +34,13 @@
 
 #define MAX_INDEX     100
 
-int get_log_filename(int pid, const char* dir, const char* pattern, const char* ext, char* path, size_t size)
+int get_log_filename(int pid, const char* dir, const char* pattern, char* path, size_t size)
 {
-	int index = 2;
-	int offset = snprintf(path, size, "%s/", dir);
-	offset += snprintf(path + offset, size - offset, pattern, pid);
-	size -= offset;
-	char *sindex = path + offset;
-	strcat(sindex, ext);
-	while (access(path, F_OK) == 0) {
-		if (index > MAX_INDEX) return -EINVAL;
-		offset = snprintf(sindex, size, "-%d", index++);
-		strcat(sindex + offset, ext);
-	}
+	int index = 0;
+	do {
+		int offset = snprintf(path, size, "%s/", dir);
+		snprintf(path + offset, size - offset, pattern, pid, index++);
+	} while (access(path, F_OK) == 0);
 	return 0;
 }
 
