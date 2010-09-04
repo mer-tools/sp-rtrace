@@ -138,9 +138,9 @@ static int scan_mmap_data()
 	FILE* fp = fopen(name, "r");
 	if (fp) {
 		while (fgets(name, PATH_MAX, fp)) {
-			void *from, *to;
+			pointer_t from, to;
 			char rights[8];
-			if (sscanf(name, "%p-%p %s %[^ ] %[^ ] %[^ ] %[^ ]", &from, &to, rights, buffer, buffer, buffer, buffer) == 7 && rights[2] == 'x') {
+			if (sscanf(name, "%lx-%lx %s %[^ ] %[^ ] %[^ ] %[^ ]", &from, &to, rights, buffer, buffer, buffer, buffer) == 7 && rights[2] == 'x') {
 				if (*buffer) buffer[strlen(buffer) - 1] = '\0';
 				/* check if the memory mapping is not already registered */
 				rd_mmap_t* mmap = (rd_mmap_t*)dlist_find(&s_mmaps, (void*)buffer, (op_binary_t)mmap_compare);

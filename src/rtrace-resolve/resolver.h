@@ -28,6 +28,7 @@
 #include <stdbool.h>
 
 #include "common/dlist.h"
+#include "common/sp_rtrace_proto.h"
 #include "sarray.h"
 
 struct rs_mmap_t;
@@ -53,8 +54,8 @@ typedef struct rs_mmap_t {
 	int id;
 
 	char* module;
-	void* from;
-	void* to;
+	pointer_t from;
+	pointer_t to;
 
 	bool is_absolute;
 
@@ -90,7 +91,7 @@ typedef struct {
  * @param[in] address   the address to resolve.
  * @return              the resolved address name.
  */
-const char* rs_resolve_address(rs_cache_t* rs, void* address);
+const char* rs_resolve_address(rs_cache_t* rs, pointer_t address);
 
 /**
  * Adds new memory mapping record to the resolver cache.
@@ -101,7 +102,7 @@ const char* rs_resolve_address(rs_cache_t* rs, void* address);
  * @param[in] to      the end address.
  * @return            the added memory mapping record.
  */
-rs_mmap_t* rs_mmap_add_module(rs_cache_t* rs, const char* module, void* from, void* to, bool single_cache);
+rs_mmap_t* rs_mmap_add_module(rs_cache_t* rs, const char* module, pointer_t from, pointer_t to, bool single_cache);
 
 /**
  * Retrieves memory mapping record covering the specified address.
@@ -110,7 +111,7 @@ rs_mmap_t* rs_mmap_add_module(rs_cache_t* rs, const char* module, void* from, vo
  * @param[in] addr   the address.
  * @return           the memory mapping record.
  */
-rs_mmap_t* rs_mmap_find_module(sarray_t* mmaps, void* addr);
+rs_mmap_t* rs_mmap_find_module(sarray_t* mmaps, pointer_t addr);
 
 
 /**

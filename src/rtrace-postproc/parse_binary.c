@@ -184,7 +184,7 @@ static rd_fcall_t* read_packet_FC(const char* data)
      * type data will be properly stored after returning from this function */
     unsigned int res_type;
     data += read_dword(data, &res_type);
-    call->res_type = (void*)(long)res_type;
+    call->res_type = (rd_resource_t*)(long)res_type;
     /* */
     data += read_dword(data, &call->context);
     data += read_dword(data, &call->timestamp);
@@ -213,8 +213,8 @@ static rd_ftrace_t* read_packet_BT(const char* data)
     rd_ftrace_t* trace = (rd_ftrace_t*)htable_create_node(sizeof(rd_ftrace_t));
     trace->ref_count = 0;
     data += read_dword(data, &trace->nframes);
-    trace->frames = (void**)malloc_a(sizeof(void*) * trace->nframes);
-    memcpy(trace->frames, data, sizeof(void*) * trace->nframes);
+    trace->frames = (pointer_t*)malloc_a(sizeof(pointer_t) * trace->nframes);
+    memcpy(trace->frames, data, sizeof(pointer_t) * trace->nframes);
     /* binary packets can't contain resolved address names */
     trace->resolved_names = NULL;
 
@@ -392,9 +392,9 @@ static void read_binary_data(rd_t* rd, int fd)
 	/* check for architecture compatibility */
 	short endian = 0x0100;
 	char endianness = *(char*)&endian;
-	if (rd->hshake->endianness != endianness || sizeof(void*) != rd->hshake->pointer_size) {
+	if (rd->hshake->endianness != endianness || sizeof(pointer_t) != rd->hshake->pointer_size) {
 		fprintf(stderr, "ERROR: unsupported architecture: endianess(%d:%d), pointer size(%d:%d)\n",
-				rd->hshake->endianness, endianness, rd->hshake->pointer_size, (int)sizeof(void*));
+				rd->hshake->endianness, endianness, rd->hshake->pointer_size, (int)sizeof(pointer_t));
 		fprintf(stderr, "This could happen when text file is being processed without correct format option.\n");
 	    exit (-1);
 	}

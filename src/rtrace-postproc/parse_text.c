@@ -100,8 +100,8 @@ static void* parse_memory_mapping(char* line)
 {
 	rd_mmap_t* mmap = NULL;
 	char module[PATH_MAX];
-	void *from, *to;
-	if (sscanf(line, ": %s => %p-%p", module, &from, &to) == 3) {
+	pointer_t from, to;
+	if (sscanf(line, ": %s => 0x%lx-0x%lx", module, &from, &to) == 3) {
 		mmap = 	(rd_mmap_t*)dlist_create_node(sizeof(rd_mmap_t));
 		mmap->module = strdup_a(module);
 		mmap->from = from;
@@ -154,25 +154,6 @@ static void* parse_resource_registry(char* line)
 
 
 /**
- * Convert decimal string parsed as hex value back into
- * decimal value.
- *
- * @param[in] hex   the hex value.
- * @return          the converted decimal value.
- */
-static long hex2dec(long hex)
-{
-	int dec = 0;
-	int shift = 1;
-	while (hex) {
-		dec += (hex & 0xF) * shift;
-		shift *= 10;
-		hex >>= 4;
-	}
-	return dec;
-}
-
-/**
  * Parses function call record.
  *
  * @param[in] line   the line to parse.
@@ -185,7 +166,8 @@ static void* parse_function_call(char* line)
 	int index, context = 0;
 	int hours, minutes, seconds, mseconds;
 	int timestamp = 0;
-	void *res_id, *res_size;
+	pointer_t res_id;
+	int res_size;
 	char name[512], *ptr = line, delim, function_type;
 	char* res_type;
 	/* parse index field <index>. */
@@ -226,37 +208,23 @@ static void* parse_function_call(char* line)
 	else {
 		res_type = NULL;
 	}
-	int n = sscanf(ptr, "(%p) = %p", &res_size, &res_id);
-	switch (n) {
-		/* deallocation record <function>(<resource id>) */
-		case 1: {
-			/* resource id was parsed as size, and size must be 0. Swap. */
-			res_id = res_size;
-			res_size = 0;
-			function_type = SP_RTRACE_FTYPE_FREE;
-			break;
-		}
-
-		/* allocation record <function>(<size>) = <resource id> */
-		case 2: {
-			/* size was in decimal format, but we parsed it as hex value.
-			 * Convert back to hex format */
-			res_size = (void**)hex2dec((long int)res_size);
-			function_type = SP_RTRACE_FTYPE_ALLOC;
-			break;
-		}
-
-		default: {
-			/* unknown format, return NULL */
-			return NULL;
-		}
+	if (sscanf(ptr, "(%d) = 0x%lx", &res_size, &res_id) == 2) {
+		function_type = SP_RTRACE_FTYPE_ALLOC;
+	}
+	else if (sscanf(ptr, "(0x%lx)", &res_id) == 1) {
+		res_size = 0;
+		function_type = SP_RTRACE_FTYPE_FREE;
+	}
+	else {
+		/* unknown format, return NULL */
+		return NULL;
 	}
 	rd_fcall_t* call = dlist_create_node(sizeof(rd_fcall_t));
 	call->index = index;
 	/* temporary assign the resource type name to res_type field. After returning
 	 * from this function the correct resource type structure will be found and
 	 * assigned instead. */
-	call->res_type = (void*)res_type;
+	call->res_type = (rd_resource_t*)(long)res_type;
 
 	call->type = function_type;
 	call->context = context;
@@ -274,7 +242,7 @@ static void* parse_function_call(char* line)
  * Single backtrace step data,
  */
 typedef struct bt_step_t {
-	void* addr;
+	pointer_t addr;
 	char* name;
 } bt_step_t;
 
@@ -290,7 +258,7 @@ typedef struct bt_step_t {
 static bool parse_backtrace(char* line, bt_step_t* btstep)
 {
 	char resolved_name[PATH_MAX], delim;
-	int n = sscanf(line, "%c%p (%[^\n]", &delim, &btstep->addr, resolved_name);
+	int n = sscanf(line, "%c0x%lx (%[^\n]", &delim, &btstep->addr, resolved_name);
 	if (n < 2 || delim != '\t') return false;
 	if (n == 3) {
 		resolved_name[strlen(resolved_name) - 1] = '\0';

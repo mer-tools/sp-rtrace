@@ -92,6 +92,9 @@
  #define SP_RTRACE_PROTO_CHECK_ALIGNMENT(value)
 #endif
 
+
+typedef unsigned long pointer_t;
+
 /**
  * Reads byte from binary stream.
  *
@@ -143,11 +146,11 @@ static inline int read_word(const char* ptr, unsigned short* value)
  * @param[out] value  the output value.
  * @return            the number of bytes read.
  */
-static inline int read_pointer(const char* ptr, void** value)
+static inline int read_pointer(const char* ptr, pointer_t* value)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(ptr);
-	*value = *(void**)ptr;
-	return sizeof(void*);
+	*value = *(pointer_t*)ptr;
+	return sizeof(pointer_t);
 }
 
 
@@ -254,11 +257,11 @@ static inline size_t write_dword(char* ptr, unsigned int value)
  * @param[in] value  the value to write.
  * @return           the number of bytes written.
  */
-static inline size_t write_pointer(char* ptr, const void* value)
+static inline size_t write_pointer(char* ptr, pointer_t value)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(ptr);
-	*(void**)ptr = (void*)value;
-	return sizeof(void*);
+	*(pointer_t*)ptr = value;
+	return sizeof(pointer_t);
 }
 
 

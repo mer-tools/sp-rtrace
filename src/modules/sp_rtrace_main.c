@@ -74,7 +74,7 @@ volatile sig_atomic_t backtrace_lock = 0;
 
 /* heap statistics */
 static struct mallinfo heap_info;
-static void* heap_bottom = NULL;
+static pointer_t heap_bottom = 0;
 
 /**
  * The default options.
@@ -399,7 +399,7 @@ static int write_handshake(int major, int minor, const char* arch)
 	short endian = 0x0100;
 	char endianness = *(char*)&endian;
 	ptr += write_byte(ptr, endianness);
-	ptr += write_byte(ptr, sizeof(void*));
+	ptr += write_byte(ptr, sizeof(pointer_t));
 
 	int size = ptr - buffer;
 	SP_RTRACE_PROTO_ALIGN_SIZE(size);
@@ -467,7 +467,7 @@ static int write_heap_info()
 		char* buffer = pipe_buffer_lock(), *ptr = buffer + SP_RTRACE_PROTO_TYPE_SIZE;
 		ptr += write_dword(ptr, SP_RTRACE_PROTO_HEAP_INFO);
 		ptr += write_pointer(ptr, heap_bottom);
-		ptr += write_pointer(ptr, sbrk(0));
+		ptr += write_pointer(ptr, (pointer_t)sbrk(0));
 		ptr += write_dword(ptr, heap_info.arena);
 		ptr += write_dword(ptr, heap_info.ordblks);
 		ptr += write_dword(ptr, heap_info.smblks);
@@ -660,7 +660,7 @@ int sp_rtrace_write_context_registry(int context_id, const char* name)
 }
 
 
-int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* name, size_t res_size, const void* id, const char** args)
+int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* name, size_t res_size, pointer_t id, const char** args)
 {
 	if (!sp_rtrace_options->enable) return 0;
 	int size = 0;
@@ -733,11 +733,11 @@ int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* n
 		if (nframes > sp_rtrace_options->backtrace_depth) {
 			nframes = sp_rtrace_options->backtrace_depth;
 		}
-		ptr += write_dword(ptr, sizeof(int) * 2 + sizeof(void*) * nframes);
+		ptr += write_dword(ptr, sizeof(int) * 2 + sizeof(pointer_t) * nframes);
 		ptr += write_dword(ptr, SP_RTRACE_PROTO_BACKTRACE);
 		ptr += write_dword(ptr, nframes);
 		for (i = BT_SKIP_TOP; i < nframes + BT_SKIP_TOP; i++) {
-			ptr += write_pointer(ptr, bt_frames[i]);
+			ptr += write_pointer(ptr, (pointer_t)bt_frames[i]);
 		}
 		size += ptr - buffer - size;
 	}
@@ -885,7 +885,7 @@ static void trace_main_init(void)
 	sp_rtrace_initialize();
 
 	/* cache the heap bottom address */
-	heap_bottom = sbrk(0);
+	heap_bottom = (pointer_t)sbrk(0);
 
 	int toggle_signal = SIGUSR1;
 

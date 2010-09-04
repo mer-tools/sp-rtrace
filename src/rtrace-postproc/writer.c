@@ -137,10 +137,10 @@ static int write_compressed_backtrace(ftrace_ref_t* trace, fmt_data_t* fmt)
 static void write_heap_information(FILE* fp, rd_hinfo_t* hinfo)
 {
 	formatter_printf(fp, "# heap status information:\n");
-	formatter_printf(fp, "#   heap bottom %p\n", hinfo->heap_bottom);
-	formatter_printf(fp, "#   heap top %p\n", hinfo->heap_top);
-	formatter_printf(fp, "#   lowest block %p\n", hinfo->lowest_block);
-	formatter_printf(fp, "#   highest block %p\n", hinfo->highest_block);
+	formatter_printf(fp, "#   heap bottom 0x%lx\n", hinfo->heap_bottom);
+	formatter_printf(fp, "#   heap top 0x%lx\n", hinfo->heap_top);
+	formatter_printf(fp, "#   lowest block 0x%lx\n", hinfo->lowest_block);
+	formatter_printf(fp, "#   highest block 0x%lx\n", hinfo->highest_block);
 	formatter_printf(fp, "#   non-mapped space allocated from system %d\n", hinfo->arena);
 	formatter_printf(fp, "#   number of free chunks %d\n", hinfo->ordblks);
 	formatter_printf(fp, "#   number of fastbin blocks %d\n", hinfo->smblks);

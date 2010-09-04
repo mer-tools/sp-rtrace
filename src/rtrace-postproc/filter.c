@@ -298,7 +298,7 @@ void update_resource_visibility(rd_t* rd)
 
 void find_lowhigh_blocks(rd_t* rd)
 {
-	rd->hinfo->lowest_block = (void*)~0L;
+	rd->hinfo->lowest_block = (pointer_t)~0L;
 	dlist_foreach2(&rd->calls, (op_binary_t)fcall_find_lowhigh_blocks, (void*)rd->hinfo);
 }
 

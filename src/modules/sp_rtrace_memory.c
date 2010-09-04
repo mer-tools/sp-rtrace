@@ -282,7 +282,7 @@ static void* trace_malloc(size_t size)
 	backtrace_lock = 0;
 
 	if (rc) {
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "malloc", size, rc, NULL);
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "malloc", size, (pointer_t)rc, NULL);
 		sp_rtrace_store_heap_info();
 	}
 	return rc;
@@ -295,7 +295,7 @@ static void* trace_calloc(size_t nmemb, size_t size)
 	backtrace_lock = 0;
 
 	if (rc) {
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "calloc", nmemb * size, rc, NULL);
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "calloc", nmemb * size, (pointer_t)rc, NULL);
 		sp_rtrace_store_heap_info();
 	}
 	return rc;
@@ -307,11 +307,11 @@ static void* trace_realloc(void* ptr, size_t size)
 	/* if allocation was successful or the requested size was 0,
 	 *  and the old pointer was not NULL - register old pointer freeing */
 	if ((rc || !size) && ptr) {
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, resource_id, "realloc", 0, ptr, NULL);
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, resource_id, "realloc", 0, (pointer_t)ptr, NULL);
 	}
 	/* if allocation was successful register new pointer allocation */
 	if (rc) {
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "realloc", size, rc, NULL);
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "realloc", size, (pointer_t)rc, NULL);
 		sp_rtrace_store_heap_info();
 	}
 	return rc;
@@ -321,7 +321,7 @@ static int trace_posix_memalign(void **memptr, size_t alignment, size_t size)
 {
 	int rc = trace_off.posix_memalign(memptr, alignment, size);
 	if (rc == 0) {
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "posix_memalign", size, *memptr, NULL);
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "posix_memalign", size, (pointer_t)*memptr, NULL);
 		sp_rtrace_store_heap_info();
 	}
 	return rc;
@@ -333,10 +333,8 @@ static void trace_free(void* ptr)
 	/* unlock backtrace after the original function has been called */
 	backtrace_lock = 0;
 
-	if (ptr) {
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, resource_id, "free", 0, ptr, NULL);
-		sp_rtrace_store_heap_info();
-	}
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, resource_id, "free", 0, (pointer_t)ptr, NULL);
+	sp_rtrace_store_heap_info();
 }
 
 static trace_t trace_on = {

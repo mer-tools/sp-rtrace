@@ -246,11 +246,11 @@ static int rs_load_symbols(rs_cache_record_t* rec, const char* filename)
  * @param[out] buffer    the output buffer.
  * @return               0 - success.
  */
-static int rs_get_address_info(rs_cache_record_t* rec, void* address, char* buffer)
+static int rs_get_address_info(rs_cache_record_t* rec, pointer_t address, char* buffer)
 {
 	const char *filename, *functionname;
 	unsigned int line;
-	void* abs_address = address;
+	void* abs_address = (void*)address;
 
 	asection *section;
 	bfd_vma pc, vma;
@@ -279,7 +279,7 @@ static int rs_get_address_info(rs_cache_record_t* rec, void* address, char* buff
 
 		if (bfd_find_nearest_line(rec->file, section, rec->symbols, pc - vma, &filename, &functionname, &line)) {
 			char* ptr_out = buffer;
-			ptr_out += sprintf(ptr_out, "\t%p (", address);
+			ptr_out += sprintf(ptr_out, "\t0x%lx (", address);
 			if (functionname) {
 				ptr_out += sprintf(ptr_out, "in ");
 				char *alloc;
@@ -314,7 +314,7 @@ static int rs_get_address_info(rs_cache_record_t* rec, void* address, char* buff
  * Public API
  */
 
-const char* rs_resolve_address(rs_cache_t* rs, void* address)
+const char* rs_resolve_address(rs_cache_t* rs, pointer_t address)
 {
 	static char buffer[PATH_MAX];
 
@@ -324,20 +324,20 @@ const char* rs_resolve_address(rs_cache_t* rs, void* address)
 	while (true) {
 		rs_mmap_t* mmap = rs_mmap_find_module(&rs->mmaps, address);
 		if (mmap == NULL) {
-			sprintf(buffer, "\t%p <unknown>\n", address);
+			sprintf(buffer, "\t0x%lx <unknown>\n", address);
 			break;
 		}
 		if (mmap != mmap->cache->mmap) {
 			rs_cache_record_clear(mmap->cache);
 			if (rs_load_symbols(mmap->cache, mmap->module) < 0) {
 				rs_cache_record_clear(mmap->cache);
-				sprintf(buffer, "\t%p (%s)\n", address, mmap->module);
+				sprintf(buffer, "\t0x%lx (%s)\n", address, mmap->module);
 				break;
 			}
 			mmap->cache->mmap = mmap;
 		}
 		if (rs_get_address_info(mmap->cache, address, buffer) < 0) {
-			sprintf(buffer, "\t%p (%s)\n", address, mmap->module);
+			sprintf(buffer, "\t0x%lx (%s)\n", address, mmap->module);
 			break;
 		}
 		break;
@@ -346,7 +346,7 @@ const char* rs_resolve_address(rs_cache_t* rs, void* address)
 	return buffer;
 }
 
-rs_mmap_t* rs_mmap_add_module(rs_cache_t* rs, const char* module, void* from, void* to, bool single_cache)
+rs_mmap_t* rs_mmap_add_module(rs_cache_t* rs, const char* module, pointer_t from, pointer_t to, bool single_cache)
 {
 	rs_mmap_t* mmap = NULL;
 	int is_absolute = rs_mmap_is_absolute(module);
@@ -372,7 +372,7 @@ rs_mmap_t* rs_mmap_add_module(rs_cache_t* rs, const char* module, void* from, vo
 	return NULL;
 }
 
-rs_mmap_t* rs_mmap_find_module(sarray_t* mmaps, void* addr)
+rs_mmap_t* rs_mmap_find_module(sarray_t* mmaps, pointer_t addr)
 {
 	/* mmap_compare function uses only .from field to compare records.
 	 * Setting it to specified address is enough to locate the responsible

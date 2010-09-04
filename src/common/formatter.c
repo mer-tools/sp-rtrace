@@ -51,7 +51,7 @@ int formatter_write_header(const formatter_header_t* header, FILE* fp)
 
 int formatter_write_mmap(const rd_mmap_t* mmap, FILE* fp)
 {
-	fprintf(fp, ": %s => %p-%p\n", mmap->module, mmap->from, mmap->to);
+	fprintf(fp, ": %s => 0x%lx-0x%lx\n", mmap->module, mmap->from, mmap->to);
 	return 0;
 }
 
@@ -85,10 +85,10 @@ int formatter_write_fcall(const rd_fcall_t*  call, FILE* fp)
 		ptr += sprintf(ptr, "<%s>", call->res_type->type);
 	}
 	if (call->type == SP_RTRACE_FTYPE_ALLOC) {
-		ptr += sprintf(ptr, "(%d) = %p", call->res_size, call->res_id);
+		ptr += sprintf(ptr, "(%d) = 0x%lx", call->res_size, call->res_id);
 	}
 	else {
-		ptr += sprintf(ptr, "(%p)", call->res_id);
+		ptr += sprintf(ptr, "(0x%lx)", call->res_id);
 	}
 	*ptr++ = '\n';
 	fwrite(buffer, 1, ptr - buffer, fp);
@@ -101,7 +101,7 @@ int formatter_write_ftrace(const rd_ftrace_t* trace, FILE* fp)
 	char buffer[1024];
 	for (i = 0; i < size; i++) {
 		char* ptr = buffer;
-		ptr += sprintf(ptr, "\t%p", trace->frames[i]);
+		ptr += sprintf(ptr, "\t0x%lx", trace->frames[i]);
 		if (trace->resolved_names && trace->resolved_names[i]) {
 			ptr += sprintf(ptr, " (%s)", trace->resolved_names[i]);
 		}

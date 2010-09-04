@@ -40,6 +40,7 @@
 
 #include "htable.h"
 #include "dlist.h"
+#include "sp_rtrace_proto.h"
 
 
 /**
@@ -122,8 +123,8 @@ void rd_minfo_free(rd_minfo_t* minfo);
 typedef struct rd_mmap_t {
 	dlist_node_t node;
 
-	void* from;
-	void* to;
+	pointer_t from;
+	pointer_t to;
 	char* module;
 } rd_mmap_t;
 
@@ -216,7 +217,7 @@ typedef struct rd_fcall_t {
 	/* the resource type */
 	rd_resource_t* res_type;
 	/* the associated (allocated/freed) resource identifier */
-	void* res_id;
+	pointer_t res_id;
 	/* the associated (allocated) resource size */
 	int res_size;
 	/* the function call backtrace */
@@ -258,7 +259,7 @@ typedef struct rd_ftrace_t {
 	unsigned int nframes;
 
 	/* the frame return addresses */
-	void** frames;
+	pointer_t* frames;
 
 	/* The resolved address names. NULL when parsing binary data,
 	 * but text files could contain already resolved names -
@@ -333,10 +334,10 @@ void rd_comment_free(rd_comment_t* comment);
  * Heap information record.
  */
 typedef struct {
-	void* heap_bottom;
-	void* heap_top;
-	void* lowest_block;
-	void* highest_block;
+	pointer_t heap_bottom;
+	pointer_t heap_top;
+	pointer_t lowest_block;
+	pointer_t highest_block;
 
 	int arena;
 	int ordblks;

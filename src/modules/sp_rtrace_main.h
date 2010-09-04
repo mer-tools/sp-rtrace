@@ -29,6 +29,8 @@
 #include <signal.h>
 #include <limits.h>
 
+#include "common/sp_rtrace_proto.h"
+
 /**
  * @file sp_rtrace_main.h
  *
@@ -75,7 +77,7 @@ extern sp_rtrace_options_t* sp_rtrace_options;
  * @param[in] args     the function argument array, ending with NULL. Optional.
  * @return             the number of bytes written.
  */
-int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* name, size_t size, const void* id, const char** args);
+int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* name, size_t size, pointer_t id, const char** args);
 
 
 typedef void (*sp_rtrace_enable_tracing_t)(bool);

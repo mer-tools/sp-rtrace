@@ -64,7 +64,7 @@ void sp_rtrace_print_header(FILE* fp, const char* version, const char* arch,
 
 void sp_rtrace_print_mmap(FILE* fp, const char* module, void* from, void* to)
 {
-	const rd_mmap_t mmap = {.module = (char*)module, .from = from, .to = to};
+	const rd_mmap_t mmap = {.module = (char*)module, .from = (pointer_t)from, .to = (pointer_t)to};
 	formatter_write_mmap(&mmap, fp);
 }
 
@@ -81,7 +81,7 @@ void sp_rtrace_print_call(FILE* fp, int index, unsigned int context, unsigned in
 			.timestamp = timestamp,
 			.type = res_size ? SP_RTRACE_FTYPE_ALLOC : SP_RTRACE_FTYPE_FREE,
 			.name = (char*)name,
-			.res_id = res_id,
+			.res_id = (pointer_t)res_id,
 			.res_size = res_size,
 			.res_type = res_type ? &resource : NULL,
 	};
@@ -91,7 +91,7 @@ void sp_rtrace_print_call(FILE* fp, int index, unsigned int context, unsigned in
 
 void sp_rtrace_print_trace(FILE* fp, void** frames, char** resolved, int nframes)
 {
-	const rd_ftrace_t trace = {.frames = frames, .nframes = nframes, .resolved_names = (char**)resolved};
+	const rd_ftrace_t trace = {.frames = (pointer_t*)frames, .nframes = nframes, .resolved_names = (char**)resolved};
 	formatter_write_ftrace(&trace, fp);
 }
 
@@ -99,10 +99,10 @@ void sp_rtrace_print_trace(FILE* fp, void** frames, char** resolved, int nframes
 void sp_rtrace_print_trace_step(FILE* fp, void* addr, const char* resolved)
 {
 	if (resolved) {
-		fprintf(fp, "\t%p (%s)\n", addr, resolved);
+		fprintf(fp, "\t0x%lx (%s)\n", (pointer_t)addr, resolved);
 	}
 	else {
-		fprintf(fp, "\t%p\n", addr);
+		fprintf(fp, "\t0x%lx\n", (pointer_t)addr);
 	}
 }
 

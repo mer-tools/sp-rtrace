@@ -213,7 +213,7 @@ int trace_shmget(key_t key, size_t size, int shmflg)
 {
 	int rc = trace_off.shmget(key, size, shmflg);
 	if (rc != -1 && (shmflg & IPC_CREAT)) {
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_segment, "shmget", size, (void*)(long)rc, NULL);
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_segment, "shmget", size, (pointer_t)rc, NULL);
 	}
 	return rc;
 }
@@ -239,7 +239,7 @@ int trace_shmctl(int shmid, int cmd, struct shmid_ds *buf)
 		/* IPC_RMID command issued to segment with attachment counter 0.
 		 * This means that the segment is getting destroyed. It was created
 		 * by current process, so report its deallocation. */
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_segment, "shmctl", 0, (void*)(long)shmid, NULL);
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_segment, "shmctl", 0, (pointer_t)shmid, NULL);
 	}
 	return rc;
 }
@@ -274,7 +274,7 @@ void* trace_shmat(int shmid, const void *shmaddr, int shmflg)
 				}
 			}
 		}
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_address, "shmat", size, rc, args);
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_address, "shmat", size, (pointer_t)rc, args);
 	}
 	return rc;
 }
@@ -300,12 +300,12 @@ int trace_shmdt(const void *shmaddr)
 
 	if (rc == 0) {
 		/* report shared memory detachment */
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_address, "shmdt", 0, shmaddr, NULL);
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_address, "shmdt", 0, (pointer_t)shmaddr, NULL);
 
 		/* if the segment was marked for removal it should be destroyed after detaching the
 		 * last address. */
 		if (nattach == 1) {
-			sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_segment, "shmdt", 0, (void*)(long)shmid, NULL);
+			sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_segment, "shmdt", 0, (pointer_t)shmid, NULL);
 		}
 	}
 	return rc;

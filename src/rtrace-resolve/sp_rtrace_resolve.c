@@ -127,9 +127,9 @@ static void display_usage()
  */
 static int parse_backtrace_index(const char* line, rs_cache_t* rs)
 {
-	void* addr;
+	pointer_t addr;
 	char delim;
-	if (sscanf(line, "%c%p", &delim, &addr) == 2 && delim == '\t') {
+	if (sscanf(line, "%c0x%lx", &delim, &addr) == 2 && delim == '\t') {
 		rs_mmap_t* mmap = rs_mmap_find_module(&rs->mmaps, addr);
 		if (mmap == NULL) {
 			return -EINVAL;
@@ -153,8 +153,8 @@ static int parse_backtrace_index(const char* line, rs_cache_t* rs)
 static const char* parse_mmap_record(const char* line, rs_cache_t* rs)
 {
 	char module[PATH_MAX];
-	void *from, *to;
-	if (sscanf(line, ": %s => %p-%p", module, &from, &to) == 3) {
+	pointer_t from, to;
+	if (sscanf(line, ": %s => 0x%lx-0x%lx", module, &from, &to) == 3) {
 		rs_mmap_t* mmap = rs_mmap_add_module(rs, module, from, to,
 				resolve_options.mode != MODE_FULL_CACHE);
 		if (mmap && resolve_options.mode == MODE_MULTI_PASS) {
@@ -215,9 +215,9 @@ static void parse_index_record(char* line, rs_cache_t* rs)
  */
 static const char* parse_backtrace_record(char* line, rs_cache_t* rs)
 {
-	void* addr;
+	pointer_t addr;
 	char delim;
-	if (sscanf(line, "%c%p", &delim, &addr) == 2 && delim == '\t') {
+	if (sscanf(line, "%c0x%lx", &delim, &addr) == 2 && delim == '\t') {
 		return rs_resolve_address(rs, addr);
 	}
 	return NULL;
@@ -236,8 +236,8 @@ static void mmap_resolve_address_file(rs_mmap_t* mmap, rs_cache_t* rs)
 
 	fseek(mmap->fin, 0, SEEK_SET);
 	while (fgets(line, PATH_MAX, mmap->fin)) {
-		void* address;
-		if (sscanf(line, "\t%p", &address) == 1) {
+		pointer_t address;
+		if (sscanf(line, "\t0x%lx", &address) == 1) {
 			fputs(rs_resolve_address(rs, address), mmap->fout);
 		}
 		else {

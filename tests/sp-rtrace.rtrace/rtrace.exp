@@ -73,7 +73,7 @@ proc check_log { command header_recs mmap_recs malloc_recs free_recs {trace_dept
 		return -1
 	}
 	if { $has_mapping < $mmap_recs } {
-		fail "check_log: expected at least $header_mmap memory mapping records, got: $has_mapping"
+		fail "check_log: expected at least $mmap_recs memory mapping records, got: $has_mapping"
 		return -1
 	}
 	if { $has_malloc < $malloc_recs } {
@@ -224,9 +224,9 @@ proc test_toggle_trace { start mode options} {
 		}
 		lappend files $log_file
 		if { [regexp "\-P\-" $options] } {
-			set rc [check_log "cat $log_file" 1 2 1 1 8]
+			set rc [check_log "cat $log_file" 1 2 1 1 10]
 		} else {
-			set rc [check_log "sp-rtrace-postproc -i$log_file" 1 2 1 1 8]
+			set rc [check_log "sp-rtrace-postproc -i$log_file" 1 2 1 1 10]
 		}
 		if { $rc == -1 } break
 	}
@@ -309,7 +309,7 @@ proc test_trace { args } {
 	if { [test_startup 4 "-b4" "-P-"] == 0 } {
 		pass "backtrace depth setting: 4"
 	}
-	if { [test_startup 8 "-b20" "-P-"] == 0 } {
+	if { [test_startup 10 "-b20" "-P-"] == 0 } {
 		pass "backtrace depth setting: 20"
 	}
 	

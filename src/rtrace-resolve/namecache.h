@@ -24,6 +24,7 @@
 #ifndef NAMECACHE_H
 #define NAMECACHE_H
 
+#include "common/sp_rtrace_proto.h"
 /**
  * @file namecache.h
  *
@@ -36,7 +37,7 @@
  * The name resolving data structure.
  */
 typedef struct {
-	void* addr;
+	pointer_t addr;
 	char* name;
 } namecache_t;
 
@@ -47,7 +48,7 @@ typedef struct {
  * @param addr[in]    the address.
  * @return            the cached record or NULL if not found.
  */
-namecache_t* namecache_get_data(void* addr );
+namecache_t* namecache_get_data(pointer_t addr );
 
 /**
  * Caches the name data record.
@@ -55,7 +56,7 @@ namecache_t* namecache_get_data(void* addr );
  * @param data[in]    the name data record;
  * @return
  */
-namecache_t* namecache_add(void* address, const char* resolved_name);
+namecache_t* namecache_add(pointer_t address, const char* resolved_name);
 
 /**
  * Removes addresses inside the specified region from the cache.
@@ -67,7 +68,7 @@ namecache_t* namecache_add(void* address, const char* resolved_name);
  * @return           0 if successfull.
  */
 int
-namecache_remove_region(void* start, void* end );
+namecache_remove_region(pointer_t start, pointer_t end );
 
 /**
  * Allocates name cache.

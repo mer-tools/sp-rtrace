@@ -38,12 +38,16 @@ proc check_cpp_demangle { args } {
 				set rc -1
 			}
 			set out_name [lindex $args $index]
-			if { $out_name != "*" && $name != $out_name } {
-				fail "expected function: $out_name, but got: $name"
-				set rc -1				
+			if { $out_name == "*"} {
+				exp_close
+			} else {
+				if { $name != $out_name } {
+					fail "expected function: $out_name, but got: $name"
+					set rc -1				
+				}
+				set index [expr $index + 1]
+				exp_continue
 			}
-			set index [expr $index + 1]
-			exp_continue
 		}
 	}
 	exp_wait

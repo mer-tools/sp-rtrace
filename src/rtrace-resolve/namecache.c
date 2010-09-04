@@ -50,7 +50,7 @@ static unsigned int access_counter = 1;
  * @param addr[in]    the address.
  * @return            the calculated hash value.
  */
-static int calc_hash(void* addr)
+static int calc_hash(pointer_t addr)
 {
 	unsigned long hash = 0;
 	unsigned long value = (unsigned long)addr;
@@ -66,7 +66,7 @@ static int calc_hash(void* addr)
  */
 
 namecache_t*
-namecache_get_data(void* addr)
+namecache_get_data(pointer_t addr)
 {
 	if (cache) {
 		int i;
@@ -82,7 +82,7 @@ namecache_get_data(void* addr)
 }
 
 namecache_t*
-namecache_add(void* address, const char* resolved_name)
+namecache_add(pointer_t address, const char* resolved_name)
 {
 	if (cache) {
 		int i;
@@ -105,12 +105,12 @@ namecache_add(void* address, const char* resolved_name)
 	return NULL;
 }
 
-int namecache_remove_region( void* start, void* end )
+int namecache_remove_region( pointer_t start, pointer_t end )
 {
 	if (cache) {
 		int i;
 		for (i = 0; i < CACHE_TOTAL_SIZE; i++) {
-			void* addr = cache[i].data.addr;
+			pointer_t addr = cache[i].data.addr;
 			if (addr >= start && addr <= end) {
 				if (cache[i].data.name) free(cache[i].data.name);
 				cache[i].data.addr = 0;

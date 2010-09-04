@@ -239,180 +239,180 @@ static void trace_initialize()
 static char* trace_strcpy(char* dst, const char* src)
 {
 	char* rc = trace_off.strcpy(dst, src);
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "strcpy", strlen(src), (void*)src, NULL);
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "strcpy", strlen(src), (pointer_t)src, NULL);
 	return rc;
 }
 
 static void* trace_mempcpy(void *dest, const void *src, size_t n)
 {
 	void* rc = trace_off.mempcpy(dest, src, n);
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "mempcpy", n, (void*)src, NULL);
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "mempcpy", n, (pointer_t)src, NULL);
 	return rc;
 }
 
 static void* trace_memmove(void *dest, const void *src, size_t n)
 {
 	void* rc = trace_off.memmove(dest, src, n);
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "memmove", n, (void*)src, NULL);
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "memmove", n, (pointer_t)src, NULL);
 	return rc;
 }
 
 static void* trace_memcpy(void *dest, const void *src, size_t n)
 {
 	void* rc = trace_off.memcpy(dest, src, n);
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "memcpy", n, (void*)src, NULL);
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "memcpy", n, (pointer_t)src, NULL);
 	return rc;
 }
 
 static void* trace_memset(void *s, int c, size_t n)
 {
 	void* rc = trace_off.memset(s, c, n);
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "memset", n, (void*)s, NULL);
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "memset", n, (pointer_t)s, NULL);
 	return rc;
 }
 
 static char* trace_strncpy(char *dest, const char *src, size_t n)
 {
 	char* rc = trace_off.strncpy(dest, src, n);
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "strncpy", n, (void*)src, NULL);
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "strncpy", n, (pointer_t)src, NULL);
 	return rc;
 }
 
 static char* trace_stpcpy(char *dest, const char *src)
 {
 	char* rc = trace_off.stpcpy(dest, src);
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "stpcpy", strlen(src), (void*)src, NULL);
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "stpcpy", strlen(src), (pointer_t)src, NULL);
 	return rc;
 }
 
 static char* trace_strcat(char *dest, const char *src)
 {
 	char* rc = trace_off.strcat(dest, src);
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "strcat", strlen(src), (void*)src, NULL);
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "strcat", strlen(src), (pointer_t)src, NULL);
 	return rc;
 }
 
 static char* trace_strncat(char *dest, const char *src, size_t n)
 {
 	char* rc = trace_off.strncat(dest, src, n);
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "strncat", n, (void*)src, NULL);
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "strncat", n, (pointer_t)src, NULL);
 	return rc;
 }
 
 static void trace_bcopy(const void *src, void *dest, size_t n)
 {
 	trace_off.bcopy(src, dest, n);
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "bcopy", n, (void*)src, NULL);
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "bcopy", n, (pointer_t)src, NULL);
 }
 
 static void trace_bzero(void *s, size_t n)
 {
 	trace_off.bzero(s, n);
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "bzero", n, (void*)s, NULL);
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "bzero", n, (pointer_t)s, NULL);
 }
 
 static char* trace_strdup(const char *s)
 {
 	char* rc = trace_off.strdup(s);
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "strdup", strlen(s), (void*)s, NULL);
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "strdup", strlen(s), (pointer_t)s, NULL);
 	return rc;
 }
 
 static char* trace_strndup(const char *s, size_t n)
 {
 	char* rc = trace_off.strndup(s, n);
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "strndup", n, (void*)s, NULL);
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "strndup", n, (pointer_t)s, NULL);
 	return rc;
 }
 
 static char* trace_strdupa(const char *s)
 {
 	char* rc = trace_off.strdupa(s);
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "strdupa", strlen(s), (void*)s, NULL);
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "strdupa", strlen(s), (pointer_t)s, NULL);
 	return rc;
 }
 
 static char* trace_strndupa(const char *s, size_t n)
 {
 	char* rc = trace_off.strndupa(s, n);
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "strndupa", n, (void*)s, NULL);
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "strndupa", n, (pointer_t)s, NULL);
 	return rc;
 }
 
 static wchar_t* trace_wmemcpy(wchar_t *dest, const wchar_t *src, size_t n)
 {
 	wchar_t* rc = trace_off.wmemcpy(dest, src, n);
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "wmemcpy", n << 1, (void*)src, NULL);
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "wmemcpy", n << 1, (pointer_t)src, NULL);
 	return rc;
 }
 
 static wchar_t* trace_wmempcpy(wchar_t *dest, const wchar_t *src, size_t n)
 {
 	wchar_t* rc = trace_off.wmempcpy(dest, src, n);
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "wmempcpy", n << 1, (void*)src, NULL);
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "wmempcpy", n << 1, (pointer_t)src, NULL);
 	return rc;
 }
 
 static wchar_t* trace_wmemmove(wchar_t* dest, const wchar_t* src, size_t b)
 {
 	wchar_t* rc = trace_off.wmemmove(dest, src, b);
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "wmemmove", b << 1, (void*)src, NULL);
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "wmemmove", b << 1, (pointer_t)src, NULL);
 	return rc;
 }
 
 static wchar_t* trace_wmemset(wchar_t *s, int c, size_t n)
 {
 	wchar_t* rc = trace_off.wmemset(s, c, n);
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "wmemset", c << 1, (void*)s, NULL);
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "wmemset", c << 1, (pointer_t)s, NULL);
 	return rc;
 }
 
 static wchar_t* trace_wcscpy(wchar_t *dest, const wchar_t *src)
 {
 	wchar_t* rc = trace_off.wcscpy(dest, src);
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "wcscpy", wcslen(src) << 1, (void*)src, NULL);
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "wcscpy", wcslen(src) << 1, (pointer_t)src, NULL);
 	return rc;
 }
 
 static wchar_t* trace_wcsncpy(wchar_t *dest, const wchar_t *src, size_t n)
 {
 	wchar_t* rc = trace_off.wcsncpy(dest, src, n);
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "wcsncpy", n << 1, (void*)src, NULL);
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "wcsncpy", n << 1, (pointer_t)src, NULL);
 	return rc;
 }
 
 static wchar_t* trace_wcpcpy(wchar_t *dest, const wchar_t *src)
 {
 	wchar_t* rc = trace_off.wcpcpy(dest, src);
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "wcpcpy", wcslen(src) << 1, (void*)src, NULL);
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "wcpcpy", wcslen(src) << 1, (pointer_t)src, NULL);
 	return rc;
 }
 
 static wchar_t* trace_wcpncpy(wchar_t *dest, const wchar_t *src, size_t n)
 {
 	wchar_t* rc = trace_off.wcpncpy(dest, src, n);
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "wcpncpy", n << 1, (void*)src, NULL);
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "wcpncpy", n << 1, (pointer_t)src, NULL);
 	return rc;
 }
 
 static wchar_t* trace_wcscat(wchar_t *dest, const wchar_t *src)
 {
 	wchar_t* rc = trace_off.wcscat(dest, src);
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "wcscat", wcslen(src) << 1, (void*)src, NULL);
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "wcscat", wcslen(src) << 1, (pointer_t)src, NULL);
 	return rc;
 }
 
 static wchar_t* trace_wcsncat(wchar_t *dest, const wchar_t *src, size_t n)
 {
 	wchar_t* rc = trace_off.wcsncat(dest, src, n);
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "wcsncat", n << 1, (void*)src, NULL);
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "wcsncat", n << 1, (pointer_t)src, NULL);
 	return rc;
 }
 
 static wchar_t* trace_wcsdup(const wchar_t *s)
 {
 	wchar_t* rc = trace_off.wcsdup(s);
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "wcsdup", wcslen(s) << 1, (void*)s, NULL);
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "wcsdup", wcslen(s) << 1, (pointer_t)s, NULL);
 	return rc;
 }
 
