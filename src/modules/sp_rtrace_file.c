@@ -421,12 +421,10 @@ int open(const char* pathname, int flags, ...)
 		va_start(args, flags);
 		mode = va_arg(args, int);
 		va_end(args);
-		BT_RETURN_IF_LOCKED(trace_off.open(pathname, flags, mode));
-		BT_LOCK_AND_EXECUTE(rc = trace_rt->open(pathname, flags, va_arg(args, int)));
+		BT_EXECUTE_LOCKED(rc = trace_rt->open(pathname, flags, va_arg(args, int)), trace_off.open(pathname, flags, mode));
 	}
 	else {
-		BT_RETURN_IF_LOCKED(trace_off.open(pathname, flags));
-		BT_LOCK_AND_EXECUTE(rc = trace_rt->open(pathname, flags));
+		BT_EXECUTE_LOCKED(rc = trace_rt->open(pathname, flags), trace_off.open(pathname, flags));
 	}
 	return rc;
 }
@@ -434,8 +432,8 @@ int open(const char* pathname, int flags, ...)
 int close(int fd)
 {
 	/* synchronize allocation functions used by backtrace */
-	BT_RETURN_IF_LOCKED(trace_off.close(fd));
-	BT_LOCK_AND_EXECUTE(int rc = trace_rt->close(fd));
+	int rc;
+	BT_EXECUTE_LOCKED(rc = trace_rt->close(fd), trace_off.close(fd));
 	return rc;
 }
 

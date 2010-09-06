@@ -395,16 +395,16 @@ static trace_t trace_init = {
 void* malloc(size_t size)
 {
 	/* synchronize allocation functions used by backtrace */
-	BT_RETURN_IF_LOCKED(trace_off.malloc(size));
-	BT_LOCK_AND_EXECUTE(void* ptr = trace_rt->malloc(size));
+	void* ptr;
+	BT_EXECUTE_LOCKED(ptr = trace_rt->malloc(size), trace_off.malloc(size));
 	return ptr;
 }
 
 void *calloc(size_t nmemb, size_t size)
 {
 	/* synchronize allocation functions used by backtrace */
-	BT_RETURN_IF_LOCKED(trace_off.calloc(nmemb, size));
-	BT_LOCK_AND_EXECUTE(void* ptr = trace_rt->calloc(nmemb, size));
+	void* ptr;
+	BT_EXECUTE_LOCKED(ptr = trace_rt->calloc(nmemb, size), trace_off.calloc(nmemb, size));
 	return ptr;
 }
 
@@ -439,8 +439,7 @@ void free(void* ptr)
 		return;
 	}
 	/* synchronize allocation functions used by backtrace */
-	BT_RETURN_IF_LOCKED(trace_off.free(ptr));
-	BT_LOCK_AND_EXECUTE(trace_rt->free(ptr));
+	BT_EXECUTE_LOCKED(trace_rt->free(ptr), trace_off.free(ptr));
 }
 
 static void trace_memory_init(void) __attribute__((constructor));

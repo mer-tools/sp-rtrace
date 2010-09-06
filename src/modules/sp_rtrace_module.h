@@ -68,6 +68,15 @@ extern volatile sig_atomic_t backtrace_lock;
 	expression; \
 	backtrace_lock = 0;
 
+/**
+ * Attempt to acquire backtrace lock on current thread.
+ * Return lock_fail_expression if failed, otherwise execute
+ * lock_ok_expression and release backtrace lock.
+ */
+#define BT_EXECUTE_LOCKED(lock_ok_expression, lock_fail_expression) { \
+		BT_RETURN_IF_LOCKED(lock_fail_expression);\
+		BT_LOCK_AND_EXECUTE(lock_ok_expression);\
+}
 
 /**
  * Module initialization return codes

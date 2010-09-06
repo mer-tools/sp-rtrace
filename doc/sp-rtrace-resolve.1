@@ -42,7 +42,15 @@ Single cache mode operates similarly the full cache mode. But
 instead of caching symbols for each module, only the symbols
 of the last loaded module are cached. While this mode should
 work always, it's also the slowest (by a lot) mode.
-
+.TP
+\fI--full-path\fP (\fI-p\fP)
+Keep the path of the function call origin source file. By default
+the path is stripped, leaving only file name.
+.TP
+\fI--keep-resolved\fP (\fI-k\fP)
+Keep the resolved address data from the input file. By default
+the resolved data from the input file are discared and the
+addresses are always resolved again.
 .SH EXAMPLES
 .TP
 sp-rtrace-resolve -i 1235.rtrace.text > 1235.rtrace.resolved
