@@ -137,7 +137,7 @@ of the functions account for most of the resource usage and how the
 resource allocations are divided between the functions they call.
 """
 
-import sys, string, re
+import sys, re
 
 
 def debug(msg):
@@ -156,6 +156,7 @@ class TotalStats:
         self.zero()
     
     def zero(self):
+        "zero/initialize statistics"
         self.sizes = []
         self.median = 0
         self.count = 0
@@ -176,7 +177,7 @@ class TotalStats:
         self.sizes.sort()
         self.count = len(self.sizes)
         if not self.count:
-                return
+            return
         self.median = self.sizes[self.count/2]
         self.overhead = self.count * self.alloc_overhead
         self.size = 0
@@ -264,12 +265,13 @@ class Graph:
         self.addresses = []     # list of (address, trace id) tuples
         self.stats = TotalStats()
 
-    def show(self):
+    def show_contents(self):
         "print out Graph contents"
-        self.stats()
+        self.stats_full()
         debug(str(self.nodes))
 
-    def show_nodes(self, nodes, references, remove={}):
+    def show_nodes(self, nodes, references, remove):
+        "print out Graph nodes (in readable format)"
         for name in nodes:
             if name not in self.nodes:
                 debug("Warning: node '%s' does not exist" % name)
@@ -285,7 +287,7 @@ class Graph:
                 debug("- This node will be REMOVED")
             debug("")
 
-    def stats(self):
+    def stats_full(self):
         "print out Graph parsing statistics"
         debug("Graph statistics:")
         debug("- backtraces parsed: %d" % self.trace_id)
@@ -445,7 +447,7 @@ class Rtrace:
         # format: from <library/binary file>
         self.gdb_lib_pattern = re.compile(".* from (\S+)$")
         # format: <address> <resolve data>
-        self.rtrace_pattern = re.compile("\t0x[a-fA-F0-9]+");
+        self.rtrace_pattern = re.compile("\t0x[a-fA-F0-9]+")
         # format: block at <hex addr> with size <size>[...]
         self.alloc_pattern = re.compile("^[0-9]+\. [^(]+\(([0-9]+)\) = (0x[a-fA-F0-9]+)(.*)")
         self.leaks = open(file)
@@ -459,7 +461,7 @@ class Rtrace:
         else:
             return libname
 
-    def new_trace_strip(self, line, join_libs):
+    def trace_strip(self, line, join_libs):
         "return relevant information from GDB style backtrace line"
         match = self.gdb_fun_pattern.match(line)
         if match:
@@ -483,31 +485,11 @@ class Rtrace:
                     return lib
                 return None
         return fun
- 
-    def old_trace_strip(self, line, join_libs):
-        "return relevant information from glibc provided backtrace line"
-        # get the function name start
-        pos_fun = line.find('(')
-        if pos_fun > 0:
-            # format: /usr/lib/libglib-2.0.so.0(g_malloc0+0x2f) [0x4168cbbf]
-            lib = self.libname_strip(line[:pos_fun])
-            if lib in join_libs:
-                return lib
-            pos_addr = line.rfind('[')
-            pos_plus = line.find('+', pos_fun, pos_addr)
-            # library name: function name()
-            if pos_plus > 0:
-                return  lib + ": " + line[pos_fun+1:pos_plus] + "()"
-            else:
-                return  lib + ": " + line[pos_fun:pos_addr-1]
-        else:
-            # no function name
-            return None
 
     def parse(self, graph, options):
         "return parsed graph out of the given rtrace report"
         ignored = 0 # ignored backtrace lines
-        address = 0 # highest allocation address for current backtrace
+        address = 0 # highest allocation address/ID for current backtrace
         trace = []  # current backtrace
         stack = 1   # current backtrace line number
         count = 0   # number of allocations for current backtrace
@@ -522,9 +504,9 @@ class Rtrace:
             # new backtrace?
             match = self.alloc_pattern.match(line)
             if match:
-                # first alloc in backtrace?
+                # first alloc in backtrace (previous stack not cleared)?
                 if stack > 0:
-                    # add previous backtrace to Graph?
+                    # add previous backtrace to Graph (had allocs)?
                     if count:
                         if inc_funs:
                             if include:
@@ -555,7 +537,7 @@ class Rtrace:
                 if line[0] != '\t' or not self.rtrace_pattern.match(line):
                     # not a backtrace record
                     continue
-                line = self.new_trace_strip(line, options.lib)
+                line = self.trace_strip(line, options.lib)
                 # ignore lines without function names
                 if not line:
                     ignored += 1
@@ -656,7 +638,8 @@ same functions, you may notice that the amount of allocations suddenly
 increases when you go down from the main().
         """ % (count, size, overhead, total_size, alloc_overhead, median)
 
-        
+
+    # BUG/FIXME: this recurses infinitely on Qt code!
     def recurse_tree(self, root_keys, trace, root_name, root_id):
         "outputs the given allocation tree as hyperlinked HTML"
         # get the subtree information
@@ -758,10 +741,11 @@ increases when you go down from the main().
 
 class Traverse:
     def __init__(self):
-        pass
+        self.graph = None # override in subclasses to do anything
     
     def root_keys(self):
-        return self.my_keys
+        "override in subclasses to specify what nodes to traverse"
+        return None
     
     def get_node_id(self, key):
         return self.graph.nodes[key].nid
@@ -791,7 +775,9 @@ class TraverseUp(Traverse):
         self.graph = graph
         self.funlist_header = "Called from the following functions"
         self.root_name = "BOTTOM-ROOT"
-        self.my_keys = graph.get_bottom_nodes()
+
+    def root_keys(self):
+        return self.graph.get_bottom_nodes()
     
     def prev_keys(self, key):
         if key == self.root_name:
@@ -810,7 +796,9 @@ class TraverseDown(Traverse):
         self.graph = graph
         self.funlist_header = "Calls the following functions"
         self.root_name = "TOP-ROOT"
-        self.my_keys = graph.get_top_nodes()
+
+    def root_keys(self):
+        return self.graph.get_top_nodes()
     
     def prev_keys(self, key):
         if key == self.root_name:
@@ -917,6 +905,8 @@ class GraphvizReport:
         self.limit = options.limit
         self.counter = 0
         self.cluster_nodes = options.cluster
+        # these need to be overridden in subclasses
+        self.heading = ""
     
     def header(self):
         "output GraphViz header with help, layout and style options"
@@ -952,12 +942,23 @@ label="%s";
     def footer(self):
         "output GraphViz footer"
         print "}"
+    
+    def set_direction_tb(self):
+        self.next = self.next_down
+        self.prev = self.next_up
+    def set_direction_bt(self):
+        self.next = self.next_up
+        self.prev = self.next_down
 
     def next_up(self, node):
         return node.parents
     def next_down(self, node):
         return node.children
-    
+
+    def node_ok(self, node):
+        "override in subclass to limit which nodes are output"
+        return True
+
     def output(self):
         "output GraphViz report"
         self.header()
@@ -1014,6 +1015,7 @@ label="%s";
         self.output_child_nodes(node)
 
     def output_child_nodes(self, node):
+        # TODO: add node labels for how much given route counts for
         size = 0
         funs = 0
         count = 0
@@ -1057,8 +1059,8 @@ class TopmostGraphReport(GraphvizReport):
         # called by superclass output_child_nodes()
         for tid in self.traces:
             if tid in node.traces:
-                return 1
-        return 0
+                return True
+        return False
         
 class AllocGraphReport(GraphvizReport):
     "report showing a graph including the largest backtraces"
@@ -1073,8 +1075,8 @@ class AllocGraphReport(GraphvizReport):
     def node_ok(self, node):
         # called by superclass output_child_nodes()
         if node.percentage >= self.limit:
-            return 1
-        return 0
+            return True
+        return False
 
 # --------------------- Options class -----------------
 
@@ -1196,7 +1198,7 @@ class Options:
             else:
                 self.help(name, "unknown option", arg)
         self.validate_input(name)
-        debug(string.join(argv))
+        debug(" ".join(argv))
         if self.verbose:
             self.show_options()
     
@@ -1220,10 +1222,10 @@ class Options:
         debug("references = %s (whether to show debug node references)" % self.bool_str(self.references))
         debug("verbose = %s" % self.bool_str(self.verbose))
 
-    def show_list(self, list, title):
-        if list:
+    def show_list(self, items, title):
+        if items:
             debug("%s:" % title)
-            for name in list:
+            for name in items:
                 debug("- %s" % name)
     
     def validate_input(self, app):
@@ -1379,7 +1381,7 @@ debug("Finalizing backtrace graph and stats...")
 stats = graph.complete()
 
 # debug output for selected nodes
-graph.show_nodes(options.node, options.references)
+graph.show_nodes(options.node, options.references, {})
 
 # if requested, remove unwanted nodes
 graph.trim(options)
@@ -1393,11 +1395,9 @@ elif options.report in ["topmost", "graph"]:
     else:
         report = TopmostGraphReport(graph, options)
     if options.direction == "tb":
-        report.next = report.next_down
-        report.prev = report.next_up
+        report.set_direction_tb()
     else:
-        report.next = report.next_up
-        report.prev = report.next_down
+        report.set_direction_bt()
 elif options.report == "html":
     if options.direction == "tb":
         traverse = TraverseDown(graph)
