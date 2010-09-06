@@ -134,6 +134,22 @@ static void display_usage()
 			"  -S <signal>     - tracing toggle signal\n"
 			"  -h              - this help page.\n"
 			"  -l              - lists available tracing modules.\n"
+			"\n"
+			"Usage examples:\n"
+			"  Start sample process with tracing enabled at start. The (binary) output data\n"
+			"  will be stored in current directory:\n"
+			"    sp-rtrace -s -p memory -x sample\n\n"
+			"  Start sample process with tracing enabled at start. Invoke sp-rtrace-postproc\n"
+			"  with options -l -c (filter leaks and compress backtraces - see sp-rtrace-postproc\n"
+			"  manual) and store the resulting file (text) into current directory:\n"
+			"    sp-rtrace -s -p memory -P '-l -c' -o $(pwd) -x sample\n\n"
+			"  Start sample process with tracing enabled at start. Invoke sp-rtrace-postproc\n"
+			"  with options -r (resolve addresses) and write results to the standard output:\n"
+			"    sp-rtrace -s -p memory -P '-r' -x sample\n\n"
+			"  Toggle tracing for an already running 'sample' process:\n"
+			"    sp-rtrace -t $(pidof sample)\n\n"
+			"  Lists all available tracing modules:\n"
+			"    sp-rtrace -l\n"
 			);
 }
 

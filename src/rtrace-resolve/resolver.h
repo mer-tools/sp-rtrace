@@ -89,9 +89,10 @@ typedef struct {
  *
  * @param[in] rs        the resolver cache.
  * @param[in] address   the address to resolve.
+ * @param[in] name      the old name. Empty string for previously unresolved addresses.
  * @return              the resolved address name.
  */
-const char* rs_resolve_address(rs_cache_t* rs, pointer_t address);
+const char* rs_resolve_address(rs_cache_t* rs, pointer_t address, const char* name);
 
 /**
  * Adds new memory mapping record to the resolver cache.

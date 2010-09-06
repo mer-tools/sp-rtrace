@@ -59,6 +59,7 @@
 #include "common/rtrace_data.h"
 #include "namecache.h"
 #include "resolver.h"
+#include "sp_rtrace_resolve.h"
 
 /**
  * Operation mode;
@@ -71,20 +72,13 @@ enum {
 	MODE_DEFAULT = MODE_FULL_CACHE,
 };
 
-/**
- * post-processor options
- */
-typedef struct resolve_options_t {
-	char* input_file;
-	char* output_file;
-	int mode;
-} resolve_options_t;
-
 
 resolve_options_t resolve_options = {
 	.input_file = NULL,
 	.output_file = NULL,
 	.mode = MODE_DEFAULT,
+	.full_path = false,
+	.keep_resolved = false,
 };
 
 
@@ -109,8 +103,13 @@ static void display_usage()
 			"where <options> are:\n"
 			"  -i <path>    - the input file path. Standard input used by default.\n"
 			"  -o <path>    - the output file path. Standard output is used by default.\n"
-			"  -m  <mode>   - The operation mode, where <mode> can be multi-pass.\n"
+			"  -m <mode>    - The operation mode, where <mode> can be multi-pass.\n"
 			"                 or single-cache.\n"
+			"  -p           - keep the path of the source file (by default the path\n"
+			"                 is stripped leaving only the file name.\n"
+			"  -k           - keep resolved names (by default the resolved names\n"
+			"                 from input stream are ignored and the addresses are\n"
+			"                 always resolved again).\n"
 			"  -h           - this help page.\n"
 	);
 }
@@ -216,11 +215,11 @@ static void parse_index_record(char* line, rs_cache_t* rs)
 static const char* parse_backtrace_record(char* line, rs_cache_t* rs)
 {
 	pointer_t addr;
-	char delim;
-	if (sscanf(line, "%c0x%lx", &delim, &addr) == 2 && delim == '\t') {
-		return rs_resolve_address(rs, addr);
-	}
-	return NULL;
+	char resolved_name[PATH_MAX] = "", delim;
+	int n = sscanf(line, "%c0x%lx (%[^\n]", &delim, &addr, resolved_name);
+	if (n < 2 || delim != '\t') return NULL;
+	if (n == 3) resolved_name[strlen(resolved_name) - 1] = '\0';
+	return rs_resolve_address(rs, addr, resolved_name);
 }
 
 /**
@@ -237,12 +236,14 @@ static void mmap_resolve_address_file(rs_mmap_t* mmap, rs_cache_t* rs)
 	fseek(mmap->fin, 0, SEEK_SET);
 	while (fgets(line, PATH_MAX, mmap->fin)) {
 		pointer_t address;
-		if (sscanf(line, "\t0x%lx", &address) == 1) {
-			fputs(rs_resolve_address(rs, address), mmap->fout);
+		char resolved_name[PATH_MAX] = "";
+		int n = sscanf(line, "\t0x%lx (%[^\n]",  &address, resolved_name);
+		if (n < 1) {
+				fprintf(stderr, "WARNING: unexpected string in module address file: %s", line);
 		}
 		else {
-			fprintf(stderr, "WARNING: unexpected string in module address file: %s",
-					line);
+			if (n == 2) resolved_name[strlen(resolved_name) - 1] = '\0';
+			fputs(rs_resolve_address(rs, address, resolved_name), mmap->fout);
 		}
 	}
 	fclose(mmap->fin);
@@ -404,12 +405,14 @@ int main(int argc, char* argv[])
 			 {"output-file", 1, 0, 'o'},
 			 {"mode", 1, 0, 'm'},
 			 {"help", 0, 0, 'h'},
+			 {"full-path", 0, 0, 'p'},
+			 {"keep-resolved", 0, 0, 'k'},
 			 {0, 0, 0, 0},
 	};
 	/* parse command line options */
 	int opt;
 
-	while ( (opt = getopt_long(argc, argv, "i:o:hm:", long_options, NULL)) != -1) {
+	while ( (opt = getopt_long(argc, argv, "i:o:hm:pk", long_options, NULL)) != -1) {
 		switch(opt) {
 		case 'h':
 			display_usage();
@@ -430,6 +433,14 @@ int main(int argc, char* argv[])
 				fprintf(stderr, "ERROR: Unknown opeartion mode: %s\n", optarg);
 				exit(-1);
 			}
+			break;
+
+		case 'p':
+			resolve_options.full_path = true;
+			break;
+
+		case 'k':
+			resolve_options.keep_resolved = true;
 			break;
 
 		default:

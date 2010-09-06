@@ -1,10 +1,20 @@
-version=1.0, arch=x86_64-linux-gnu, time=2010.9.4 15:03:33, process=../bin/alloc_test, pid=9399, 
+version=1.0, arch=i486-linux-gnu, time=2010.9.6 13:08:43, process=../bin/alloc_test, pid=8482, 
 <1> : memory (memory allocation in bytes)
+: /lib/tls/i686/cmov/libc-2.11.1.so => 0x110000-0x263000
+: /lib/tls/i686/cmov/libdl-2.11.1.so => 0x26a000-0x26c000
+: /usr/lib/sp-rtrace/libsp-rtrace-memory.so.1.0.0 => 0x355000-0x357000
+: /lib/ld-2.11.1.so => 0x51e000-0x539000
+: /lib/tls/i686/cmov/libm-2.11.1.so => 0x56f000-0x593000
+: /usr/lib/sp-rtrace/libsp-rtrace-main.so.1.0.0 => 0x708000-0x70d000
+: /lib/tls/i686/cmov/libpthread-2.11.1.so => 0x730000-0x745000
+: /lib/libgcc_s.so.1 => 0xb60000-0xb7d000
+: /lib/tls/i686/cmov/librt-2.11.1.so => 0xdf9000-0xe00000
+: /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test => 0x8048000-0x8049000
 # heap status information:
-#   heap bottom 0xbda000
-#   heap top 0xbfb000
-#   lowest block 0xbda010
-#   highest block 0xbe19e0
+#   heap bottom 0x9a5e000
+#   heap top 0x9a7f000
+#   lowest block 0x9a5e008
+#   highest block 0x9a65600
 #   non-mapped space allocated from system 135168
 #   number of free chunks 1
 #   number of fastbin blocks 0
@@ -12,618 +22,618 @@ version=1.0, arch=x86_64-linux-gnu, time=2010.9.4 15:03:33, process=../bin/alloc
 #   space in mapped regions 0
 #   maximum total allocated space 0
 #   space available in freed fastbin blocks 0
-#   total allocated space 31184
-#   total free space 103984
-#   top-most, releasable (via malloc_trim) space 103984
+#   total allocated space 30200
+#   total free space 104968
+#   top-most, releasable (via malloc_trim) space 104968
 # tracing module: [0] main (1.0)
 # tracing module: [1] memory (1.0)
-1. [01:07:12.771] malloc(1003) = 0xbda010
-	0x4006f1 <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-2. [01:07:12.771] malloc(1002) = 0xbdaa60
-	0x4006b6 <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-3. [01:07:12.771] malloc(1001) = 0xbdae60
-	0x40067b <unknown>
-	0x4006cf <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-4. [01:07:12.771] malloc(1000) = 0xbdb260
-	0x400652 <unknown>
-	0x400694 <unknown>
-	0x4006cf <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-5. [01:07:12.771] malloc(2000) = 0xbdb650
-	0x40066b <unknown>
-	0x400694 <unknown>
-	0x4006cf <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-6. [01:07:12.771] free(0xbdb650)
-	0x40069c <unknown>
-	0x4006cf <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-7. [01:07:12.771] malloc(2001) = 0xbdb650
-	0x4006a6 <unknown>
-	0x4006cf <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-8. [01:07:12.771] free(0xbdb650)
-	0x4006d7 <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-9. [01:07:12.771] malloc(2002) = 0xbdb650
-	0x4006e1 <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-10. [01:07:12.771] free(0xbdb650)
-	0x400712 <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-11. [01:07:12.771] malloc(2003) = 0xbdb650
-	0x40071c <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-12. [01:07:12.771] free(0xbdb650)
-	0x400741 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-13. [01:07:12.771] malloc(1003) = 0xbdb650
-	0x4006f1 <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-14. [01:07:12.771] malloc(1002) = 0xbdba50
-	0x4006b6 <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-15. [01:07:12.771] malloc(1001) = 0xbdbe50
-	0x40067b <unknown>
-	0x4006cf <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-16. [01:07:12.771] malloc(1000) = 0xbdc250
-	0x400652 <unknown>
-	0x400694 <unknown>
-	0x4006cf <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-17. [01:07:12.771] malloc(2000) = 0xbdc640
-	0x40066b <unknown>
-	0x400694 <unknown>
-	0x4006cf <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-18. [01:07:12.771] free(0xbdc640)
-	0x40069c <unknown>
-	0x4006cf <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-19. [01:07:12.771] malloc(2001) = 0xbdc640
-	0x4006a6 <unknown>
-	0x4006cf <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-20. [01:07:12.771] free(0xbdc640)
-	0x4006d7 <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-21. [01:07:12.771] malloc(2002) = 0xbdc640
-	0x4006e1 <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-22. [01:07:12.771] free(0xbdc640)
-	0x400712 <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-23. [01:07:12.771] malloc(2003) = 0xbdc640
-	0x40071c <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-24. [01:07:12.771] free(0xbdc640)
-	0x400741 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-25. [01:07:12.771] malloc(1003) = 0xbdc640
-	0x4006f1 <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-26. [01:07:12.771] malloc(1002) = 0xbdca40
-	0x4006b6 <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-27. [01:07:12.771] malloc(1001) = 0xbdce40
-	0x40067b <unknown>
-	0x4006cf <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-28. [01:07:12.771] malloc(1000) = 0xbdd240
-	0x400652 <unknown>
-	0x400694 <unknown>
-	0x4006cf <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-29. [01:07:12.771] malloc(2000) = 0xbdd630
-	0x40066b <unknown>
-	0x400694 <unknown>
-	0x4006cf <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-30. [01:07:12.771] free(0xbdd630)
-	0x40069c <unknown>
-	0x4006cf <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-31. [01:07:12.771] malloc(2001) = 0xbdd630
-	0x4006a6 <unknown>
-	0x4006cf <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-32. [01:07:12.771] free(0xbdd630)
-	0x4006d7 <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-33. [01:07:12.771] malloc(2002) = 0xbdd630
-	0x4006e1 <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-34. [01:07:12.771] free(0xbdd630)
-	0x400712 <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-35. [01:07:12.771] malloc(2003) = 0xbdd630
-	0x40071c <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-36. [01:07:12.771] free(0xbdd630)
-	0x400741 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-37. [01:07:12.771] malloc(1003) = 0xbdd630
-	0x4006f1 <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-38. [01:07:12.771] malloc(1002) = 0xbdda30
-	0x4006b6 <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-39. [01:07:12.771] malloc(1001) = 0xbdde30
-	0x40067b <unknown>
-	0x4006cf <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-40. [01:07:12.771] malloc(1000) = 0xbde230
-	0x400652 <unknown>
-	0x400694 <unknown>
-	0x4006cf <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-41. [01:07:12.771] malloc(2000) = 0xbde620
-	0x40066b <unknown>
-	0x400694 <unknown>
-	0x4006cf <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-42. [01:07:12.771] free(0xbde620)
-	0x40069c <unknown>
-	0x4006cf <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-43. [01:07:12.771] malloc(2001) = 0xbde620
-	0x4006a6 <unknown>
-	0x4006cf <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-44. [01:07:12.771] free(0xbde620)
-	0x4006d7 <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-45. [01:07:12.771] malloc(2002) = 0xbde620
-	0x4006e1 <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-46. [01:07:12.771] free(0xbde620)
-	0x400712 <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-47. [01:07:12.771] malloc(2003) = 0xbde620
-	0x40071c <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-48. [01:07:12.771] free(0xbde620)
-	0x400741 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-49. [01:07:12.771] malloc(1003) = 0xbde620
-	0x4006f1 <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-50. [01:07:12.771] malloc(1002) = 0xbdea20
-	0x4006b6 <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-51. [01:07:12.771] malloc(1001) = 0xbdee20
-	0x40067b <unknown>
-	0x4006cf <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-52. [01:07:12.771] malloc(1000) = 0xbdf220
-	0x400652 <unknown>
-	0x400694 <unknown>
-	0x4006cf <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-53. [01:07:12.771] malloc(2000) = 0xbdf610
-	0x40066b <unknown>
-	0x400694 <unknown>
-	0x4006cf <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-54. [01:07:12.771] free(0xbdf610)
-	0x40069c <unknown>
-	0x4006cf <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-55. [01:07:12.771] malloc(2001) = 0xbdf610
-	0x4006a6 <unknown>
-	0x4006cf <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-56. [01:07:12.771] free(0xbdf610)
-	0x4006d7 <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-57. [01:07:12.771] malloc(2002) = 0xbdf610
-	0x4006e1 <unknown>
-	0x40070a <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-58. [01:07:12.771] free(0xbdf610)
-	0x400712 <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-59. [01:07:12.771] malloc(2003) = 0xbdf610
-	0x40071c <unknown>
-	0x400739 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-60. [01:07:12.771] free(0xbdf610)
-	0x400741 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-61. [01:07:12.771] malloc(1002) = 0xbdf610
-	0x4006b6 <unknown>
-	0x40075e <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-62. [01:07:12.771] malloc(1001) = 0xbdfa10
-	0x40067b <unknown>
-	0x4006cf <unknown>
-	0x40075e <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-63. [01:07:12.771] malloc(1000) = 0xbdfe10
-	0x400652 <unknown>
-	0x400694 <unknown>
-	0x4006cf <unknown>
-	0x40075e <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-64. [01:07:12.771] malloc(2000) = 0xbe0200
-	0x40066b <unknown>
-	0x400694 <unknown>
-	0x4006cf <unknown>
-	0x40075e <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-65. [01:07:12.771] free(0xbe0200)
-	0x40069c <unknown>
-	0x4006cf <unknown>
-	0x40075e <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-66. [01:07:12.771] malloc(2001) = 0xbe0200
-	0x4006a6 <unknown>
-	0x4006cf <unknown>
-	0x40075e <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-67. [01:07:12.771] free(0xbe0200)
-	0x4006d7 <unknown>
-	0x40075e <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-68. [01:07:12.771] malloc(2002) = 0xbe0200
-	0x4006e1 <unknown>
-	0x40075e <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-69. [01:07:12.771] free(0xbe0200)
-	0x400766 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-70. [01:07:12.771] malloc(1002) = 0xbe0200
-	0x4006b6 <unknown>
-	0x40075e <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-71. [01:07:12.771] malloc(1001) = 0xbe0600
-	0x40067b <unknown>
-	0x4006cf <unknown>
-	0x40075e <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-72. [01:07:12.771] malloc(1000) = 0xbe0a00
-	0x400652 <unknown>
-	0x400694 <unknown>
-	0x4006cf <unknown>
-	0x40075e <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-73. [01:07:12.771] malloc(2000) = 0xbe0df0
-	0x40066b <unknown>
-	0x400694 <unknown>
-	0x4006cf <unknown>
-	0x40075e <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-74. [01:07:12.771] free(0xbe0df0)
-	0x40069c <unknown>
-	0x4006cf <unknown>
-	0x40075e <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-75. [01:07:12.771] malloc(2001) = 0xbe0df0
-	0x4006a6 <unknown>
-	0x4006cf <unknown>
-	0x40075e <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-76. [01:07:12.771] free(0xbe0df0)
-	0x4006d7 <unknown>
-	0x40075e <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-77. [01:07:12.771] malloc(2002) = 0xbe0df0
-	0x4006e1 <unknown>
-	0x40075e <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-78. [01:07:12.771] free(0xbe0df0)
-	0x400766 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-79. [01:07:12.771] malloc(1002) = 0xbe0df0
-	0x4006b6 <unknown>
-	0x40075e <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-80. [01:07:12.771] malloc(1001) = 0xbe11f0
-	0x40067b <unknown>
-	0x4006cf <unknown>
-	0x40075e <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-81. [01:07:12.771] malloc(1000) = 0xbe15f0
-	0x400652 <unknown>
-	0x400694 <unknown>
-	0x4006cf <unknown>
-	0x40075e <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-82. [01:07:12.771] malloc(2000) = 0xbe19e0
-	0x40066b <unknown>
-	0x400694 <unknown>
-	0x4006cf <unknown>
-	0x40075e <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-83. [01:07:12.771] free(0xbe19e0)
-	0x40069c <unknown>
-	0x4006cf <unknown>
-	0x40075e <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-84. [01:07:12.771] malloc(2001) = 0xbe19e0
-	0x4006a6 <unknown>
-	0x4006cf <unknown>
-	0x40075e <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-85. [01:07:12.771] free(0xbe19e0)
-	0x4006d7 <unknown>
-	0x40075e <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-86. [01:07:12.771] malloc(2002) = 0xbe19e0
-	0x4006e1 <unknown>
-	0x40075e <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
-87. [01:07:12.771] free(0xbe19e0)
-	0x400766 <unknown>
-	0x400780 <unknown>
-	0x7f6124cc7c4d <unknown>
-	0x400589 <unknown>
+1. [11:49:17.431] malloc(1003) = 0x9a5e008
+	0x8048570 (in three at alloc_test.c:62)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+2. [11:49:17.431] malloc(1002) = 0x9a5e7c0
+	0x8048533 (in two at alloc_test.c:53)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+3. [11:49:17.431] malloc(1001) = 0x9a5ebb0
+	0x80484f6 (in one at alloc_test.c:44)
+	0x8048548 (in two at alloc_test.c:56)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+4. [11:49:17.431] malloc(1000) = 0x9a5efa0
+	0x80484c6 (in zero at alloc_test.c:36)
+	0x804850b (in one at alloc_test.c:47)
+	0x8048548 (in two at alloc_test.c:56)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+5. [11:49:17.431] malloc(2000) = 0x9a5f390
+	0x80484e2 (in zero at alloc_test.c:40)
+	0x804850b (in one at alloc_test.c:47)
+	0x8048548 (in two at alloc_test.c:56)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+6. [11:49:17.431] free(0x9a5f390)
+	0x8048513 (in one at alloc_test.c:48)
+	0x8048548 (in two at alloc_test.c:56)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+7. [11:49:17.431] malloc(2001) = 0x9a5f390
+	0x804851f (in one at alloc_test.c:49)
+	0x8048548 (in two at alloc_test.c:56)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+8. [11:49:17.431] free(0x9a5f390)
+	0x8048550 (in two at alloc_test.c:57)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+9. [11:49:17.431] malloc(2002) = 0x9a5f390
+	0x804855c (in two at alloc_test.c:58)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+10. [11:49:17.431] free(0x9a5f390)
+	0x804858d (in three at alloc_test.c:66)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+11. [11:49:17.431] malloc(2003) = 0x9a5f390
+	0x8048599 (in three at alloc_test.c:67)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+12. [11:49:17.431] free(0x9a5f390)
+	0x80485b7 (in start at alloc_test.c:72)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+13. [11:49:17.431] malloc(1003) = 0x9a5f390
+	0x8048570 (in three at alloc_test.c:62)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+14. [11:49:17.431] malloc(1002) = 0x9a5f780
+	0x8048533 (in two at alloc_test.c:53)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+15. [11:49:17.431] malloc(1001) = 0x9a5fb70
+	0x80484f6 (in one at alloc_test.c:44)
+	0x8048548 (in two at alloc_test.c:56)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+16. [11:49:17.431] malloc(1000) = 0x9a5ff60
+	0x80484c6 (in zero at alloc_test.c:36)
+	0x804850b (in one at alloc_test.c:47)
+	0x8048548 (in two at alloc_test.c:56)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+17. [11:49:17.431] malloc(2000) = 0x9a60350
+	0x80484e2 (in zero at alloc_test.c:40)
+	0x804850b (in one at alloc_test.c:47)
+	0x8048548 (in two at alloc_test.c:56)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+18. [11:49:17.431] free(0x9a60350)
+	0x8048513 (in one at alloc_test.c:48)
+	0x8048548 (in two at alloc_test.c:56)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+19. [11:49:17.431] malloc(2001) = 0x9a60350
+	0x804851f (in one at alloc_test.c:49)
+	0x8048548 (in two at alloc_test.c:56)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+20. [11:49:17.431] free(0x9a60350)
+	0x8048550 (in two at alloc_test.c:57)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+21. [11:49:17.431] malloc(2002) = 0x9a60350
+	0x804855c (in two at alloc_test.c:58)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+22. [11:49:17.431] free(0x9a60350)
+	0x804858d (in three at alloc_test.c:66)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+23. [11:49:17.431] malloc(2003) = 0x9a60350
+	0x8048599 (in three at alloc_test.c:67)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+24. [11:49:17.431] free(0x9a60350)
+	0x80485b7 (in start at alloc_test.c:72)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+25. [11:49:17.431] malloc(1003) = 0x9a60350
+	0x8048570 (in three at alloc_test.c:62)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+26. [11:49:17.431] malloc(1002) = 0x9a60740
+	0x8048533 (in two at alloc_test.c:53)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+27. [11:49:17.431] malloc(1001) = 0x9a60b30
+	0x80484f6 (in one at alloc_test.c:44)
+	0x8048548 (in two at alloc_test.c:56)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+28. [11:49:17.431] malloc(1000) = 0x9a60f20
+	0x80484c6 (in zero at alloc_test.c:36)
+	0x804850b (in one at alloc_test.c:47)
+	0x8048548 (in two at alloc_test.c:56)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+29. [11:49:17.431] malloc(2000) = 0x9a61310
+	0x80484e2 (in zero at alloc_test.c:40)
+	0x804850b (in one at alloc_test.c:47)
+	0x8048548 (in two at alloc_test.c:56)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+30. [11:49:17.431] free(0x9a61310)
+	0x8048513 (in one at alloc_test.c:48)
+	0x8048548 (in two at alloc_test.c:56)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+31. [11:49:17.431] malloc(2001) = 0x9a61310
+	0x804851f (in one at alloc_test.c:49)
+	0x8048548 (in two at alloc_test.c:56)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+32. [11:49:17.431] free(0x9a61310)
+	0x8048550 (in two at alloc_test.c:57)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+33. [11:49:17.431] malloc(2002) = 0x9a61310
+	0x804855c (in two at alloc_test.c:58)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+34. [11:49:17.431] free(0x9a61310)
+	0x804858d (in three at alloc_test.c:66)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+35. [11:49:17.431] malloc(2003) = 0x9a61310
+	0x8048599 (in three at alloc_test.c:67)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+36. [11:49:17.431] free(0x9a61310)
+	0x80485b7 (in start at alloc_test.c:72)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+37. [11:49:17.431] malloc(1003) = 0x9a61310
+	0x8048570 (in three at alloc_test.c:62)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+38. [11:49:17.431] malloc(1002) = 0x9a61700
+	0x8048533 (in two at alloc_test.c:53)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+39. [11:49:17.431] malloc(1001) = 0x9a61af0
+	0x80484f6 (in one at alloc_test.c:44)
+	0x8048548 (in two at alloc_test.c:56)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+40. [11:49:17.432] malloc(1000) = 0x9a61ee0
+	0x80484c6 (in zero at alloc_test.c:36)
+	0x804850b (in one at alloc_test.c:47)
+	0x8048548 (in two at alloc_test.c:56)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+41. [11:49:17.432] malloc(2000) = 0x9a622d0
+	0x80484e2 (in zero at alloc_test.c:40)
+	0x804850b (in one at alloc_test.c:47)
+	0x8048548 (in two at alloc_test.c:56)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+42. [11:49:17.432] free(0x9a622d0)
+	0x8048513 (in one at alloc_test.c:48)
+	0x8048548 (in two at alloc_test.c:56)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+43. [11:49:17.432] malloc(2001) = 0x9a622d0
+	0x804851f (in one at alloc_test.c:49)
+	0x8048548 (in two at alloc_test.c:56)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+44. [11:49:17.432] free(0x9a622d0)
+	0x8048550 (in two at alloc_test.c:57)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+45. [11:49:17.432] malloc(2002) = 0x9a622d0
+	0x804855c (in two at alloc_test.c:58)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+46. [11:49:17.432] free(0x9a622d0)
+	0x804858d (in three at alloc_test.c:66)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+47. [11:49:17.432] malloc(2003) = 0x9a622d0
+	0x8048599 (in three at alloc_test.c:67)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+48. [11:49:17.432] free(0x9a622d0)
+	0x80485b7 (in start at alloc_test.c:72)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+49. [11:49:17.432] malloc(1003) = 0x9a622d0
+	0x8048570 (in three at alloc_test.c:62)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+50. [11:49:17.432] malloc(1002) = 0x9a626c0
+	0x8048533 (in two at alloc_test.c:53)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+51. [11:49:17.432] malloc(1001) = 0x9a62ab0
+	0x80484f6 (in one at alloc_test.c:44)
+	0x8048548 (in two at alloc_test.c:56)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+52. [11:49:17.432] malloc(1000) = 0x9a62ea0
+	0x80484c6 (in zero at alloc_test.c:36)
+	0x804850b (in one at alloc_test.c:47)
+	0x8048548 (in two at alloc_test.c:56)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+53. [11:49:17.432] malloc(2000) = 0x9a63290
+	0x80484e2 (in zero at alloc_test.c:40)
+	0x804850b (in one at alloc_test.c:47)
+	0x8048548 (in two at alloc_test.c:56)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+54. [11:49:17.432] free(0x9a63290)
+	0x8048513 (in one at alloc_test.c:48)
+	0x8048548 (in two at alloc_test.c:56)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+55. [11:49:17.432] malloc(2001) = 0x9a63290
+	0x804851f (in one at alloc_test.c:49)
+	0x8048548 (in two at alloc_test.c:56)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+56. [11:49:17.432] free(0x9a63290)
+	0x8048550 (in two at alloc_test.c:57)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+57. [11:49:17.432] malloc(2002) = 0x9a63290
+	0x804855c (in two at alloc_test.c:58)
+	0x8048585 (in three at alloc_test.c:65)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+58. [11:49:17.432] free(0x9a63290)
+	0x804858d (in three at alloc_test.c:66)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+59. [11:49:17.432] malloc(2003) = 0x9a63290
+	0x8048599 (in three at alloc_test.c:67)
+	0x80485af (in start at alloc_test.c:73)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+60. [11:49:17.432] free(0x9a63290)
+	0x80485b7 (in start at alloc_test.c:72)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+61. [11:49:17.432] malloc(1002) = 0x9a63290
+	0x8048533 (in two at alloc_test.c:53)
+	0x80485cf (in start at alloc_test.c:76)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+62. [11:49:17.432] malloc(1001) = 0x9a63680
+	0x80484f6 (in one at alloc_test.c:44)
+	0x8048548 (in two at alloc_test.c:56)
+	0x80485cf (in start at alloc_test.c:76)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+63. [11:49:17.432] malloc(1000) = 0x9a63a70
+	0x80484c6 (in zero at alloc_test.c:36)
+	0x804850b (in one at alloc_test.c:47)
+	0x8048548 (in two at alloc_test.c:56)
+	0x80485cf (in start at alloc_test.c:76)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+64. [11:49:17.432] malloc(2000) = 0x9a63e60
+	0x80484e2 (in zero at alloc_test.c:40)
+	0x804850b (in one at alloc_test.c:47)
+	0x8048548 (in two at alloc_test.c:56)
+	0x80485cf (in start at alloc_test.c:76)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+65. [11:49:17.432] free(0x9a63e60)
+	0x8048513 (in one at alloc_test.c:48)
+	0x8048548 (in two at alloc_test.c:56)
+	0x80485cf (in start at alloc_test.c:76)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+66. [11:49:17.432] malloc(2001) = 0x9a63e60
+	0x804851f (in one at alloc_test.c:49)
+	0x8048548 (in two at alloc_test.c:56)
+	0x80485cf (in start at alloc_test.c:76)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+67. [11:49:17.432] free(0x9a63e60)
+	0x8048550 (in two at alloc_test.c:57)
+	0x80485cf (in start at alloc_test.c:76)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+68. [11:49:17.432] malloc(2002) = 0x9a63e60
+	0x804855c (in two at alloc_test.c:58)
+	0x80485cf (in start at alloc_test.c:76)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+69. [11:49:17.432] free(0x9a63e60)
+	0x80485d7 (in start at alloc_test.c:75)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+70. [11:49:17.432] malloc(1002) = 0x9a63e60
+	0x8048533 (in two at alloc_test.c:53)
+	0x80485cf (in start at alloc_test.c:76)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+71. [11:49:17.432] malloc(1001) = 0x9a64250
+	0x80484f6 (in one at alloc_test.c:44)
+	0x8048548 (in two at alloc_test.c:56)
+	0x80485cf (in start at alloc_test.c:76)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+72. [11:49:17.432] malloc(1000) = 0x9a64640
+	0x80484c6 (in zero at alloc_test.c:36)
+	0x804850b (in one at alloc_test.c:47)
+	0x8048548 (in two at alloc_test.c:56)
+	0x80485cf (in start at alloc_test.c:76)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+73. [11:49:17.432] malloc(2000) = 0x9a64a30
+	0x80484e2 (in zero at alloc_test.c:40)
+	0x804850b (in one at alloc_test.c:47)
+	0x8048548 (in two at alloc_test.c:56)
+	0x80485cf (in start at alloc_test.c:76)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+74. [11:49:17.432] free(0x9a64a30)
+	0x8048513 (in one at alloc_test.c:48)
+	0x8048548 (in two at alloc_test.c:56)
+	0x80485cf (in start at alloc_test.c:76)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+75. [11:49:17.432] malloc(2001) = 0x9a64a30
+	0x804851f (in one at alloc_test.c:49)
+	0x8048548 (in two at alloc_test.c:56)
+	0x80485cf (in start at alloc_test.c:76)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+76. [11:49:17.432] free(0x9a64a30)
+	0x8048550 (in two at alloc_test.c:57)
+	0x80485cf (in start at alloc_test.c:76)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+77. [11:49:17.432] malloc(2002) = 0x9a64a30
+	0x804855c (in two at alloc_test.c:58)
+	0x80485cf (in start at alloc_test.c:76)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+78. [11:49:17.432] free(0x9a64a30)
+	0x80485d7 (in start at alloc_test.c:75)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+79. [11:49:17.432] malloc(1002) = 0x9a64a30
+	0x8048533 (in two at alloc_test.c:53)
+	0x80485cf (in start at alloc_test.c:76)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+80. [11:49:17.432] malloc(1001) = 0x9a64e20
+	0x80484f6 (in one at alloc_test.c:44)
+	0x8048548 (in two at alloc_test.c:56)
+	0x80485cf (in start at alloc_test.c:76)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+81. [11:49:17.432] malloc(1000) = 0x9a65210
+	0x80484c6 (in zero at alloc_test.c:36)
+	0x804850b (in one at alloc_test.c:47)
+	0x8048548 (in two at alloc_test.c:56)
+	0x80485cf (in start at alloc_test.c:76)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+82. [11:49:17.432] malloc(2000) = 0x9a65600
+	0x80484e2 (in zero at alloc_test.c:40)
+	0x804850b (in one at alloc_test.c:47)
+	0x8048548 (in two at alloc_test.c:56)
+	0x80485cf (in start at alloc_test.c:76)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+83. [11:49:17.432] free(0x9a65600)
+	0x8048513 (in one at alloc_test.c:48)
+	0x8048548 (in two at alloc_test.c:56)
+	0x80485cf (in start at alloc_test.c:76)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+84. [11:49:17.432] malloc(2001) = 0x9a65600
+	0x804851f (in one at alloc_test.c:49)
+	0x8048548 (in two at alloc_test.c:56)
+	0x80485cf (in start at alloc_test.c:76)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+85. [11:49:17.432] free(0x9a65600)
+	0x8048550 (in two at alloc_test.c:57)
+	0x80485cf (in start at alloc_test.c:76)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+86. [11:49:17.432] malloc(2002) = 0x9a65600
+	0x804855c (in two at alloc_test.c:58)
+	0x80485cf (in start at alloc_test.c:76)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)
+87. [11:49:17.432] free(0x9a65600)
+	0x80485d7 (in start at alloc_test.c:75)
+	0x80485f1 (in main at alloc_test.c:83)
+	0x126bd6 (in __libc_start_main at libc-start.c:258)
+	0x8048421 (in _start)

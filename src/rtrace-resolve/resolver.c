@@ -31,6 +31,7 @@
 #include <limits.h>
 
 #include "resolver.h"
+#include "sp_rtrace_resolve.h"
 #include "common/utils.h"
 #include "namecache.h"
 
@@ -298,7 +299,14 @@ static int rs_get_address_info(rs_cache_record_t* rec, pointer_t address, char* 
 			}
 
 			if (filename) {
-				ptr_out += sprintf(ptr_out, " at %s", filename);
+				/* strip the path if not told otherwise */
+				const char* source = filename;
+				if (!resolve_options.full_path) {
+					source = strrchr(filename, '/');
+					if (source) source++;
+					else source = filename;
+				}
+				ptr_out += sprintf(ptr_out, " at %s", source);
 				if (line) ptr_out += sprintf(ptr_out, ":%d", line);
 			}
 			ptr_out += sprintf(ptr_out, ")\n");
@@ -314,10 +322,28 @@ static int rs_get_address_info(rs_cache_record_t* rec, pointer_t address, char* 
  * Public API
  */
 
-const char* rs_resolve_address(rs_cache_t* rs, pointer_t address)
+const char* rs_resolve_address(rs_cache_t* rs, pointer_t address, const char* name)
 {
 	static char buffer[PATH_MAX];
 
+	if (*name && resolve_options.keep_resolved) {
+		/* The input stream had the address resolved and the option to keep resolved
+		 * addresses is set. Return the old address (stripping the source path if necessary). */
+		const char* source;
+		if (!resolve_options.full_path && (source = strrchr(name, '/')) != NULL ) {
+			const char* path = strrchr(source, ' ');
+			char* ptr = buffer + sprintf(buffer, "\t0x%lx (", address);
+			int len = path - name;
+			memcpy(ptr, name, len);
+			sprintf(ptr + len, "%s)", source);
+		}
+		else {
+			sprintf(buffer, "\t0x%lx (%s)\n", address, name);
+		}
+		return buffer;
+	}
+
+	/* process with address resolving */
 	namecache_t* nc = namecache_get_data(address);
 	if (nc) return nc->name;
 
