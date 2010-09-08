@@ -155,9 +155,9 @@ char *rtrace_env_opt[] = {
 		 */
 		NULL,
 		/**
-		 * --free-backtraces
+		 * --backtrace-all
 		 */
-		"SP_RTRACE_BACKTRACE_FULL",
+		"SP_RTRACE_BACKTRACE_ALL",
 		/**
 		 * Trailing NULL
 		 */
