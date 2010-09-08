@@ -345,8 +345,9 @@ class Graph:
         if idx+1 < len(trace):
             node.add_parent(trace[idx+1])
 
-    def update(self, trace, sizes, count, address):
+    def update(self, trace, sizes, address):
         "update graph with given trace[], size, count, topmost address"
+        count = len(sizes)
         size = self.stats.add_sizes(sizes)
         self.trace_id += 1
         idx = 0
@@ -439,18 +440,20 @@ class Graph:
 # -------------- rtrace report parsing --------------------
 
 class Rtrace:
-    def __init__(self, file):
+    def __init__(self, tracefile):
         # format: at <source file>:<line nro>
         self.gdb_src_pattern = re.compile(".* at ([^ :]+):([0-9]+)")
         # format: in <function name> ()
         self.gdb_fun_pattern = re.compile(".*\(in (.+?)( at .*|)\)$")
         # format: from <library/binary file>
         self.gdb_lib_pattern = re.compile(".* from (\S+)$")
-        # format: <address> <resolve data>
-        self.rtrace_pattern = re.compile("\t0x[a-fA-F0-9]+")
-        # format: block at <hex addr> with size <size>[...]
-        self.alloc_pattern = re.compile("^[0-9]+\. [^(]+\(([0-9]+)\) = (0x[a-fA-F0-9]+)(.*)")
-        self.leaks = open(file)
+        # format: <address> <resolved data>
+        self.rtrace_pattern = re.compile("^\t0x[a-fA-F0-9]")
+        # format: <index>. [@<context id>] [\[<timestamp>\]] <function name>\<<resource type>\>(<resource size>) = <hex ID>
+        self.alloc_pattern = re.compile("^[0-9]+\. [^a-zA-Z_]+([^(]+)\(([0-9]+)\) = (0x[a-fA-F0-9]+)")
+        # format: <index>. [@<context id>] [\[<timestamp>\]] <function name>\<<resource type>\>(<hex ID>)
+        self.free_pattern  = re.compile("^[0-9]+\. [^a-zA-Z_]+([^(]+)\((0x[a-fA-F0-9]+)\)")
+        self.leaks = open(tracefile)
 
     def libname_strip(self, libname):
         "returns library name stripped of 'lib' prefix and '.so*' postfix"
@@ -485,56 +488,75 @@ class Rtrace:
                     return lib
                 return None
         return fun
+    
+    def get_name_size_addr(self, line):
+        "return name and size & ID for alloc, zero for freed size or None for no match"
+        match = self.alloc_pattern.match(line)
+        if match:
+            return (match.group(1), int(match.group(2)), int(match.group(3), 16))
+        match = self.free_pattern.match(line)
+        if match:
+            return (match.group(1), 0, int(match.group(2), 16))
+        debug("ERROR: this alloc/free line doesn't match the patterns:\n%s" % line)
+        sys.exit(1)
+    
+    def ignore(self, line, options):
+        "return True if given line should be ignored, False otherwise"
+        for fun in options.ignore:
+            if line.startswith(fun):
+                ignore = True
+                for fun in options.noignore:
+                    if line.startswith(fun):
+                        ignore = False
+                if ignore:
+                    return True
+        return False
 
     def parse(self, graph, options):
         "return parsed graph out of the given rtrace report"
+        top = 0     # highest allocation address/ID for current backtrace
         ignored = 0 # ignored backtrace lines
-        address = 0 # highest allocation address/ID for current backtrace
         trace = []  # current backtrace
-        stack = 1   # current backtrace line number
-        count = 0   # number of allocations for current backtrace
-        sizes = []  # allocation sizes for current backtrace
-        skip = 0    # whether to skip rest of the current backtrace
-        include = 0 # whether to include this backtrace
-        inc_funs = options.include
-        stop_funs = options.stop
-        ignore_funs = options.ignore
-        noignore_funs = options.noignore
+        sizes = []  # sizes for each alloc/free for current backtrace
+        skip = False    # whether to skip rest of the current backtrace
+        stack = False   # whether current alloc/free includes stack frames
+        include = False # whether to include this backtrace
         for line in self.leaks:
             # new backtrace?
-            match = self.alloc_pattern.match(line)
-            if match:
-                # first alloc in backtrace (previous stack not cleared)?
-                if stack > 0:
-                    # add previous backtrace to Graph (had allocs)?
-                    if count:
-                        if inc_funs:
-                            if include:
-                                graph.update(trace, sizes, count, address)
-                        else:
-                            graph.update(trace, sizes, count, address)
+            if line[0] in "0123456789":
+                (name,size,addr) = self.get_name_size_addr(line)
+                # backtrace stack frames collected for previous allocs/frees?
+                if stack:
+                    if options.progress:
+                        debug(line[:line.find('.')])
+                    if options.include:
+                        if include:
+                            graph.update(trace, sizes, top)
+                    else:
+                        graph.update(trace, sizes, top)
                     # initialize new backtrace
-                    address = 0
-                    trace = []
-                    stack = 0
-                    count = 0
+                    if self.ignore(name, options):
+                        trace = []
+                        ignored += 1
+                    else:
+                        trace = [name]
                     sizes = []
-                    skip = 0
-                    include = 0
+                    top = 0
+                    skip = False
+                    stack = False
+                    include = False
                 # get alloc size
-                sizes.append(int(match.group(1)))
-                count += 1
+                sizes.append(size)
                 # get alloc address
-                cur_addr = int(match.group(2), 16)
-                if (cur_addr > address):
-                    # largest address for this trace
-                    address = cur_addr
+                if (addr > top):
+                    # this is highest address for this trace
+                    top = addr
             else:
                 # trace information?
                 if skip:
                     continue
                 # continue current trace
-                if line[0] != '\t' or not self.rtrace_pattern.match(line):
+                if not self.rtrace_pattern.match(line):
                     # not a backtrace record
                     continue
                 line = self.trace_strip(line, options.lib)
@@ -542,40 +564,31 @@ class Rtrace:
                 if not line:
                     ignored += 1
                     continue
-                # ignore lines in the ignore list, but not in noignore list
-                ignore = 0
-                for fun in ignore_funs:
-                    if line.find(fun) >= 0:
-                        ignore = 1
-                        for fun in noignore_funs:
-                            if line.find(fun) >= 0:
-                                ignore = 0
-                        if ignore:
-                            break
-                if ignore:
+                # ignore lines specified in options
+                if self.ignore(line, options):
                     ignored += 1
                     continue
-                trace.append(line)
                 # skip rest of the trace?
-                for fun in stop_funs:
-                    if line.find(fun) >= 0:
-                        skip = 1
+                for fun in options.stop:
+                    if line.startswith(fun):
+                        skip = True
                         break
                 # flag this trace for node inclusion?
-                for fun in inc_funs:
-                    if line.find(fun) >= 0:
-                        include = 1
+                for fun in options.include:
+                    if line.startswith(fun):
+                        include = True
                         break
-                stack += 1
+                trace.append(line)
+                stack = True
                 continue
 
         # add previous backtrace to Graph
-        if count:
-            if inc_funs:
+        if stack:
+            if options.include:
                 if include:
-                    graph.update(trace, sizes, count, address)
+                    graph.update(trace, sizes, top)
             else:
-                graph.update(trace, sizes, count, address)
+                graph.update(trace, sizes, top)
 
         return (graph, ignored)
 
@@ -1178,6 +1191,8 @@ class Options:
                 self.intermediate = self.get_bool(name, arg, value)
             elif option == "leafs":
                 self.leafs = self.get_bool(name, arg, value)
+            elif option == "progress":
+                self.progress = self.get_bool(name, arg, value)
             elif option == "verbose":
                 self.verbose = self.get_bool(name, arg, value)
             elif option == "stats":
@@ -1346,7 +1361,9 @@ Debug options:
     --show-references=yes -- show what other nodes refer nodes
         specified with the above option
 
-    --verbose=yes -- show more information about rtrace-calltree working
+    --progress=yes -- show running parsed alloc/free record index number
+
+    --verbose=yes -- show more information about internal state
 
 
 Following options can be given as many times as you wish and they apply
