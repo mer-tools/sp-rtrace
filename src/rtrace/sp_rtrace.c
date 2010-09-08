@@ -110,12 +110,13 @@ static void display_usage()
 			"  -b <depth>      - the maximum number of function addresses\n"
 			"                    in stack trace\n"
 			"  -T              - disables timestamps in FC packets\n"
-			"  -A              - enables function argument (FA) packets\n"
 			"  -B              - disables packet buffering\n"
 			"  -P <options>    - post-processor options. If this option\n"
 			"                    is set the pre-processor will automatically\n"
 			"                    launch the post-processor for data post-\n"
 			"                    processing\n"
+			"  -A              - enable backtraces for all functions. By default\n"
+			"                    only allocation function backtraces are reported.\n"
 			"  Note that options should be always before the execute (-x)\n"
 			"  switch.\n"
 			"\n"
@@ -193,6 +194,7 @@ static void set_environment()
 	if (rtrace_options.toggle_signal_name) setenv(rtrace_env_opt[OPT_TOGGLE_SIGNAL], rtrace_options.toggle_signal_name, 1);
 	if (rtrace_options.disable_packet_buffering) setenv(rtrace_env_opt[OPT_DISABLE_PACKET_BUFFERING], OPT_ENABLE, 1);
 	if (rtrace_options.start) setenv(rtrace_env_opt[OPT_START], OPT_ENABLE, 1);
+	if (rtrace_options.backtrace_all) setenv(rtrace_env_opt[OPT_BACKTRACE_ALL], OPT_ENABLE, 1);
 
 	if (rtrace_options.audit) setenv("LD_AUDIT", rtrace_options.audit, 1);
 
@@ -768,7 +770,7 @@ int main(int argc, char* argv[])
 			break;
 
 		case 'A':
-			rtrace_options.enable_arguments = true;
+			rtrace_options.backtrace_all = true;
 			break;
 
 		case 'P':

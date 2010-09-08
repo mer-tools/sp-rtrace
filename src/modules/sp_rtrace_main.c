@@ -88,6 +88,7 @@ static sp_rtrace_options_t rtrace_main_options = {
 	.enable_packet_buffering = true,
 	.output_dir = {0},
 	.postproc = {0},
+	.backtrace_all = false,
 };
 
 sp_rtrace_options_t* sp_rtrace_options = &rtrace_main_options;
@@ -667,7 +668,7 @@ int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* n
 	int nframes = 0;
 	void* bt_frames[256];
 
-	if (sp_rtrace_options->backtrace_depth) {
+	if (sp_rtrace_options->backtrace_depth && (type == SP_RTRACE_FTYPE_ALLOC || sp_rtrace_options->backtrace_all)) {
 		unsigned int bt_depth = sp_rtrace_options->backtrace_depth + BT_SKIP_TOP + BT_SKIP_BOTTOM;
 		if (bt_depth > sizeof(bt_frames) / sizeof(bt_frames[0])) {
 			bt_depth = sizeof(bt_frames) / sizeof(bt_frames[0]);
@@ -842,6 +843,13 @@ bool sp_rtrace_initialize()
 		if (env_manage_preproc && *env_manage_preproc == '1') {
 			sp_rtrace_options->manage_preproc = true;
 			LOG("manage_preproc=%d", sp_rtrace_options->manage_preproc);
+		}
+
+		/* read backtrace-all option */
+		const char* env_backtrace_all = getenv(rtrace_env_opt[OPT_BACKTRACE_ALL]);
+		if (env_backtrace_all && *env_backtrace_all == '1') {
+			sp_rtrace_options->backtrace_all = true;
+			LOG("backtrace_all=%d", sp_rtrace_options->backtrace_all);
 		}
 
 		/* read post-processor options */

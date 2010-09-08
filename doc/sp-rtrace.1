@@ -11,6 +11,9 @@ enable/disable tracing for already launched processes.
 .PP
 As data pre-processor it accepts trace data from a pipe and either
 stores it on the disk or writes it into a post-processor pipe.
+
+Note that by default only allocation function backtraces are reported. To
+get also de-allocation function backtraces use backtrace-all option (see below).
 .SS Options affecting all modes:
 .TP 
 \fI--help\fP (\fI-h\fP)
@@ -90,11 +93,10 @@ Disables timestamps in function call (FC) packets.
 
 By default timestamps are enabled.
 .TP
-\fI--enable-arguments\fP (\fI-A\fP)
-Enables function argument (FA) packets. Note that tracing modules might
-not support function argument packets as implementing them is optional.
-
-By default function argument packets are disabled.
+\fI--backtrace-all\fP (\fI-A\fP)
+Enables backtrace reporting for all functions. By default only allocation
+function backtraces are reported because de-allocation backtraces are less interesting
+and most often only adds unnecessary overhead.
 .TP
 \fI--backtrace-depth\fP=<depth>(\fI-b\fP <depth>)
 The maximum number of frame return addresses in stack trace. 0 will disable

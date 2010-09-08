@@ -59,6 +59,7 @@ typedef struct sp_rtrace_options_t {
 	bool enable_packet_buffering;
 	char output_dir[PATH_MAX];
 	char postproc[PATH_MAX];
+	bool backtrace_all;
 } sp_rtrace_options_t;
 
 extern sp_rtrace_options_t* sp_rtrace_options;

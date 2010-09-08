@@ -42,7 +42,6 @@ struct option rtrace_long_opt[] = {
 		 {"follow-forks", 0, 0, 'f'},
 		 {"backtrace-depth", 1, 0, 'b'},
 		 {"disable-timestamps", 0, 0, 'T'},
-		 {"enable-arguments", 0, 0, 'A'},
 		 {"postproc", 1, 0, 'P'},
 		 {"toggle-signal", 1, 0, 'S'},
 		 {"disable-packet-buffering", 0, 0, 'B'},
@@ -50,6 +49,7 @@ struct option rtrace_long_opt[] = {
 		 {"list", 0, 0, 'l'},
 		 {"listen", 0, 0, 'L'},
 		 {"help", 0, 0, 'h'},
+		 {"backtrace-all", 0, 0, 'A'},
 		 {0, 0, 0, 0}
 };
 
@@ -155,13 +155,17 @@ char *rtrace_env_opt[] = {
 		 */
 		NULL,
 		/**
+		 * --free-backtraces
+		 */
+		"SP_RTRACE_BACKTRACE_FULL",
+		/**
 		 * Trailing NULL
 		 */
 		NULL,
 };
 
 /* sp_rtrace short option list */
-char* rtrace_short_opt = "i:o:mp:a:st:fb:TAP:S:Bhx:lL";
+char* rtrace_short_opt = "i:o:mp:a:st:fb:TAP:S:Bhx:lLF";
 
 void rtrace_args_add_opt(rtrace_args_t* args, char opt, const char* value)
 {
