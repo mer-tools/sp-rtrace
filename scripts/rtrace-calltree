@@ -1110,12 +1110,13 @@ class Options:
     report = "stats"    # report type
     direction = "tb"    # traversal direction
     intermediate = 1    # whether to leave out intermediate nodes
-    leafs = 1           # whether to leave out leaf nodes with only 1 parent
-    show_below_limit = 1# show how many nodes were below limit
-    references = 0      # whether to show what references --node=<node>
-    verbose = 0         # whether to have some extra output
-    refs = 0            # whether to talk in output about KBs or references
-    file = None         # input file
+    leafs = True            # whether to leave out leaf nodes with only 1 parent
+    show_below_limit = True # show how many nodes were below limit
+    references = False      # whether to show what references --node=<node>
+    progress = False        # whether to show number of each read record
+    verbose = False         # whether to have some extra output
+    refs = False            # whether to talk in output about KBs or references
+    tracefile = None        # resource trace file
     
     def __init__(self, argv):
         "parse command line options"
@@ -1130,7 +1131,7 @@ class Options:
             else:
                 if arg[0] == "-":
                     self.help(name, "Unknown option", arg)
-                self.file = arg
+                self.tracefile = arg
                 continue
             # check/get options
             if option == "limit":
@@ -1163,18 +1164,33 @@ class Options:
                 self.ignore.append(value)
             elif option == "no-ignore":
                 self.noignore.append(value)
-            elif option == "ignore-gtk-internals":
-                self.ignore += ["g_type_", "g_object_", "g_signal_",
+            elif option == "ignore-font-allocs":
+                self.ignore += [
+                "FT_Realloc", "FT_Alloc", "FT_QAlloc", "FcStrCopy",
+                "ft_alloc", "ft_realloc", "ft_mem_"
+                ]
+            elif option == "ignore-libc-allocs":
+                self.ignore += [
+                "malloc", "realloc", "calloc", "memdup", "strdup", "strndup"
+                ]
+            elif option == "ignore-glib-internals":
+                self.ignore += [
+                "g_type_", "g_object_", "g_signal_", "g_main_context_",
                 "g_enum_", "g_quark_", "g_param_", "g_pattern_spec_",
                 "g_hash_table_", "g_slist_", "g_list_", "g_array_",
-                "g_mem_", "closure_", "gtk_marshal_", "gtk_binding_",
-                "_gtk_", "gtk_container_", "_main_context_",
-                "FT_Realloc", "FT_Alloc", "FT_QAlloc", "FcStrCopy",
-                "_malloc", "realloc", "memdup", "strdup", "strndup",
-                "g_slice_", "ft_alloc", "png_zalloc" ]
+                "g_malloc", "g_try_", "g_mem_", "g_slice_",
+                "g_strdup", "g_strndup", "g_memdup",
+                "g_closure_", "g_cclosure_"
+                ]
+            elif option == "ignore-gtk-internals":
+                self.ignore += [
+                "gtk_binding_", "_gtk_", "gtk_container_", "png_zalloc"
+                ]
                 # "gtk_widget_size_request",
                 # "gtk_widget_map", "gtk_widget_realize",
-                # "ld-2.3.2.so", "tsearch", "dcgettext"]
+                # "tsearch", "dcgettext"]
+            elif option == "ignore-qt-allocs":
+                self.ignore += ["qMalloc", "qRealloc",  "operator new"]
             elif option == "stop":
                 self.stop.append(value)
             elif option == "node":
@@ -1218,7 +1234,7 @@ class Options:
             self.show_options()
     
     def show_options(self):
-        debug("file = '%s' (rtrace leak file to parse)" % self.file)
+        debug("file = '%s' (rtrace leak file to parse)" % self.tracefile)
         debug("report = '%s' (report type)" % self.report)
         debug("direction = '%s' (report traversal direction)" % self.direction)
         debug("depth = %d (number of topmost graphs to show)" % self.depth)
@@ -1228,10 +1244,10 @@ class Options:
         debug("leafs = %s (whether to include leaf nodes)" % self.bool_str(self.leafs))
         debug("show_below_limit = %s (whether to show how many nodes were below limit)" % self.bool_str(self.show_below_limit))
         self.show_list(self.cluster, "Cluster libs with following substrings together")
-        self.show_list(self.include, "Include only backtraces having these node(s) with these substrings")
-        self.show_list(self.ignore, "Ignore in backtraces nodes with these substrings")
-        self.show_list(self.noignore, "Do not ignore these although they would match ignore substring")
-        self.show_list(self.stop, "Stop backtrace parsing to functions with these substring")
+        self.show_list(self.include, "Include only backtraces having node(s) which names start with these prefixes")
+        self.show_list(self.ignore, "Ignore in backtraces nodes which names have these prefixes")
+        self.show_list(self.noignore, "However, do not ignore nodes which names have these prefixes")
+        self.show_list(self.stop, "Stop backtrace parsing to nodes which names have these prefixes")
         self.show_list(self.lib, "Functions within these libraries are shown with a single node")
         self.show_list(self.node, "Nodes about which to show debug information")
         debug("references = %s (whether to show debug node references)" % self.bool_str(self.references))
@@ -1244,9 +1260,9 @@ class Options:
                 debug("- %s" % name)
     
     def validate_input(self, app):
-        if not self.file:
-            self.help(app, "leak report missing")
-        fi = open(self.file, "r")
+        if not self.tracefile:
+            self.help(app, "resource trace report missing")
+        fi = open(self.tracefile, "r")
         if ord(fi.read(1)) == 0xf0:
             self.help(app, "input file appears to be in binary format")
         fi.close()
@@ -1321,29 +1337,45 @@ Additional options for reducing the amount of output data:
     --show-below-limit=no, do not show nodes telling how many called
         nodes were below the specified limit
 
-    --stop=value, value is a substring of the node name where the
-        current backtrace parsing is stopped.  Using something like
-        "--stop=closure_marshal --stop=gtk_marshal" could make Gtk
-        memory allocation graphs more readable
+    --stop=value, value is a string prefix of node name where
+        each backtrace parsing stops.  Using something like
+        "--stop=g_cclosure_marshal --stop=_gtk_marshal" could for
+        example make Gtk memory allocation graphs more readable
 
-    --include-only=value, value is a substring of the node name for
-        backtraces that should be included into reports.  All backtraces
-        NOT containing a node name with this substring are ignored
+    --include-only=value, value is a string prefix for node names
+       for backtraces that should be included into reports.  All backtraces
+        NOT containing a node name starting with this substring are ignored
 
-    --ignore=value, value is a substring of the node name which is
-        ignored in the backtraces
+    --ignore=value, value is a string prefix for node names which should be
+        ignored in the backtraces.  Useful for making graphs more readable.
+        Use --verbose to see what is ignored by the shortcut options below.
 
-    --no-ignore=value,  value is a substring of the node name which is
-        kept in the backtraces although it is matched by --ignore
-    
-    --ignore-gtk-internals=yes, shortcut option which ignores several lowest
-        level allocation, standard data structure handling and recursed
-        functions called by Gtk applications.  Use --verbose to see what
-        is ignored.  You might want to use also these options:
+    --no-ignore=value, value is a string prefix for node names are kept in
+        the backtraces although it is matched by --ignore.
+
+    --ignore-font-allocs=yes, shortcut to ignore lower level freetype
+        and fontconfig allocation functions
+
+    --ignore-libc-allocs=yes, shortcut to ignore lower level C-library
+        allocation functions to make graphs more readable
+
+    --ignore-qt-allocs=yes, shortcut to ignore lower level Qt/C++
+        allocation functions
+
+    --ignore-glib-internals=yes, shortcut to ignore several lowest level
+        allocation, standard data structure handling and recursed functions
+        called by Glib programs.  You might want to try also these options:
         --intermediate=no --leafs=no --show-below-limit=no 
+        --ignore=dcgettext --ignore=tsearch
+        --join-lib=ld-<version>.so
+
+    --ignore-gtk-internals=yes, shortcut to ignore several recursed
+      functions called by Gtk applications.  You might want to try
+      also these options:
+        --ignore-libc-allocs --ignore-font-allocs
         --ignore=gtk_widget_ --no-ignore=gtk_widget_show
-        --ignore=gdk_window_ --ignore=dcgettext --ignore=tsearch
-        --join-lib=fontconfig --join-lib=ld-2.3.2.so
+        --ignore=gdk_window_ --ignore=_gdk_window_
+        --join-lib=fontconfig 
 
     --join-lib=value, value is the name of the library (part of node
         name before ':') which should be represented as a single node
@@ -1385,41 +1417,42 @@ generate PostScript, SVG, PNG etc. formats out of them.""")
 
 # ----------------------- main ------------------------
 
-graph = Graph()
-options = Options(sys.argv)
-
-debug("\nParsing...")
-leaks = Rtrace(options.file)
-(graph, ignored) = leaks.parse(graph, options)
-debug(graph.stats_oneliner())
-debug("Ignored %d backtrace lines without function names." % ignored)
-
-debug("Finalizing backtrace graph and stats...")
-stats = graph.complete()
-
-# debug output for selected nodes
-graph.show_nodes(options.node, options.references, {})
-
-# if requested, remove unwanted nodes
-graph.trim(options)
-
-debug("Writing report...")
-if options.report == "stats":
-    report = AsciiReport(stats, options)
-elif options.report in ["topmost", "graph"]:
-    if options.report == "graph":
-        report = AllocGraphReport(graph, options)
-    else:
-        report = TopmostGraphReport(graph, options)
-    if options.direction == "tb":
-        report.set_direction_tb()
-    else:
-        report.set_direction_bt()
-elif options.report == "html":
-    if options.direction == "tb":
-        traverse = TraverseDown(graph)
-    else:
-        traverse = TraverseUp(graph)
-    report = HtmlReport(traverse, stats, options)
-
-report.output()
+if __name__ == "__main__":
+    graph = Graph()
+    options = Options(sys.argv)
+    
+    debug("\nParsing...")
+    leaks = Rtrace(options.tracefile)
+    (graph, ignored) = leaks.parse(graph, options)
+    debug(graph.stats_oneliner())
+    debug("Ignored %d backtrace lines without function names." % ignored)
+    
+    debug("Finalizing backtrace graph and stats...")
+    stats = graph.complete()
+    
+    # debug output for selected nodes
+    graph.show_nodes(options.node, options.references, {})
+    
+    # if requested, remove unwanted nodes
+    graph.trim(options)
+    
+    debug("Writing report...")
+    if options.report == "stats":
+        report = AsciiReport(stats, options)
+    elif options.report in ["topmost", "graph"]:
+        if options.report == "graph":
+            report = AllocGraphReport(graph, options)
+        else:
+            report = TopmostGraphReport(graph, options)
+        if options.direction == "tb":
+            report.set_direction_tb()
+        else:
+            report.set_direction_bt()
+    elif options.report == "html":
+        if options.direction == "tb":
+            traverse = TraverseDown(graph)
+        else:
+            traverse = TraverseUp(graph)
+        report = HtmlReport(traverse, stats, options)
+    
+    report.output()
