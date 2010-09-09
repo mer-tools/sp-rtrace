@@ -667,8 +667,8 @@ increases when you go down from the main().
         # sort according to size percentage, descending
         showlist.sort()
         showlist.reverse()
-        # no nodes in tree or largest item percentage is too small
-        if not showlist or showlist[0][2] < self.limit:
+        # no nodes in tree or even largest item's percentage is too small
+        if not showlist or showlist[0][0] < self.limit:
             return
 
         print "<hr>"
@@ -691,6 +691,7 @@ increases when you go down from the main().
         print "<table border=\"1\" cellpadding=\"2\">"
         print "<tr><th>Percentage:</th><th>Size:</th><th>Count:</th><th>Funtion:</th></tr>"
         last = 0
+        recursed = []
         for percentage,node,next in showlist:
             if percentage >= self.limit:
                 print "<tr align=\"right\">"
@@ -700,14 +701,13 @@ increases when you go down from the main().
                 # no next item(s)?
                 if not next:
                     print "<td align=left>%s</td>" % node.name
-                    last += 1
                 # do not recurse i.e. is this function is in preceding trace?
                 elif node.name in trace:
                     print "<td align=left>%s (recursed)</td>" % node.name
-                    del(showlist[last])
+                    recursed.append(last)
                 else:
                     print "<td align=left><a href=\"#N%d-%d\">%s</a></td>" % (node.nid, root_id, node.name)
-                    last += 1
+                last += 1
                 print "</tr>"
             else:
                 # FIXME: only if options.show_below_limit is set
@@ -730,6 +730,11 @@ increases when you go down from the main().
                 showlist = showlist[:last]
                 break
         print "</table>"
+
+        # you cannot remove items while iterating, so do it now
+        recursed.reverse()
+        for i in recursed:
+            del(showlist[i])
 
         prev_keys = self.traverse.prev_keys(root_name)
         if len(prev_keys) > 1:
