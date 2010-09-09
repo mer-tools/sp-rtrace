@@ -120,15 +120,29 @@
 # - Support non-indented backtraces from glibc backtrace_symbols_fd().
 # - Allow librefs to report zero size objects, that can result from
 #   g_type_query() failures.
-# 20010-08-02
+# 2010-08-02
 # - Updated to work with rtrace format, renamed to rtrace-calltree and
 #   moved to the sp-rtrace package.
+# 2010-09-06:
+# - Remove support for old sp-libleaks format
+# - Fix PyLint reported errors and some of the warnings
+# 2010-09-08:
+# - Fix handling of resource freeing backtraces (they caused destructors
+#   to seem allocate resources and main() to be called from them).
+# - Include trace functions to nodes (by default, but allow ignoring them)
+# - Add more --ignore-* convenience options, split Glib ones to their option
+# - Match function names only from the beginning with --stop, --ignore
+#   and --include-only options
+# 2010-09-09:
+# - Fix HTML report recursion prevention
+# - Option to use function argument value instead of function name.
+#   (useful e.g. for file open traces)
 #
 # Originally this file (alloc-tree) was a part of libleaks package, but
 # renamed and moved to the sp-rtrace package during libleaks redesign.
 #
 """
-ALLOC-TREE
+CALLTREE
 
 This script reads non-freed resources allocations from sp-rtrace and
 internally accumulates these to functions up in the listed backtraces.
@@ -653,7 +667,6 @@ increases when you go down from the main().
         """ % (count, size, overhead, total_size, alloc_overhead, median)
 
 
-    # BUG/FIXME: this recurses infinitely on Qt code!
     def recurse_tree(self, root_keys, trace, root_name, root_id):
         "outputs the given allocation tree as hyperlinked HTML"
         # get the subtree information
