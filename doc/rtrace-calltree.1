@@ -4,18 +4,20 @@ rtrace-calltree - post-processing for rtrace reports
 .SH SYNOPSIS
 rtrace-calltree [options] <rtrace report>  >  report.[txt|dot|html]
 .SH DESCRIPTION
-\fIrtrace-calltree\fP can produce different reports from rtrace non-freed
+\fIrtrace-calltree\fP can produce different reports from rtrace
 resource allocations reports.
-From these output reports you can see for example which of the functions
+From these reports you can see for example which of the functions
 account for most of the resource usage and how
 the resource allocations are divided between the functions they call.
-Rtrace leak report is sp-rtrace report post-processed with -lr[c] option.
+Rtrace leak report is sp-rtrace report post-processed with -c[l]r
+option.
 .PP
 \fIrtrace-calltree\fP works by accumulating the allocations upwards in
 the backtrace calltrees.  Each function is a node in the allocation
 graph. Once all allocations are propagated to the functions from
 which the calls to the allocation function originated, the information
-is output in the requested format.
+is output in the requested format.  Bactrace items which have just
+addresses instead of function/method names are ignored.
 .SH OUTPUT REPORT TYPES
 \fIrtrace-calltree\fP supports several different output report types:
 .TP
@@ -24,7 +26,7 @@ is output in the requested format.
 This is the default report type.
 .TP
 \fBgraph\fP
-A graph of the largest allocations.  This is probably the most
+A callgraph of the largest allocations.  This is probably the most
 interesting report, but you normally need to specify quite a lot of
 additional options to get exactly what you want.  Using this is
 explained more in detail with the (PDF) analysis document coming
@@ -43,20 +45,22 @@ to generate PostScript, SVG, PNG etc. formats out of them.
 Output a graph of topmost allocations backtraces.
 .PP
 Note that the count and total size of allocations listed in this graph
-is for all the unfreed allocations in the use-case, not just for the
-bactraces included into \fItopmost\fP graph.
+is for all the backtraces in the trace file, not just for the ones
+included into \fItopmost\fP graph.
 .TP
 \fBhtml\fP
 Output hyperlinked backtraces sorted according to allocation sizes
-(as percentage of total allocs).
+(as percentage of total allocs).  Pretty much obsoleted by the callgraph
+output.
 .PP
-The output is similar to what \fIvalgrind\fP Massif plugin shows, but
-the content differs significantly; Massif offers a bottom-up "space*time"
-view to all allocations within (whole) application life-time. Rtrace
-and \fIrtrace-calltree\fP can offer both top-down and bottom-up views to all
-non-freed allocations between specified points of time in the
-application life-cycle.  Allocation life-time is not taken into
-account when sorting the backtraces.
+The output is similar to earlier \fIvalgrind\fP Massif plugin output
+(current Massif gives ASCII callgraphs), but the content differs;
+Massif offers a bottom-up "space*time" view to all allocations within
+(whole) application life-time. Rtrace and \fIrtrace-calltree\fP can
+offer both top-down and bottom-up views to all (e.g. non-freed)
+allocations between specified points of time in the application
+life-cycle.  Allocation life-time is not taken into account when
+sorting the backtraces.
 .SH REPORT OUTPUT OPTIONS
 .TP
 \fB--type\fP=\fIvalue\fP
@@ -106,7 +110,7 @@ to get included.  Default is 10.0.
 .PP
 Note: If you decrease this with the 'html' report, --stop use
 is recommended as the generated HTML output can be very large
-(even gigabytes if rtrace report was megabytes).  For
+(even gigabytes although rtrace report was megabytes).  For
 "graph" report, there are additional options for reducing
 the amount of output, see the filtering options.
 .TP
@@ -115,48 +119,70 @@ Do not show nodes summarizing how many called nodes were below the
 specified (or default) limit (see --limit option).
 .TP
 \fB--stop\fP=\fIvalue\fP
-Value is a substring of the node name where the current backtrace
-backtracking is stopped.  Using something like following could make
-Gtk memory allocation graphs more readable (or you could use just
---ignore-gtk-internals=yes):
+Value is a string prefix of node name where each backtrace parsing
+stops.  Using something like following could make Gtk memory
+allocation graphs more readable (or you could use
+just --ignore-gtk-internals=yes):
 .br
-		--stop=closure_marshal --stop=gtk_marshal
+		--stop=g_cclosure_marshal --stop=_gtk_marshal
 .TP
 \fB--include-only\fP=\fIvalue\fP
-Value is a substring of the node name for backtraces that should be
-included into reports. All backtraces \fBnot\fP containing a node name
-with this substring are ignored.
+Value is a string prefix for node names for backtraces that should be
+included into reports.  All backtraces \fBnot\fP containing a node
+name starting with this substring are ignored.
 .TP
 \fB--ignore\fP=\fIvalue\fP
-Value is a substring of the node name which is ignored in the
-backtraces.
+Value is a string prefix for node names which should be ignored in the
+backtraces.  Useful for making graphs more readable. Use --verbose to
+see what is ignored by the shortcut options below after enabling them.
 .TP
 \fB--no-ignore\fP=\fIvalue\fP
-Value is a substring of the node name which is kept in the backtraces
-although it is matched by --ignore.
+Value is a string prefix for node names that should be kept in the
+backtraces although they were matched by --ignore.
 .TP
-\fB--ignore-gtk-internals\fP=\fIyes\fP
-Shortcut option which ignores several lowest level allocation, standard
-data structure handling and recursed functions called by Gtk applications.
-You can use --verbose option to see what is ignored.  You might want to use
-also these options:
-
+\fB--ignore-font-allocs\fP=\fIyes\fP
+Shortcut to ignore lower level freetype and fontconfig allocation functions.
+.TP
+\fB--ignore-libc-allocs\fP=\fIyes\fP
+Shortcut to ignore lower level C-library allocation functions to make
+graphs more readable.
+.TP
+\fB--ignore-qt-allocs\fP=\fIyes\fP
+Shortcut to ignore lower level Qt/C++ allocation functions.
+.TP
+\fB--ignore-glib-internals\fP=\fIyes\fP
+Shortcut to ignore several lowest level allocation, standard data
+structure handling and recursed functions called by Glib programs.
+You might want to try also these options:
 .nf
 		--leafs=no
 		--intermediate=no
 		--show-below-limit=no
+		--ignore=dcgettext
+		--ignore=tsearch
+		--join-lib=ld-<version>.so
+.fi
+.TP
+\fB--ignore-gtk-internals\fP=\fIyes\fP
+Shortcut to ignore several recursed functions called by Gtk
+applications.  You might want to try also these options:
+.nf
+		--ignore-libc-allocs
+		--ignore-font-allocs
 		--ignore=gtk_widget_
 		--no-ignore=gtk_widget_show
 		--ignore=gdk_window_
-		--ignore=dcgettext
-		--ignore=tsearch
-		--join-lib=fontconfig
-		--join-lib=ld-2.3.2.so
+		--ignore=_gdk_window_
+		--join-lib=fontconfig 
 .fi
 .TP
 \fB--join-lib\fP=\fIvalue\fP
 Value is the name of the library (part of node name before ':') which
 should be represented as a single node.
+.TP
+\fB--trace-args\fP=\fIyes\fP
+Show trace function (1st) argument instead of its name. This can be
+used e.g. to see file names in file descriptor traces.
 .TP
 \fB--intermediate\fP=\fIno\fP
 Leave out nodes with only one parent and child.
@@ -174,6 +200,9 @@ applies.
 \fB--node\fP=\fIvalue\fP
 Show internal information about given node. This option can be given
 as many as times as needed.
+.TP
+\fB--progress\fP=\fIyes\fP
+Show running parsed alloc/free record index number.
 .TP
 \fB--show-references\fP=\fIyes\fP
 Show what other nodes refer nodes specified with the --node option.

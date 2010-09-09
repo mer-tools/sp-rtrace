@@ -1130,8 +1130,8 @@ class Options:
     direction = "tb"    # traversal direction
     leafs = True            # leave out leaf nodes with only 1 parent?
     intermediate = True     # leave out intermediate nodes?
-    trace_args = False      # replace trace function names with arg values?
     show_below_limit = True # show how many nodes were below limit
+    trace_args = False      # replace trace function names with arg values?
     references = False      # whether to show what references --node=<node>
     progress = False        # whether to show number of each read record
     verbose = False         # whether to have some extra output
@@ -1317,16 +1317,16 @@ Options for report output type and looks:
 
     --stats=value, value is either "count" or "total" depending on whether
         you want the histogram to show graphically the number of the given
-        sized allocations or how much they take memory (with alloc overhead)
+        sized allocations or how much they take memory (with alloc overhead).
 
     --direction=value, value is one of:
         tb -- top to bottom i.e. from main() towards malloc()  (default)
         bt -- bottom to top i.e. from malloc() towards main()
-        Default is "tb"
+        Default is "tb".
 
     --depth=value, value is an integer (1-99) used in following reports:
         topmost -- how many of the traces to highest allocations are shown
-        Default is 3
+        Default is 3.
 
     --emph-limit=value,  value (1.0-100) is used with "graph"
         report type to indicate that functions responsible for more
@@ -1342,7 +1342,7 @@ Options for report output type and looks:
     --cluster=value,  value is the name of the library which nodes
         should be clustered in "graph". Note: this option is useless
         with recursive backtraces, for Gtk applications you should
-        use also --ignore-gtk-internals=yes
+        use also --ignore-gtk-internals=yes.
 
 
 Additional options for reducing the amount of output data:
@@ -1355,35 +1355,36 @@ Additional options for reducing the amount of output data:
         recommended as the generated HTML output can be very large
         (even gigabytes if rtrace report was megabytes).  For
         "graph" report, there are additional options for reducing
-        the amount of output, see below
+        the amount of output, see below.
 
     --show-below-limit=no, do not show nodes telling how many called
-        nodes were below the specified limit
+        nodes were below the specified limit.
 
     --stop=value, value is a string prefix of node name where
         each backtrace parsing stops.  Using something like
         "--stop=g_cclosure_marshal --stop=_gtk_marshal" could for
-        example make Gtk memory allocation graphs more readable
+        example make Gtk memory allocation graphs more readable.
 
     --include-only=value, value is a string prefix for node names
        for backtraces that should be included into reports.  All backtraces
-        NOT containing a node name starting with this substring are ignored
+       NOT containing a node name starting with this substring are ignored.
 
     --ignore=value, value is a string prefix for node names which should be
         ignored in the backtraces.  Useful for making graphs more readable.
-        Use --verbose to see what is ignored by the shortcut options below.
+        Use --verbose to see what is ignored by the shortcut options below
+        after enabling them.
 
-    --no-ignore=value, value is a string prefix for node names are kept in
-        the backtraces although it is matched by --ignore.
+    --no-ignore=value, value is a string prefix for node names that should
+        be kept in the backtraces although they were matched by --ignore.
 
     --ignore-font-allocs=yes, shortcut to ignore lower level freetype
-        and fontconfig allocation functions
+        and fontconfig allocation functions.
 
     --ignore-libc-allocs=yes, shortcut to ignore lower level C-library
-        allocation functions to make graphs more readable
+        allocation functions to make graphs more readable.
 
     --ignore-qt-allocs=yes, shortcut to ignore lower level Qt/C++
-        allocation functions
+        allocation functions.
 
     --ignore-glib-internals=yes, shortcut to ignore several lowest level
         allocation, standard data structure handling and recursed functions
@@ -1401,12 +1402,12 @@ Additional options for reducing the amount of output data:
         --join-lib=fontconfig 
 
     --join-lib=value, value is the name of the library (part of node
-        name before ':') which should be represented as a single node
+        name before ':') which should be represented as a single node.
 
-    --trace-args=no, show trace function (1st) argument instead of its name.
-        This can be used e.g. to see file names in file descriptor traces
+    --trace-args=yes, show trace function (1st) argument instead of its name.
+        This can be used e.g. to see file names in file descriptor traces.
 
-    --intermediate=no, leave out nodes with only one parent and child
+    --intermediate=no, leave out nodes with only one parent and child.
 
     --leafs=no, leaves out nodes which have either:
         - one parent and no children, or
@@ -1414,14 +1415,14 @@ Additional options for reducing the amount of output data:
     
 Debug options:
     
-    --node=value -- shows internal information about given node
+    --node=value -- shows internal information about given node.
 
     --show-references=yes -- show what other nodes refer nodes
-        specified with the above option
+        specified with the above option.
 
-    --progress=yes -- show running parsed alloc/free record index number
+    --progress=yes -- show running parsed alloc/free record index number.
 
-    --verbose=yes -- show more information about internal state
+    --verbose=yes -- show more information about internal state.
 
 
 Following options can be given as many times as you wish and they apply
