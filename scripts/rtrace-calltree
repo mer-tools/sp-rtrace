@@ -447,8 +447,6 @@ class Rtrace:
         self.gdb_fun_pattern = re.compile(".*\(in (.+?)( at .*|)\)$")
         # format: from <library/binary file>
         self.gdb_lib_pattern = re.compile(".* from (\S+)$")
-        # format: <address> <resolved data>
-        self.rtrace_pattern = re.compile("^\t0x[a-fA-F0-9]")
         # format: <index>. [@<context id>] [\[<timestamp>\]] <function name>\<<resource type>\>(<resource size>) = <hex ID>
         self.alloc_pattern = re.compile("^[0-9]+\. [^a-zA-Z_]+([^(]+)\(([0-9]+)\) = (0x[a-fA-F0-9]+)")
         # format: <index>. [@<context id>] [\[<timestamp>\]] <function name>\<<resource type>\>(<hex ID>)
@@ -551,14 +549,11 @@ class Rtrace:
                 if (addr > top):
                     # this is highest address for this trace
                     top = addr
-            else:
-                # trace information?
+            elif line.startswith("\t0x"):
+                # ignore this backtrace?
                 if skip:
                     continue
-                # continue current trace
-                if not self.rtrace_pattern.match(line):
-                    # not a backtrace record
-                    continue
+                # parse backtrace line
                 line = self.trace_strip(line, options.lib)
                 # ignore lines without function names
                 if not line:
@@ -581,6 +576,12 @@ class Rtrace:
                 trace.append(line)
                 stack = True
                 continue
+            elif options.trace_args and line.startswith("\t$1 = "):
+                arg = line[6:].strip()
+                if trace:
+                    trace[0] = arg
+                else:
+                    trace = [arg]
 
         # add previous backtrace to Graph
         if stack:
@@ -1114,8 +1115,9 @@ class Options:
     stats = "count"     # statistics report histogram type
     report = "stats"    # report type
     direction = "tb"    # traversal direction
-    intermediate = 1    # whether to leave out intermediate nodes
-    leafs = True            # whether to leave out leaf nodes with only 1 parent
+    leafs = True            # leave out leaf nodes with only 1 parent?
+    intermediate = True     # leave out intermediate nodes?
+    trace_args = False      # replace trace function names with arg values?
     show_below_limit = True # show how many nodes were below limit
     references = False      # whether to show what references --node=<node>
     progress = False        # whether to show number of each read record
@@ -1208,6 +1210,8 @@ class Options:
                 self.show_below_limit = self.get_bool(name, arg, value)
             elif option == "show-references":
                 self.references = self.get_bool(name, arg, value)
+            elif option == "trace-args":
+                self.trace_args = self.get_bool(name, arg, value)
             elif option == "intermediate":
                 self.intermediate = self.get_bool(name, arg, value)
             elif option == "leafs":
@@ -1245,9 +1249,10 @@ class Options:
         debug("depth = %d (number of topmost graphs to show)" % self.depth)
         debug("limit = %.1f (show only nodes with amount of allocs >= given %% of total)" % self.limit)
         debug("emph_limit = %.1f (emphatize nodes with amount of allocs >= given %% of total)" % self.emph_limit)
-        debug("intermediate = %s (whether to include intermediate nodes)" % self.bool_str(self.intermediate))
-        debug("leafs = %s (whether to include leaf nodes)" % self.bool_str(self.leafs))
-        debug("show_below_limit = %s (whether to show how many nodes were below limit)" % self.bool_str(self.show_below_limit))
+        debug("leafs = %s (include leaf nodes?)" % self.bool_str(self.leafs))
+        debug("intermediate = %s (include intermediate nodes?)" % self.bool_str(self.intermediate))
+        debug("trace_args = %s (replace trace function names with args?)" % self.bool_str(self.trace_args))
+        debug("show_below_limit = %s (show how many nodes were below limit?)" % self.bool_str(self.show_below_limit))
         self.show_list(self.cluster, "Cluster libs with following substrings together")
         self.show_list(self.include, "Include only backtraces having node(s) which names start with these prefixes")
         self.show_list(self.ignore, "Ignore in backtraces nodes which names have these prefixes")
@@ -1384,6 +1389,9 @@ Additional options for reducing the amount of output data:
 
     --join-lib=value, value is the name of the library (part of node
         name before ':') which should be represented as a single node
+
+    --trace-args=no, show trace function (1st) argument instead of its name.
+        This can be used e.g. to see file names in file descriptor traces
 
     --intermediate=no, leave out nodes with only one parent and child
 
