@@ -136,22 +136,24 @@ Value is a string prefix for node names which should be ignored in the
 backtraces.  Useful for making graphs more readable. Use --verbose to
 see what is ignored by the shortcut options below after enabling them.
 .TP
+\fB--ignore-middle\fP=\fIvalue\fP
+Like --ignore, but given substring is for any part of the function names
+(slower, but useful e.g. with template functions as their names are
+prefixed with a changing return type).
+.TP
 \fB--no-ignore\fP=\fIvalue\fP
 Value is a string prefix for node names that should be kept in the
-backtraces although they were matched by --ignore.
+backtraces although they were matched by --ignore or --ignore-middle.
 .TP
 \fB--ignore-font-allocs\fP=\fIyes\fP
 Shortcut to ignore lower level freetype and fontconfig allocation functions.
 .TP
 \fB--ignore-libc-allocs\fP=\fIyes\fP
-Shortcut to ignore lower level C-library allocation functions to make
-graphs more readable.
-.TP
-\fB--ignore-qt-allocs\fP=\fIyes\fP
-Shortcut to ignore lower level Qt/C++ allocation functions.
+Shortcut to ignore lower level C-library and C++ allocation/free functions
+to make graphs more readable.
 .TP
 \fB--ignore-glib-internals\fP=\fIyes\fP
-Shortcut to ignore several lowest level allocation, standard data
+Shortcut to ignore several lowest level allocation/free, standard data
 structure handling and recursed functions called by Glib programs.
 You might want to try also these options:
 .nf
@@ -175,6 +177,13 @@ applications.  You might want to try also these options:
 		--ignore=_gdk_window_
 		--join-lib=fontconfig 
 .fi
+.TP
+\fB--ignore-qt-internals\fP=\fIyes\fP
+
+Shortcut to ignore lower level Qt allocation/free, standard data
+structure handling and marshalling/recursed functions called by Qt
+applications. You might want to try also --ignore-glib-internals
+option.
 .TP
 \fB--join-lib\fP=\fIvalue\fP
 Value is the name of the library (part of node name before ':') which

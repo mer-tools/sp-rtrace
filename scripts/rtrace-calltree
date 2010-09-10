@@ -135,8 +135,12 @@
 #   and --include-only options
 # 2010-09-09:
 # - Fix HTML report recursion prevention
-# - Option to use function argument value instead of function name.
+# - Option to use function argument value instead of function name
 #   (useful e.g. for file open traces)
+# 2010-09-10:
+# - Add --ignore-middle option for matching e.g. template functions
+# - Move new/delete under --ignore-libc allocs and change/expand
+#   --ignore-qt-allocs option to --ignore-qt-internals
 #
 # Originally this file (alloc-tree) was a part of libleaks package, but
 # renamed and moved to the sp-rtrace package during libleaks redesign.
@@ -516,12 +520,16 @@ class Rtrace:
         "return True if given line should be ignored, False otherwise"
         for fun in options.ignore:
             if line.startswith(fun):
-                ignore = True
                 for fun in options.noignore:
                     if line.startswith(fun):
-                        ignore = False
-                if ignore:
-                    return True
+                        return False
+                return True
+        for fun in options.ignore_middle:
+            if fun in line:
+                for fun in options.noignore:
+                    if line.startswith(fun):
+                        return False
+                return True
         return False
 
     def parse(self, graph, options):
@@ -1116,9 +1124,10 @@ class Options:
     "command line option help, parsing and storage"
     cluster = []        # which libraries should be clustered
     include = []        # include only backtraces having these functions
-    ignore = []         # substrings of function to ignore in the backtraces
-    noignore = []       # substrings of function not to ignore
-    stop = []           # substrings of functions where to end backtrace
+    ignore = []         # prefixes of functions to ignore in the backtraces
+    ignore_middle = []  # substrings of function to ignore in the backtraces
+    noignore = []       # prefixes of functions not to ignore
+    stop = []           # prefixes of functions where to end backtrace
     lib = []            # libs which should be shown with single node
     node = []           # which node(s) to show info about
     depth = 3           # depends on report type
@@ -1191,7 +1200,9 @@ class Options:
                 ]
             elif option == "ignore-libc-allocs":
                 self.ignore += [
-                "malloc", "realloc", "calloc", "memdup", "strdup", "strndup"
+                "malloc", "realloc", "calloc", "free",
+                "operator new", "operator delete",
+                "memdup", "strdup", "strndup"
                 ]
             elif option == "ignore-glib-internals":
                 self.ignore += [
@@ -1202,15 +1213,23 @@ class Options:
                 "g_strdup", "g_strndup", "g_memdup",
                 "g_closure_", "g_cclosure_"
                 ]
+                # "tsearch", "dcgettext"]
             elif option == "ignore-gtk-internals":
                 self.ignore += [
                 "gtk_binding_", "_gtk_", "gtk_container_", "png_zalloc"
                 ]
                 # "gtk_widget_size_request",
                 # "gtk_widget_map", "gtk_widget_realize",
-                # "tsearch", "dcgettext"]
-            elif option == "ignore-qt-allocs":
-                self.ignore += ["qMalloc", "qRealloc",  "operator new"]
+            elif option == "ignore-qt-internals":
+                self.ignore += [
+                "qMalloc", "qRealloc", "qFree",
+                "QString::", "QByteArray::", "QObject::",
+                "QHashData::", "QListData::", "QMapData::",
+                "qDBusAddSpyHook", "qt_plugin_instance",
+                ]
+                self.ignore_middle += [
+                "::qt_metacall", " QVariant::"
+                ]
             elif option == "stop":
                 self.stop.append(value)
             elif option == "node":
@@ -1266,9 +1285,10 @@ class Options:
         debug("intermediate = %s (include intermediate nodes?)" % self.bool_str(self.intermediate))
         debug("trace_args = %s (replace trace function names with args?)" % self.bool_str(self.trace_args))
         debug("show_below_limit = %s (show how many nodes were below limit?)" % self.bool_str(self.show_below_limit))
-        self.show_list(self.cluster, "Cluster libs with following substrings together")
+        self.show_list(self.cluster, "Cluster libs with following names together")
         self.show_list(self.include, "Include only backtraces having node(s) which names start with these prefixes")
         self.show_list(self.ignore, "Ignore in backtraces nodes which names have these prefixes")
+        self.show_list(self.ignore_middle, "Ignore in backtraces nodes which names have these substrings")
         self.show_list(self.noignore, "However, do not ignore nodes which names have these prefixes")
         self.show_list(self.stop, "Stop backtrace parsing to nodes which names have these prefixes")
         self.show_list(self.lib, "Functions within these libraries are shown with a single node")
@@ -1374,21 +1394,24 @@ Additional options for reducing the amount of output data:
         Use --verbose to see what is ignored by the shortcut options below
         after enabling them.
 
+    --ignore-middle=value, like --ignore, but given substring is for any
+        part of the function names(slower, but useful e.g. with template
+        functions as their names are prefixed with a changing return type).
+
     --no-ignore=value, value is a string prefix for node names that should
-        be kept in the backtraces although they were matched by --ignore.
+        be kept in the backtraces although they were matched by --ignore
+        or --ignore-middle.
 
     --ignore-font-allocs=yes, shortcut to ignore lower level freetype
         and fontconfig allocation functions.
 
-    --ignore-libc-allocs=yes, shortcut to ignore lower level C-library
-        allocation functions to make graphs more readable.
-
-    --ignore-qt-allocs=yes, shortcut to ignore lower level Qt/C++
-        allocation functions.
+    --ignore-libc-allocs=yes, shortcut to ignore lower level C and
+        C++ allocation/free functions to make graphs more readable.
 
     --ignore-glib-internals=yes, shortcut to ignore several lowest level
-        allocation, standard data structure handling and recursed functions
-        called by Glib programs.  You might want to try also these options:
+        allocation/free, standard data structure handling and recursed
+        functions called by Glib programs.  You might want to try also
+        these options:
         --intermediate=no --leafs=no --show-below-limit=no 
         --ignore=dcgettext --ignore=tsearch
         --join-lib=ld-<version>.so
@@ -1400,6 +1423,11 @@ Additional options for reducing the amount of output data:
         --ignore=gtk_widget_ --no-ignore=gtk_widget_show
         --ignore=gdk_window_ --ignore=_gdk_window_
         --join-lib=fontconfig 
+
+    --ignore-qt-internals=yes, shortcut to ignore lower level Qt
+        allocation/free, standard data structure handling and
+        marshalling/recursed functions called by Qt applications.
+        You might want to try also --ignore-glib-internals option.
 
     --join-lib=value, value is the name of the library (part of node
         name before ':') which should be represented as a single node.
