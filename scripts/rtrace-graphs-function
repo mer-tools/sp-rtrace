@@ -24,12 +24,26 @@
 # Originally this file was a part of libleaks package, but moved
 # to the sp-rtrace package during libleaks redesign.
 #
+#
+# CHANGES
+#
+# 2010-08-02
+# - Updated to support rtrace format and moved to sp-rtrace pacakge.
+# 2010-09-10
+# - Update help and calltree options
+# - If destination file is older than source file, re-create it
+# - If files are already generated, don't check for / complain
+#  about tools needed to generate them
+#
+# Originally this file was a part of sp-libleaks package, but moved
+# to the sp-rtrace package during libleaks redesign.
 
 # check command line args
 if [ $# -lt 3 ]; then
 	echo "Generates graphs of unfreed resource allocations going"
-	echo "through given function for all given trace files.  The graphs"
-	echo "are saved to a subdirectory with the given function name."
+	echo "through given functions matching given function name prefix"
+	echo "in all given trace files. The graphs are saved to"
+	echo "a subdirectory with the given function name (prefix)."
 	echo
 	echo "Good values for <limit> are 0.1 - 2, depending on the trace"
 	echo "file contents."
@@ -40,43 +54,52 @@ if [ $# -lt 3 ]; then
 	exit 1
 fi
 
+# if path given for script, make sure rest of things can be
+# executed from that path too (helps testing it)
+if [ \! -z "${0%/*}" ]; then
+	export PATH=$PATH:${0%/*}
+fi
+
 fun=$1
 limit=$2
 shift
 shift
 
 # check for required utilities
-if [ -z $(which sp-rtrace-resolve) ]; then
-	echo "ERROR: 'sp-rtrace-resolve' utility missing from PATH"
-	exit 1
-fi
-if [ -z $(which sp-rtrace-postproc) ]; then
-	echo "ERROR: 'sp-rtrace-postproc' utility missing from PATH"
-	exit 1
-fi
-if [ -z $(which rtrace-calltree) ]; then
-	echo "ERROR: 'rtrace-calltree' utility missing from PATH"
-	exit 1
-fi
-if [ -z $(which dot) ]; then
-	echo "ERROR: 'dot' utility is missing from PATH"
-	echo "- 'dot' it used for converting the graphs into PostScript"
-	echo "- you can get it from http://www.graphviz.org/"
-	echo "  (configure GraphViz with '--without-x')"
-	exit 1
-fi
+function check_resolve
+{
+	if [ -z $(which sp-rtrace-resolve) ]; then
+		echo "ERROR: 'sp-rtrace-resolve' utility missing from PATH"
+		exit 1
+	fi
+	if [ -z $(which sp-rtrace-postproc) ]; then
+		echo "ERROR: 'sp-rtrace-postproc' utility missing from PATH"
+		exit 1
+	fi
+}
+function check_calltree
+{
+	if [ -z $(which rtrace-calltree) ]; then
+		echo "ERROR: 'rtrace-calltree' utility missing from PATH"
+		exit 1
+	fi
+}
+function check_dot
+{
+	if [ -z $(which dot) ]; then
+		echo "ERROR: 'dot' utility is missing from PATH"
+		echo "- 'dot' it used for converting the graphs into PostScript"
+		echo "- you can get it from http://www.graphviz.org/"
+		echo "  (configure GraphViz with '--without-x')"
+		exit 1
+	fi
+}
 
-
-if [ -d $fun ]; then
-	echo "ERROR: directory '$fun' exists already,"
-	echo "cowardly refusing to overwrite it."
-	exit 1
-else
-	mkdir $fun
-fi
+mkdir -p $fun
 
 # process all given trace files
 echo "-------------------------------------------------------------------"
+count=0
 for trace in $*
 do
 	echo "Processing '$trace'..."
@@ -85,21 +108,23 @@ do
 		exit 1
 	fi
 	resolved=${trace%.txt}.resolved
-	if [ \! -f $resolved ]; then
+	if [ \! -f $resolved ] || [ $resolved -ot $trace ]; then
+		check_resolve
 		echo "Removing freed allocations and resolving traces: $trace -> $resolved"
 		sp-rtrace-postproc -lcri $trace > $resolved
 		if [ $? != 0 ]; then
 			rm $resolved
-			echo "ERROR: 'sp-rtrace-resolve' call failed"
+			echo "ERROR: 'sp-rtrace-postproc/-resolve' call failed"
 			exit 1
 		fi
 	fi
 	dot=$fun/${resolved%.resolved}.dot
-	if [ \! -f $dot ]; then
+	if [ \! -f $dot ] || [ $dot -ot $resolved ]; then
+		check_calltree
 		echo "Generating call tree: $resolved -> $dot"
 		rtrace-calltree --type=graph --limit=$limit --emph-limit=4 \
-		--include-only=$fun --ignore=malloc --ignore=realloc \
-		--ignore=strdup --ignore=memdup $resolved > $dot
+		--include-only=$fun --trace-args=yes --ignore-libc-allocs=yes \
+		$resolved > $dot
 		if [ $? != 0 ]; then
 			rm $dot
 			echo "ERROR: 'rtrace-calltree' call failed"
@@ -107,7 +132,8 @@ do
 		fi
 	fi
 	ps=${dot%.dot}.ps
-	if [ \! -f $ps ]; then
+	if [ \! -f $ps ] || [ $ps -ot $dot ]; then
+		check_dot
 		echo "Plotting function call graph: $dot -> $ps"
 		dot -Tps $dot > $ps
 		if [ $? != 0 ]; then
@@ -115,16 +141,22 @@ do
 			echo "ERROR: 'dot' (GraphViz) call failed"
 			exit 1
 		fi
+		count=$((count+1))
 	fi
 done
+
+if [ $count -eq 0 ]; then
+	echo "NOTE: All .rtrace.txt, .resolved or .dot files already processed."
+	echo
+fi
 
 echo "-------------------------------------------------------------------"
 echo
 echo "Generated graphs of allocations going through function '$fun'"
 echo "and showing nodes for functions through which went at least $limit%"
-echo "those allocations."
+echo "of those allocations."
 echo
 echo $fun/
-ls $fun/
+ls $fun/*.ps $fun/*.dot|sed 's/^/- /'
 echo
 echo "DONE!"
