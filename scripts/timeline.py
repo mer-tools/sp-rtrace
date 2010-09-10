@@ -37,19 +37,31 @@ class Timestamp:
 	format = staticmethod(format)
 # /class Timestamp
 
+
 class Context:
 	"""
 	This class contains context allocation implementation.
 	"""
+	# context masks 
 	MASK_NONE = 0
 	MASK_ALL = 0xFFFFFFFF
 	
-	id = 0
+	# the context value/mask
+	value = 0
+	# the context name
 	name = ""
-	def __init__(self, id, name):
-		self.id = int(id, 16)
+
+	def __init__(self, value, name):
+		self.value = value
 		self.name = name
+
+	def isMaskAll(self):
+		return self.value == Context.MASK_ALL
+	
+	def isMaskNone(self):
+		return self.value == Context.MASK_NONE
 # /class Context
+
 
 class Event:
 	"""
@@ -72,41 +84,50 @@ class Event:
 		self.timestamp = timestamp
 		self.res_size = res_size
 		self.res_id= res_id
-		if context is None:
-			self.context = 0
-		else:
-			self.context = int(context, 16)
+		self.context = context
 		
-	def matchContextMask(self, mask):
+	def matchContext(self, context):
 		"Checks if the event matches the specified context mask"
-		if mask == Context.MASK_NONE:
+		if context.isMaskNone():
 			if self.context != 0:
 				return False
-		elif mask != Context.MASK_ALL and not mask & self.context:
+		elif not (context.isMaskAll() or context.value & self.context):
 				return False
 		return True
 # /class Event
 
 class Table:
 	"""
-	This class provides gnuplot table emulation with labels
+	The Table class provides gnuplot table emulation with labels
 	"""
 	
-
 	class Column:
-
+		"""
+		The Column class represents a single column in the table.
+		"""
+		
 		class Cell:
+			"""
+			The Cell class represents a single cell in the column.
+			"""
+			text = None
+			align = None
+			
 			def __init__(self, text, align = "right"):
 				self.text = text
 				self.align = align
 	
 			def write(self, file, row, col, size):
+				"Writes cell contents at the specified coordinates"
 				if self.align == "right":
 					col += size - 1
 				if self.align == "center":
 					col += size / 2
 				file.write("set label \"%s\" at character %d,%d %s\n" % (self.text, col, row, self.align))
 			# /class Cell
+		
+		size = 0
+		cells = None
 		
 		def __init__(self, size):
 			self.size = size	
@@ -118,6 +139,7 @@ class Table:
 			self.cells[row] = self.Cell(text, align)
 		
 		def write(self, file, rows, col):
+			"Writes column contents at the specified coordinates"
 			for row in range(len(self.cells)):
 				cell = self.cells[row]
 				if cell is None:
@@ -156,6 +178,7 @@ class Processor:
 	processing. It servers as base class for specific post-processing
 	tasks.
 	"""
+	
 	class Index:
 		"""
 		This class is used to index resources by their identifiers, which
@@ -194,9 +217,9 @@ class Processor:
 			sys.exit(2)
 		self.events[resource].append(Event(Event.Types.FREE, context, timestamp, res_id, 0))
 		
-	def registerContext(self, id, name):
+	def registerContext(self, value, name):
 		"Registers context declaration"
-		self.contexts.append(Context(id, name))
+		self.contexts.append(Context(value, name))
 		
 	def writeReport(self, stream):
 		"Writes the end report"
@@ -208,13 +231,294 @@ class Processor:
 	def setTimestampOffset(self, offset):
 		"Sets the initial timestamp value from where the offsets are calculated"
 		self.timestampOffset = offset
-
 # /class Processor		
 		
 
+class ActivityProcessor(Processor):
+	"""
+	The ActivityProcessor class generates 'activity' report.
+	The activity report contains graphs illustrating the resource
+	allocation rate per time slice.
+	"""
+	GNUPLOT_CONFIG = "timeline.cfg"
+	
+	class Stats:
+		"""
+		Resource allocation activity statistics 
+		"""
+		class Data:
+			count = 0
+			size = 0
+			timestamp = 0
+		# /class Data
+
+		peakSize = None
+		peakCount = None
+		
+		def __init__(self):
+			self.peakSize = self.Data()
+			self.peakCount = self.Data()
+	# /class Stats
+
+	def writeReport(self, stream):
+		"Writes the end report"
+		xrange = 0
+		yrange = 0
+		y2range= 0
+		plotData = ""
+		stats = {}
+		
+		# calculate the X axis range and activity time slice
+		for resource in self.events.keys():
+			events = self.events[resource]
+			if events[-1].timestamp > xrange:
+				xrange = events[-1].timestamp
+		slice = Options.slice
+		if slice == 0:
+			slice = xrange / 20
+			if slice == 0:
+				slice = 1
+		#
+		
+		contexts = [Context(Context.MASK_ALL, "all allocations")]
+		if len(self.contexts) > 0:
+			contexts.append(Context(Context.MASK_NONE, "no contexts"))
+			contexts.extend(self.contexts)
+				
+		# iterate through registered resources
+		for resource in self.events.keys():
+			# iterate through available contexts
+			for context in contexts:
+				# create the data files for the resource-context filter
+				fileNameRate = "%s-size-%x.dat" % (resource, context.value)
+				fileRate = open(fileNameRate, "w")
+				if fileRate is None:
+					print >> sys.stderr, "Failed to create data file: %s" % fileNameRate
+					sys.exit(2)
+				fileRate.write("Resource \"%s (%s)\"\n" % (resource, context.name))
+				
+				fileNameCount = "%s-count-%x.dat" % (resource, context.value)
+				fileCount = open(fileNameCount, "w")
+				if fileCount is None:
+					print >> sys.stderr, "Failed to create data file: %s" % fileNameCount
+					sys.exit(2)
+				fileCount.write("Resource \"%s (%s)\"\n" % (resource, context.name))
+				
+				# resource indexing map 
+				index = {}
+				# total allocation size per time slice
+				total = 0
+				# allocation number for time slice
+				count = 0
+				# allocation events per time slice
+				allocs = []
+				# flag indicating if the filter has any data
+				hasData = False
+				# initialize resource statistics data
+				if context.isMaskAll():
+					stat = self.Stats()
+					stats[resource] = stat
+				#
+				events = self.events[resource]
+				
+				# iterate through allocation events
+				for event in events:
+					if not event.matchContext(context):
+						continue
+					
+					if event.type == Event.Types.ALLOC:
+						if event.res_id in index:
+							index[event.res_id].refCount += 1
+							continue
+						else:
+							# store the event in dictionary for event lookup speedup.
+							index[event.res_id] = self.Index(event);
+							#
+							total += event.res_size
+							count += 1
+							allocs.append(event)
+							# remove allocation events outside time slice
+							while allocs[0].timestamp < event.timestamp - slice:
+								oldEvent = allocs.pop(0)
+								total -= oldEvent.res_size
+								count -= 1
+								
+							# store peak values
+							if context.isMaskAll():
+								if total > stat.peakSize.size:
+									stat.peakSize.size = total
+									stat.peakSize.count = count
+									stat.peakSize.timestamp = event.timestamp
+								if count > stat.peakCount.count:
+									stat.peakCount.size = total
+									stat.peakCount.count = count
+									stat.peakCount.timestamp = event.timestamp
+								#
+							
+					if event.type == Event.Types.FREE:
+						if event.res_id not in index:
+							continue
+						ievent = index[event.res_id]
+						ievent.refCount -= 1
+						if ievent.refCount > 0:
+							continue
+						del index[event.res_id]
+						
+					fileRate.write("%d %d\n" % (event.timestamp, total))
+					fileCount.write("%d %d\n" % (event.timestamp, count))
+					hasData = True
+					if total > yrange:
+						yrange = total
+					if count > y2range:
+						y2range = count
+						
+				fileRate.close()
+				fileCount.close()
+				if hasData:
+					if plotData != "":
+						plotData += ", "
+					plotData += "\"%s\" using ($1/1000):2 title column(2)" % fileNameRate
+					plotData += ", \"%s\" using ($1/1000):2 title column(2) axes x1y2" % fileNameCount
+			# peak marker data.
+			# Peak markers are vertical lines, drawn at the time of the max peak
+			plotData += ", \"%s-size-peak.dat\" using ($1/1000):2 title column(2)" % resource
+			plotData += ", \"%s-count-peak.dat\" using ($1/1000):2 title column(2)" % resource
+			
+		# iterate through registered resources to generate peak allocation data files
+		for resource in self.events.keys():
+			fileName = resource + "-size-peak.dat"
+			file = open(fileName, "w")
+			if file is None:
+				print >> sys.stderr, "Failed to create data file: %s" % fileName
+				sys.exit(2)
+			timestamp = stats[resource].peakSize.timestamp
+			file.write("Resource \"%s (size peak:%s)\"\n" % (resource, Timestamp.format(self.timestampOffset + timestamp)))
+			file.write("%d %d\n" % (timestamp, 0))
+			file.write("%d %d\n" % (timestamp, yrange))
+			file.close()
+			
+			fileName = resource + "-count-peak.dat"
+			file = open(fileName, "w")
+			if file is None:
+				print >> sys.stderr, "Failed to create data file: %s" % fileName
+				sys.exit(2)
+			timestamp = stats[resource].peakCount.timestamp
+			file.write("Resource \"%s (count peak:%s)\"\n" % (resource, Timestamp.format(self.timestampOffset + timestamp)))
+			file.write("%d %d\n" % (timestamp, 0))
+			file.write("%d %d\n" % (timestamp, yrange))
+			file.close()
+			
+		#	
+		# generate gnuplot configuration file:
+		#
+		file = open(self.GNUPLOT_CONFIG, "w")
+		if file is None:
+			print >> sys.stderr, "Failed to create configuration file: %s" % self.GNUPLOT_CONFIG
+			sys.exit(2)
+		
+		# set terminal properties
+		file.write("set terminal postscript eps enhanced color\n")
+		# set file title
+		file.write("set title \"Amount of {/Helvetica-Italic}non-freed {/Helvetica} allocations\"\n")
+		# set X axis range 
+		file.write("set xrange[0.000:%.3f]\n" % (float(xrange) / 1000))
+		# set Y/Y2 axis range 
+		file.write("set yrange[0:%d]\n" % (yrange))
+		file.write("set y2range[0:%d]\n" % (y2range))
+		# format X axis tics
+		xtic = float(int(xrange / 10)) / 1000
+		if xtic == 0:
+			xtic = 0.001
+		file.write("set xtics %f,%f,%f\n" % (xtic, xtic, float(xrange) / 1000 - xtic))
+		file.write("set xtics rotate\n")
+		file.write("set xtics add (\"%s\" %f)\n" % (Timestamp.format(self.timestampOffset), 0))
+		file.write("set xtics add (\"%s\" %f)\n" % (Timestamp.format(self.timestampOffset + xrange), float(xrange) / 1000))
+		# set the X axis tic label format
+		file.write("set format x \"+%.3f\"\n")
+		# set the Y/Y2 axis tic label format
+		file.write("set format y \"%.1s%c\"\n")
+		file.write("set ytics out\n")
+		file.write("set y2tics out\n")
+		file.write("set ytics nomirror\n")
+		# set Y/Y2 axis label
+		file.write("set ylabel \"size per %.3f sec\"\n" % (float(slice) / 1000))
+		file.write("set y2label \"count per %.3f sec\"\n" % (float(slice) / 1000))
+		# set X axis label
+		file.write("set xlabel \"time (secs)\" offset 0,-3\n")
+		# set graph line style
+		file.write("set style data lines\n")
+		# write graph information outside graph
+		file.write("set key bmargin\n")
+		
+		# Write summary report
+		
+		# define table headers
+		table = Table(1, 1)
+		# resource name column
+		table.addColumn(10)
+		# snapshot name column
+		table.addColumn(10)
+		# allocation count
+		table.addColumn(8)
+		# allocation size
+		table.addColumn(10)
+
+		table.setText(0, 0, "{/Helvetica-Italic-Bold}Resource", "center")
+		table.setText(0, 1, "{/Helvetica-Italic-Bold}State", "center")
+
+		table.setText(0, 2, "{/Helvetica-Italic-Bold}Count", "center")
+		table.setText(0, 3, "{/Helvetica-Italic-Bold}Size", "center")
+
+		# write summary data
+		resourceIndex = 2
+		for resource in self.events.keys():
+			stat = stats[resource]
+			table.setText(resourceIndex, 0, resource, "left")
+			table.setText(resourceIndex, 1, "peak size", "center")
+			table.setText(resourceIndex, 2, "%d" % stat.peakSize.count)
+			table.setText(resourceIndex, 3, "%d" % stat.peakSize.size)
+
+			resourceIndex += 1
+			table.setText(resourceIndex, 1, "peak count", "center")
+			table.setText(resourceIndex, 2, "%d" % stat.peakCount.count)
+			table.setText(resourceIndex, 3, "%d" % stat.peakCount.size)
+			
+			resourceIndex += 2
+		
+		table.write(file)
+		
+		# Reserve space at the bottom for leak data
+		bmargin = len(contexts) + 9
+		if bmargin < 9 + table.rows:
+			bmargin = 9 + table.rows
+		if bmargin < 15:
+			bmargin = 15
+		file.write("set bmargin %d\n" % bmargin)
+		
+		# plot the data files
+		file.write("plot %s\n" % plotData)
+		file.close()
+		
+		# Convert with gnuplot
+		gnuplot = subprocess.Popen(["gnuplot", self.GNUPLOT_CONFIG], 0, None, None, stream, None)
+		gnuplot.wait()
+			
+		# cleanup gnuplot configuration and data files
+		os.remove(self.GNUPLOT_CONFIG)
+		
+		for resource in self.events.keys():
+			os.remove(resource + "-size-peak.dat")
+			os.remove(resource + "-count-peak.dat")
+			for context in contexts:
+				os.remove("%s-size-%x.dat" % (resource, context.value))
+				os.remove("%s-count-%x.dat" % (resource, context.value))
+	
+# /class ActivityProcessor
+
+
 class TotalsProcessor(Processor):
 	"""
-	This class generates 'totals' report.
+	The TotalsProcessor class generates 'totals' report.
 	The 'totals' report contains graph illustrating the total resource 
 	allocation over the time.
 	"""
@@ -227,6 +531,13 @@ class TotalsProcessor(Processor):
 		class Data:
 			count = 0
 			size = 0
+		# /class Data
+		
+		endLeaks = None
+		peakLeaks = None
+		endTotals = None
+		peakTotals = None
+		peakTimestamp = 0
 
 		def __init__(self):
 			# non-freed allocations at the end of trace
@@ -237,20 +548,8 @@ class TotalsProcessor(Processor):
 			self.endTotals = self.Data()
 			# total allocations at the peak time
 			self.peakTotals = self.Data()
-			
-			self.peakTimestamp = 0
 	# /class Stats
 			
-	class Mask:
-		value = 0
-		name = ""
-		def __init__(self, value, name):
-			self.value = value
-			self.name = name
-			
-		def isAll(self):
-			return self.value == Context.MASK_ALL
-	# /class Mask
 		
 	def writeReport(self, stream):
 		"Writes the end report"
@@ -260,40 +559,41 @@ class TotalsProcessor(Processor):
 		# leak summing map
 		stats = {}
 
-		contextMasks = [self.Mask(Context.MASK_ALL, "all allocations")]
+		contexts = [Context(Context.MASK_ALL, "all allocations")]
 		if len(self.contexts) > 0:
-			contextMasks.append(self.Mask(Context.MASK_NONE, "no contexts"))
-			for context in self.contexts:
-				contextMasks.append(self.Mask(context.id, context.name))
+			contexts.append(Context(Context.MASK_NONE, "no contexts"))
+			contexts.extend(self.contexts)
 		
 		# iterate through registered resources
 		for resource in self.events.keys():
 			# iterate through available contexts
-			for contextMask in contextMasks:
-				fileName = "%s-%x.dat" % (resource, contextMask.value)
+			for context in contexts:
+				# create the data file for the resource-context filter
+				fileName = "%s-%x.dat" % (resource, context.value)
 				file = open(fileName, "w")
 				if file is None:
 					print >> sys.stderr, "Failed to create data file: %s" % fileName
 					sys.exit(2)
-				file.write("Resource \"%s (%s)\"\n" % (resource, contextMask.name))
+				file.write("Resource \"%s (%s)\"\n" % (resource, context.name))
 					
 				# resource indexing map 
 				index = {}
 				# total allocation size
 				total = 0
+				# flag indicating if the filter has any data
+				hasData = False
 				# initialize resource statistics data
-				if contextMask.isAll():
+				if context.isMaskAll():
 					stat = self.Stats()
 					stats[resource] = stat
 				#
-				eventList = self.events[resource]
-				if eventList[-1].timestamp > xrange:
-					xrange = eventList[-1].timestamp
-				if plotData != "":
-					plotData += ", "
-				plotData += "\"%s\" using ($1/1000):2 title column(2)" % fileName
-				for event in eventList:
-					if not event.matchContextMask(contextMask.value):
+				events = self.events[resource]
+				if events[-1].timestamp > xrange:
+					xrange = events[-1].timestamp
+					
+				# iterate through allocation/deallocation events
+				for event in events:
+					if not event.matchContext(context):
 						continue
 					
 					if event.type == Event.Types.ALLOC:
@@ -305,7 +605,7 @@ class TotalsProcessor(Processor):
 							index[event.res_id] = self.Index(event);
 							#
 							total += event.res_size
-							if contextMask.isAll():
+							if context.isMaskAll():
 								stat.endLeaks.size += event.res_size
 								stat.endLeaks.count += 1
 								stat.endTotals.size += event.res_size
@@ -325,15 +625,22 @@ class TotalsProcessor(Processor):
 						if ievent.refCount > 0:
 							continue
 						total -= ievent.event.res_size
-						if contextMask.isAll():
+						if context.isMaskAll():
 							stat.endLeaks.size -= ievent.event.res_size
 							stat.endLeaks.count -= 1
 						del index[event.res_id]
 						
 					file.write("%d %d\n" % (event.timestamp, total))
+					hasData = True
 					if total > yrange:
 						yrange = total
 				file.close()
+				if hasData:
+					if plotData != "":
+						plotData += ", "
+					plotData += "\"%s\" using ($1/1000):2 title column(2)" % fileName
+			# peak marker data.
+			# Peak markers are vertical lines, drawn at the time of the max peak
 			plotData += ", \"%s-peak.dat\" using ($1/1000):2 title column(2)" % resource
 
 		# iterate through registered resources to generate peak allocation data files
@@ -349,39 +656,42 @@ class TotalsProcessor(Processor):
 			file.write("%d %d\n" % (timestamp, yrange))
 			file.close()
 
+
+		#	
+		# generate gnuplot configuration file:
+		#
 		file = open(self.GNUPLOT_CONFIG, "w")
 		if file is None:
 			print >> sys.stderr, "Failed to create configuration file: %s" % self.GNUPLOT_CONFIG
 			sys.exit(2)
-	
-		#	
-		# generate gnuplot configuration file:
-		#
 		
-		# set file title
-		file.write("set title \"Amount of _non-freed_ allocations\"\n")
 		# set terminal properties
-		file.write("set terminal postscript eps color\n")
+		file.write("set terminal postscript eps enhanced color\n")
+		# set file title
+		file.write("set title \"Amount of {/Helvetica-Italic}non-freed {/Helvetica} allocations\"\n")
 		# set X axis range 
 		file.write("set xrange[0.000:%.3f]\n" % (float(xrange) / 1000))
 		# set Y axis range 
 		file.write("set yrange[0:%d]\n" % (yrange))
 		# format X axis tics
 		xtic = float(int(xrange / 10)) / 1000
-		file.write("set xtics %f,%f,%f\n" % (xtic, xtic, xtic * 9))
+		if xtic == 0:
+			xtic = 0.001
+		file.write("set xtics %f,%f,%f\n" % (xtic, xtic, float(xrange) / 1000 - xtic))
 		file.write("set xtics rotate\n")
 		file.write("set xtics add (\"%s\" %f)\n" % (Timestamp.format(self.timestampOffset), 0))
 		file.write("set xtics add (\"%s\" %f)\n" % (Timestamp.format(self.timestampOffset + xrange), float(xrange) / 1000))
 		# set the X axis tic label format
-		file.write("set format x \"+%.2f\"\n")
+		file.write("set format x \"+%.3f\"\n")
 		# set the Y axis tic label format
 		file.write("set format y \"%.1s%c\"\n")
+		file.write("set ytics out\n")
 		# set Y axis label
 		file.write("set ylabel \"size\"\n")
 		# set X axis label
 		file.write("set xlabel \"time (secs)\" offset 0,-3\n")
 		# set graph line style
-		file.write("set style data linespoints\n")
+		file.write("set style data lines\n")
 		# write graph information outside graph
 		file.write("set key bmargin\n")
 		
@@ -402,18 +712,18 @@ class TotalsProcessor(Processor):
 		# leaked allocation size
 		table.addColumn(10)
 
-		table.setText(1, 0, "Resource", "center")
-		table.setText(1, 1, "State", "center")
+		table.setText(1, 0, "{/Helvetica-Italic-Bold}Resource", "center")
+		table.setText(1, 1, "{/Helvetica-Italic-Bold}State", "center")
 
-		table.setText(0, 2, "Total", "center")
-		table.setText(0, 3, "Total", "center")
-		table.setText(1, 2, "count", "center")
-		table.setText(1, 3, "size", "center")
+		table.setText(0, 2, "{/Helvetica-Italic-Bold}Total", "center")
+		table.setText(0, 3, "{/Helvetica-Italic-Bold}Total", "center")
+		table.setText(1, 2, "{/Helvetica-Italic-Bold}count", "center")
+		table.setText(1, 3, "{/Helvetica-Italic-Bold}size", "center")
 
-		table.setText(0, 4, "Non-freed", "center")
-		table.setText(0, 5, "Non-freed", "center")
-		table.setText(1, 4, "count", "center")
-		table.setText(1, 5, "size", "center")
+		table.setText(0, 4, "{/Helvetica-Italic-Bold}Non-freed", "center")
+		table.setText(0, 5, "{/Helvetica-Italic-Bold}Non-freed", "center")
+		table.setText(1, 4, "{/Helvetica-Italic-Bold}count", "center")
+		table.setText(1, 5, "{/Helvetica-Italic-Bold}size", "center")
 		
 		# write summary data
 		resourceIndex = 3
@@ -438,7 +748,7 @@ class TotalsProcessor(Processor):
 		table.write(file)
 		
 		# Reserve space at the bottom for leak data
-		bmargin = len(contextMasks) + 9
+		bmargin = len(contexts) + 9
 		if bmargin < 9 + table.rows:
 			bmargin = 9 + table.rows
 		if bmargin < 15:
@@ -450,18 +760,16 @@ class TotalsProcessor(Processor):
 		file.close()
 		
 		# Convert with gnuplot
-		devNull = open("/dev/null")
-		gnuplot = subprocess.Popen(["gnuplot", self.GNUPLOT_CONFIG], 0, None, None, stream, devNull)
+		gnuplot = subprocess.Popen(["gnuplot", self.GNUPLOT_CONFIG], 0, None, None, stream, None)
 		gnuplot.wait()
-		devNull.close()
 		
 		# cleanup gnuplot configuration and data files
 		os.remove(self.GNUPLOT_CONFIG)
 		
 		for resource in self.events.keys():
 			os.remove(resource + "-peak.dat")
-			for contextMask in contextMasks:
-				os.remove("%s-%x.dat" % (resource, contextMask.value))
+			for context in contexts:
+				os.remove("%s-%x.dat" % (resource, context.value))
 # /class TotalsProcessor
 		
 	
@@ -486,11 +794,17 @@ class Parser:
 		for line in stream:
 			match = self.reAlloc.match(line)
 			if match:
-				self.processor.registerAlloc(match.group(1), self.getTimestampFromString(match.group(2)), match.group(3), match.group(5), int(match.group(4)))
+				context = match.group(1)
+				if context is None:
+					context = 0
+				self.processor.registerAlloc(context, self.getTimestampFromString(match.group(2)), match.group(3), match.group(5), int(match.group(4)))
 				continue
 			match = self.reFree.match(line)
 			if match:
-				self.processor.registerFree(match.group(1), self.getTimestampFromString(match.group(2)), match.group(3), match.group(4))
+				context = match.group(1)
+				if context is None:
+					context = 0
+				self.processor.registerFree(context, self.getTimestampFromString(match.group(2)), match.group(3), match.group(4))
 				continue
 			match = self.reResource.match(line)
 			if match:
@@ -498,7 +812,7 @@ class Parser:
 				continue
 			match = self.reContext.match(line)
 			if match:
-				self.processor.registerContext(match.group(1), match.group(2))
+				self.processor.registerContext(int(match.group(1), 16), match.group(2))
 				continue
 				
 	def write(self, stream):
@@ -524,15 +838,16 @@ class Options:
 		NONE = 0
 		TOTALS = 1
 		LIFETIME = 2
-		USAGE = 3
+		ACTIVITY = 3
 
 	mode = Modes.NONE
 	streamIn = sys.stdin
 	streamOut = sys.stdout
+	slice = 0
 	
 	def parse(argv):
 		try:
-			opts, args = getopt.gnu_getopt(argv, "tluo:i:", ["totals", "lifetime", "usage", "in=", "out="])
+			opts, args = getopt.gnu_getopt(argv, "tlao:i:s:", ["totals", "lifetime", "activity", "in=", "out=", "slice="])
 		except getopt.GetoptError, err:
 			print >> sys.stderr, str(err) 
 			Options.displayUsage()
@@ -548,14 +863,18 @@ class Options:
 			if opt == "-l" or opt == "--lifetime":
 				Options.mode = Options.Modes.LIFETIME
 				
-			if opt == "-u" or opt == "--usage":
-				Options.mode = Options.Modes.USAGE
+			if opt == "-a" or opt == "--activity":
+				Options.mode = Options.Modes.ACTIVITY
+				parser = Parser(ActivityProcessor())
 				
 			if opt == "-i" or opt == "--in":
 				Options.streamIn = open(val, "r")
 				
 			if opt == "-o" or opt == "--out":
 				Options.streamOut = open(val, "w")
+			
+			if opt == "-s" or opt == "--slice":
+				Options.slice = int(val)
 				
 		if parser is None:
 			print >> sys.stderr, "No report type specified."
