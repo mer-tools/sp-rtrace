@@ -538,6 +538,7 @@ class Rtrace:
         ignored = 0 # ignored backtrace lines
         trace = []  # current backtrace
         sizes = []  # sizes for each alloc/free for current backtrace
+        args = []   # different arguments merged for same backtrace
         skip = False    # whether to skip rest of the current backtrace
         stack = False   # whether current alloc/free includes stack frames
         include = False # whether to include this backtrace
@@ -549,11 +550,12 @@ class Rtrace:
                 if stack:
                     if options.progress:
                         debug(line[:line.find('.')])
-                    if options.include:
-                        if include:
+                    if include or not options.include:
+                        if args:
+                            for arg,size in args:
+                                graph.update([arg]+trace, [size], top)
+                        else:
                             graph.update(trace, sizes, top)
-                    else:
-                        graph.update(trace, sizes, top)
                     # initialize new backtrace
                     if self.ignore(name, options):
                         trace = []
@@ -561,6 +563,7 @@ class Rtrace:
                     else:
                         trace = [name]
                     sizes = []
+                    args = []
                     top = 0
                     skip = False
                     stack = False
@@ -600,18 +603,21 @@ class Rtrace:
                 continue
             elif options.trace_args and line.startswith("\t$1 = "):
                 arg = line[6:].strip()
-                if trace:
-                    trace[0] = arg
-                else:
-                    trace = [arg]
+                if arg:
+                    # TODO: can same arg have multiple allocs/sizes?
+                    args.append((arg, sizes[0]))
+                    if trace and not stack:
+                        trace = []
+                    sizes = []
 
         # add previous backtrace to Graph
         if stack:
-            if options.include:
-                if include:
+            if include or not options.include:
+                if args:
+                    for arg,size in args:
+                        graph.update([arg]+trace, [size], top)
+                else:
                     graph.update(trace, sizes, top)
-            else:
-                graph.update(trace, sizes, top)
 
         return (graph, ignored)
 
