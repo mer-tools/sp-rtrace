@@ -26,7 +26,7 @@ class Timestamp:
 	"""
 	def format(hours):
 		"Converts timestamp to text format"
-		msecs = hours % 1000
+		msecs = hours % 1000		
 		hours /= 1000
 		seconds = hours % 60
 		hours /= 60
@@ -275,7 +275,7 @@ class ActivityProcessor(Processor):
 				xrange = events[-1].timestamp
 		slice = Options.slice
 		if slice == 0:
-			slice = xrange / 20
+			slice = xrange / 100
 			if slice == 0:
 				slice = 1
 		#
@@ -321,64 +321,75 @@ class ActivityProcessor(Processor):
 				#
 				events = self.events[resource]
 				
-				# iterate through allocation events
-				for event in events:
-					if not event.matchContext(context):
-						continue
-					
-					if event.type == Event.Types.ALLOC:
-						if event.res_id in index:
-							index[event.res_id].refCount += 1
-							continue
-						else:
-							# store the event in dictionary for event lookup speedup.
-							index[event.res_id] = self.Index(event);
-							#
-							total += event.res_size
-							count += 1
-							allocs.append(event)
-							# remove allocation events outside time slice
-							while allocs[0].timestamp < event.timestamp - slice:
-								oldEvent = allocs.pop(0)
-								total -= oldEvent.res_size
-								count -= 1
-								
-							# store peak values
-							if context.isMaskAll():
-								if total > stat.peakSize.size:
-									stat.peakSize.size = total
-									stat.peakSize.count = count
-									stat.peakSize.timestamp = event.timestamp
-								if count > stat.peakCount.count:
-									stat.peakCount.size = total
-									stat.peakCount.count = count
-									stat.peakCount.timestamp = event.timestamp
-								#
+				lastTimestamp = events[-1].timestamp
+				 
+				timestamp = 0
+				step = slice / 2
+				if step == 0:
+					step = 0.001
+				it = iter(events)
+				try:
+					event = it.next()
+					while timestamp <= lastTimestamp:
+						while event.timestamp <= timestamp:
+							if event.type == Event.Types.ALLOC:
+								if event.res_id in index:
+									index[event.res_id].refCount += 1
+								else:
+									# store the event in dictionary for event lookup speedup.
+									index[event.res_id] = self.Index(event);
+									#
+									total += event.res_size
+									count += 1
+									allocs.append(event)
+									
+							if event.type == Event.Types.FREE:
+								if event.res_id in index:
+									ievent = index[event.res_id]
+									ievent.refCount -= 1
+									if ievent.refCount <= 0:
+										del index[event.res_id]
+							event = it.next()
+
+						# remove allocation events outside time slice
+						while len(allocs) > 0 and allocs[0].timestamp < event.timestamp - slice:
+							oldEvent = allocs.pop(0)
+							total -= oldEvent.res_size
+							count -= 1
 							
-					if event.type == Event.Types.FREE:
-						if event.res_id not in index:
-							continue
-						ievent = index[event.res_id]
-						ievent.refCount -= 1
-						if ievent.refCount > 0:
-							continue
-						del index[event.res_id]
+						# store peak values
+						if context.isMaskAll():
+							if total > stat.peakSize.size:
+								stat.peakSize.size = total
+								stat.peakSize.count = count
+								stat.peakSize.timestamp = event.timestamp
+							if count > stat.peakCount.count:
+								stat.peakCount.size = total
+								stat.peakCount.count = count
+								stat.peakCount.timestamp = event.timestamp
+							#
+							
+						fileRate.write("%d %d\n" % (event.timestamp, total))
+						fileCount.write("%d %d\n" % (event.timestamp, count))
+						hasData = True
+						if total > yrange:
+							yrange = total
+						if count > y2range:
+							y2range = count
 						
-					fileRate.write("%d %d\n" % (event.timestamp, total))
-					fileCount.write("%d %d\n" % (event.timestamp, count))
-					hasData = True
-					if total > yrange:
-						yrange = total
-					if count > y2range:
-						y2range = count
+						timestamp += step
 						
-				fileRate.close()
-				fileCount.close()
-				if hasData:
-					if plotData != "":
-						plotData += ", "
-					plotData += "\"%s\" using ($1/1000):2 title column(2)" % fileNameRate
-					plotData += ", \"%s\" using ($1/1000):2 title column(2) axes x1y2" % fileNameCount
+					fileRate.close()
+					fileCount.close()
+					if hasData:
+						if plotData != "":
+							plotData += ", "
+						plotData += "\"%s\" using ($1/1000):2 title column(2)" % fileNameRate
+						plotData += ", \"%s\" using ($1/1000):2 title column(2) axes x1y2" % fileNameCount
+						
+				except StopIteration:
+					pass
+				 
 			# peak marker data.
 			# Peak markers are vertical lines, drawn at the time of the max peak
 			plotData += ", \"%s-size-peak.dat\" using ($1/1000):2 title column(2)" % resource
@@ -417,9 +428,13 @@ class ActivityProcessor(Processor):
 			sys.exit(2)
 		
 		# set terminal properties
-		file.write("set terminal postscript eps enhanced color\n")
+		if Options.isPng:
+			file.write("set terminal png enhanced size 1024,728\n")
+			file.write("set fontpath \"/usr/share/fonts/truetype/ttf-liberation\"\n")
+		else:
+			file.write("set terminal postscript eps enhanced color\n")
 		# set file title
-		file.write("set title \"Amount of {/Helvetica-Italic}non-freed {/Helvetica} allocations\"\n")
+		file.write("set title \"Allocation (amount and count) rate\"\n")
 		# set X axis range 
 		file.write("set xrange[0.000:%.3f]\n" % (float(xrange) / 1000))
 		# set Y/Y2 axis range 
@@ -441,7 +456,7 @@ class ActivityProcessor(Processor):
 		file.write("set y2tics out\n")
 		file.write("set ytics nomirror\n")
 		# set Y/Y2 axis label
-		file.write("set ylabel \"size per %.3f sec\"\n" % (float(slice) / 1000))
+		file.write("set ylabel \"amount per %.3f sec\"\n" % (float(slice) / 1000))
 		file.write("set y2label \"count per %.3f sec\"\n" % (float(slice) / 1000))
 		# set X axis label
 		file.write("set xlabel \"time (secs)\" offset 0,-3\n")
@@ -463,11 +478,11 @@ class ActivityProcessor(Processor):
 		# allocation size
 		table.addColumn(10)
 
-		table.setText(0, 0, "{/Helvetica-Italic-Bold}Resource", "center")
-		table.setText(0, 1, "{/Helvetica-Italic-Bold}State", "center")
+		table.setText(0, 0, "{/%s}Resource" % Options.fonts.BOLDITALIC, "center")
+		table.setText(0, 1, "{/%s}State" % Options.fonts.BOLDITALIC, "center")
 
-		table.setText(0, 2, "{/Helvetica-Italic-Bold}Count", "center")
-		table.setText(0, 3, "{/Helvetica-Italic-Bold}Size", "center")
+		table.setText(0, 2, "{/%s}Count" % Options.fonts.BOLDITALIC, "center")
+		table.setText(0, 3, "{/%s}Size" % Options.fonts.BOLDITALIC, "center")
 
 		# write summary data
 		resourceIndex = 2
@@ -500,7 +515,9 @@ class ActivityProcessor(Processor):
 		file.close()
 		
 		# Convert with gnuplot
-		gnuplot = subprocess.Popen(["gnuplot", self.GNUPLOT_CONFIG], 0, None, None, stream, None)
+		gnuplot = subprocess.Popen(["gnuplot", self.GNUPLOT_CONFIG], 0, None, None, stream, None, None, None, None, None, \
+								 env={"GNUPLOT_DEFAULT_GDFONT": Options.fonts.NORMAL, \
+									 "GDFONTPATH": Options.GDFONTPATH})
 		gnuplot.wait()
 			
 		# cleanup gnuplot configuration and data files
@@ -665,10 +682,15 @@ class TotalsProcessor(Processor):
 			print >> sys.stderr, "Failed to create configuration file: %s" % self.GNUPLOT_CONFIG
 			sys.exit(2)
 		
+
 		# set terminal properties
-		file.write("set terminal postscript eps enhanced color\n")
+		if Options.isPng:
+			file.write("set terminal png enhanced size 1024,728\n")
+			file.write("set fontpath \"/usr/share/fonts/truetype/ttf-liberation\"\n")
+		else:
+			file.write("set terminal postscript eps enhanced color\n")
 		# set file title
-		file.write("set title \"Amount of {/Helvetica-Italic}non-freed {/Helvetica} allocations\"\n")
+		file.write("set title \"Amount of {/%s}non-freed {/%s} allocations\"\n" % (Options.fonts.ITALIC, Options.fonts.NORMAL))
 		# set X axis range 
 		file.write("set xrange[0.000:%.3f]\n" % (float(xrange) / 1000))
 		# set Y axis range 
@@ -712,18 +734,18 @@ class TotalsProcessor(Processor):
 		# leaked allocation size
 		table.addColumn(10)
 
-		table.setText(1, 0, "{/Helvetica-Italic-Bold}Resource", "center")
-		table.setText(1, 1, "{/Helvetica-Italic-Bold}State", "center")
+		table.setText(1, 0, "{/%s}Resource" % Options.fonts.BOLDITALIC, "center")
+		table.setText(1, 1, "{/%s}State" % Options.fonts.BOLDITALIC, "center")
 
-		table.setText(0, 2, "{/Helvetica-Italic-Bold}Total", "center")
-		table.setText(0, 3, "{/Helvetica-Italic-Bold}Total", "center")
-		table.setText(1, 2, "{/Helvetica-Italic-Bold}count", "center")
-		table.setText(1, 3, "{/Helvetica-Italic-Bold}size", "center")
+		table.setText(0, 2, "{/%s}Total" % Options.fonts.BOLDITALIC, "center")
+		table.setText(0, 3, "{/%s}Total" % Options.fonts.BOLDITALIC, "center")
+		table.setText(1, 2, "{/%s}count" % Options.fonts.BOLDITALIC, "center")
+		table.setText(1, 3, "{/%s}size" % Options.fonts.BOLDITALIC, "center")
 
-		table.setText(0, 4, "{/Helvetica-Italic-Bold}Non-freed", "center")
-		table.setText(0, 5, "{/Helvetica-Italic-Bold}Non-freed", "center")
-		table.setText(1, 4, "{/Helvetica-Italic-Bold}count", "center")
-		table.setText(1, 5, "{/Helvetica-Italic-Bold}size", "center")
+		table.setText(0, 4, "{/%s}Non-freed" % Options.fonts.BOLDITALIC, "center")
+		table.setText(0, 5, "{/%s}Non-freed" % Options.fonts.BOLDITALIC, "center")
+		table.setText(1, 4, "{/%s}count" % Options.fonts.BOLDITALIC, "center")
+		table.setText(1, 5, "{/%s}size" % Options.fonts.BOLDITALIC, "center")
 		
 		# write summary data
 		resourceIndex = 3
@@ -760,7 +782,9 @@ class TotalsProcessor(Processor):
 		file.close()
 		
 		# Convert with gnuplot
-		gnuplot = subprocess.Popen(["gnuplot", self.GNUPLOT_CONFIG], 0, None, None, stream, None)
+		gnuplot = subprocess.Popen(["gnuplot", self.GNUPLOT_CONFIG], 0, None, None, stream, None, None, None, None, None, \
+								 env={"GNUPLOT_DEFAULT_GDFONT": Options.fonts.NORMAL, \
+									 "GDFONTPATH": Options.GDFONTPATH})
 		gnuplot.wait()
 		
 		# cleanup gnuplot configuration and data files
@@ -839,15 +863,28 @@ class Options:
 		TOTALS = 1
 		LIFETIME = 2
 		ACTIVITY = 3
+	# /class Modes
 
+	class Fonts:
+		NORMAL = "LiberationSans"
+		ITALIC = "LiberationSans-Italic"
+		BOLDITALIC = "LiberationSans-BoldItalic"
+	# /class Fonts
+
+	GDFONTPATH = "/usr/share/fonts/truetype/ttf-liberation"
+	
 	mode = Modes.NONE
 	streamIn = sys.stdin
 	streamOut = sys.stdout
 	slice = 0
 	
+	isPng = False
+	fonts = Fonts()
+	
+	
 	def parse(argv):
 		try:
-			opts, args = getopt.gnu_getopt(argv, "tlao:i:s:", ["totals", "lifetime", "activity", "in=", "out=", "slice="])
+			opts, args = getopt.gnu_getopt(argv, "tlao:i:s:p", ["totals", "lifetime", "activity", "in=", "out=", "slice=", "png"])
 		except getopt.GetoptError, err:
 			print >> sys.stderr, str(err) 
 			Options.displayUsage()
@@ -876,6 +913,10 @@ class Options:
 			if opt == "-s" or opt == "--slice":
 				Options.slice = int(val)
 				
+			if opt == "-p" or opt == "--png":
+				Options.isPng =  True
+				Options.fonts.NORMAL = "LiberationSans-Regular"
+				
 		if parser is None:
 			print >> sys.stderr, "No report type specified."
 			Options.displayUsage()
@@ -895,6 +936,8 @@ Usage:
     -l         generate report of resource life times.
     -a         generate report of resource allocation/deallocation
                activity.
+    -s <msec>  the time slice for acivity report.
+    -p         generate png file (eps file is generated by default)."
     -i <file>  input file.
     -o <file>  outtput file.
 """
