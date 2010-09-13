@@ -72,6 +72,7 @@ static int res_fd = 0;
   */
 
 typedef int (*open_t)(const char* pathname, int flags, ...);
+typedef int (*open64_t)(const char* pathname, int flags, ...);
 typedef int (*close_t)(int fd);
 typedef int (*dup2_t)(int oldfd, int newfd);
 typedef int (*socket_t)(int domain, int type, int protocol);
@@ -96,6 +97,7 @@ typedef struct {
 	fclose_t fclose;
 	fcloseall_t fcloseall;
 	open_t open;
+	open64_t open64;
 	close_t close;
 	dup2_t dup2;
 	socket_t socket;
@@ -143,6 +145,7 @@ static void trace_initialize()
 	switch (init_mode) {
 		case MODULE_UNINITIALIZED: {
 			trace_off.open = (open_t)dlsym(RTLD_NEXT, "open");
+			trace_off.open64 = (open_t)dlsym(RTLD_NEXT, "open64");
 			trace_off.close = (close_t)dlsym(RTLD_NEXT, "close");
 			trace_off.dup2 = (dup2_t)dlsym(RTLD_NEXT, "dup2");
 			trace_off.socket = (socket_t)dlsym(RTLD_NEXT, "socket");
@@ -199,6 +202,32 @@ static int trace_open(const char* pathname, int flags, ...)
 		const char *args[] = {pathname, arg2, NULL};
 		sprintf(arg2, "%x", flags);
 		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fd, "open", 1, (pointer_t)rc, args);
+	}
+	return rc;
+}
+
+/*
+ * tracing functions
+ */
+static int trace_open64(const char* pathname, int flags, ...)
+{
+	int rc = 0;
+	if (flags & O_CREAT) {
+		va_list args;
+		va_start(args, flags);
+		rc = trace_off.open64(pathname, flags, va_arg(args, int));
+		va_end(args);
+	}
+	else {
+		rc = trace_off.open64(pathname, flags);
+	}
+	backtrace_lock = 0;
+
+	if (rc != -1) {
+		char arg2[16];
+		const char *args[] = {pathname, arg2, NULL};
+		sprintf(arg2, "%x", flags);
+		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fd, "open64", 1, (pointer_t)rc, args);
 	}
 	return rc;
 }
@@ -392,6 +421,7 @@ static int trace_pipe(int pipefd[2])
 
 static trace_t trace_on = {
 	.open = trace_open,
+	.open64 = trace_open64,
 	.close = trace_close,
 	.dup2 = trace_dup2,
 	.socket = trace_socket,
@@ -425,6 +455,23 @@ int open(const char* pathname, int flags, ...)
 	}
 	else {
 		BT_EXECUTE_LOCKED(rc = trace_rt->open(pathname, flags), trace_off.open(pathname, flags));
+	}
+	return rc;
+}
+
+int open64(const char* pathname, int flags, ...)
+{
+	int rc;
+	if (flags & O_CREAT) {
+		int mode;
+		va_list args;
+		va_start(args, flags);
+		mode = va_arg(args, int);
+		va_end(args);
+		BT_EXECUTE_LOCKED(rc = trace_rt->open64(pathname, flags, va_arg(args, int)), trace_off.open(pathname, flags, mode));
+	}
+	else {
+		BT_EXECUTE_LOCKED(rc = trace_rt->open64(pathname, flags), trace_off.open(pathname, flags));
 	}
 	return rc;
 }
@@ -569,6 +616,24 @@ static int init_open(const char* pathname, int flags, ...)
 	return rc;
 }
 
+/*
+ * Initialization functions.
+ */
+static int init_open64(const char* pathname, int flags, ...)
+{
+	trace_initialize();
+	int rc = 0;
+	if (flags & O_CREAT) {
+		va_list args;
+		va_start(args, flags);
+		rc = trace_init_rt->open64(pathname, flags, va_arg(args, int));
+		va_end(args);
+	}
+	else {
+		rc = trace_init_rt->open64(pathname, flags);
+	}
+	return rc;
+}
 
 static int init_close(int fd)
 {
@@ -693,6 +758,7 @@ static int init_pipe(int pipefd[2])
 
 static trace_t trace_init = {
 	.open = init_open,
+	.open64 = init_open64,
 	.close = init_close,
 	.dup2 = init_dup2,
 	.socket = init_socket,
