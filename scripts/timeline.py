@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 # 02110-1301 USA
 
-import sys, string, re, os, getopt, subprocess
+import sys, string, re, os, getopt, subprocess, operator
 
 class Timestamp:
 	"""
@@ -78,13 +78,15 @@ class Event:
 	res_id = ""
 	type = Types.UNDEFINED
 	context = 0
+	index = 0
 	
-	def __init__(self, type, context, timestamp, res_id, res_size):
+	def __init__(self, type, index, context, timestamp, res_id, res_size):
 		self.type = type
 		self.timestamp = timestamp
 		self.res_size = res_size
 		self.res_id= res_id
 		self.context = context
+		self.index = index
 		
 	def matchContext(self, context):
 		"Checks if the event matches the specified context mask"
@@ -193,11 +195,41 @@ class Processor:
 			self.refCount = 1
 	# /class Index
 			
+	class DataFile:
+		"""
+		This class represents gnuplot data file
+		"""
+		_filename = None
+		
+		def __init__(self, filename, title = None):
+			self._filename = filename
+			if title is not None:
+				self.create(title)
+			
+		def create(self, title):
+			self.file = open(self._filename, "w")
+			if self.file is None:
+				raise NameError("Failed to create data file: %s" % filename)
+			self.file.write("Resource \"%s\"\n" % title)
+			
+		def write(self, x, y):
+			self.file.write("%d %d\n" % (x, y))
+			
+		def close(self):
+			self.file.close()
+			
+		def remove(self):
+			os.remove(self._filename)
+			
+		def getFilename(self):
+			return self._filename
+	# /class DataFile
+			
 	events = {}
 	contexts = []
 	timestampOffset = 0
 	
-	def registerAlloc(self, context, timestamp, res_type, res_id, res_size):
+	def registerAlloc(self, index, context, timestamp, res_type, res_id, res_size):
 		"Registers resource allocation"
 		resource = res_type;
 		if resource is None:
@@ -205,9 +237,9 @@ class Processor:
 		if resource not in self.events:
 			print >> sys.stderr, "Unknown resource: %s" % resource
 			sys.exit(2)
-		self.events[resource].append(Event(Event.Types.ALLOC, context, timestamp, res_id, res_size))
+		self.events[resource].append(Event(Event.Types.ALLOC, index, context, timestamp, res_id, res_size))
 		
-	def registerFree(self, context, timestamp, res_type, res_id):
+	def registerFree(self, index, context, timestamp, res_type, res_id):
 		"Registers resource deallocation"
 		resource = res_type;
 		if resource is None:
@@ -215,7 +247,7 @@ class Processor:
 		if resource not in self.events:
 			print >> sys.stderr, "Unknown resource: %s" % resource
 			sys.exit(2)
-		self.events[resource].append(Event(Event.Types.FREE, context, timestamp, res_id, 0))
+		self.events[resource].append(Event(Event.Types.FREE, index, context, timestamp, res_id, 0))
 		
 	def registerContext(self, value, name):
 		"Registers context declaration"
@@ -231,6 +263,12 @@ class Processor:
 	def setTimestampOffset(self, offset):
 		"Sets the initial timestamp value from where the offsets are calculated"
 		self.timestampOffset = offset
+		
+	def sort(self):
+		for resource in self.events.keys():
+			self.events[resource] = sorted(self.events[resource], key = operator.attrgetter("index"))
+			self.events[resource] = sorted(self.events[resource], key = operator.attrgetter("timestamp"))
+				
 # /class Processor		
 		
 
@@ -250,14 +288,17 @@ class ActivityProcessor(Processor):
 			count = 0
 			size = 0
 			timestamp = 0
+			file = None
 		# /class Data
 
 		peakSize = None
-		peakCount = None
+		peakAllocs = None
+		peakFrees = None
 		
 		def __init__(self):
 			self.peakSize = self.Data()
-			self.peakCount = self.Data()
+			self.peakAllocs = self.Data()
+			self.peakFrees = self.Data()
 	# /class Stats
 
 	def writeReport(self, stream):
@@ -266,7 +307,10 @@ class ActivityProcessor(Processor):
 		yrange = 0
 		y2range= 0
 		plotData = ""
+		# peak statistics list
 		stats = {}
+		# data file list
+		files = []
 		
 		# calculate the X axis range and activity time slice
 		for resource in self.events.keys():
@@ -284,49 +328,54 @@ class ActivityProcessor(Processor):
 		if len(self.contexts) > 0:
 			contexts.append(Context(Context.MASK_NONE, "no contexts"))
 			contexts.extend(self.contexts)
-				
+
 		# iterate through registered resources
 		for resource in self.events.keys():
+			stat = self.Stats()
+			stats[resource] = stat
+
+			# initialize peak statistics data files
+			stat.peakSize.file = self.DataFile("%s-size-peak.dat" % resource)
+			files.append(stat.peakSize.file)
+			stat.peakAllocs.file = self.DataFile("%s-allocs-peak.dat" % resource)
+			files.append(stat.peakAllocs.file)
+			stat.peakFrees.file = self.DataFile("%s-frees-peak.dat" % resource)
+			files.append(stat.peakFrees.file)
+
+			# initialize resource statistics data
+			events = self.events[resource]
+			
+			lastTimestamp = events[-1].timestamp
+			step = slice / 2
+			if step == 0:
+				step = 0.001
+			
 			# iterate through available contexts
 			for context in contexts:
 				# create the data files for the resource-context filter
-				fileNameRate = "%s-size-%x.dat" % (resource, context.value)
-				fileRate = open(fileNameRate, "w")
-				if fileRate is None:
-					print >> sys.stderr, "Failed to create data file: %s" % fileNameRate
-					sys.exit(2)
-				fileRate.write("Resource \"%s (%s)\"\n" % (resource, context.name))
-				
-				fileNameCount = "%s-count-%x.dat" % (resource, context.value)
-				fileCount = open(fileNameCount, "w")
-				if fileCount is None:
-					print >> sys.stderr, "Failed to create data file: %s" % fileNameCount
-					sys.exit(2)
-				fileCount.write("Resource \"%s (%s)\"\n" % (resource, context.name))
-				
+				fileRate = self.DataFile("%s-size-%x.dat" % (resource, context.value), "%s (rate:%s)" % (resource, context.name))
+				fileAllocs = self.DataFile("%s-allocs-%x.dat" % (resource, context.value), "%s (allocs:%s)" % (resource, context.name))
+				fileFrees = self.DataFile("%s-frees-%x.data" % (resource, context.value), "%s (frees:%s)" % (resource, context.name))
+				 
+				# store data files so they can be removed afterwards
+				files.append(fileRate)
+				files.append(fileAllocs)
+				files.append(fileFrees)
+				 
 				# resource indexing map 
 				index = {}
 				# total allocation size per time slice
 				total = 0
 				# allocation number for time slice
-				count = 0
+				allocs = 0
+				# deallocation number for time slice
+				frees = 0
 				# allocation events per time slice
-				allocs = []
+				sliceEvents = []
 				# flag indicating if the filter has any data
 				hasData = False
-				# initialize resource statistics data
-				if context.isMaskAll():
-					stat = self.Stats()
-					stats[resource] = stat
-				#
-				events = self.events[resource]
-				
-				lastTimestamp = events[-1].timestamp
 				 
 				timestamp = 0
-				step = slice / 2
-				if step == 0:
-					step = 0.001
 				it = iter(events)
 				try:
 					event = it.next()
@@ -340,8 +389,8 @@ class ActivityProcessor(Processor):
 									index[event.res_id] = self.Index(event);
 									#
 									total += event.res_size
-									count += 1
-									allocs.append(event)
+									allocs += 1
+									sliceEvents.append(event)
 									
 							if event.type == Event.Types.FREE:
 								if event.res_id in index:
@@ -349,76 +398,93 @@ class ActivityProcessor(Processor):
 									ievent.refCount -= 1
 									if ievent.refCount <= 0:
 										del index[event.res_id]
+									frees +=1
+									sliceEvents.append(event)
+									
 							event = it.next()
 
 						# remove allocation events outside time slice
-						while len(allocs) > 0 and allocs[0].timestamp < event.timestamp - slice:
-							oldEvent = allocs.pop(0)
-							total -= oldEvent.res_size
-							count -= 1
+						while len(sliceEvents) > 0 and sliceEvents[0].timestamp < event.timestamp - slice:
+							oldEvent = sliceEvents.pop(0)
+							if oldEvent.type == Event.Types.ALLOC:
+								total -= oldEvent.res_size
+								allocs -= 1
+							if oldEvent.type == Event.Types.FREE:
+								frees -= 1
 							
 						# store peak values
 						if context.isMaskAll():
 							if total > stat.peakSize.size:
 								stat.peakSize.size = total
-								stat.peakSize.count = count
+								stat.peakSize.count = allocs
 								stat.peakSize.timestamp = event.timestamp
-							if count > stat.peakCount.count:
-								stat.peakCount.size = total
-								stat.peakCount.count = count
-								stat.peakCount.timestamp = event.timestamp
-							#
+							if allocs > stat.peakAllocs.count:
+								stat.peakAllocs.size = total
+								stat.peakAllocs.count = allocs
+								stat.peakAllocs.timestamp = event.timestamp
+							if frees > stat.peakFrees.count:
+								stat.peakFrees.count = frees
+								stat.peakFrees.size = total
+								stat.peakFrees.timestamp = event.timestamp
+						#
 							
-						fileRate.write("%d %d\n" % (event.timestamp, total))
-						fileCount.write("%d %d\n" % (event.timestamp, count))
+						fileRate.write(event.timestamp, total)
+						fileAllocs.write(event.timestamp, allocs)
+						fileFrees.write(event.timestamp, frees)
+						
 						hasData = True
 						if total > yrange:
 							yrange = total
-						if count > y2range:
-							y2range = count
+						if allocs > y2range:
+							y2range = allocs
+						if frees > y2range:
+							y2range = frees
 						
 						timestamp += step
 						
 					fileRate.close()
-					fileCount.close()
+					fileAllocs.close()
+					fileFrees.close()
+					
 					if hasData:
 						if plotData != "":
 							plotData += ", "
-						plotData += "\"%s\" using ($1/1000):2 title column(2)" % fileNameRate
-						plotData += ", \"%s\" using ($1/1000):2 title column(2) axes x1y2" % fileNameCount
+						plotData += "\"%s\" using ($1/1000):2 title column(2)" % fileRate.getFilename()
+						plotData += ", \"%s\" using ($1/1000):2 title column(2) axes x1y2" % fileAllocs.getFilename()
+						plotData += ", \"%s\" using ($1/1000):2 title column(2) axes x1y2" % fileFrees.getFilename()
 						
 				except StopIteration:
 					pass
 				 
 			# peak marker data.
 			# Peak markers are vertical lines, drawn at the time of the max peak
-			plotData += ", \"%s-size-peak.dat\" using ($1/1000):2 title column(2)" % resource
-			plotData += ", \"%s-count-peak.dat\" using ($1/1000):2 title column(2)" % resource
+			plotData += ", \"%s\" using ($1/1000):2 title column(2)" % stat.peakSize.file.getFilename()
+			plotData += ", \"%s\" using ($1/1000):2 title column(2)" % stat.peakAllocs.file.getFilename()
+			plotData += ", \"%s\" using ($1/1000):2 title column(2)" % stat.peakFrees.file.getFilename()
 			
 		# iterate through registered resources to generate peak allocation data files
 		for resource in self.events.keys():
-			fileName = resource + "-size-peak.dat"
-			file = open(fileName, "w")
-			if file is None:
-				print >> sys.stderr, "Failed to create data file: %s" % fileName
-				sys.exit(2)
 			timestamp = stats[resource].peakSize.timestamp
-			file.write("Resource \"%s (size peak:%s)\"\n" % (resource, Timestamp.format(self.timestampOffset + timestamp)))
-			file.write("%d %d\n" % (timestamp, 0))
-			file.write("%d %d\n" % (timestamp, yrange))
+			file = stats[resource].peakSize.file
+			file.create("%s (peak rate:%s)" % (resource, Timestamp.format(self.timestampOffset + timestamp)))
+			file.write(timestamp, 0)
+			file.write(timestamp, yrange)
 			file.close()
 			
-			fileName = resource + "-count-peak.dat"
-			file = open(fileName, "w")
-			if file is None:
-				print >> sys.stderr, "Failed to create data file: %s" % fileName
-				sys.exit(2)
-			timestamp = stats[resource].peakCount.timestamp
-			file.write("Resource \"%s (count peak:%s)\"\n" % (resource, Timestamp.format(self.timestampOffset + timestamp)))
-			file.write("%d %d\n" % (timestamp, 0))
-			file.write("%d %d\n" % (timestamp, yrange))
+			timestamp = stats[resource].peakAllocs.timestamp
+			file = stats[resource].peakAllocs.file
+			file.create("%s (peak allocs:%s)" % (resource, Timestamp.format(self.timestampOffset + timestamp)))
+			file.write(timestamp, 0)
+			file.write(timestamp, yrange)
 			file.close()
 			
+			timestamp = stats[resource].peakFrees.timestamp
+			file = stats[resource].peakFrees.file
+			file.create("%s (peak frees:%s)" % (resource, Timestamp.format(self.timestampOffset + timestamp)))
+			file.write(timestamp, 0)
+			file.write(timestamp, yrange)
+			file.close()
+
 		#	
 		# generate gnuplot configuration file:
 		#
@@ -434,7 +500,7 @@ class ActivityProcessor(Processor):
 		else:
 			file.write("set terminal postscript eps enhanced color\n")
 		# set file title
-		file.write("set title \"Allocation (amount and count) rate\"\n")
+		file.write("set title \"Allocation/deallocation rate\"\n")
 		# set X axis range 
 		file.write("set xrange[0.000:%.3f]\n" % (float(xrange) / 1000))
 		# set Y/Y2 axis range 
@@ -494,9 +560,14 @@ class ActivityProcessor(Processor):
 			table.setText(resourceIndex, 3, "%d" % stat.peakSize.size)
 
 			resourceIndex += 1
-			table.setText(resourceIndex, 1, "peak count", "center")
-			table.setText(resourceIndex, 2, "%d" % stat.peakCount.count)
-			table.setText(resourceIndex, 3, "%d" % stat.peakCount.size)
+			table.setText(resourceIndex, 1, "peak allocs", "center")
+			table.setText(resourceIndex, 2, "%d" % stat.peakAllocs.count)
+			table.setText(resourceIndex, 3, "%d" % stat.peakAllocs.size)
+			
+			resourceIndex += 1
+			table.setText(resourceIndex, 1, "peak frees", "center")
+			table.setText(resourceIndex, 2, "%d" % stat.peakFrees.count)
+			table.setText(resourceIndex, 3, "%d" % stat.peakFrees.size)
 			
 			resourceIndex += 2
 		
@@ -523,12 +594,8 @@ class ActivityProcessor(Processor):
 		# cleanup gnuplot configuration and data files
 		os.remove(self.GNUPLOT_CONFIG)
 		
-		for resource in self.events.keys():
-			os.remove(resource + "-size-peak.dat")
-			os.remove(resource + "-count-peak.dat")
-			for context in contexts:
-				os.remove("%s-size-%x.dat" % (resource, context.value))
-				os.remove("%s-count-%x.dat" % (resource, context.value))
+		for file in files:
+			file.remove();
 	
 # /class ActivityProcessor
 
@@ -555,6 +622,7 @@ class TotalsProcessor(Processor):
 		endTotals = None
 		peakTotals = None
 		peakTimestamp = 0
+		peakFile = None
 
 		def __init__(self):
 			# non-freed allocations at the end of trace
@@ -575,6 +643,8 @@ class TotalsProcessor(Processor):
 		plotData = ""
 		# leak summing map
 		stats = {}
+		# data file list
+		files = []
 
 		contexts = [Context(Context.MASK_ALL, "all allocations")]
 		if len(self.contexts) > 0:
@@ -583,15 +653,22 @@ class TotalsProcessor(Processor):
 		
 		# iterate through registered resources
 		for resource in self.events.keys():
+			stat = self.Stats()
+			stats[resource] = stat
+			#
+			events = self.events[resource]
+			if events[-1].timestamp > xrange:
+				xrange = events[-1].timestamp
+
+			# initialize peak statistics data files
+			stat.peakFile = self.DataFile("%s-peak.dat" % resource)
+			files.append(stat.peakFile)
+
 			# iterate through available contexts
 			for context in contexts:
 				# create the data file for the resource-context filter
-				fileName = "%s-%x.dat" % (resource, context.value)
-				file = open(fileName, "w")
-				if file is None:
-					print >> sys.stderr, "Failed to create data file: %s" % fileName
-					sys.exit(2)
-				file.write("Resource \"%s (%s)\"\n" % (resource, context.name))
+				file = self.DataFile("%s-%x.dat" % (resource, context.value), "%s (%s)" % (resource, context.name))
+				files.append(file)
 					
 				# resource indexing map 
 				index = {}
@@ -599,14 +676,6 @@ class TotalsProcessor(Processor):
 				total = 0
 				# flag indicating if the filter has any data
 				hasData = False
-				# initialize resource statistics data
-				if context.isMaskAll():
-					stat = self.Stats()
-					stats[resource] = stat
-				#
-				events = self.events[resource]
-				if events[-1].timestamp > xrange:
-					xrange = events[-1].timestamp
 					
 				# iterate through allocation/deallocation events
 				for event in events:
@@ -647,7 +716,7 @@ class TotalsProcessor(Processor):
 							stat.endLeaks.count -= 1
 						del index[event.res_id]
 						
-					file.write("%d %d\n" % (event.timestamp, total))
+					file.write(event.timestamp, total)
 					hasData = True
 					if total > yrange:
 						yrange = total
@@ -655,24 +724,19 @@ class TotalsProcessor(Processor):
 				if hasData:
 					if plotData != "":
 						plotData += ", "
-					plotData += "\"%s\" using ($1/1000):2 title column(2)" % fileName
+					plotData += "\"%s\" using ($1/1000):2 title column(2)" % file.getFilename()
 			# peak marker data.
 			# Peak markers are vertical lines, drawn at the time of the max peak
-			plotData += ", \"%s-peak.dat\" using ($1/1000):2 title column(2)" % resource
+			plotData += ", \"%s\" using ($1/1000):2 title column(2)" % stat.peakFile.getFilename()
 
 		# iterate through registered resources to generate peak allocation data files
 		for resource in self.events.keys():
-			fileName = resource + "-peak.dat"
-			file = open(fileName, "w")
-			if file is None:
-				print >> sys.stderr, "Failed to create data file: %s" % fileName
-				sys.exit(2)
+			file = stats[resource].peakFile
 			timestamp = stats[resource].peakTimestamp
-			file.write("Resource \"%s (peak:%s)\"\n" % (resource, Timestamp.format(self.timestampOffset + timestamp)))
-			file.write("%d %d\n" % (timestamp, 0))
-			file.write("%d %d\n" % (timestamp, yrange))
+			file.create("%s (peak:%s)\n" % (resource, Timestamp.format(self.timestampOffset + timestamp)))
+			file.write(timestamp, 0)
+			file.write(timestamp, yrange)
 			file.close()
-
 
 		#	
 		# generate gnuplot configuration file:
@@ -790,10 +854,8 @@ class TotalsProcessor(Processor):
 		# cleanup gnuplot configuration and data files
 		os.remove(self.GNUPLOT_CONFIG)
 		
-		for resource in self.events.keys():
-			os.remove(resource + "-peak.dat")
-			for context in contexts:
-				os.remove("%s-%x.dat" % (resource, context.value))
+		for file in files:
+			file.remove();
 # /class TotalsProcessor
 		
 	
@@ -803,8 +865,8 @@ class Parser:
 	to produce the required report file.
 	"""
 	processor = None
-	reAlloc = re.compile("^[0-9]+\.(?: @([0-9a-fA-F]+)|) [^[]*\[([^\]]+)\][^(<]+(?:<([^>]+)>|)\(([^)]+)\) = (0x[a-fA-F0-9]+)(.*)$")
-	reFree = re.compile("^[0-9]+\.(?: @([0-9a-fA-F]+)|) [^[]*\[([^\]]+)\][^(<]+(?:<([^>]+)>|)\((0x[a-fA-F0-9]+)\)$")
+	reAlloc = re.compile("^([0-9]+)\.(?: @([0-9a-fA-F]+)|) [^[]*\[([^\]]+)\][^(<]+(?:<([^>]+)>|)\(([^)]+)\) = (0x[a-fA-F0-9]+)(.*)$")
+	reFree = re.compile("^([0-9]+)\.(?: @([0-9a-fA-F]+)|) [^[]*\[([^\]]+)\][^(<]+(?:<([^>]+)>|)\((0x[a-fA-F0-9]+)\)$")
 	reResource = re.compile("\<([0-9a-z]+)\> : ([^ ]+) \(([^\)]+)\)")
 	reTimestamp = re.compile("^([0-9]+)\:([0-9]+)\:([0-9]+)\.([0-9]+)$")
 	reContext = re.compile("^\@ ([0-9a-fA-F]+) : (.*)$")
@@ -818,17 +880,17 @@ class Parser:
 		for line in stream:
 			match = self.reAlloc.match(line)
 			if match:
-				context = match.group(1)
+				context = match.group(2)
 				if context is None:
 					context = 0
-				self.processor.registerAlloc(context, self.getTimestampFromString(match.group(2)), match.group(3), match.group(5), int(match.group(4)))
+				self.processor.registerAlloc(int(match.group(1)), context, self.getTimestampFromString(match.group(3)), match.group(4), match.group(6), int(match.group(5)))
 				continue
 			match = self.reFree.match(line)
 			if match:
-				context = match.group(1)
+				context = match.group(2)
 				if context is None:
 					context = 0
-				self.processor.registerFree(context, self.getTimestampFromString(match.group(2)), match.group(3), match.group(4))
+				self.processor.registerFree(int(match.group(1)), context, self.getTimestampFromString(match.group(3)), match.group(4), match.group(5))
 				continue
 			match = self.reResource.match(line)
 			if match:
@@ -840,7 +902,8 @@ class Parser:
 				continue
 				
 	def write(self, stream):
-		self.processor.writeReport(stream);
+		self.processor.sort()
+		self.processor.writeReport(stream)
 		
 	def getTimestampFromString(self, text):
 		timestamp = 0
