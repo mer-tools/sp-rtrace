@@ -1197,6 +1197,8 @@ class Options:
                 self.lib.append(value)
             elif option == "ignore":
                 self.ignore.append(value)
+            elif option == "ignore-middle":
+                self.ignore_middle.append(value)
             elif option == "no-ignore":
                 self.noignore.append(value)
             elif option == "ignore-font-allocs":
@@ -1234,7 +1236,7 @@ class Options:
                 "qDBusAddSpyHook", "qt_plugin_instance",
                 ]
                 self.ignore_middle += [
-                "::qt_metacall", " QVariant::"
+                "::qt_metacall", "::notify", " QVariant::"
                 ]
             elif option == "stop":
                 self.stop.append(value)
