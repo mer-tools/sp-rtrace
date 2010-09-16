@@ -36,14 +36,23 @@ struct rs_mmap_t;
 /**
  * The resolver cache record.
  */
-typedef struct {
+typedef struct rs_cache_record_t {
 	/* associated memory mapping record */
 	struct rs_mmap_t* mmap;
 
-	/* resolving data */
+	/* bfd resolving data */
 	bfd* file;
 	asymbol** symbols;
 	long symcount;
+
+	/* elf resolving data */
+	int fd;
+	void* image;
+	size_t image_size;
+
+	/**/
+	int (*get_address_info)(struct rs_cache_record_t* rec, pointer_t address, char* buffer);
+
 } rs_cache_record_t;
 
 
