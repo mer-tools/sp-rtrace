@@ -318,9 +318,13 @@ class ActivityProcessor(Processor):
 			if events[-1].timestamp > xrange:
 				xrange = events[-1].timestamp
 		slice = Options.slice
-		if slice == 0:
-			slice = xrange / 100
-			if slice == 0:
+		round = 1000
+		decimal = -1
+		while slice == 0:
+			slice = (xrange / 100 / round) * round
+			round /= 10;
+			decimal += 1
+			if slice == 0 and round == 0:
 				slice = 1
 		#
 		
@@ -377,9 +381,9 @@ class ActivityProcessor(Processor):
 				 
 				timestamp = 0
 				it = iter(events)
-				try:
-					event = it.next()
-					while timestamp <= lastTimestamp:
+				event = it.next()
+				while True:
+					try:
 						while event.timestamp <= timestamp:
 							if event.type == Event.Types.ALLOC:
 								if event.res_id in index:
@@ -402,59 +406,65 @@ class ActivityProcessor(Processor):
 									sliceEvents.append(event)
 									
 							event = it.next()
+						
+					except StopIteration:
+						pass
 
-						# remove allocation events outside time slice
-						while len(sliceEvents) > 0 and sliceEvents[0].timestamp < event.timestamp - slice:
-							oldEvent = sliceEvents.pop(0)
-							if oldEvent.type == Event.Types.ALLOC:
-								total -= oldEvent.res_size
-								allocs -= 1
-							if oldEvent.type == Event.Types.FREE:
-								frees -= 1
-							
-						# store peak values
-						if context.isMaskAll():
-							if total > stat.peakSize.size:
-								stat.peakSize.size = total
-								stat.peakSize.count = allocs
-								stat.peakSize.timestamp = event.timestamp
-							if allocs > stat.peakAllocs.count:
-								stat.peakAllocs.size = total
-								stat.peakAllocs.count = allocs
-								stat.peakAllocs.timestamp = event.timestamp
-							if frees > stat.peakFrees.count:
-								stat.peakFrees.count = frees
-								stat.peakFrees.size = total
-								stat.peakFrees.timestamp = event.timestamp
-						#
-							
-						fileRate.write(event.timestamp, total)
-						fileAllocs.write(event.timestamp, allocs)
-						fileFrees.write(event.timestamp, frees)
+					# remove allocation events outside time slice
+					while len(sliceEvents) > 0 and sliceEvents[0].timestamp < event.timestamp - slice:
+						oldEvent = sliceEvents.pop(0)
+						if oldEvent.type == Event.Types.ALLOC:
+							total -= oldEvent.res_size
+							allocs -= 1
+						if oldEvent.type == Event.Types.FREE:
+							frees -= 1
 						
-						hasData = True
-						if total > yrange:
-							yrange = total
-						if allocs > y2range:
-							y2range = allocs
-						if frees > y2range:
-							y2range = frees
+					# store peak values
+					if context.isMaskAll():
+						if total > stat.peakSize.size:
+							stat.peakSize.size = total
+							stat.peakSize.count = allocs
+							stat.peakSize.timestamp = event.timestamp
+						if allocs > stat.peakAllocs.count:
+							stat.peakAllocs.size = total
+							stat.peakAllocs.count = allocs
+							stat.peakAllocs.timestamp = event.timestamp
+						if frees > stat.peakFrees.count:
+							stat.peakFrees.count = frees
+							stat.peakFrees.size = total
+							stat.peakFrees.timestamp = event.timestamp
+					#
 						
-						timestamp += step
-						
-					fileRate.close()
-					fileAllocs.close()
-					fileFrees.close()
+					fileRate.write(event.timestamp, total)
+					fileAllocs.write(event.timestamp, allocs)
+					fileFrees.write(event.timestamp, frees)
 					
-					if hasData:
-						if plotData != "":
-							plotData += ", "
-						plotData += "\"%s\" using ($1/1000):2 title column(2)" % fileRate.getFilename()
-						plotData += ", \"%s\" using ($1/1000):2 title column(2) axes x1y2" % fileAllocs.getFilename()
-						plotData += ", \"%s\" using ($1/1000):2 title column(2) axes x1y2" % fileFrees.getFilename()
-						
-				except StopIteration:
-					pass
+					hasData = True
+					if total > yrange:
+						yrange = total
+					if allocs > y2range:
+						y2range = allocs
+					if frees > y2range:
+						y2range = frees
+
+					if timestamp == lastTimestamp:
+						break
+					timestamp += step
+					# calculate the activity of the last timestamp even if it did 
+					# not match slice point.
+					if timestamp > lastTimestamp:
+						timestamp = lastTimestamp
+
+				fileRate.close()
+				fileAllocs.close()
+				fileFrees.close()
+				
+				if hasData:
+					if plotData != "":
+						plotData += ", "
+					plotData += "\"%s\" using ($1/1000):2 title column(2)" % fileRate.getFilename()
+					plotData += ", \"%s\" using ($1/1000):2 title column(2) axes x1y2" % fileAllocs.getFilename()
+					plotData += ", \"%s\" using ($1/1000):2 title column(2) axes x1y2" % fileFrees.getFilename()
 				 
 			# peak marker data.
 			# Peak markers are vertical lines, drawn at the time of the max peak
@@ -493,6 +503,7 @@ class ActivityProcessor(Processor):
 			print >> sys.stderr, "Failed to create configuration file: %s" % self.GNUPLOT_CONFIG
 			sys.exit(2)
 		
+		files.append(file)
 		# set terminal properties
 		if Options.isPng:
 			file.write("set terminal png enhanced size 1024,728\n")
@@ -522,8 +533,10 @@ class ActivityProcessor(Processor):
 		file.write("set y2tics out\n")
 		file.write("set ytics nomirror\n")
 		# set Y/Y2 axis label
-		file.write("set ylabel \"amount per %.3f sec\"\n" % (float(slice) / 1000))
-		file.write("set y2label \"count per %.3f sec\"\n" % (float(slice) / 1000))
+		sliceTxt = "%%.%df" % decimal
+		sliceTxt = sliceTxt % (float(slice) / 1000)
+		file.write("set ylabel \"amount per %s sec\"\n" % sliceTxt)
+		file.write("set y2label \"count per %s sec\"\n" % sliceTxt)
 		# set X axis label
 		file.write("set xlabel \"time (secs)\" offset 0,-3\n")
 		# set graph line style
@@ -591,11 +604,8 @@ class ActivityProcessor(Processor):
 									 "GDFONTPATH": Options.GDFONTPATH})
 		gnuplot.wait()
 			
-		# cleanup gnuplot configuration and data files
-		os.remove(self.GNUPLOT_CONFIG)
-		
-		for file in files:
-			file.remove();
+#		for file in files:
+#			file.remove();
 	
 # /class ActivityProcessor
 
