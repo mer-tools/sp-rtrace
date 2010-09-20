@@ -82,6 +82,8 @@ resolve_options_t resolve_options = {
 };
 
 
+static volatile sig_atomic_t resolver_abort = 0;
+
 /**
  * Free options resources allocated during command line parsing.
  *
@@ -235,6 +237,7 @@ static void mmap_resolve_address_file(rs_mmap_t* mmap, rs_cache_t* rs)
 
 	fseek(mmap->fin, 0, SEEK_SET);
 	while (fgets(line, PATH_MAX, mmap->fin)) {
+		if (resolver_abort) return;
 		pointer_t address;
 		char resolved_name[PATH_MAX] = "";
 		int n = sscanf(line, "\t0x%lx (%[^\n]",  &address, resolved_name);
@@ -243,7 +246,10 @@ static void mmap_resolve_address_file(rs_mmap_t* mmap, rs_cache_t* rs)
 		}
 		else {
 			if (n == 2) resolved_name[strlen(resolved_name) - 1] = '\0';
-			fputs(rs_resolve_address(rs, address, resolved_name), mmap->fout);
+			if (fputs(rs_resolve_address(rs, address, resolved_name), mmap->fout) == EOF) {
+				fprintf(stderr, "ERROR: while writing resolved data to file, disk full?\n");
+				exit (-1);
+			}
 		}
 	}
 	fclose(mmap->fin);
@@ -290,6 +296,7 @@ static void do_resolve(FILE *fpin, FILE *fpout)
 		}
 		/* 1. step - index the input stream */
 		while (fgets(line, sizeof(line), fpin)) {
+			if (resolver_abort) return;
 			const char* pout = NULL;
 			pout = parse_mmap_record(line, &rs);
 			if (!pout) {
@@ -311,8 +318,12 @@ static void do_resolve(FILE *fpin, FILE *fpout)
 		fseek(findex, 0, SEEK_SET);
 
 		while (fgets(line, sizeof(line), findex)) {
+			if (resolver_abort) return;
 			parse_index_record(line, &rs);
-			fputs(line, fpout);
+			if (fputs(line, fpout) == EOF) {
+				fprintf(stderr, "ERROR: while writing assembled data to file, disk full?\n");
+				exit (-1);
+			}
 		}
 
 		/* clean up the temporary files */
@@ -322,6 +333,7 @@ static void do_resolve(FILE *fpin, FILE *fpout)
 	}
 	else {
 		while (fgets(line, sizeof(line), fpin)) {
+			if (resolver_abort) return;
 			const char* pout = NULL;
 			pout = parse_mmap_record(line, &rs);
 			if (!pout) pout = parse_backtrace_record(line, &rs);
@@ -387,6 +399,7 @@ static void resolve()
  */
 static void sigint_handler(int sig __attribute((unused)))
 {
+	resolver_abort = 1;
 }
 
 int main(int argc, char* argv[])
