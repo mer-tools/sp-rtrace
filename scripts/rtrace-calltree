@@ -1456,7 +1456,7 @@ Additional options for reducing the amount of output data:
         --ignore-libc-allocs --ignore-font-allocs
         --ignore=gtk_widget_ --no-ignore=gtk_widget_show
         --ignore=gdk_window_ --ignore=_gdk_window_
-        --join=fontconfig 
+        --join=fontconfig
 
     --ignore-qt-internals=yes, shortcut to ignore lower level Qt
         allocation/free, standard data structure handling and
