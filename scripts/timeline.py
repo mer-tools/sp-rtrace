@@ -173,7 +173,41 @@ class Table:
 			offset += column.write(file, self.rows + self.row, offset)
 # /class Table
 			
-			
+class Tic:
+	"""
+	This class provides helper functions for time slices used to represent
+	time tics and activity slices.
+	"""
+	value = 0
+	format = None
+	text = None
+	
+	def __init__(self, slice, rounded):
+		if rounded:
+			decimal = -1
+			round = 1000
+			while self.value == 0:
+				self.value = (slice / round) * round
+				round /= 10;
+				decimal += 1
+				if self.value == 0 and round == 0:
+					self.value = 1
+			#
+		else: 
+			decimal = 3
+			self.value = slice
+			while slice and slice % 10 == 0:
+				decimal -= 1
+				slice /= 10	
+		self.format = "%%.%df" % decimal
+	
+	def getText(self):
+		if not self.text:
+			self.text = self.format % (float(self.value) / 1000)
+		return self.text	
+	
+# /class Tic
+
 class Processor:
 	"""
 	This class stores the allocation/deallocation events for further 
@@ -317,16 +351,12 @@ class ActivityProcessor(Processor):
 			events = self.events[resource]
 			if events[-1].timestamp > xrange:
 				xrange = events[-1].timestamp
-		slice = Options.slice
-		round = 1000
-		decimal = -1
-		while slice == 0:
-			slice = (xrange / 100 / round) * round
-			round /= 10;
-			decimal += 1
-			if slice == 0 and round == 0:
-				slice = 1
-		#
+		
+		
+		if Options.slice == 0:
+			slice = Tic(xrange / 100, True)
+		else:
+			slice = Tic(Options.slice, False)
 		
 		contexts = [Context(Context.MASK_ALL, "all allocations")]
 		if len(self.contexts) > 0:
@@ -350,7 +380,7 @@ class ActivityProcessor(Processor):
 			events = self.events[resource]
 			
 			lastTimestamp = events[-1].timestamp
-			step = slice / 2
+			step = slice.value / 2
 			if step == 0:
 				step = 0.001
 			
@@ -411,7 +441,7 @@ class ActivityProcessor(Processor):
 						pass
 
 					# remove allocation events outside time slice
-					while len(sliceEvents) > 0 and sliceEvents[0].timestamp < event.timestamp - slice:
+					while len(sliceEvents) > 0 and sliceEvents[0].timestamp < event.timestamp - slice.value:
 						oldEvent = sliceEvents.pop(0)
 						if oldEvent.type == Event.Types.ALLOC:
 							total -= oldEvent.res_size
@@ -533,10 +563,8 @@ class ActivityProcessor(Processor):
 		file.write("set y2tics out\n")
 		file.write("set ytics nomirror\n")
 		# set Y/Y2 axis label
-		sliceTxt = "%%.%df" % decimal
-		sliceTxt = sliceTxt % (float(slice) / 1000)
-		file.write("set ylabel \"amount per %s sec\"\n" % sliceTxt)
-		file.write("set y2label \"count per %s sec\"\n" % sliceTxt)
+		file.write("set ylabel \"amount per %s sec\"\n" % slice.getText())
+		file.write("set y2label \"count per %s sec\"\n" % slice.getText())
 		# set X axis label
 		file.write("set xlabel \"time (secs)\" offset 0,-3\n")
 		# set graph line style

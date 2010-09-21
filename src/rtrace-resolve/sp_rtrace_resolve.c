@@ -61,17 +61,6 @@
 #include "resolver.h"
 #include "sp_rtrace_resolve.h"
 
-/**
- * Operation mode;
- */
-enum {
-	MODE_UNDEFINED,
-	MODE_FULL_CACHE,
-	MODE_MULTI_PASS,
-	MODE_SINGLE_CACHE,
-	MODE_DEFAULT = MODE_FULL_CACHE,
-};
-
 
 resolve_options_t resolve_options = {
 	.input_file = NULL,
@@ -105,8 +94,8 @@ static void display_usage()
 			"where <options> are:\n"
 			"  -i <path>    - the input file path. Standard input used by default.\n"
 			"  -o <path>    - the output file path. Standard output is used by default.\n"
-			"  -m <mode>    - The operation mode, where <mode> can be multi-pass.\n"
-			"                 or single-cache.\n"
+			"  -m <mode>    - The operation mode, where <mode> can be multi-pass,\n"
+			"                 single-cache, bfd or elf.\n"
 			"  -p           - keep the path of the source file (by default the path\n"
 			"                 is stripped leaving only the file name.\n"
 			"  -k           - keep resolved names (by default the resolved names\n"
@@ -157,8 +146,8 @@ static const char* parse_mmap_record(const char* line, rs_cache_t* rs)
 	pointer_t from, to;
 	if (sscanf(line, ": %s => 0x%lx-0x%lx", module, &from, &to) == 3) {
 		rs_mmap_t* mmap = rs_mmap_add_module(rs, module, from, to,
-				resolve_options.mode != MODE_FULL_CACHE);
-		if (mmap && resolve_options.mode == MODE_MULTI_PASS) {
+				!(resolve_options.mode & MODE_FULL_CACHE));
+		if (mmap && (resolve_options.mode & MODE_MULTI_PASS)) {
 			/* create module address files for multi-pass resolving */
 			char path[PATH_MAX];
 			char* ptr = strrchr(mmap->module, '/');
@@ -288,7 +277,7 @@ static void do_resolve(FILE *fpin, FILE *fpout)
 	rs_cache_init(&rs);
 	char line[4096];
 
-    if (resolve_options.mode == MODE_MULTI_PASS) {
+    if (resolve_options.mode & MODE_MULTI_PASS) {
 		FILE* findex = fopen("rtrace.index", "w+");
 		if (!findex) {
 			fprintf(stderr, "ERROR: failed to create multi-pass index file\n");
@@ -417,6 +406,7 @@ int main(int argc, char* argv[])
 			 {"input-file", 1, 0, 'i'},
 			 {"output-file", 1, 0, 'o'},
 			 {"mode", 1, 0, 'm'},
+			 {"method", 1, 0, 't'},
 			 {"help", 0, 0, 'h'},
 			 {"full-path", 0, 0, 'p'},
 			 {"keep-resolved", 0, 0, 'k'},
@@ -425,7 +415,7 @@ int main(int argc, char* argv[])
 	/* parse command line options */
 	int opt;
 
-	while ( (opt = getopt_long(argc, argv, "i:o:hm:pk", long_options, NULL)) != -1) {
+	while ( (opt = getopt_long(argc, argv, "i:o:hm:pkt:", long_options, NULL)) != -1) {
 		switch(opt) {
 		case 'h':
 			display_usage();
@@ -440,10 +430,19 @@ int main(int argc, char* argv[])
 			break;
 
 		case 'm':
-			if (!strcmp(optarg, "multi-pass")) resolve_options.mode = MODE_MULTI_PASS;
-			else if (!strcmp(optarg, "single-cache")) resolve_options.mode = MODE_SINGLE_CACHE;
+			if (!strcmp(optarg, "multi-pass")) resolve_options.mode = (resolve_options.mode & (~MODE_OPERATION_MASK)) | MODE_MULTI_PASS;
+			else if (!strcmp(optarg, "single-cache")) resolve_options.mode = (resolve_options.mode & (~MODE_OPERATION_MASK)) |MODE_SINGLE_CACHE;
 			else {
-				fprintf(stderr, "ERROR: Unknown opeartion mode: %s\n", optarg);
+				fprintf(stderr, "ERROR: Unknown operation mode: %s\n", optarg);
+				exit(-1);
+			}
+			break;
+
+		case 't':
+			if (!strcmp(optarg, "elf")) resolve_options.mode = (resolve_options.mode & (~MODE_TYPE_MASK)) |MODE_ELF;
+			else if (!strcmp(optarg, "bfd")) resolve_options.mode = (resolve_options.mode & (~MODE_TYPE_MASK)) |MODE_BFD;
+			else {
+				fprintf(stderr, "ERROR: Unknown resolving method: %s\n", optarg);
 				exit(-1);
 			}
 			break;

@@ -388,65 +388,72 @@ static int rs_open_file(rs_cache_record_t* rec, const char* filename)
  */
 static int rs_load_symbols(rs_cache_record_t* rec, const char* filename)
 {
+	long symcount = 0;
 	unsigned int size;
-	static char *places[]={".","./.debug", "/usr/lib/debug", NULL};
+	if (resolve_options.mode & (MODE_BFD | MODE_MIXED)) {
+		static char *places[]={".","./.debug", "/usr/lib/debug", NULL};
 
-	/* locate and open the symbol file */
-	if (rs_open_file(rec, filename) < 0) return -EINVAL;
+		/* locate and open the symbol file */
+		if (rs_open_file(rec, filename) < 0) return -EINVAL;
 
-	int index = 0;
-	while (places[index]) {
-		char* dbg_name = bfd_follow_gnu_debuglink (rec->file, places[index]);
-		if (dbg_name) {
-			bfd_close(rec->file);
-			int rc = rs_open_file(rec, dbg_name);
-			free(dbg_name);
-			if (rc < 0) return -EINVAL;
-			break;
+		int index = 0;
+		while (places[index]) {
+			char* dbg_name = bfd_follow_gnu_debuglink (rec->file, places[index]);
+			if (dbg_name) {
+				bfd_close(rec->file);
+				int rc = rs_open_file(rec, dbg_name);
+				free(dbg_name);
+				if (rc < 0) return -EINVAL;
+				break;
+			}
+			index++;
 		}
-		index++;
-	}
-	/* read the symbol table from opened file */
-	if ((bfd_get_file_flags (rec->file) & HAS_SYMS) == 0) {
-		fprintf(stderr, "ERROR: no symbols in %s\n", bfd_get_filename(rec->file));
-		return -EINVAL;
-	}
-
-	long symcount = bfd_read_minisymbols(rec->file, FALSE, (void *) &rec->symbols, &size);
-	if (symcount == 0) {
-		/* Use elf symbol table lookup, as the bfd_find_nearest_line returns bogus information
-		 * for global constructors when dynamic symbol tables are used.
-		 */
-		rec->fd = open(filename, O_RDONLY);
-		if (rec->fd == -1) {
-			fprintf(stderr, "Failed to open image file %s\n", filename);
-			return -EINVAL;
-		}
-		struct stat sb;
-		fstat(rec->fd, &sb);
-
-		if (sb.st_size <= EI_CLASS) {
-			fprintf(stderr, "Image file too short to contain elf header\n");
-			close(rec->fd);
+		/* read the symbol table from opened file */
+		if ((bfd_get_file_flags (rec->file) & HAS_SYMS) == 0) {
+			fprintf(stderr, "ERROR: no symbols in %s\n", bfd_get_filename(rec->file));
 			return -EINVAL;
 		}
 
-		rec->image_size = sb.st_size;
-
-		rec->image = mmap (NULL, rec->image_size, PROT_READ, MAP_PRIVATE, rec->fd, 0);
-		if (rec->image == MAP_FAILED) {
-			fprintf(stderr, "Failed to map elf image\n");
-			close(rec->fd);
-			return -EINVAL;
-		}
-		if (memcmp(rec->image, ELFMAG, SELFMAG) != 0) {
-			fprintf(stderr, "Elf header identification failed\n");
-			return -EINVAL;
-		}
-		rec->get_address_info = elf_get_address_info;
-	}
-	else {
+		symcount = bfd_read_minisymbols(rec->file, FALSE, (void *) &rec->symbols, &size);
 		rec->get_address_info = bfd_get_address_info;
+	}
+	if (symcount == 0) {
+		if (resolve_options.mode & MODE_BFD) {
+			symcount = bfd_read_minisymbols(rec->file, TRUE, (void *) &rec->symbols, &size);
+		}
+		else {
+			/* Use elf symbol table lookup, as the bfd_find_nearest_line returns bogus information
+			 * for global constructors when dynamic symbol tables are used.
+			 */
+			rec->fd = open(filename, O_RDONLY);
+			if (rec->fd == -1) {
+				fprintf(stderr, "Failed to open image file %s\n", filename);
+				return -EINVAL;
+			}
+			struct stat sb;
+			fstat(rec->fd, &sb);
+
+			if (sb.st_size <= EI_CLASS) {
+				fprintf(stderr, "Image file too short to contain elf header\n");
+				close(rec->fd);
+				return -EINVAL;
+			}
+
+			rec->image_size = sb.st_size;
+
+			rec->image = mmap (NULL, rec->image_size, PROT_READ, MAP_PRIVATE, rec->fd, 0);
+			if (rec->image == MAP_FAILED) {
+				fprintf(stderr, "Failed to map elf image\n");
+				close(rec->fd);
+				return -EINVAL;
+			}
+			if (memcmp(rec->image, ELFMAG, SELFMAG) != 0) {
+				fprintf(stderr, "Elf header identification failed\n");
+				return -EINVAL;
+			}
+			rec->get_address_info = elf_get_address_info;
+			symcount = 0;
+		}
 	}
 
 	if (symcount < 0) {
@@ -454,6 +461,7 @@ static int rs_load_symbols(rs_cache_record_t* rec, const char* filename)
 		return -EINVAL;
 	}
 	rec->symcount = symcount;
+
 	return 0;
 }
 

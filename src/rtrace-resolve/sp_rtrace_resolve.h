@@ -23,6 +23,28 @@
 #ifndef SP_RTRACE_RESOLVE_H_
 #define SP_RTRACE_RESOLVE_H_
 
+
+/**
+ * Operation modes
+ */
+enum {
+	MODE_UNDEFINED = 0x0,
+	/* operation modes */
+	MODE_FULL_CACHE = 1 << 0,
+	MODE_MULTI_PASS = 1 << 1,
+	MODE_SINGLE_CACHE = 1 << 2,
+
+	MODE_OPERATION_MASK = MODE_FULL_CACHE | MODE_MULTI_PASS | MODE_SINGLE_CACHE,
+	/* resolving modes */
+	MODE_BFD = 1 << 16,
+	MODE_ELF = 1 << 17,
+	MODE_MIXED = 1 << 18,
+
+	MODE_TYPE_MASK = MODE_BFD | MODE_ELF | MODE_MIXED,
+	/* */
+	MODE_DEFAULT = MODE_FULL_CACHE | MODE_MIXED,
+};
+
 /**
  * post-processor options
  */

@@ -43,6 +43,20 @@ instead of caching symbols for each module, only the symbols
 of the last loaded module are cached. While this mode should
 work always, it's also the slowest (by a lot) mode.
 .TP
+\fI--method\fP=<method> (\fI-t\fP <method>)
+Sets the resolving method which can be either bfd or elf. By
+default resolver uses bfd library to extract debug information
+if it's present in the default locations. Otherwise it scans
+elf symbol table for the target symbol.
+
+With elf method resolver will go straight to the elf symbol
+scanning, without attempting to load debug symbols with bfd
+library.
+
+With bfd method resolver will not try to scan elf symbol table
+if the debug symbols aren't present. Instead it will attempt
+to load dynamic symbols with bfd.
+.TP
 \fI--full-path\fP (\fI-p\fP)
 Keep the path of the function call origin source file. By default
 the path is stripped, leaving only file name.

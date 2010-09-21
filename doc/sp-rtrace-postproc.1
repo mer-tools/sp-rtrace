@@ -45,6 +45,9 @@ Resolves backtrace addresses by starting sp-rtrace-resolve process and
 redirecting output to it. If --output-dir option is set, post-processor
 generates appropriate output file name and passes it to the resolver with 
 -o option. Otherwise the resolved data will be written to standard output.
+
+The resolver is launched with full caching mode and elf resolving method 
+enabled. To use other resolving options the resolver must be used separately.
 .TP
 \fI--context\fP <mask> (\fI-C\fP <mask>)
 Filters function call records matching the specified context id mask.
