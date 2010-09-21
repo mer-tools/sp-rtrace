@@ -367,7 +367,7 @@ static int get_address_info(rs_cache_record_t* rec, pointer_t address, char* buf
 			ptr_out += sprintf(ptr_out, "%s", alloc);
 			free(alloc);
 		} else {
-			ptr_out += sprintf(ptr_out, "%s", functionname);
+			ptr_out += sprintf(ptr_out, "%s()", functionname);
 		}
 	}
 	if (sym->source) {
