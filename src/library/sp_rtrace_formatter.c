@@ -99,7 +99,7 @@ void sp_rtrace_print_trace(FILE* fp, void** frames, char** resolved, int nframes
 void sp_rtrace_print_trace_step(FILE* fp, void* addr, const char* resolved)
 {
 	if (resolved) {
-		fprintf(fp, "\t0x%lx (%s)\n", (pointer_t)addr, resolved);
+		fprintf(fp, "\t0x%lx %s\n", (pointer_t)addr, resolved);
 	}
 	else {
 		fprintf(fp, "\t0x%lx\n", (pointer_t)addr);

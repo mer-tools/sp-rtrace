@@ -291,7 +291,7 @@ static void do_resolve(FILE *fpin, FILE *fpout)
 			if (!pout) {
 				int index = parse_backtrace_index(line, &rs);
 				/* backtrace record with memory mapping, index it */
-				if (index > 0) {
+				if (index >= 0) {
 					fprintf(findex, "^%d\n", index);
 					continue;
 				}
@@ -431,7 +431,7 @@ int main(int argc, char* argv[])
 
 		case 'm':
 			if (!strcmp(optarg, "multi-pass")) resolve_options.mode = (resolve_options.mode & (~MODE_OPERATION_MASK)) | MODE_MULTI_PASS;
-			else if (!strcmp(optarg, "single-cache")) resolve_options.mode = (resolve_options.mode & (~MODE_OPERATION_MASK)) |MODE_SINGLE_CACHE;
+			else if (!strcmp(optarg, "single-cache")) resolve_options.mode = (resolve_options.mode & (~MODE_OPERATION_MASK)) | MODE_SINGLE_CACHE;
 			else {
 				fprintf(stderr, "ERROR: Unknown operation mode: %s\n", optarg);
 				exit(-1);
@@ -439,8 +439,8 @@ int main(int argc, char* argv[])
 			break;
 
 		case 't':
-			if (!strcmp(optarg, "elf")) resolve_options.mode = (resolve_options.mode & (~MODE_TYPE_MASK)) |MODE_ELF;
-			else if (!strcmp(optarg, "bfd")) resolve_options.mode = (resolve_options.mode & (~MODE_TYPE_MASK)) |MODE_BFD;
+			if (!strcmp(optarg, "elf")) resolve_options.mode = (resolve_options.mode & (~MODE_METHOD_MASK)) | MODE_ELF;
+			else if (!strcmp(optarg, "bfd")) resolve_options.mode = (resolve_options.mode & (~MODE_METHOD_MASK)) | MODE_BFD;
 			else {
 				fprintf(stderr, "ERROR: Unknown resolving method: %s\n", optarg);
 				exit(-1);

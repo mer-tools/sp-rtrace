@@ -50,9 +50,6 @@ typedef struct rs_cache_record_t {
 	void* image;
 	size_t image_size;
 
-	/**/
-	int (*get_address_info)(struct rs_cache_record_t* rec, pointer_t address, char* buffer);
-
 } rs_cache_record_t;
 
 

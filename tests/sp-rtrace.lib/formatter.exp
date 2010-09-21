@@ -177,7 +177,7 @@ proc check_print_trace { nframes args } {
 	set rc 0
 	eval spawn $::bin_dir/$::out_file trace $out_args
 	expect {
-		-re {(?n)^\t(0x[0-9a-fA-F]+)(?: \(([^\r\n]+)\)|)\s*$} {
+		-re {(?n)^\t(0x[0-9a-fA-F]+)(?: ([^\r\n]+)|)\s*$} {
 			set out_addr $expect_out(1,string)
 			if { [info exists expect_out(2,string)] } {
 				set out_resolved $expect_out(2,string)
@@ -187,7 +187,7 @@ proc check_print_trace { nframes args } {
 			set in_addr "[lindex $args [expr $index * 2]]"
 			set in_resolved "[lindex $args [expr $index * 2 + 1]]"
 			if {  $in_addr != $out_addr } {
-				fail "Wrong bactrace address. Expected '$in_addr', got '$out_addr"
+				fail "Wrong backtrace address. Expected '$in_addr', got '$out_addr"
 				set rc -1
 			}
 			if {  $in_resolved != $out_resolved } {
@@ -212,7 +212,7 @@ proc check_print_trace_step { addr name } {
 	set rc 0
 	spawn $::bin_dir/$::out_file trace_step $addr $name
 	expect {
-		-re {(?n)^\t(0x[0-9a-fA-F]+)(?: \(([^\n\r]+)\)|)\s*$} {
+		-re {(?n)^\t(0x[0-9a-fA-F]+)(?: ([^\n\r]+)|)\s*$} {
 			set out_addr $expect_out(1,string)
 			if { [info exists expect_out(2,string)] } {
 				set out_name $expect_out(2,string)

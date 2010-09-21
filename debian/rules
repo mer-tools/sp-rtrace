@@ -12,7 +12,7 @@
 DEB_HOST_GNU_TYPE   ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
 DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 
-CFLAGS += -g -Wall -Wno-unused-function -Wextra
+CFLAGS += -g -Wall -Wextra -Wno-unused-function -Wno-missing-field-initializers
 #-DDEBUG_INFO 
 #-DALIGN_CHECK 
 

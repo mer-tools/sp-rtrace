@@ -258,10 +258,9 @@ typedef struct bt_step_t {
 static bool parse_backtrace(char* line, bt_step_t* btstep)
 {
 	char resolved_name[PATH_MAX], delim;
-	int n = sscanf(line, "%c0x%lx (%[^\n]", &delim, &btstep->addr, resolved_name);
+	int n = sscanf(line, "%c0x%lx %[^\n]", &delim, &btstep->addr, resolved_name);
 	if (n < 2 || delim != '\t') return false;
 	if (n == 3) {
-		resolved_name[strlen(resolved_name) - 1] = '\0';
 		btstep->name = strdup_a(resolved_name);
 	}
 	else {

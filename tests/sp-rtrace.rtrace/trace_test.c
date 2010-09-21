@@ -68,7 +68,6 @@ static sig_atomic_t s_loop = 1;
 
 static void sigint_handler(int sig)
 {
-	fprintf(stderr, "SIGUSR2 received\n");
 	s_loop = 0;
 }
 

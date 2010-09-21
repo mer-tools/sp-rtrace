@@ -58,7 +58,7 @@ proc check_log { command header_recs mmap_recs malloc_recs free_recs {trace_dept
 				set has_free [expr $has_free + 1]
 				exp_continue
 			}
-			if { [regexp {^\t0x[0-9a-fA-F]} $line] } {
+			if { [regexp {^\t0x[0-9a-fA-F]+} $line] } {
 				set has_trace [expr $has_trace + 1]
 				exp_continue
 			}
@@ -85,7 +85,7 @@ proc check_log { command header_recs mmap_recs malloc_recs free_recs {trace_dept
 		return -1
 	}
 	if { $trace_depth >= 0 && [expr $trace_depth * ($has_free + $has_malloc)] != $has_trace } {
-		fail "check_log: wrong number of backtrace frames: $has_trace"
+		fail "check_log: wrong number of backtrace frames - got: $has_trace, expected: [expr $trace_depth * ($has_free + $has_malloc)]"
 		return -1
 	}
 	return 0
@@ -98,7 +98,7 @@ proc test_startup { bt_depth args } {
 	verbose "test_startup_text $args"
 	set log_file ""
 	# start test application and send it termination signal after 1 second
-	eval spawn $::src_dir/launcher.sh "$::bin_dir/$::out_file" "-o$::bin_dir" "-s" $args 
+	eval spawn $::src_dir/launcher.sh "$::bin_dir/$::out_file" "-o$::bin_dir" "-s" "-A" $args 
 	set launcher_sid $spawn_id
  	after 1000
 	if { [exec kill -SIGUSR2 [pidof $::out_file] ] == -1 } {
@@ -175,7 +175,7 @@ proc test_toggle_trace { start mode options} {
 	set rc 0
 	set timeout 5
 	# start test application and send it termination signal after 1 second
-	eval spawn $::src_dir/launcher.sh "$::bin_dir/$::out_file" "-o$::bin_dir" $options $start $mode 
+	eval spawn $::src_dir/launcher.sh "$::bin_dir/$::out_file" "-o$::bin_dir" $options $start $mode "-A" 
 	set launcher_sid $spawn_id
 	after 1000
 	

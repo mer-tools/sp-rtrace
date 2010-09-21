@@ -103,7 +103,7 @@ int formatter_write_ftrace(const rd_ftrace_t* trace, FILE* fp)
 		char* ptr = buffer;
 		ptr += sprintf(ptr, "\t0x%lx", trace->frames[i]);
 		if (trace->resolved_names && trace->resolved_names[i]) {
-			ptr += sprintf(ptr, " (%s)", trace->resolved_names[i]);
+			ptr += sprintf(ptr, " %s", trace->resolved_names[i]);
 		}
 		*ptr++ = '\n';
 		fwrite(buffer, 1, ptr - buffer, fp);

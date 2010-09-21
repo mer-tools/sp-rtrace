@@ -53,8 +53,6 @@ typedef struct rtrace_options_t {
 	char* backtrace_depth;
 	/* true if the function call (FC) packet timestamps must be disabled */
 	bool disable_timestamps;
-	/* true if the function argument (FA) packets must be enabled */
-	bool enable_arguments;
 	/* the post-processor options */
 	char* postproc;
 	/* signal to use to toggle the tracing */

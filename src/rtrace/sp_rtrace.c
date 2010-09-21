@@ -75,7 +75,6 @@ rtrace_options_t rtrace_options = {
 		.follow_forks = false,
 		.backtrace_depth = NULL,
 		.disable_timestamps = false,
-		.enable_arguments = false,
 		.postproc = NULL,
 		.toggle_signal = SIGUSR1,
 		.toggle_signal_name = NULL,
@@ -189,7 +188,6 @@ static void set_environment()
 	if (rtrace_options.manage_preproc) setenv(rtrace_env_opt[OPT_MANAGE_PREPROC], OPT_ENABLE, 1);
 	if (rtrace_options.backtrace_depth) setenv(rtrace_env_opt[OPT_BACKTRACE_DEPTH], rtrace_options.backtrace_depth, 1);
 	if (rtrace_options.disable_timestamps) setenv(rtrace_env_opt[OPT_DISABLE_TIMESTAMPS], OPT_ENABLE, 1);
-	if (rtrace_options.enable_arguments) setenv(rtrace_env_opt[OPT_ENABLE_ARGUMENTS], OPT_ENABLE, 1);
 	if (rtrace_options.postproc) setenv(rtrace_env_opt[OPT_POSTPROC], rtrace_options.postproc, 1);
 	if (rtrace_options.toggle_signal_name) setenv(rtrace_env_opt[OPT_TOGGLE_SIGNAL], rtrace_options.toggle_signal_name, 1);
 	if (rtrace_options.disable_packet_buffering) setenv(rtrace_env_opt[OPT_DISABLE_PACKET_BUFFERING], OPT_ENABLE, 1);

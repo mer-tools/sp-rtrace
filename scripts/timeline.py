@@ -632,8 +632,8 @@ class ActivityProcessor(Processor):
 									 "GDFONTPATH": Options.GDFONTPATH})
 		gnuplot.wait()
 			
-#		for file in files:
-#			file.remove();
+		for file in files:
+			file.remove();
 	
 # /class ActivityProcessor
 

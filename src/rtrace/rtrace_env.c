@@ -115,12 +115,6 @@ char *rtrace_env_opt[] = {
 		 */
 		"SP_RTRACE_DISABLE_TIMESTAMPS",
 		/**
-		 * --enable-arguments
-		 * Enables sending function call argument packets.
-		 * By default function arguments are disabled.
-		 */
-		"SP_RTRACE_ENABLE_ARGUMENTS",
-		/**
 		 * --postproc
 		 * Specifies post-processing options.
 		 * This option is used when SP_RTRACE_MANAGE_PREPROC is set.

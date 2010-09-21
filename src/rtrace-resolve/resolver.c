@@ -76,6 +76,11 @@ extern char* cplus_demangle(const char* symbol, int flags);
 
 #endif
 
+typedef struct {
+	const char* name;
+	const char* source;
+	unsigned int line;
+} symbol_info_t;
 
  /**
   * Free resolver cache record.
@@ -194,46 +199,83 @@ static void rs_mmap_free_node(rs_mmap_t* mmap)
  * Resolving logic
  */
 
-/**
- * Prints resolved function name in the buffer.
- *
- * This function will attempt to demangle the name if necessary.
- * @param ptr_out
- * @return
- */
-static int print_function_name(char* ptr_out, const char* functionname)
-{
-	char* ptr = ptr_out;
-	ptr += sprintf(ptr, "in ");
-	char *alloc;
-
-	if (functionname[0] == 'I' && functionname[1] == 'A' &&
-		functionname[2] == '_' && functionname[3] == '_')
-		functionname = functionname + 4;
-
-	alloc = (char*)cplus_demangle(functionname, DMGL_ANSI | DMGL_PARAMS);
-	if (alloc != NULL) {
-		ptr += sprintf(ptr, "%s", alloc);
-		free(alloc);
-	} else {
-		ptr += sprintf(ptr, "%s", functionname);
-	}
-	return ptr - ptr_out;
-}
 
 /**
  * Retrieves address information (function name, file, line number) through
  * bfd interface.
  *
- * @param[in] bfd_cache  the bfd cache data.
+ * @param[in] rec        the file cache record.
  * @param[in] address    the address to look up.
- * @param[out] buffer    the output buffer.
+ * @param[out] symbol     the output buffer.
  * @return               0 - success.
  */
-static int bfd_get_address_info(rs_cache_record_t* rec, pointer_t address, char* buffer)
+static int elf_get_address_info(rs_cache_record_t* rec, pointer_t address, symbol_info_t* symbol)
 {
-	const char *filename, *functionname = NULL;
-	unsigned int line;
+	Elf_Ehdr_t *ehdr = rec->image;
+	Elf_Sym_t *sym, *symtab, *symtab_end;
+	Elf_Off_t soff = ehdr->e_shoff, str_soff;
+	Elf_Shdr_t *shdr, *str_shdr;
+
+	void* abs_address = (void*)address;
+	if (!rec->mmap->is_absolute) {
+		abs_address -= (unsigned long)rec->mmap->from;
+	}
+
+	shdr = (Elf_Shdr_t*)((char*)rec->image + soff);
+
+	if (soff + ehdr->e_shnum * ehdr->e_shentsize > rec->image_size) {
+		return -EINVAL;
+	}
+
+	int i;
+	for (i = 0; i < ehdr->e_shnum; ++i) {
+		switch (shdr->sh_type) {
+			case SHT_SYMTAB:
+			case SHT_DYNSYM: {
+				symtab = (Elf_Sym_t*)((char*)rec->image + shdr->sh_offset);
+				symtab_end = (Elf_Sym_t*)((char*)symtab + shdr->sh_size);
+				size_t symtab_size = shdr->sh_entsize;
+
+				str_soff = soff + (shdr->sh_link * ehdr->e_shentsize);
+				if (str_soff + ehdr->e_shentsize >= rec->image_size) break;
+
+				str_shdr = (Elf_Shdr_t*)((char*)rec->image + str_soff);
+				char* strtab = (char*)rec->image + str_shdr->sh_offset;
+
+				for (sym = symtab; sym < symtab_end; sym = (Elf_Sym_t*)((char*)sym + symtab_size)) {
+					if (ELF_ST_TYPE(sym->st_info) == STT_FUNC && sym->st_shndx != SHN_UNDEF) {
+						if ((Elf_Addr_t)abs_address >= sym->st_value && (unsigned)(abs_address - sym->st_value) < sym->st_size) {
+							if (strtab + sym->st_name) {
+								symbol->name =  strtab + sym->st_name;
+								return 0;
+							}
+							return -EINVAL;
+						}
+					}
+				}
+				break;
+			}
+
+			default:
+				break;
+		}
+		shdr = (Elf_Shdr_t*)(((char *)shdr) + ehdr->e_shentsize);
+	}
+	return -EINVAL;
+}
+
+
+/**
+ * Retrieves address information (function name, file, line number) through
+ * bfd interface.
+ *
+ * @param[in] rec        the bfd cache data.
+ * @param[in] address    the address to look up.
+ * @param[out] symbol    the output buffer.
+ * @return               0 - success.
+ */
+static int bfd_get_address_info(rs_cache_record_t* rec, pointer_t address, symbol_info_t* symbol)
+{
 	void* abs_address = (void*)address;
 
 	asection *section;
@@ -262,25 +304,7 @@ static int bfd_get_address_info(rs_cache_record_t* rec, pointer_t address, char*
 		if (pc >= vma + size)
 			continue;
 
-		if (bfd_find_nearest_line(rec->file, section, rec->symbols, pc - vma, &filename, &functionname, &line)) {
-			char* ptr_out = buffer;
-			ptr_out += sprintf(ptr_out, "\t0x%lx (", address);
-			if (functionname) {
-				ptr_out += print_function_name(ptr_out, functionname);
-			}
-
-			if (filename) {
-				/* strip the path if not told otherwise */
-				const char* source = filename;
-				if (!resolve_options.full_path) {
-					source = strrchr(filename, '/');
-					if (source) source++;
-					else source = filename;
-				}
-				ptr_out += sprintf(ptr_out, " at %s", source);
-				if (line) ptr_out += sprintf(ptr_out, ":%d", line);
-			}
-			ptr_out += sprintf(ptr_out, ")\n");
+		if (bfd_find_nearest_line(rec->file, section, rec->symbols, pc - vma, &symbol->source, &symbol->name, &symbol->line)) {
 			return 0;
 		}
 	}
@@ -288,68 +312,81 @@ static int bfd_get_address_info(rs_cache_record_t* rec, pointer_t address, char*
 	return -EINVAL;
 }
 
+
 /**
- * Retrieves address information (function name, file, line number) through
- * bfd interface.
+ * Retrieves address information (function name, file, line number).
  *
- * @param[in] bfd_cache  the bfd cache data.
+ * @param[in] rec        the file cache record.
  * @param[in] address    the address to look up.
  * @param[out] buffer    the output buffer.
  * @return               0 - success.
  */
-static int elf_get_address_info(rs_cache_record_t* rec, pointer_t address, char* buffer)
+static int get_address_info(rs_cache_record_t* rec, pointer_t address, char* buffer)
 {
-	Elf_Ehdr_t *ehdr = rec->image;
-	Elf_Sym_t *sym, *symtab, *symtab_end;
-	Elf_Off_t soff = ehdr->e_shoff, str_soff;
-	Elf_Shdr_t *shdr, *str_shdr;
-	void* abs_address = (void*)address;
+	symbol_info_t bfd = {0};
+	symbol_info_t elf = {0};
+	symbol_info_t* sym = NULL;
+	char* ptr_out = buffer;
 
-	if (soff + ehdr->e_shnum * ehdr->e_shentsize > rec->image_size) {
-		return -EINVAL;
-	}
-
-	if (!rec->mmap->is_absolute) {
-		abs_address -= (unsigned long)rec->mmap->from;
-	}
-
-	shdr = (Elf_Shdr_t*)((char*)rec->image + soff);
-
-	int i;
-	for (i = 0; i < ehdr->e_shnum; ++i) {
-		switch (shdr->sh_type) {
-			case SHT_SYMTAB:
-			case SHT_DYNSYM: {
-				symtab = (Elf_Sym_t*)((char*)rec->image + shdr->sh_offset);
-				symtab_end = (Elf_Sym_t*)((char*)symtab + shdr->sh_size);
-				size_t symtab_size = shdr->sh_entsize;
-
-				str_soff = soff + (shdr->sh_link * ehdr->e_shentsize);
-				if (str_soff + ehdr->e_shentsize >= rec->image_size) break;
-
-				str_shdr = (Elf_Shdr_t*)((char*)rec->image + str_soff);
-				char* strtab = (char*)rec->image + str_shdr->sh_offset;
-
-				for (sym = symtab; sym < symtab_end; sym = (Elf_Sym_t*)((char*)sym + symtab_size)) {
-					if (ELF_ST_TYPE(sym->st_info) == STT_FUNC && sym->st_shndx != SHN_UNDEF) {
-						if ((Elf_Addr_t)abs_address >= sym->st_value && (unsigned)(abs_address - sym->st_value) < sym->st_size) {
-							char* ptr_out = buffer;
-							ptr_out += sprintf(ptr_out, "\t0x%lx (", address);
-							ptr_out += print_function_name(ptr_out, strtab + sym->st_name);
-							ptr_out += sprintf(ptr_out, ")\n");
-							return 0;
-						}
-					}
-				}
-				break;
-			}
-
-			default:
-				break;
+	if (resolve_options.mode & MODE_BFD) {
+		int rc = bfd_get_address_info(rec, address, &bfd);
+		if ( !(resolve_options.mode & MODE_ELF) && rc == 0) {
+			sym = &bfd;
 		}
-		shdr = (Elf_Shdr_t*)(((char *)shdr) + ehdr->e_shentsize);
 	}
-	return -EINVAL;
+	if (resolve_options.mode & MODE_ELF) {
+		int rc = elf_get_address_info(rec, address, &elf);
+		if ( !(resolve_options.mode & MODE_BFD) && rc == 0) {
+			sym = &elf;
+		}
+	}
+	if ( (resolve_options.mode & MODE_METHOD_MASK) == (MODE_ELF | MODE_BFD) ) {
+		if (!elf.name) {
+			sym = NULL;
+		}
+		else if (!bfd.name || strcmp(elf.name, bfd.name)) {
+			sym = &elf;
+		}
+		else {
+			sym = &bfd;
+		}
+	}
+	if (sym == NULL) return -EINVAL;
+
+	ptr_out += sprintf(ptr_out, "\t0x%lx ", address);
+	if (sym->name) {
+		char *alloc;
+		const char* functionname = sym->name;
+
+		if (functionname[0] == 'I' && functionname[1] == 'A' &&
+			functionname[2] == '_' && functionname[3] == '_')
+			functionname = functionname + 4;
+
+		alloc = (char*)cplus_demangle(functionname, DMGL_ANSI | DMGL_PARAMS);
+		if (alloc != NULL) {
+			ptr_out += sprintf(ptr_out, "%s", alloc);
+			free(alloc);
+		} else {
+			ptr_out += sprintf(ptr_out, "%s", functionname);
+		}
+	}
+	if (sym->source) {
+		/* strip the path if not told otherwise */
+		const char* source = sym->source;
+		if (!resolve_options.full_path) {
+			source = strrchr(sym->source, '/');
+			if (source) source++;
+			else source = sym->source;
+		}
+		ptr_out += sprintf(ptr_out, " at %s", source);
+		if (sym->line) ptr_out += sprintf(ptr_out, ":%d", sym->line);
+	}
+	else {
+		ptr_out += sprintf(ptr_out, " from %s", rec->mmap->module);
+	}
+	*ptr_out++ = '\n';
+	*ptr_out = '\0';
+	return 0;
 }
 
 /**
@@ -390,7 +427,7 @@ static int rs_load_symbols(rs_cache_record_t* rec, const char* filename)
 {
 	long symcount = 0;
 	unsigned int size;
-	if (resolve_options.mode & (MODE_BFD | MODE_MIXED)) {
+	if (resolve_options.mode & MODE_BFD) {
 		static char *places[]={".","./.debug", "/usr/lib/debug", NULL};
 
 		/* locate and open the symbol file */
@@ -415,45 +452,41 @@ static int rs_load_symbols(rs_cache_record_t* rec, const char* filename)
 		}
 
 		symcount = bfd_read_minisymbols(rec->file, FALSE, (void *) &rec->symbols, &size);
-		rec->get_address_info = bfd_get_address_info;
 	}
-	if (symcount == 0) {
-		if (resolve_options.mode & MODE_BFD) {
-			symcount = bfd_read_minisymbols(rec->file, TRUE, (void *) &rec->symbols, &size);
+	if (symcount == 0 && !(resolve_options.mode & MODE_ELF)) {
+		symcount = bfd_read_minisymbols(rec->file, TRUE, (void *) &rec->symbols, &size);
+	}
+	if (resolve_options.mode & MODE_ELF) {
+		/* Use elf symbol table lookup, as the bfd_find_nearest_line returns bogus information
+		 * for global constructors when dynamic symbol tables are used.
+		 */
+		rec->fd = open(filename, O_RDONLY);
+		if (rec->fd == -1) {
+			fprintf(stderr, "Failed to open image file %s\n", filename);
+			return -EINVAL;
 		}
-		else {
-			/* Use elf symbol table lookup, as the bfd_find_nearest_line returns bogus information
-			 * for global constructors when dynamic symbol tables are used.
-			 */
-			rec->fd = open(filename, O_RDONLY);
-			if (rec->fd == -1) {
-				fprintf(stderr, "Failed to open image file %s\n", filename);
-				return -EINVAL;
-			}
-			struct stat sb;
-			fstat(rec->fd, &sb);
+		struct stat sb;
+		fstat(rec->fd, &sb);
 
-			if (sb.st_size <= EI_CLASS) {
-				fprintf(stderr, "Image file too short to contain elf header\n");
-				close(rec->fd);
-				return -EINVAL;
-			}
-
-			rec->image_size = sb.st_size;
-
-			rec->image = mmap (NULL, rec->image_size, PROT_READ, MAP_PRIVATE, rec->fd, 0);
-			if (rec->image == MAP_FAILED) {
-				fprintf(stderr, "Failed to map elf image\n");
-				close(rec->fd);
-				return -EINVAL;
-			}
-			if (memcmp(rec->image, ELFMAG, SELFMAG) != 0) {
-				fprintf(stderr, "Elf header identification failed\n");
-				return -EINVAL;
-			}
-			rec->get_address_info = elf_get_address_info;
-			symcount = 0;
+		if (sb.st_size <= EI_CLASS) {
+			fprintf(stderr, "Image file too short to contain elf header\n");
+			close(rec->fd);
+			return -EINVAL;
 		}
+
+		rec->image_size = sb.st_size;
+
+		rec->image = mmap (NULL, rec->image_size, PROT_READ, MAP_PRIVATE, rec->fd, 0);
+		if (rec->image == MAP_FAILED) {
+			fprintf(stderr, "Failed to map elf image\n");
+			close(rec->fd);
+			return -EINVAL;
+		}
+		if (memcmp(rec->image, ELFMAG, SELFMAG) != 0) {
+			fprintf(stderr, "Elf header identification failed\n");
+			return -EINVAL;
+		}
+		symcount = 0;
 	}
 
 	if (symcount < 0) {
@@ -479,13 +512,13 @@ const char* rs_resolve_address(rs_cache_t* rs, pointer_t address, const char* na
 		const char* source;
 		if (!resolve_options.full_path && (source = strrchr(name, '/')) != NULL ) {
 			const char* path = strrchr(source, ' ');
-			char* ptr = buffer + sprintf(buffer, "\t0x%lx (", address);
+			char* ptr = buffer + sprintf(buffer, "\t0x%lx ", address);
 			int len = path - name;
 			memcpy(ptr, name, len);
-			sprintf(ptr + len, "%s)", source);
+			sprintf(ptr + len, "%s", source);
 		}
 		else {
-			sprintf(buffer, "\t0x%lx (%s)\n", address, name);
+			sprintf(buffer, "\t0x%lx %s\n", address, name);
 		}
 		return buffer;
 	}
@@ -504,13 +537,13 @@ const char* rs_resolve_address(rs_cache_t* rs, pointer_t address, const char* na
 			rs_cache_record_clear(mmap->cache);
 			if (rs_load_symbols(mmap->cache, mmap->module) < 0) {
 				rs_cache_record_clear(mmap->cache);
-				sprintf(buffer, "\t0x%lx (%s)\n", address, mmap->module);
+				sprintf(buffer, "\t0x%lx from %s\n", address, mmap->module);
 				break;
 			}
 			mmap->cache->mmap = mmap;
 		}
-		if (mmap->cache->get_address_info(mmap->cache, address, buffer) < 0) {
-			sprintf(buffer, "\t0x%lx (%s)\n", address, mmap->module);
+		if (get_address_info(mmap->cache, address, buffer) < 0) {
+			sprintf(buffer, "\t0x%lx from %s\n", address, mmap->module);
 			break;
 		}
 		break;
