@@ -94,10 +94,11 @@ emphatized.  Only nodes whose allocations go over the --emph-limit
 value are checked for this. Default is 1.2.
 .TP
 \fB--cluster\fP=\fIvalue\fP (graph report)
-Value is the name of the library which nodes should be clustered in the graph.
+Value is the name for the library or code file which nodes should be
+clustered together.
 .PP
-This option is useless with recursive backtraces, e.g. for Gtk applications
-you should use also --ignore-gtk-internals=yes with this option.
+Note: this option is useless with recursive backtraces, for UI applications
+you should use also --ignore-glib/gtk/qt-internals=yes.
 .SH REPORT CONTENT FILTERING OPTIONS
 Programs doing a lot of allocations with complex backtraces produce
 so much data that you really cannot analyse it without reducing the
@@ -162,7 +163,7 @@ You might want to try also these options:
 		--show-below-limit=no
 		--ignore=dcgettext
 		--ignore=tsearch
-		--join-lib=ld-<version>.so
+		--join=ld-<version>
 .fi
 .TP
 \fB--ignore-gtk-internals\fP=\fIyes\fP
@@ -175,19 +176,21 @@ applications.  You might want to try also these options:
 		--no-ignore=gtk_widget_show
 		--ignore=gdk_window_
 		--ignore=_gdk_window_
-		--join-lib=fontconfig 
+		--join=fontconfig 
 .fi
 .TP
 \fB--ignore-qt-internals\fP=\fIyes\fP
-
 Shortcut to ignore lower level Qt allocation/free, standard data
 structure handling and marshalling/recursed functions called by Qt
-applications. You might want to try also --ignore-glib-internals
-option.
+applications.  You might want to try also these options:
+.nf
+		--ignore-glib-internals=yes
+		--join=qt_format_text
+.fi
 .TP
-\fB--join-lib\fP=\fIvalue\fP
-Value is the name of the library (part of node name before ':') which
-should be represented as a single node.
+\fB--join\fP=\fIvalue\fP
+Value is the name for the function, library or source
+code file which nodes should be represented as a single node.
 .TP
 \fB--trace-args\fP=\fIyes\fP
 Show trace function (1st) argument instead of its name. This can be
@@ -200,10 +203,23 @@ Leave out nodes with only one parent and child.
 Leave out nodes which have either one parent and no children, or
 one child and no parents.
 .PP
-Options --stop, --ignore, --include-only, --join-lib and --cluster
+Options --stop, --ignore, --include-only, --join and --cluster
 can be given as many times as you wish and they apply to all
 values you gave. For all the other options, only the last value
 applies.
+.SH REDUCING GRAPH SIZE BY MINIMIZING THE NODE SIZES
+To remove function and method arguments, pipe output through:
+.nf
+		sed -e 's/([^0-9)][^)]*)/()/' -e 's/)(.[^)]*)//'
+.fi
+To remove also source file names, add:
+.nf
+		-e 's/ in [^ \\\\]*//'
+.fi
+To remove also paths from the --trace-args file names, add:
+.nf
+		-e 's%/.*[^ ]/%%'
+.fi
 .SH DEBUG OPTIONS
 .TP
 \fB--node\fP=\fIvalue\fP

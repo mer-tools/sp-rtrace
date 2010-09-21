@@ -141,6 +141,12 @@
 # - Add --ignore-middle option for matching e.g. template functions
 # - Move new/delete under --ignore-libc allocs and change/expand
 #   --ignore-qt-allocs option to --ignore-qt-internals
+# 2010-09-21:
+# - Change node text order to fix prefix matching with debug symbols
+# - Fix --cluster node parsing and support also source files
+# - Rename --join-lib to --join, match also function and source file names
+# - Improve Qt internal functions ignoring
+# - Add help on how to reduce graph with "sed"
 #
 # Originally this file (alloc-tree) was a part of libleaks package, but
 # renamed and moved to the sp-rtrace package during libleaks redesign.
@@ -460,8 +466,8 @@ class Graph:
 class Rtrace:
     def __init__(self, tracefile):
         # format: at <source file>:<line nro>
-        self.gdb_src_pattern = re.compile(".* at ([^ :]+):([0-9]+)")
-        # format: in <function name> ()
+        self.gdb_src_pattern = re.compile(".* at ([^ :]+):([0-9]+)\)")
+        # format: in <function name>()[ at ...]
         self.gdb_fun_pattern = re.compile(".*\(in (.+?)( at .*|)\)$")
         # format: from <library/binary file>
         self.gdb_lib_pattern = re.compile(".* from (\S+)$")
@@ -474,30 +480,39 @@ class Rtrace:
     def libname_strip(self, libname):
         "returns library name stripped of 'lib' prefix and '.so*' postfix"
         libname = libname[libname.rfind("/") + 1:]
-        if libname[:3] == "lib":
+        if libname.startswith("lib"):
             pos = libname.rfind(".so")
-            return libname[3:pos]
-        else:
-            return libname
+            if pos > 0:
+                return libname[3:pos]
+        return libname
 
-    def trace_strip(self, line, join_libs):
+    def trace_strip(self, line, joins):
         "return relevant information from GDB style backtrace line"
         match = self.gdb_fun_pattern.match(line)
         if match:
             fun = match.group(1)
+            pos = fun.find('(')
+            if pos >= 0:
+                name = fun[:pos]
+            else:
+                name = fun
+            if name in joins:
+                return name + "()"
         else:
             fun = None
         match = self.gdb_src_pattern.match(line)
         if match:
             src,linenro = match.groups()
-            return "%s(%s): %s" % (src, linenro, fun)
+            if src in joins:
+                return src
+            return "%s in %s:%s" % (fun, src, linenro)
         match = self.gdb_lib_pattern.match(line)
         if match:
             lib = self.libname_strip(match.group(1))
-            if lib in join_libs:
+            if lib in joins:
                 return lib
             if fun:
-                return "%s: %s" % (lib, fun)
+                return "%s in %s" % (fun, lib)
             else:
                 if lib == match.group(1):
                     # not library, some other binary
@@ -579,7 +594,7 @@ class Rtrace:
                 if skip:
                     continue
                 # parse backtrace line
-                line = self.trace_strip(line, options.lib)
+                line = self.trace_strip(line, options.joins)
                 # ignore lines without function names
                 if not line:
                     ignored += 1
@@ -1014,9 +1029,14 @@ label="%s";
         for node in self.nodes.itervalues():
             if not self.node_ok(node):
                 continue
-            # cluster name is just the library name
-            # FIXME: node names can now contain more stuff
-            name = node.name[:node.name.find(':')]
+            # cluster name is just the library or code file name
+            name = node.name
+            pos = name.rfind(' in ')
+            if pos > 0:
+                name = name[pos+4:]
+                pos = name.rfind(":")
+                if pos > 0:
+                    name = name[:pos]
             if name in self.cluster_nodes:
                 if name in clusters:
                     clusters[name][node.name] = node
@@ -1134,7 +1154,7 @@ class Options:
     ignore_middle = []  # substrings of function to ignore in the backtraces
     noignore = []       # prefixes of functions not to ignore
     stop = []           # prefixes of functions where to end backtrace
-    lib = []            # libs which should be shown with single node
+    joins = []          # libs/sources which should be shown with single node
     node = []           # which node(s) to show info about
     depth = 3           # depends on report type
     limit = 10          # maximum percentage of total to show
@@ -1193,8 +1213,8 @@ class Options:
                     self.depth = int(value)
                 else:
                     self.help(name, "invalid percentage limit", arg)
-            elif option == "join-lib":
-                self.lib.append(value)
+            elif option == "join":
+                self.joins.append(value)
             elif option == "ignore":
                 self.ignore.append(value)
             elif option == "ignore-middle":
@@ -1214,11 +1234,12 @@ class Options:
                 ]
             elif option == "ignore-glib-internals":
                 self.ignore += [
-                "g_type_", "g_object_", "g_signal_", "g_main_context_",
+                "g_type_", "g_object_", "g_signal_",
                 "g_enum_", "g_quark_", "g_param_", "g_pattern_spec_",
                 "g_hash_table_", "g_slist_", "g_list_", "g_array_",
                 "g_malloc", "g_try_", "g_mem_", "g_slice_",
                 "g_strdup", "g_strndup", "g_memdup",
+                "g_main_context_", "g_main_dispatch",
                 "g_closure_", "g_cclosure_"
                 ]
                 # "tsearch", "dcgettext"]
@@ -1233,10 +1254,15 @@ class Options:
                 "qMalloc", "qRealloc", "qFree",
                 "QString::", "QByteArray::", "QObject::",
                 "QHashData::", "QListData::", "QMapData::",
-                "qDBusAddSpyHook", "qt_plugin_instance",
+                "QVectorData::", "QString in ", "QEventLoop::",
+                "QMetaObject::", "QMetaCallEvent::",
+                "qDBusAddSpyHook", "qt_plugin_instance"
                 ]
+                # these can cause complication calls/loops
+                # and QVariant is a template class
                 self.ignore_middle += [
-                "::qt_metacall", "::notify", " QVariant::"
+                "::event", "::notify", "::sendPostedEvents",
+                "::qt_metacall", " QVariant::"
                 ]
             elif option == "stop":
                 self.stop.append(value)
@@ -1293,13 +1319,13 @@ class Options:
         debug("intermediate = %s (include intermediate nodes?)" % self.bool_str(self.intermediate))
         debug("trace_args = %s (replace trace function names with args?)" % self.bool_str(self.trace_args))
         debug("show_below_limit = %s (show how many nodes were below limit?)" % self.bool_str(self.show_below_limit))
-        self.show_list(self.cluster, "Cluster libs with following names together")
+        self.show_list(self.cluster, "Cluster functions within given sources/libs together")
         self.show_list(self.include, "Include only backtraces having node(s) which names start with these prefixes")
         self.show_list(self.ignore, "Ignore in backtraces nodes which names have these prefixes")
         self.show_list(self.ignore_middle, "Ignore in backtraces nodes which names have these substrings")
         self.show_list(self.noignore, "However, do not ignore nodes which names have these prefixes")
         self.show_list(self.stop, "Stop backtrace parsing to nodes which names have these prefixes")
-        self.show_list(self.lib, "Functions within these libraries are shown with a single node")
+        self.show_list(self.joins, "Merge nodes for these functions/source files/libraries together")
         self.show_list(self.node, "Nodes about which to show debug information")
         debug("references = %s (whether to show debug node references)" % self.bool_str(self.references))
         debug("verbose = %s" % self.bool_str(self.verbose))
@@ -1367,10 +1393,10 @@ Options for report output type and looks:
         emphatized.  Only nodes whose allocations go over emph-limit
         are checked for this. Default is 1.2.
 
-    --cluster=value,  value is the name of the library which nodes
-        should be clustered in "graph". Note: this option is useless
-        with recursive backtraces, for Gtk applications you should
-        use also --ignore-gtk-internals=yes.
+    --cluster=value,  value is the name for the library or code file
+        which nodes should be clustered together.  Note: this option
+        is useless with recursive backtraces, for UI applications you
+        should use also --ignore-glib/gtk/qt-internals=yes.
 
 
 Additional options for reducing the amount of output data:
@@ -1422,7 +1448,7 @@ Additional options for reducing the amount of output data:
         these options:
         --intermediate=no --leafs=no --show-below-limit=no 
         --ignore=dcgettext --ignore=tsearch
-        --join-lib=ld-<version>.so
+        --join=ld-<version>.so
 
     --ignore-gtk-internals=yes, shortcut to ignore several recursed
       functions called by Gtk applications.  You might want to try
@@ -1430,15 +1456,17 @@ Additional options for reducing the amount of output data:
         --ignore-libc-allocs --ignore-font-allocs
         --ignore=gtk_widget_ --no-ignore=gtk_widget_show
         --ignore=gdk_window_ --ignore=_gdk_window_
-        --join-lib=fontconfig 
+        --join=fontconfig 
 
     --ignore-qt-internals=yes, shortcut to ignore lower level Qt
         allocation/free, standard data structure handling and
         marshalling/recursed functions called by Qt applications.
-        You might want to try also --ignore-glib-internals option.
+        You might want to try also these options:
+          --ignore-glib-internals=yes
+          --stop=qt_format_text
 
-    --join-lib=value, value is the name of the library (part of node
-        name before ':') which should be represented as a single node.
+    --join=value, value is the name for the function, library or source
+        code file which nodes should be represented as a single node.
 
     --trace-args=yes, show trace function (1st) argument instead of its name.
         This can be used e.g. to see file names in file descriptor traces.
@@ -1448,7 +1476,20 @@ Additional options for reducing the amount of output data:
     --leafs=no, leaves out nodes which have either:
         - one parent and no children, or
         - one child and no parents
-    
+
+
+Reducing graph size by minimizing the node sizes:
+
+    To remove function and method arguments, pipe output through:
+        sed -e 's/([^0-9)][^)]*)/()/' -e 's/)(.[^)]*)//'
+
+    To remove also source file names, add:
+        -e 's/ in [^ \\\\]*//'
+
+    To remove also paths from the --trace-args file names, add:
+       -e 's%/.*[^ ]/%%'
+
+
 Debug options:
     
     --node=value -- shows internal information about given node.
@@ -1466,8 +1507,8 @@ to all values you gave (of other options, only the last value applies):
     --stop
     --ignore
     --include-only
-    --join-lib
     --cluster
+    --join
     --node
 
 Graphs are output in 'dot' format.  You will need GraphViz package to
