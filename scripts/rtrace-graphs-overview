@@ -37,6 +37,9 @@
 # - If destination file is older than source file, re-create it
 # - If files are already generated, don't check for / complain
 #  about tools needed to generate them
+# 2010-09-21
+# - Update filtering options
+# - Remove extra arguments from function signatures to get graphs smaller
 #
 # Originally this file was a part of sp-libleaks package, but moved
 # to the sp-rtrace package during libleaks redesign.
@@ -102,11 +105,13 @@ do
 		echo "ERROR: 'rtrace-calltree' utility missing from PATH"
 		exit 1
 	fi
-
+	# sed removes args from function & method signatures,
+	# including function pointers
 	echo "Generating call tree: $resolved -> $dot"
-	rtrace-calltree --type=graph --limit=1 --emph-limit=5 \
+	rtrace-calltree --type=graph --limit=3 --emph-limit=6 \
 	--ignore-libc-allocs=yes --ignore-glib-internals=yes --ignore-qt-internals=yes \
-	--trace-args=yes --show-below-limit=no $resolved > $dot
+	--ignore-middle="~" --show-below-limit=no $resolved |\
+	sed -e 's/([^0-9)][^)]*)/()/' -e 's/)(.[^)]*)//' > $dot
 	if [ $? != 0 ]; then
 		rm $dot
 		echo "ERROR: 'rtrace-calltree' call failed"

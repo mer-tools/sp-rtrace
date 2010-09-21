@@ -123,7 +123,7 @@ do
 		check_calltree
 		echo "Generating call tree: $resolved -> $dot"
 		rtrace-calltree --type=graph --limit=$limit --emph-limit=4 \
-		--include-only=$fun --trace-args=yes --ignore-libc-allocs=yes \
+		--include-only=$fun --ignore-libc-allocs=yes \
 		$resolved > $dot
 		if [ $? != 0 ]; then
 			rm $dot

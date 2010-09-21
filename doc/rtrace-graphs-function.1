@@ -5,9 +5,7 @@ rtrace-graphs-function - create graph of allocs in rtrace report
 rtrace-graphs-function <function name> <limit> <rtrace traces>
 .SH DESCRIPTION
 \fIrtrace-graphs-function\fP generates graphs of unfreed resource
-allocations  going
-through the given function for all the given trace files.
-Rtrace report is sp-rtrace output post-processed with -l[c] option.
+allocations  going through the given function for all the given trace files.
 .PP
 Limit is how much of the total allocations need to go through the given
 function for a function to be shown in the graphs.  Good values for
@@ -20,6 +18,10 @@ contain debug symbols), \fIrtrace-calltree\fP to analyse the data and \fIdot\fP
 .PP
 The graphs are saved to a subdirectory with the given function name.
 To re-generate the files, just remove the directory.
+.PP
+If you want to modify what details are filtered, you can just call
+\fIrtrace-calltree\fP (and \fIdot\fP) directly with options suitably
+modified from the ones (shown to be) used by this script.
 .SH SEE ALSO
 .IR sp-rtrace (1),
 .IR sp-rtrace-postproc (1),
