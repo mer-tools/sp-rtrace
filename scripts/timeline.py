@@ -33,8 +33,20 @@ class Timestamp:
 		minutes = hours % 60
 		hours /= 60  
 		return "%02d:%02d:%02d.%03d" % (hours, minutes, seconds, msecs)
-		
+	
+	def formatOffset(offset):
+		"Converts timestamp offset to text format"
+		text = Timestamp.format(offset)
+		text = string.lstrip(text, ":0")
+		text = string.rstrip(text, "0")
+		if text[-1] == '.':
+			text = string.rstrip(text, ".")
+		if text == "" or text[0] == '.':
+			text = "0" + text
+		return text
+	
 	format = staticmethod(format)
+	formatOffset = staticmethod(formatOffset)
 # /class Timestamp
 
 
@@ -274,11 +286,10 @@ class Plotter:
 		step = Tic(range / 10, True)
 		fstep = float(step.value) / 1000
 		tic = 0
-		template = "set xtics add (\"%%s\\n+%s\" %%f)\n" % step.format
-		while tic <= frange - fstep:
-			self.file.write(template % (Timestamp.format(self.timestampOffset + tic * 1000), tic, tic))
-			tic += fstep
-		self.file.write(template % (Timestamp.format(self.timestampOffset + range), frange, frange))
+		while tic <= range - step.value:
+			self.file.write("set xtics add (\"%s\\n+%s\" %f)\n" % (Timestamp.format(self.timestampOffset + tic), Timestamp.formatOffset(tic), float(tic) / 1000))
+			tic += step.value
+		self.file.write("set xtics add (\"%s\\n+%s\" %f)\n" % (Timestamp.format(self.timestampOffset + range), Timestamp.formatOffset(range), frange))
 			
 			
 	def setAxisY(self, label, range, format):
