@@ -98,80 +98,6 @@ class Event:
 		return True
 # /class Event
 
-class Table:
-	"""
-	The Table class provides gnuplot table emulation with labels
-	"""
-	
-	class Column:
-		"""
-		The Column class represents a single column in the table.
-		"""
-		
-		class Cell:
-			"""
-			The Cell class represents a single cell in the column.
-			"""
-			text = None
-			align = None
-			
-			def __init__(self, text, align = "right"):
-				self.text = text
-				self.align = align
-	
-			def write(self, file, row, col, size):
-				"Writes cell contents at the specified coordinates"
-				if self.align == "right":
-					col += size - 1
-				if self.align == "center":
-					col += size / 2
-				file.write("set label \"%s\" at character %d,%d %s\n" % (self.text, col, row, self.align))
-			# /class Cell
-		
-		size = 0
-		cells = None
-		
-		def __init__(self, size):
-			self.size = size	
-			self.cells = []
-			
-		def setCell(self, row, text, align):
-			if row + 1 > len(self.cells):
-				self.cells.extend(None for rows in range(row + 1 - len(self.cells)))
-			self.cells[row] = self.Cell(text, align)
-		
-		def write(self, file, rows, col):
-			"Writes column contents at the specified coordinates"
-			for row in range(len(self.cells)):
-				cell = self.cells[row]
-				if cell is None:
-					continue
-				cell.write(file, rows - row, col, self.size)
-			return self.size
-	# /class Column
-		
-	rows = 0
-	columns = []
-	
-	def __init__(self, row, col):
-		self.row = row
-		self.col = col
-	
-	def addColumn(self, size):
-		self.columns.append(self.Column(size))
-	
-	def setText(self, row, col, text, align = "right"):
-		if col > len(self.columns):
-			raise NameError("Table.setText: column value(%d) exceeding column count(%d)" % (col, len(self.columns)))
-		self.columns[col].setCell(row, text, align)
-		if row > self.rows:
-			self.rows = row
-		
-	def write(self, file):
-		offset = self.col
-		for column in self.columns:
-			offset += column.write(file, self.rows + self.row, offset)
-# /class Table
 			
 class Tic:
 	"""
@@ -184,21 +110,22 @@ class Tic:
 	
 	def __init__(self, slice, rounded):
 		if rounded:
-			decimal = -1
-			round = 1000
-			while self.value == 0:
-				self.value = (slice / round) * round
-				round /= 10;
-				decimal += 1
-				if self.value == 0 and round == 0:
-					self.value = 1
+			round = 1
+			value = slice
+			self.value = 1
+			while value != 0:
+				self.value = value * round;
+				round *= 10
+				value /= 10
 			#
 		else: 
-			decimal = 3
 			self.value = slice
-			while slice and slice % 10 == 0:
-				decimal -= 1
-				slice /= 10	
+			
+		decimal = 3
+		slice = self.value
+		while decimal and slice and slice % 10 == 0:
+			decimal -= 1
+			slice /= 10	
 		self.format = "%%.%df" % decimal
 	
 	def getText(self):
@@ -207,6 +134,202 @@ class Tic:
 		return self.text	
 	
 # /class Tic
+
+class Plotter:
+	"""
+	The plotter class provides high level API for creating gnuplot configuration file.
+	
+	The configuration file is created when creating Plotter instance and closed
+	when the plot() method is called().
+	"""
+	
+	class Table:
+		"""
+		The Table class provides gnuplot table emulation with labels
+		"""
+		
+		class Column:
+			"""
+			The Column class represents a single column in the table.
+			"""
+			
+			class Cell:
+				"""
+				The Cell class represents a single cell in the column.
+				"""
+				text = None
+				align = None
+				
+				def __init__(self, text, align = "right"):
+					self.text = text
+					self.align = align
+		
+				def write(self, file, row, col, size):
+					"Writes cell contents at the specified coordinates"
+					if self.align == "right":
+						col += size - 1
+					if self.align == "center":
+						col += size / 2
+					file.write("set label \"%s\" at character %d,%d %s\n" % (self.text, col, row, self.align))
+				# /class Cell
+			
+			size = 0
+			cells = None
+			
+			def __init__(self, size):
+				self.size = size	
+				self.cells = []
+				
+			def setCell(self, row, text, align):
+				if row + 1 > len(self.cells):
+					self.cells.extend(None for rows in range(row + 1 - len(self.cells)))
+				self.cells[row] = self.Cell(text, align)
+			
+			def write(self, file, rows, col):
+				"Writes column contents at the specified coordinates"
+				for row in range(len(self.cells)):
+					cell = self.cells[row]
+					if cell is None:
+						continue
+					cell.write(file, rows - row, col, self.size)
+				return self.size
+		# /class Column
+			
+		rows = 0
+		columns = []
+		
+		def __init__(self, row, col):
+			self.row = row
+			self.col = col
+		
+		def addColumn(self, size):
+			self.columns.append(self.Column(size))
+		
+		def setText(self, row, col, text, align = "right"):
+			if col > len(self.columns):
+				raise NameError("Table.setText: column value(%d) exceeding column count(%d)" % (col, len(self.columns)))
+			self.columns[col].setCell(row, text, align)
+			if row > self.rows:
+				self.rows = row
+			
+		def write(self, file):
+			offset = self.col
+			for column in self.columns:
+				offset += column.write(file, self.rows + self.row, offset)
+	# /class Table
+		
+	PNG = 1
+	POSTSCRIPT = 2
+	
+	file = None
+	filename = None
+	terminal = None
+	timestampOffset = 0
+	tables = []
+	
+	def __init__(self, filename, timestamp = 0, terminal = POSTSCRIPT):
+		self.file = open(filename, "w")
+		if self.file is None:
+			print >> sys.stderr, "Failed to create configuration file: %s" % filename
+			sys.exit(2)
+	
+		# set terminal properties
+		if terminal == Plotter.PNG:
+			self.file.write("set terminal png enhanced size 1024,728\n")
+			self.file.write("set fontpath \"/usr/share/fonts/truetype/ttf-liberation\"\n")
+		elif terminal == Plotter.POSTSCRIPT:
+			self.file.write("set terminal postscript eps enhanced color\n")
+		else:
+			raise NamedError("Unknown terminal type: %s" % terminal)
+		self.terminal = terminal
+		self.timestampOffset = timestamp
+		self.filename = filename
+		
+		# write graph legend outside graph
+		self.file.write("set key bmargin\n")
+		
+	def setTitle(self, title):
+		"Sets report title"
+		self.file.write("set title \"%s\"\n" % title)
+		
+	def setLineStyle(self, style):	
+		"Sets graph line style"
+		self.file.write("set style data %s\n" % style)
+		
+	def setAxisX(self, label, range, format = None):
+		"Sets X axis"
+		# set label
+		self.file.write("set xlabel \"%s\" offset 0,-4\n" % label)
+		# set  range
+		frange = float(range) / 1000
+		self.file.write("set xrange[0.000:%.3f]\n" % (frange))
+		# set the X axis tic label format, not used as tics are printed manually
+		# file.write("set format x \"+%.3f\"\n")
+
+		# place autotics outside range to avoid interference with manual tics
+		self.file.write("set xtics %f,%f\n" % (frange + 1, frange + 1))
+		
+		# set ticks
+		self.file.write("set xtics rotate\n")
+		step = Tic(range / 10, True)
+		fstep = float(step.value) / 1000
+		tic = 0
+		template = "set xtics add (\"%%s\\n+%s\" %%f)\n" % step.format
+		while tic <= frange - fstep:
+			self.file.write(template % (Timestamp.format(self.timestampOffset + tic * 1000), tic, tic))
+			tic += fstep
+		self.file.write(template % (Timestamp.format(self.timestampOffset + range), frange, frange))
+			
+			
+	def setAxisY(self, label, range, format):
+		"Sets Y axis"
+		self.file.write("set yrange[0:%d]\n" % (range))
+		
+		self.file.write("set format y \"%s\"\n" % format)
+		self.file.write("set ytics out\n")
+		
+		self.file.write("set ylabel \"%s\"\n" % label)
+	
+	
+	def setAxisY2(self, label, range, format = None):
+		"Sets Y2 axis"
+		
+		self.file.write("set y2range[0:%d]\n" % (range))
+		
+		self.file.write("set y2tics out\n")
+		self.file.write("set ytics nomirror\n")
+		
+		self.file.write("set y2label \"%s\"\n" % label)
+
+	def setBMargin(self, value):
+		self.file.write("set bmargin %d\n" % value)
+
+	def plot(self, data):
+		"Sets the tables and plots the data files"
+		for table in self.tables:
+			table.write(self.file)
+			
+		self.file.write("plot %s\n" % data)
+		self.file.close()
+		
+	def remove(self):
+		"Deletes the gnuplot configuration file"
+		os.remove(self.filename)
+		pass
+		
+	def createTable(self, row, col):
+		"""
+		Creates virtual table object. The tables can be used to report statistics
+		or whatever table formatted information is required. A gnuplot report can
+		have multiple tables.
+		"""
+		table = self.Table(row, col)
+		self.tables.append(table)
+		return table
+		
+			
+# /class Plotter	
+
 
 class Processor:
 	"""
@@ -528,54 +651,19 @@ class ActivityProcessor(Processor):
 		#	
 		# generate gnuplot configuration file:
 		#
-		file = open(self.GNUPLOT_CONFIG, "w")
-		if file is None:
-			print >> sys.stderr, "Failed to create configuration file: %s" % self.GNUPLOT_CONFIG
-			sys.exit(2)
+		plotter = Plotter(self.GNUPLOT_CONFIG, self.timestampOffset, Options.isPng and Plotter.PNG or Plotter.POSTSCRIPT)
+		plotter.setTitle("Allocation/deallocation rate")
 		
-		files.append(file)
-		# set terminal properties
-		if Options.isPng:
-			file.write("set terminal png enhanced size 1024,728\n")
-			file.write("set fontpath \"/usr/share/fonts/truetype/ttf-liberation\"\n")
-		else:
-			file.write("set terminal postscript eps enhanced color\n")
-		# set file title
-		file.write("set title \"Allocation/deallocation rate\"\n")
-		# set X axis range 
-		file.write("set xrange[0.000:%.3f]\n" % (float(xrange) / 1000))
-		# set Y/Y2 axis range 
-		file.write("set yrange[0:%d]\n" % (yrange))
-		file.write("set y2range[0:%d]\n" % (y2range))
-		# format X axis tics
-		xtic = float(int(xrange / 10)) / 1000
-		if xtic == 0:
-			xtic = 0.001
-		file.write("set xtics %f,%f,%f\n" % (xtic, xtic, float(xrange) / 1000 - xtic))
-		file.write("set xtics rotate\n")
-		file.write("set xtics add (\"%s\" %f)\n" % (Timestamp.format(self.timestampOffset), 0))
-		file.write("set xtics add (\"%s\" %f)\n" % (Timestamp.format(self.timestampOffset + xrange), float(xrange) / 1000))
-		# set the X axis tic label format
-		file.write("set format x \"+%.3f\"\n")
-		# set the Y/Y2 axis tic label format
-		file.write("set format y \"%.1s%c\"\n")
-		file.write("set ytics out\n")
-		file.write("set y2tics out\n")
-		file.write("set ytics nomirror\n")
-		# set Y/Y2 axis label
-		file.write("set ylabel \"amount per %s sec\"\n" % slice.getText())
-		file.write("set y2label \"count per %s sec\"\n" % slice.getText())
-		# set X axis label
-		file.write("set xlabel \"time (secs)\" offset 0,-3\n")
-		# set graph line style
-		file.write("set style data lines\n")
-		# write graph information outside graph
-		file.write("set key bmargin\n")
+		plotter.setAxisX("time (secs)", xrange)
+		plotter.setAxisY("amount per %s sec" % slice.getText(), yrange, "%.1s%c")
+		plotter.setAxisY2("count per %s sec" % slice.getText(), y2range)
+			
+		plotter.setLineStyle("lines")
 		
 		# Write summary report
 		
 		# define table headers
-		table = Table(1, 1)
+		table = plotter.createTable(1, 1)
 		# resource name column
 		table.addColumn(10)
 		# snapshot name column
@@ -585,11 +673,18 @@ class ActivityProcessor(Processor):
 		# allocation size
 		table.addColumn(10)
 
-		table.setText(0, 0, "{/%s}Resource" % Options.fonts.BOLDITALIC, "center")
-		table.setText(0, 1, "{/%s}State" % Options.fonts.BOLDITALIC, "center")
+#		table.setText(0, 0, "{/%s}Resource" % Options.fonts.BOLDITALIC, "center")
+#		table.setText(0, 1, "{/%s}State" % Options.fonts.BOLDITALIC, "center")
+#
+#		table.setText(0, 2, "{/%s}Count" % Options.fonts.BOLDITALIC, "center")
+#		table.setText(0, 3, "{/%s}Size" % Options.fonts.BOLDITALIC, "center")
 
-		table.setText(0, 2, "{/%s}Count" % Options.fonts.BOLDITALIC, "center")
-		table.setText(0, 3, "{/%s}Size" % Options.fonts.BOLDITALIC, "center")
+		table.setText(0, 0, "Resource", "center")
+		table.setText(0, 1, "State", "center")
+
+		table.setText(0, 2, "Count", "center")
+		table.setText(0, 3, "Size", "center")
+
 
 		# write summary data
 		resourceIndex = 2
@@ -612,19 +707,16 @@ class ActivityProcessor(Processor):
 			
 			resourceIndex += 2
 		
-		table.write(file)
-		
 		# Reserve space at the bottom for leak data
 		bmargin = len(contexts) + 9
 		if bmargin < 9 + table.rows:
 			bmargin = 9 + table.rows
 		if bmargin < 15:
 			bmargin = 15
-		file.write("set bmargin %d\n" % bmargin)
+		plotter.setBMargin(bmargin)
 		
 		# plot the data files
-		file.write("plot %s\n" % plotData)
-		file.close()
+		plotter.plot(plotData)
 		
 		# Convert with gnuplot
 		gnuplot = subprocess.Popen(["gnuplot", self.GNUPLOT_CONFIG], 0, None, None, stream, None, None, None, None, None, \
@@ -633,7 +725,8 @@ class ActivityProcessor(Processor):
 		gnuplot.wait()
 			
 		for file in files:
-			file.remove();
+			file.remove()
+		plotter.remove()
 	
 # /class ActivityProcessor
 
@@ -779,50 +872,18 @@ class TotalsProcessor(Processor):
 		#	
 		# generate gnuplot configuration file:
 		#
-		file = open(self.GNUPLOT_CONFIG, "w")
-		if file is None:
-			print >> sys.stderr, "Failed to create configuration file: %s" % self.GNUPLOT_CONFIG
-			sys.exit(2)
+		plotter = Plotter(self.GNUPLOT_CONFIG, self.timestampOffset, Options.isPng and Plotter.PNG or Plotter.POSTSCRIPT)
+		plotter.setTitle("Amount of non-freed allocations")
 		
-
-		# set terminal properties
-		if Options.isPng:
-			file.write("set terminal png enhanced size 1024,728\n")
-			file.write("set fontpath \"/usr/share/fonts/truetype/ttf-liberation\"\n")
-		else:
-			file.write("set terminal postscript eps enhanced color\n")
-		# set file title
-		file.write("set title \"Amount of {/%s}non-freed {/%s} allocations\"\n" % (Options.fonts.ITALIC, Options.fonts.NORMAL))
-		# set X axis range 
-		file.write("set xrange[0.000:%.3f]\n" % (float(xrange) / 1000))
-		# set Y axis range 
-		file.write("set yrange[0:%d]\n" % (yrange))
-		# format X axis tics
-		xtic = float(int(xrange / 10)) / 1000
-		if xtic == 0:
-			xtic = 0.001
-		file.write("set xtics %f,%f,%f\n" % (xtic, xtic, float(xrange) / 1000 - xtic))
-		file.write("set xtics rotate\n")
-		file.write("set xtics add (\"%s\" %f)\n" % (Timestamp.format(self.timestampOffset), 0))
-		file.write("set xtics add (\"%s\" %f)\n" % (Timestamp.format(self.timestampOffset + xrange), float(xrange) / 1000))
-		# set the X axis tic label format
-		file.write("set format x \"+%.3f\"\n")
-		# set the Y axis tic label format
-		file.write("set format y \"%.1s%c\"\n")
-		file.write("set ytics out\n")
-		# set Y axis label
-		file.write("set ylabel \"size\"\n")
-		# set X axis label
-		file.write("set xlabel \"time (secs)\" offset 0,-3\n")
-		# set graph line style
-		file.write("set style data lines\n")
-		# write graph information outside graph
-		file.write("set key bmargin\n")
+		plotter.setAxisX("time (secs)", xrange)
+		plotter.setAxisY("size", yrange, "%.1s%c")
+			
+		plotter.setLineStyle("lines")
 		
 		# Write summary report
 		
 		# define table headers
-		table = Table(1, 1)
+		table = plotter.createTable(1, 1)
 		# resource name column
 		table.addColumn(10)
 		# snapshot name column
@@ -836,18 +897,31 @@ class TotalsProcessor(Processor):
 		# leaked allocation size
 		table.addColumn(10)
 
-		table.setText(1, 0, "{/%s}Resource" % Options.fonts.BOLDITALIC, "center")
-		table.setText(1, 1, "{/%s}State" % Options.fonts.BOLDITALIC, "center")
+#		table.setText(1, 0, "{/%s}Resource" % Options.fonts.BOLDITALIC, "center")
+#		table.setText(1, 1, "{/%s}State" % Options.fonts.BOLDITALIC, "center")
+#
+#		table.setText(0, 2, "{/%s}Total" % Options.fonts.BOLDITALIC, "center")
+#		table.setText(0, 3, "{/%s}Total" % Options.fonts.BOLDITALIC, "center")
+#		table.setText(1, 2, "{/%s}count" % Options.fonts.BOLDITALIC, "center")
+#		table.setText(1, 3, "{/%s}size" % Options.fonts.BOLDITALIC, "center")
+#
+#		table.setText(0, 4, "{/%s}Non-freed" % Options.fonts.BOLDITALIC, "center")
+#		table.setText(0, 5, "{/%s}Non-freed" % Options.fonts.BOLDITALIC, "center")
+#		table.setText(1, 4, "{/%s}count" % Options.fonts.BOLDITALIC, "center")
+#		table.setText(1, 5, "{/%s}size" % Options.fonts.BOLDITALIC, "center")
 
-		table.setText(0, 2, "{/%s}Total" % Options.fonts.BOLDITALIC, "center")
-		table.setText(0, 3, "{/%s}Total" % Options.fonts.BOLDITALIC, "center")
-		table.setText(1, 2, "{/%s}count" % Options.fonts.BOLDITALIC, "center")
-		table.setText(1, 3, "{/%s}size" % Options.fonts.BOLDITALIC, "center")
+		table.setText(1, 0, "Resource", "center")
+		table.setText(1, 1, "State", "center")
 
-		table.setText(0, 4, "{/%s}Non-freed" % Options.fonts.BOLDITALIC, "center")
-		table.setText(0, 5, "{/%s}Non-freed" % Options.fonts.BOLDITALIC, "center")
-		table.setText(1, 4, "{/%s}count" % Options.fonts.BOLDITALIC, "center")
-		table.setText(1, 5, "{/%s}size" % Options.fonts.BOLDITALIC, "center")
+		table.setText(0, 2, "Total", "center")
+		table.setText(0, 3, "Total", "center")
+		table.setText(1, 2, "count", "center")
+		table.setText(1, 3, "size", "center")
+
+		table.setText(0, 4, "Non-freed", "center")
+		table.setText(0, 5, "Non-freed", "center")
+		table.setText(1, 4, "count", "center")
+		table.setText(1, 5, "size", "center")
 		
 		# write summary data
 		resourceIndex = 3
@@ -869,19 +943,16 @@ class TotalsProcessor(Processor):
 			
 			resourceIndex += 2
 		
-		table.write(file)
-		
 		# Reserve space at the bottom for leak data
 		bmargin = len(contexts) + 9
 		if bmargin < 9 + table.rows:
 			bmargin = 9 + table.rows
 		if bmargin < 15:
 			bmargin = 15
-		file.write("set bmargin %d\n" % bmargin)
+		plotter.setBMargin(bmargin)
 		
 		# plot the data files
-		file.write("plot %s\n" % plotData)
-		file.close()
+		plotter.plot(plotData)
 		
 		# Convert with gnuplot
 		gnuplot = subprocess.Popen(["gnuplot", self.GNUPLOT_CONFIG], 0, None, None, stream, None, None, None, None, None, \
@@ -890,7 +961,7 @@ class TotalsProcessor(Processor):
 		gnuplot.wait()
 		
 		# cleanup gnuplot configuration and data files
-		os.remove(self.GNUPLOT_CONFIG)
+		plotter.remove()
 		
 		for file in files:
 			file.remove();
