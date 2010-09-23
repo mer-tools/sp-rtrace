@@ -1,3 +1,24 @@
+sp-rtrace (1.1) unstable; urgency=low
+
+  * Function name resolving verifies libbfd provide information from
+    the ELF symbol table to get rid of bogus information provided
+    by BFD for inline/template methods.  This may also remove useful
+    information, for that case one can ask resolving to use just BFD.
+    Fixes: NB#192289
+  * Fixes to tracing toggling and backtrace generation
+  * Modules can trace activity done before process enters main()
+  * New file module for tracing file descriptor increase & decrease
+  * Backtraces for freed resources are optional (improves performance)
+  * Backtrace is output in similar format to one used by Gdb
+  * rtrace-calltree:
+    - HTML report generation & pylint errors fixed
+    - callgraphs handle resource freeing backtraces properly
+    - more & updated --ignore-* convenience functions
+    - option for seeing first function arguments (e.g. filename) as nodes
+  * Preliminary unfreed allocs & allocation activity timeline charts
+
+ -- Tommi Rantala <ext-tommi.1.rantala@nokia.com>  Thu, 23 Sep 2010 12:41:36 +0300
+
 sp-rtrace (1.0) unstable; urgency=low
 
   * Initial Release.
