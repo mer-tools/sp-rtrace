@@ -105,12 +105,12 @@ do
 		echo "ERROR: 'rtrace-calltree' utility missing from PATH"
 		exit 1
 	fi
-	# sed removes args from function & method signatures,
-	# including function pointers
+	# sed command removes args from function & method
+	# signatures, including pointers to functions
 	echo "Generating call tree: $resolved -> $dot"
-	rtrace-calltree --type=graph --limit=3 --emph-limit=6 \
+	rtrace-calltree --type=graph --limit=3 --emph-limit=9 \
 	--ignore-libc-allocs=yes --ignore-glib-internals=yes --ignore-qt-internals=yes \
-	--ignore-middle="~" --show-below-limit=no $resolved |\
+	--ignore="libmeegotouch" --show-below-limit=no $resolved |\
 	sed -e 's/([^0-9)][^)]*)/()/' -e 's/)(.[^)]*)//' > $dot
 	if [ $? != 0 ]; then
 		rm $dot

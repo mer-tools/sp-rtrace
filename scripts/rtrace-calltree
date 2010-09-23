@@ -147,6 +147,9 @@
 # - Rename --join-lib to --join, match also function and source file names
 # - Improve Qt internal functions ignoring
 # - Add help on how to reduce graph with "sed"
+# 2010-09-23:
+# - Improve error handling
+# - Handle the new Gdb style sp-rtrace backtrace format
 #
 # Originally this file (alloc-tree) was a part of libleaks package, but
 # renamed and moved to the sp-rtrace package during libleaks redesign.
@@ -167,8 +170,8 @@ import sys, re
 def debug(msg):
     sys.stderr.write("%s\n" % msg)
 
-def error(msg):
-    sys.stderr.write("ERROR: %s\n" % msg)
+def error_exit(msg):
+    sys.stderr.write("\nERROR: %s!\n" % msg)
     sys.exit(1)
 
 
@@ -261,14 +264,14 @@ class Node:
         if fun_name in self.children:
             self.children.remove(fun_name)
         else:
-            debug("ERROR: function '%s' not in node children" % fun_name)
+            error_exit("function '%s' not in node children" % fun_name)
 
     def remove_parent(self, fun_name):
         "removes given parent from node"
         if fun_name in self.parents:
             self.parents.remove(fun_name)
         else:
-            debug("ERROR: function '%s' not in node parents" % fun_name)
+            error_exit("function '%s' not in node parents" % fun_name)
     
     def add_trace(self, trace_id):
         "add given trace id to node or return zero if it already was in"
@@ -465,32 +468,68 @@ class Graph:
 
 class Rtrace:
     def __init__(self, tracefile):
-        # format: at <source file>:<line nro>
-        self.gdb_src_pattern = re.compile(".* at ([^ :]+):([0-9]+)\)")
-        # format: in <function name>()[ at ...]
-        self.gdb_fun_pattern = re.compile(".*\(in (.+?)( at .*|)\)$")
-        # format: from <library/binary file>
-        self.gdb_lib_pattern = re.compile(".* from (\S+)$")
         # format: <index>. [@<context id>] [\[<timestamp>\]] <function name>\<<resource type>\>(<resource size>) = <hex ID>
         self.alloc_pattern = re.compile("^[0-9]+\. [^a-zA-Z_]+([^(]+)\(([0-9]+)\) = (0x[a-fA-F0-9]+)")
         # format: <index>. [@<context id>] [\[<timestamp>\]] <function name>\<<resource type>\>(<hex ID>)
         self.free_pattern  = re.compile("^[0-9]+\. [^a-zA-Z_]+([^(]+)\((0x[a-fA-F0-9]+)\)")
+        # format: at <source file>:<line nro>
+        self.gdb_src_pattern = re.compile(".* at ([^:]+):([0-9]+)$")
         self.leaks = open(tracefile)
 
     def libname_strip(self, libname):
         "returns library name stripped of 'lib' prefix and '.so*' postfix"
-        libname = libname[libname.rfind("/") + 1:]
-        if libname.startswith("lib"):
-            pos = libname.rfind(".so")
-            if pos > 0:
-                return libname[3:pos]
-        return libname
+        # format: from <library/binary file>
+        pos1 = libname.rfind("/")
+        if pos1 >= 0:
+            libname = libname[pos1+1:]
+        elif libname.startswith(" from "):
+            libname = libname[6:]
+        pos2 = libname.rfind(".so")
+        if pos2 > 0:
+            return libname[:pos2]
+        return libname.strip()
 
     def trace_strip(self, line, joins):
         "return relevant information from GDB style backtrace line"
-        match = self.gdb_fun_pattern.match(line)
-        if match:
-            fun = match.group(1)
+        # format (src is only with function):
+        # \t0x<hex>[ <function name>(<args>)][ at <src>:<line>| from <bin/lib>]
+        #  
+        # remove address, leave preceeding space
+        pos = line.find(' ')
+        if pos <= 0:
+            return None
+        line = line[pos:]
+
+        pos = line.find(" from ")
+        if pos == 0:
+            # just library/binary
+            return self.libname_strip(line)
+        if pos > 0:
+            # function + library/binary
+            lib = self.libname_strip(line[pos:])
+            if lib in joins:
+                return lib
+            fun = line[:pos]
+            src = None
+        else:
+            lib = None
+            pos = line.find(" at ")
+            if pos < 0:
+                # just function/method (+ args)
+                fun = line
+                src = None
+            else:
+                # function + src:line
+                fun = line[:pos]
+                match = self.gdb_src_pattern.match(line)
+                if not match:
+                    error_exit("line containing ' at ' doesn't match <src>:<line>:\n%s\n" % line)
+                src,linenro = match.groups()
+                if src in joins:
+                    return src
+        fun = fun.strip()
+        if fun:
+            # check function joins
             pos = fun.find('(')
             if pos >= 0:
                 name = fun[:pos]
@@ -499,26 +538,14 @@ class Rtrace:
             if name in joins:
                 return name + "()"
         else:
-            fun = None
-        match = self.gdb_src_pattern.match(line)
-        if match:
-            src,linenro = match.groups()
-            if src in joins:
-                return src
-            return "%s in %s:%s" % (fun, src, linenro)
-        match = self.gdb_lib_pattern.match(line)
-        if match:
-            lib = self.libname_strip(match.group(1))
-            if lib in joins:
-                return lib
-            if fun:
-                return "%s in %s" % (fun, lib)
-            else:
-                if lib == match.group(1):
-                    # not library, some other binary
-                    return lib
-                return None
-        return fun
+            fun = "()"
+        #debug("----------\nline:\t%s\nfun:\t%s\nsrc:\t%s\nlib:\t%s" % (line.strip(),fun,src,lib))
+        if lib:
+            return "%s in %s" % (fun, lib)
+        elif src:
+            return "%s at %s:%s" % (fun, src, linenro)
+        else:
+            return fun
     
     def get_name_size_addr(self, line):
         "return name and size & ID for alloc, zero for freed size or None for no match"
@@ -528,8 +555,7 @@ class Rtrace:
         match = self.free_pattern.match(line)
         if match:
             return (match.group(1), 0, int(match.group(2), 16))
-        debug("ERROR: this alloc/free line doesn't match the patterns:\n%s" % line)
-        sys.exit(1)
+        error_exit("this alloc/free line doesn't match the patterns:\n%s" % line)
     
     def ignore(self, line, options):
         "return True if given line should be ignored, False otherwise"
@@ -814,8 +840,7 @@ class Traverse:
     def get_node(self, trace, key):
         "return node corresponding to key if it is valid for this trace"
         if key not in self.graph.nodes:
-            debug("ERROR: key '%s' not in nodes" % key)
-            return None
+            error_exit("key '%s' not in nodes" % key)
         node = self.graph.nodes[key]
         tracelen = len(trace)
         if tracelen > 1:
@@ -1136,7 +1161,7 @@ class AllocGraphReport(GraphvizReport):
         if options.refs:
             self.heading = "Functions through which the references were done"
         else:
-            self.heading = "Functions through which at least %.1f%% of the total allocations were done" % self.limit
+            self.heading = "Functions through which >=%.1f%% of the total allocations were done" % self.limit
     
     def node_ok(self, node):
         # called by superclass output_child_nodes()
@@ -1222,17 +1247,23 @@ class Options:
             elif option == "no-ignore":
                 self.noignore.append(value)
             elif option == "ignore-font-allocs":
+                if not self.get_bool(name, arg, value):
+                    continue
                 self.ignore += [
                 "FT_Realloc", "FT_Alloc", "FT_QAlloc", "FcStrCopy",
                 "ft_alloc", "ft_realloc", "ft_mem_"
                 ]
             elif option == "ignore-libc-allocs":
+                if not self.get_bool(name, arg, value):
+                    continue
                 self.ignore += [
                 "malloc", "realloc", "calloc", "free",
                 "operator new", "operator delete",
                 "memdup", "strdup", "strndup"
                 ]
             elif option == "ignore-glib-internals":
+                if not self.get_bool(name, arg, value):
+                    continue
                 self.ignore += [
                 "g_type_", "g_object_", "g_signal_",
                 "g_enum_", "g_quark_", "g_param_", "g_pattern_spec_",
@@ -1244,14 +1275,18 @@ class Options:
                 ]
                 # "tsearch", "dcgettext"]
             elif option == "ignore-gtk-internals":
+                if not self.get_bool(name, arg, value):
+                    continue
                 self.ignore += [
                 "gtk_binding_", "_gtk_", "gtk_container_", "png_zalloc"
                 ]
                 # "gtk_widget_size_request",
                 # "gtk_widget_map", "gtk_widget_realize",
             elif option == "ignore-qt-internals":
+                if not self.get_bool(name, arg, value):
+                    continue
                 self.ignore += [
-                "qMalloc", "qRealloc", "qFree",
+                "libQt", "qMalloc", "qRealloc", "qFree",
                 "QString::", "QByteArray::", "QObject::",
                 "QHashData::", "QListData::", "QMapData::",
                 "QVectorData::", "QString in ", "QEventLoop::",
@@ -1355,7 +1390,7 @@ class Options:
         else:
             self.help(name, "value should be either 'yes' or 'no'", arg)
 
-    def help(self, name, error, arg=None):
+    def help(self, name, errstr, arg=None):
         "show command line help and exit"
         debug(__doc__)
         debug("usage: %s [options] <rtrace-report>  >  report.[txt|dot|html]" % name)
@@ -1478,18 +1513,6 @@ Additional options for reducing the amount of output data:
         - one child and no parents
 
 
-Reducing graph size by minimizing the node sizes:
-
-    To remove function and method arguments, pipe output through:
-        sed -e 's/([^0-9)][^)]*)/()/' -e 's/)(.[^)]*)//'
-
-    To remove also source file names, add:
-        -e 's/ in [^ \\\\]*//'
-
-    To remove also paths from the --trace-args file names, add:
-       -e 's%/.*[^ ]/%%'
-
-
 Debug options:
     
     --node=value -- shows internal information about given node.
@@ -1513,10 +1536,10 @@ to all values you gave (of other options, only the last value applies):
 
 Graphs are output in 'dot' format.  You will need GraphViz package to
 generate PostScript, SVG, PNG etc. formats out of them.""")
-        if error:
-            debug("\nERROR: %s!" % error)
+        if errstr:
             if arg:
-                debug("(for option '%s')" % arg)
+                errstr += " (for '%s')" % arg
+            error_exit(errstr)
         sys.exit(1)
 
 # ----------------------- main ------------------------
