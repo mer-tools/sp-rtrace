@@ -56,6 +56,19 @@ library.
 With bfd method resolver will not try to scan elf symbol table
 if the debug symbols aren't present. Instead it will attempt
 to load dynamic symbols with bfd.
+
+Bfd method gives more detailed information though it might be
+misleading sometimes when template methods and other inline 
+functions are used:
+.RS
+.IP *
+as a general rule one should ignore e.g. Qt (template/inline)
+destructors shown for resource _allocation_ paths 
+.IP *
+Gdb can be used to find out the right place in code based on
+the address (with instructions on how to do that, e.g. something
+similar to what I mentioned doing in previous mail).
+.RE
 .TP
 \fI--full-path\fP (\fI-p\fP)
 Keep the path of the function call origin source file. By default
