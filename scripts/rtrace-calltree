@@ -1265,6 +1265,7 @@ class Options:
                 if not self.get_bool(name, arg, value):
                     continue
                 self.ignore += [
+                "libglib-2.0", "libgobject-2.0",
                 "g_type_", "g_object_", "g_signal_",
                 "g_enum_", "g_quark_", "g_param_", "g_pattern_spec_",
                 "g_hash_table_", "g_slist_", "g_list_", "g_array_",
@@ -1287,10 +1288,11 @@ class Options:
                     continue
                 self.ignore += [
                 "libQt", "qMalloc", "qRealloc", "qFree",
-                "QString::", "QByteArray::", "QObject::",
+                "QString::", "QByteArray::", "QMutex",
                 "QHashData::", "QListData::", "QMapData::",
                 "QVectorData::", "QString in ", "QEventLoop::",
-                "QMetaObject::", "QMetaCallEvent::",
+                "QMetaObject::", "QObjectPrivate::", "QObject::",
+                "QMetaCallEvent::",
                 "qDBusAddSpyHook", "qt_plugin_instance"
                 ]
                 # these can cause complication calls/loops
