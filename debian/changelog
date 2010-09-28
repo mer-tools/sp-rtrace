@@ -1,3 +1,9 @@
+sp-rtrace (1.2) unstable; urgency=low
+
+  * Fixes: NB#194298 - sp-rtrace: add automake to build-deps.
+
+ -- Tommi Rantala <ext-tommi.1.rantala@nokia.com>  Tue, 28 Sep 2010 14:35:51 +0300
+
 sp-rtrace (1.1) unstable; urgency=low
 
   * Function name resolving verifies libbfd provide information from
