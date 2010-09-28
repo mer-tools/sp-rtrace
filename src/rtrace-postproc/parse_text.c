@@ -350,6 +350,18 @@ static long compare_resource(rd_resource_t* res, rd_resource_t* template)
 }
 
 /**
+ * Compare calls by timestamp/index
+ * @param call1
+ * @param call2
+ * @return
+ */
+static long compare_calls(rd_fcall_t* call1, rd_fcall_t* call2)
+{
+	if (call1->timestamp == call2->timestamp) return call1->index - call2->index;
+	return call1->timestamp - call2->timestamp;
+}
+
+/**
  * Reads and parses text format trace log.
  *
  * @param[in] rd   the resource trace data container.
@@ -440,7 +452,7 @@ static void read_text_data(rd_t* rd, FILE* fp)
 				RD_FCALL(data)->res_type = (rd_resource_t*)dlist_first(&rd->resources);
 			}
 
-			dlist_add(&rd->calls, data);
+			dlist_add_sorted_r(&rd->calls, data, (op_binary_t)compare_calls);
 			ref_node_t* ref = (ref_node_t*)dlist_create_node(sizeof(ref_node_t));
 			ref->ref = data;
 			dlist_add(&last_calls, ref);

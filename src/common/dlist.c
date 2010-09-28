@@ -117,6 +117,45 @@ void dlist_add_sorted(dlist_t* list, void* node, op_binary_t compare)
 	}
 }
 
+void dlist_add_sorted_r(dlist_t* list, void* node, op_binary_t compare)
+{
+	assert(node);
+	dlist_node_t* list_node = (dlist_node_t*)node;
+	/* First check if the node must be inserted at the end of the list
+	 * It should be done either when list is empty or when the new member is
+	 * less than the first.
+	 */
+	if (!list->head || compare(list_node, list->head) >= 0) {
+		list_node->prev = list->head;
+		list_node->next = NULL;
+		/* If the list was empty initialize it's tail reference, otherwise
+		 * set the new node as previous node for the first node in the list.
+		 */
+		if (!list->tail) list->tail = list_node;
+		else list->head->next = list_node;
+		/* After all links are set, put the new node at the end
+		 * of the list.
+		 */
+		list->head = list_node;
+	}
+	else {
+		dlist_node_t* cur_node = list->head;
+		/* Find the node after which the new node must be inserted */
+		while (cur_node->prev && compare(list_node, cur_node->prev) < 0) {
+			cur_node = cur_node->prev;
+		}
+		/* Update list tail if the node must be inserted at the beginning of the list,
+		 * otherwise update the next node link for the previous node.
+		 */
+		if (!cur_node->prev) list->tail = list_node;
+		else cur_node->prev->next = list_node;
+		/* Update links for the new node and the node after which it's inserted */
+		list_node->prev = cur_node->prev;
+		cur_node->prev = list_node;
+		list_node->next = cur_node;
+	}
+}
+
 /**
  * Simple pointer comparison.
  *

@@ -129,6 +129,22 @@ static void populate_list_sorted(dlist_t* list, node_t* node, int size)
 	}
 }
 
+/**
+ * Populates sorted list with the given node array by using reverse lookup.
+ *
+ * @param[in] list
+ * @param[in] node  the node array.
+ * @param[in] size  the number of nodes in array.
+ */
+static void populate_list_sorted_r(dlist_t* list, node_t* node, int size)
+{
+	int i;
+	for (i = 0; i < size; i++) {
+		dlist_add_sorted_r(list, new_node(node->value, node->name), (op_binary_t)compare_nodes);
+		node++;
+	}
+}
+
 
 /**
  * Compares list with the given node array.
@@ -287,6 +303,34 @@ RT_CASE(add_node_sorted)
 	dlist_t list;
 	dlist_init(&list);
 	populate_list_sorted(&list, nodes, RT_SIZEOF(nodes));
+	RT_ASSERT(verify_list(&list, nodes_sorted, RT_SIZEOF(nodes)) == RT_OK);
+	dlist_free(&list, (op_unary_t)free_node);
+
+	return RT_OK;
+}
+
+/**
+ * Node adding to sorted list test case.
+ */
+RT_CASE(add_node_sorted_r)
+{
+	node_t nodes[] = {
+			{.value = 4, .name = "four"},
+			{.value = 1, .name = "one"},
+			{.value = 6, .name = "six"},
+			{.value = 2, .name = "two"},
+			{.value = 3, .name = "three"},
+		};
+	node_t nodes_sorted[] = {
+			{.value = 1, .name = "one"},
+			{.value = 2, .name = "two"},
+			{.value = 3, .name = "three"},
+			{.value = 4, .name = "four"},
+			{.value = 6, .name = "six"},
+		};
+	dlist_t list;
+	dlist_init(&list);
+	populate_list_sorted_r(&list, nodes, RT_SIZEOF(nodes));
 	RT_ASSERT(verify_list(&list, nodes_sorted, RT_SIZEOF(nodes)) == RT_OK);
 	dlist_free(&list, (op_unary_t)free_node);
 
@@ -589,6 +633,7 @@ int main()
 	RT_RUN_CASE(create_node);
 	RT_RUN_CASE(add_node);
 	RT_RUN_CASE(add_node_sorted);
+	RT_RUN_CASE(add_node_sorted_r);
 	RT_RUN_CASE(find_node);
 	RT_RUN_CASE(remove_node);
 	RT_RUN_CASE(iterate_unary);

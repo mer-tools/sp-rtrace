@@ -149,6 +149,21 @@ void dlist_add(dlist_t* list, void* data);
  */
 void dlist_add_sorted(dlist_t* list, void* data, op_binary_t compare);
 
+
+/**
+ * Adds a new node to the list at the place specified by
+ * the compare function.
+ *
+ * This function is similar to dlist_add_sorted() function, with
+ * the exception that the index lookup is performed from the end
+ * instead of the beginning.
+ * @param[in] list      the list.
+ * @param[in] data      the data to add.
+ * @param[in] compare   the comparison function.
+ * @return
+ */
+void dlist_add_sorted_r(dlist_t* list, void* data, op_binary_t compare);
+
 /**
  * Finds node containing the specified data.
  *
