@@ -1,7 +1,7 @@
 Source: sp-rtrace
 Priority: extra
 Maintainer: Kiryl Shutsemau <kiryl.shutsemau@nokia.com>
-Build-Depends: debhelper (>= 5), autotools-dev, autoconf, doxygen, binutils-dev
+Build-Depends: debhelper (>= 5), autoconf, automake, libtool, doxygen, binutils-dev
 Standards-Version: 3.8.0
 Section: utils
 
