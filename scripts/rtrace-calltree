@@ -150,6 +150,8 @@
 # 2010-09-23:
 # - Improve error handling
 # - Handle the new Gdb style sp-rtrace backtrace format
+# 2010-09-29:
+# - Option for specifying size range for included allocations
 #
 # Originally this file (alloc-tree) was a part of libleaks package, but
 # renamed and moved to the sp-rtrace package during libleaks redesign.
@@ -591,7 +593,9 @@ class Rtrace:
                 if stack:
                     if options.progress:
                         debug(line[:line.find('.')])
-                    if include or not options.include:
+                    # there are alloc lines for this backtrace and
+                    # it's marked for inclusion or all BTs are included?
+                    if sizes and (include or not options.include):
                         if args:
                             for arg,size in args:
                                 graph.update([arg]+trace, [size], top)
@@ -610,7 +614,8 @@ class Rtrace:
                     stack = False
                     include = False
                 # get alloc size
-                sizes.append(size)
+                if size >= options.size_min and size <= options.size_max:
+                    sizes.append(size)
                 # get alloc address
                 if (addr > top):
                     # this is highest address for this trace
@@ -1183,6 +1188,8 @@ class Options:
     node = []           # which node(s) to show info about
     depth = 3           # depends on report type
     limit = 10          # maximum percentage of total to show
+    size_min = 0	# minimum alloc size to include
+    size_max = 0xEFFF	# maximum alloc size to include
     emph_limit = 60     # maximum percentage of total to emphasize
     own_allocs = 1.2    # factor by how much own allocs can exceed child allocs
     stats = "count"     # statistics report histogram type
@@ -1232,6 +1239,15 @@ class Options:
                     self.own_allocs = float(value)
                 else:
                     self.help(name, "invalid own-alloc-emph-limit factor", arg)
+            elif option == "size-range":
+                try:
+                    (mins, maxs) = value.split('-')
+                    if mins:
+                        self.size_min = int(mins)
+                    if maxs:
+                        self.size_max = int(maxs)
+                except ValueError:
+                    self.help(name, "invalid --size-range range/values", arg)
             elif option == "depth":
                 value = int(value)
                 if value >= 1 and value < 100:
@@ -1352,6 +1368,7 @@ class Options:
         debug("depth = %d (number of topmost graphs to show)" % self.depth)
         debug("limit = %.1f (show only nodes with amount of allocs >= given %% of total)" % self.limit)
         debug("emph_limit = %.1f (emphatize nodes with amount of allocs >= given %% of total)" % self.emph_limit)
+        debug("size-range = %d-%d (which sizes allocs to incluce)" % (self.size_min, self.size_max))
         debug("leafs = %s (include leaf nodes?)" % self.bool_str(self.leafs))
         debug("intermediate = %s (include intermediate nodes?)" % self.bool_str(self.intermediate))
         debug("trace_args = %s (replace trace function names with args?)" % self.bool_str(self.trace_args))
@@ -1457,8 +1474,11 @@ Additional options for reducing the amount of output data:
         example make Gtk memory allocation graphs more readable.
 
     --include-only=value, value is a string prefix for node names
-       for backtraces that should be included into reports.  All backtraces
+       for backtraces that should be included into report.  All backtraces
        NOT containing a node name starting with this substring are ignored.
+
+    --size-range=[smallest]-[largest], values are sizes of the smallest
+        and largest allocations that will be included to the report.
 
     --ignore=value, value is a string prefix for node names which should be
         ignored in the backtraces.  Useful for making graphs more readable.

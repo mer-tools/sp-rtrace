@@ -116,8 +116,12 @@ is recommended as the generated HTML output can be very large
 the amount of output, see the filtering options.
 .TP
 \fB--show-below-limit\fP=\fIno\fP
-Do not show nodes summarizing how many called nodes were below the
-specified (or default) limit (see --limit option).
+Do not show nodes summarizing how many called nodes were below
+the specified (or default) limit (see --limit option).
+.TP
+\fB--size-range\fP=\fI[smallest]\fP-\fI[largest]\fP
+Values are sizes of the smallest and largest allocations that will
+be included to the report.
 .TP
 \fB--stop\fP=\fIvalue\fP
 Value is a string prefix of node name where each backtrace parsing
