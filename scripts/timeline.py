@@ -508,7 +508,7 @@ class Processor:
 
 	def setTimestampOffset(self, offset):
 		"Sets the initial timestamp value from where the offsets are calculated"
-		self.timestampOffset = offset
+		self.timestampOffset = offset	
 		
 	def sort(self):
 		for resource in self.events.keys():
@@ -524,22 +524,47 @@ class LifetimeProcessor(Processor):
 	report. This report contains lines, illustrating resource
 	allocation and release times.
 	"""
-	
-	PAGE_LIMIT = 1000
-	DETAILS_LIMIT = 20
-
-	def addLifeline(self, resource, startTimestamp, endTimestamp, size):
-		"Adds resource lifeline to the report graph"
-		self.file.add(startTimestamp, size, endTimestamp, size)
-		self.plotter.addGraph(self.file, "($%d/1000)" % (self.resourceIndex * 2 - 1), "%d" % (self.resourceIndex * 2), "\"\"", None, self.lsMain)
-		self.resourceIndex += 1
-		if self.resourceIndex > self.PAGE_LIMIT:
-			self.file.close()
-			self.pageIndex += 1
-			self.resourceIndex = 1
-			self.file = self.plotter.createFile("%s-%d" % (resource, self.pageIndex))
+	class Pager:
+		"""
+		This is a helper class to split huge plot data into multiple files.
+		"""
+		RECORD_LIMIT = 1000
+		
+		plotter = None
+		resource = None
+		resourceIndex = 1
+		pageIndex = 1
+		file = None
+				
+		def __init__(self, plotter, resource):
+			self.plotter = plotter
+			self.resource = resource
+			self.createFile()
+			
+		def addLifeline(self, startTimestamp, endTimestamp, size, style):
+			"Adds resource lifeline to the report graph"
+			self.file.add(startTimestamp, size, endTimestamp, size)
+			self.plotter.addGraph(self.file, "($%d/1000)" % (self.resourceIndex * 2 - 1), "%d" % (self.resourceIndex * 2), "\"\"", None, style)
+			self.resourceIndex += 1
+			if self.resourceIndex > self.RECORD_LIMIT:
+				self.file.close()
+				self.pageIndex += 1
+				self.resourceIndex = 1
+				self.createFile()
+				#print >> sys.stderr, "page index: %d" % self.pageIndex
+			
+		def createFile(self):
+			self.file = self.plotter.createFile("%s-%d" % (self.resource, self.pageIndex))
 			self.file.create()
-			#print >> sys.stderr, "page index: %d" % self.pageIndex
+			
+		def finish(self):
+			self.file.close();
+			
+		def getTotal(self):
+			return (self.pageIndex - 1) * self.RECORD_LIMIT + self.resourceIndex
+		
+	DETAILS_LIMIT = 20
+	PAGE_LIMIT = 150
 			
 	
 	def writeReport(self, plotter):
@@ -547,8 +572,8 @@ class LifetimeProcessor(Processor):
 		xrange = 0
 		yrange = 0
 		
-		self.plotter = plotter
-		self.lsMain = plotter.setLineStyle(1, "blue")
+		lsMain = plotter.setLineStyle(1, "blue")
+		totalGraphs = 0
 
 		for resource in self.events.keys():
 			# initialize resource statistics data
@@ -564,11 +589,8 @@ class LifetimeProcessor(Processor):
 				xrange = events[-1].timestamp
 			# resource indexing map 
 			index = {}
-			
-			self.pageIndex = 1
-			self.resourceIndex = 1
-			self.file = plotter.createFile("%s-%d" % (resource, self.pageIndex))
-			self.file.create()
+
+			pager = self.Pager(plotter, resource)			
 			
 			for event in events:
 				if event.type == Event.Types.ALLOC:
@@ -590,24 +612,25 @@ class LifetimeProcessor(Processor):
 					size = ievent.event.res_size
 					if size > yrange:
 						yrange = size
-					self.addLifeline(resource, ievent.event.timestamp, event.timestamp, size)
+					pager.addLifeline(ievent.event.timestamp, event.timestamp, size, lsMain)
 
-#					if self.pageIndex > 10:
-#						break
-						
+					if pager.pageIndex > self.PAGE_LIMIT:
+						print >> sys.stderr, "Warning, number of resources exceeding limits, processing could take a lot of time."
+					
 					del index[event.res_id]
 
 			# plot all unallocated resources					
 			for res_id, ievent in index.iteritems():
-				self.addLifeline(resource, ievent.event.timestamp, xrange, ievent.event.res_size)	
-
-			self.file.close()
+				pager.addLifeline(ievent.event.timestamp, xrange, ievent.event.res_size, lsMain)	
+			
+			totalGraphs += pager.getTotal()
+			pager.finish();
 			
 		plotter.setTitle("Resource life-time")
 		plotter.setAxisX("time (secs)", xrange)
 		plotter.setAxisY("size", yrange, "%.1s%c")
 			
-		if self.resourceIndex + (self.pageIndex - 1) * self.PAGE_LIMIT > self.DETAILS_LIMIT:
+		if totalGraphs > self.DETAILS_LIMIT:
 			plotter.setDataStyle("lines")
 		else:
 			plotter.setDataStyle("linespoints")
@@ -1128,6 +1151,10 @@ class Parser:
 	def read(self, stream):
 		self.timestampOffset = 0
 		for line in stream:
+			# don't attempt to parse backtrace records
+			if line[0] == '\t':
+				continue
+			#
 			match = self.reAlloc.match(line)
 			if match:
 				context = match.group(2)
