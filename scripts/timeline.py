@@ -86,6 +86,7 @@ class Event:
 	# /class Types
 		
 	timestamp = 0
+	timestampOffset = 0
 	res_size = 0
 	res_id = ""
 	type = Types.UNDEFINED
@@ -110,6 +111,64 @@ class Event:
 		return True
 # /class Event
 
+class Filter:
+	"""
+	The base class for event filters.
+	"""
+
+	def matchesEvent(self, event):
+		return False
+	
+# /class Filter
+
+
+class TimeFilter:
+	"""
+	Time based event filter
+	"""
+	start = 0
+	end = sys.maxint
+	
+	def __init__(self, start, end):
+		if start is not None:
+			self.start = start
+		if end is not None:
+			self.end = end
+
+	def matchesTimestamp(self, timestamp, timestampOffset):
+		absStart = self.start < 0 and timestampOffset - self.start or self.start
+		absEnd = self.end < 0 and timestampOffset - self.end or self.end 
+		print >> sys.stderr, "%s < %s < %s (%s)" % (Timestamp.format(absStart), Timestamp.format(timestamp), 
+											Timestamp.format(absEnd), Timestamp.format(timestampOffset))
+		if absStart > timestamp:
+			return False
+		if absEnd < timestamp:
+			return False
+		return True
+# /class TimeFilter
+ 
+class SizeFilter(Filter):
+	"""
+	Resource size based filter
+	"""		
+	min = 0
+	max = sys.maxint
+	
+	def __init__(self, min, max):
+		if min is not None:
+			self.min = min
+		if max is not None:
+			self.max = max
+		
+	def matchesEvent(self, event):
+		if event.res_size == 0:
+			return True
+		if self.min > event.res_size:
+			return False
+		if self.max < event.res_size:
+			return False
+		return True
+# /class SizeFilter		
 			
 class Tic:
 	"""
@@ -514,6 +573,12 @@ class Processor:
 		for resource in self.events.keys():
 			self.events[resource] = sorted(self.events[resource], key = operator.attrgetter("index"))
 			self.events[resource] = sorted(self.events[resource], key = operator.attrgetter("timestamp"))
+			
+	def isEventActive(self, event):
+		for filter in Options.filters:
+			if not filter.matchesEvent(event):
+				return False
+		return True
 				
 # /class Processor		
 		
@@ -593,6 +658,8 @@ class LifetimeProcessor(Processor):
 			pager = self.Pager(plotter, resource)			
 			
 			for event in events:
+				if not self.isEventActive(event):
+					continue
 				if event.type == Event.Types.ALLOC:
 					if event.res_id in index:
 						index[event.res_id].refCount += 1
@@ -1143,13 +1210,12 @@ class Parser:
 	reResource = re.compile("\<([0-9a-z]+)\> : ([^ ]+) \(([^\)]+)\)")
 	reTimestamp = re.compile("^([0-9]+)\:([0-9]+)\:([0-9]+)\.([0-9]+)$")
 	reContext = re.compile("^\@ ([0-9a-fA-F]+) : (.*)$")
-	timestampOffset = 0
+	timestampOffset = None
 	
 	def __init__(self, processor):
 		self.processor = processor
 		
 	def read(self, stream):
-		self.timestampOffset = 0
 		for line in stream:
 			# don't attempt to parse backtrace records
 			if line[0] == '\t':
@@ -1160,13 +1226,27 @@ class Parser:
 				context = match.group(2)
 				if context is None:
 					context = 0
-				self.processor.registerAlloc(int(match.group(1)), context, self.getTimestampFromString(match.group(3)), match.group(4), match.group(6), int(match.group(5)))
+				timestamp = self.getTimestampFromString(match.group(3))
+				if not Options.timeFilter.matchesTimestamp(timestamp, self.timestampOffset or timestamp):
+					continue
+				if self.timestampOffset is None:
+					self.timestampOffset = timestamp
+					self.processor.setTimestampOffset(self.timestampOffset)
+				timestamp -= self.timestampOffset
+				self.processor.registerAlloc(int(match.group(1)), context, timestamp, match.group(4), match.group(6), int(match.group(5)))
 				continue
 			match = self.reFree.match(line)
 			if match:
 				context = match.group(2)
 				if context is None:
 					context = 0
+				timestamp = self.getTimestampFromString(match.group(3))
+				if not Options.timeFilter.matchesTimestamp(timestamp, self.timestampOffset or timestamp):
+					continue
+				if self.timestampOffset is None:
+					self.timestampOffset = timestamp
+					self.processor.setTimestampOffset(self.timestampOffset)
+				timestamp -= self.timestampOffset
 				self.processor.registerFree(int(match.group(1)), context, self.getTimestampFromString(match.group(3)), match.group(4), match.group(5))
 				continue
 			match = self.reResource.match(line)
@@ -1177,6 +1257,10 @@ class Parser:
 			if match:
 				self.processor.registerContext(int(match.group(1), 16), match.group(2))
 				continue
+			
+		if self.timestampOffset is None:
+			print >> sys.stderr, "The specified time period does not contain any events"
+			sys.exit(0)
 				
 	def write(self, stream):
 		self.processor.sort()
@@ -1189,10 +1273,7 @@ class Parser:
 		match = self.reTimestamp.match(text)
 		if match:
 			timestamp = int(match.group(1)) * 3600000 + int(match.group(2)) * 60000 + int(match.group(3)) * 1000 + int(match.group(4))
-		if self.timestampOffset == 0 and timestamp != 0:
-			self.timestampOffset = timestamp
-			self.processor.setTimestampOffset(timestamp)
-		return timestamp - self.timestampOffset
+		return timestamp
 # /class Parser	
 	
 
@@ -1223,10 +1304,21 @@ class Options:
 	isPng = False
 	fonts = Fonts()
 	
+	filters = []
+	timeFilter = None
 	
 	def parse(argv):
 		try:
-			opts, args = getopt.gnu_getopt(argv, "tlao:i:s:p", ["totals", "lifetime", "activity", "in=", "out=", "slice=", "png"])
+			opts, args = getopt.gnu_getopt(argv, "tlao:i:s:p", 
+										["totals", 
+										 "lifetime",
+										 "activity", 
+										 "in=",
+										 "out=",
+										 "slice=",
+										 "png",
+										 "filter-size=",
+										 "filter-time="])
 		except getopt.GetoptError, err:
 			print >> sys.stderr, str(err) 
 			Options.displayUsage()
@@ -1259,6 +1351,26 @@ class Options:
 			if opt == "-p" or opt == "--png":
 				Options.isPng =  True
 				Options.fonts.NORMAL = "LiberationSans-Regular"
+			
+			if opt == "--filter-size":
+				match = re.match("([0-9kmKM]*)-([0-9kmKM]*)", val)
+				if match is None:
+					print >> sys.stderr, "Invalid size filter value: %s" % val
+					Options.displayUsage()
+					sys.exit(2)
+				min = Options.parseSize(match.group(1))
+				max = Options.parseSize(match.group(2))
+				Options.filters.append(SizeFilter(min, max))
+				
+			if opt == "--filter-time":
+				match = re.match("([0-9:.]*)-([0-9:.]*)", val)
+				if match is None:
+					print >> sys.stderr, "Invalid timestamp filter value: %s" % val
+					Options.displayUsage()
+					sys.exit(2)
+				start = Options.parseTime(match.group(1))
+				end = Options.parseTime(match.group(2))
+				Options.timeFilter = TimeFilter(start, end)
 				
 		if parser is None:
 			print >> sys.stderr, "No report type specified."
@@ -1267,6 +1379,29 @@ class Options:
 			
 		return parser
 			
+	def parseSize(text):
+		if text == "":
+			return None
+		match = re.match("([0-9]+)([kmKM]?)", text)
+		if match is None:
+			return None
+		mod = 1
+		if match.group(2).upper() == "K":
+			mod = 1024
+		if match.group(2).upper() == "M":
+			mod = 1024 * 1024
+		return int(match.group(1)) * mod
+	
+	def parseTime(text):
+		match = re.match("([0-9]+):([0-9]+):([0-9]+)(?:\.([0-9]+)|)", text)
+		if match is None:
+			return -int(text)
+		timestamp = int(match.group(1)) * 60 * 60 * 1000
+		timestamp += int(match.group(2)) * 60 * 1000
+		timestamp += int(match.group(3)) * 1000
+		if match.group(4) is not None:
+			timestamp += int(match.group(4))
+		return timestamp
 	
 	def displayUsage():
 		print \
@@ -1289,7 +1424,8 @@ Usage:
 	# static method definitions
 	parse = staticmethod(parse)
 	displayUsage = staticmethod(displayUsage)
-	
+	parseSize = staticmethod(parseSize)
+	parseTime = staticmethod(parseTime)
 # /class Options
 	
 
