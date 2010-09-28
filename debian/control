@@ -8,7 +8,7 @@ Section: utils
 Package: libsp-rtrace-dev
 Section: libdevel
 Architecture: any
-Depends: ${shlibs:Depends}, libsp-rtrace1-1
+Depends: ${shlibs:Depends}, libsp-rtrace1-1 (= ${binary:Version})
 Description: Development files for using resource consumption tracing support library.
  This package contains headers, manuals and symbolic links to use the resource
  consuption tracing support library (libsp-rtrace1).
