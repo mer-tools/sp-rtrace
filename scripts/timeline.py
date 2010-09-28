@@ -208,11 +208,12 @@ class Plotter:
 		# /class Column
 			
 		rows = 0
-		columns = []
+		columns = None
 		
 		def __init__(self, row, col):
 			self.row = row
 			self.col = col
+			self.columns = []
 		
 		def addColumn(self, size):
 			self.columns.append(self.Column(size))
@@ -230,19 +231,84 @@ class Plotter:
 				offset += column.write(file, self.rows + self.row, offset)
 	# /class Table
 		
+	class DataFile:
+		"""
+		This class represents gnuplot data file
+		"""
+		
+		class Cache:
+			x1 = 0
+			y1 = 0
+			x2 = 0
+			y2 = 0
+			
+			def __init__(self, x1, y1, x2, y2):
+				self.x1 = x1
+				self.y1 = y1
+				self.x2 = x2
+				self.y2 = y2
+		# /class Cache
+		
+		_filename = None
+		cache = None
+		
+		def __init__(self, filename, title = None):
+			self._filename = filename
+			self.cache = []
+			if title is not None:
+				self.create(title)
+			
+		def create(self, title = None):
+			self.file = open(self._filename, "w")
+			if self.file is None:
+				raise NameError("Failed to create data file: %s" % filename)
+			if title is not None:
+				self.file.write("Resource \"%s\"\n" % title)
+			
+		def write(self, x, y):
+			self.file.write("%d %d\n" % (x, y))
+			
+		def add(self, x1, y1, x2, y2):
+			self.cache.append(self.Cache(x1, y1, x2, y2))
+			
+		def close(self):
+			for line in self.cache:
+				self.file.write("%d %d " % (line.x1, line.y1))
+			self.file.write("\n")
+			for line in self.cache:
+				self.file.write("%d %d " % (line.x2, line.y2))
+			self.file.write("\n")
+				
+			self.file.close()
+			
+		def remove(self):
+			os.remove(self._filename)
+			
+		def getFilename(self):
+			return self._filename
+	# /class DataFile
+		
 	PNG = 1
 	POSTSCRIPT = 2
+	CFG_FILENAME = "timeline.cfg"
 	
 	file = None
-	filename = None
 	terminal = None
 	timestampOffset = 0
-	tables = []
-	
-	def __init__(self, filename, timestamp = 0, terminal = POSTSCRIPT):
-		self.file = open(filename, "w")
+	tables = None
+	files = None
+	stream = None
+	graphs = None
+	# the last index of line style setting
+	lineStyleIndex = 0
+		
+	def __init__(self, stream, timestamp = 0, terminal = POSTSCRIPT):
+		self.file = open(self.CFG_FILENAME, "w")
+		self.tables = []
+		self.files = []
+		self.graphs = []
 		if self.file is None:
-			print >> sys.stderr, "Failed to create configuration file: %s" % filename
+			print >> sys.stderr, "Failed to create configuration file: %s" % self.CFG_FILENAME
 			sys.exit(2)
 	
 		# set terminal properties
@@ -255,7 +321,7 @@ class Plotter:
 			raise NamedError("Unknown terminal type: %s" % terminal)
 		self.terminal = terminal
 		self.timestampOffset = timestamp
-		self.filename = filename
+		self.stream = stream
 		
 		# write graph legend outside graph
 		self.file.write("set key bmargin\n")
@@ -264,7 +330,7 @@ class Plotter:
 		"Sets report title"
 		self.file.write("set title \"%s\"\n" % title)
 		
-	def setLineStyle(self, style):	
+	def setDataStyle(self, style):	
 		"Sets graph line style"
 		self.file.write("set style data %s\n" % style)
 		
@@ -315,18 +381,44 @@ class Plotter:
 	def setBMargin(self, value):
 		self.file.write("set bmargin %d\n" % value)
 
-	def plot(self, data):
+	def addGraph(self, file, col, row, title = "\"\"", axis = None, style = None):
+		"Adds a file based graph to plot"
+		if len(self.graphs):
+			data = ","
+		else:
+			data = ""
+		data += "\"%s\" using %s:%s" % (file.getFilename(), col, row)
+		if style is not None:
+			data += " ls %d" % style
+		data += " title %s" % title
+		if axis:
+			data += " axes %s" % axis
+		data += "\\\n"
+		self.graphs.append(data)
+			
+	def plot(self):
 		"Sets the tables and plots the data files"
 		for table in self.tables:
 			table.write(self.file)
 			
-		self.file.write("plot %s\n" % data)
+		self.file.write("plot \\\n")
+		for graph in self.graphs:
+			self.file.write(graph)
+		self.file.write("\n")
+		
 		self.file.close()
 		
-	def remove(self):
-		"Deletes the gnuplot configuration file"
-		os.remove(self.filename)
-		pass
+		# Convert with gnuplot
+		gnuplot = subprocess.Popen(["gnuplot", self.CFG_FILENAME], 0, None, None, self.stream)
+		gnuplot.wait()
+	
+	def setLineStyle(self, type, color):
+		self.lineStyleIndex += 1
+		self.file.write("set style line %d lt %s lc rgb \"%s\"\n" % (self.lineStyleIndex, type, color))
+		return self.lineStyleIndex
+	
+	# TODO: uncomment	
+	#	self.cleanup()
 		
 	def createTable(self, row, col):
 		"""
@@ -337,7 +429,18 @@ class Plotter:
 		table = self.Table(row, col)
 		self.tables.append(table)
 		return table
+	
+	def createFile(self, filename, title = None):
+		file = self.DataFile(filename, title)
+		self.files.append(file)
+		return file
 		
+	def cleanup(self):
+		"Deletes configuration and data files"
+		os.remove(self.CFG_FILENAME)
+		
+		for file in self.files:
+			file.remove();
 			
 # /class Plotter	
 
@@ -363,39 +466,14 @@ class Processor:
 			self.refCount = 1
 	# /class Index
 			
-	class DataFile:
-		"""
-		This class represents gnuplot data file
-		"""
-		_filename = None
-		
-		def __init__(self, filename, title = None):
-			self._filename = filename
-			if title is not None:
-				self.create(title)
 			
-		def create(self, title):
-			self.file = open(self._filename, "w")
-			if self.file is None:
-				raise NameError("Failed to create data file: %s" % filename)
-			self.file.write("Resource \"%s\"\n" % title)
-			
-		def write(self, x, y):
-			self.file.write("%d %d\n" % (x, y))
-			
-		def close(self):
-			self.file.close()
-			
-		def remove(self):
-			os.remove(self._filename)
-			
-		def getFilename(self):
-			return self._filename
-	# /class DataFile
-			
-	events = {}
-	contexts = []
+	events = None
+	contexts = None
 	timestampOffset = 0
+	
+	def __init__(self):
+		self.events = {}
+		self.contexts = []
 	
 	def registerAlloc(self, index, context, timestamp, res_type, res_id, res_size):
 		"Registers resource allocation"
@@ -421,7 +499,7 @@ class Processor:
 		"Registers context declaration"
 		self.contexts.append(Context(value, name))
 		
-	def writeReport(self, stream):
+	def writeReport(self, plotter):
 		"Writes the end report"
 		
 	def registerResource(self, resource):
@@ -440,14 +518,110 @@ class Processor:
 # /class Processor		
 		
 
+class LifetimeProcessor(Processor):
+	"""
+	The LifetimeProcessor class generates resource life time
+	report. This report contains lines, illustrating resource
+	allocation and release times.
+	"""
+	
+	PAGE_LIMIT = 1000
+	DETAILS_LIMIT = 20
+
+	def addLifeline(self, resource, startTimestamp, endTimestamp, size):
+		"Adds resource lifeline to the report graph"
+		self.file.add(startTimestamp, size, endTimestamp, size)
+		self.plotter.addGraph(self.file, "($%d/1000)" % (self.resourceIndex * 2 - 1), "%d" % (self.resourceIndex * 2), "\"\"", None, self.lsMain)
+		self.resourceIndex += 1
+		if self.resourceIndex > self.PAGE_LIMIT:
+			self.file.close()
+			self.pageIndex += 1
+			self.resourceIndex = 1
+			self.file = self.plotter.createFile("%s-%d" % (resource, self.pageIndex))
+			self.file.create()
+			#print >> sys.stderr, "page index: %d" % self.pageIndex
+			
+	
+	def writeReport(self, plotter):
+		"Writes the end report"
+		xrange = 0
+		yrange = 0
+		
+		self.plotter = plotter
+		self.lsMain = plotter.setLineStyle(1, "blue")
+
+		for resource in self.events.keys():
+			# initialize resource statistics data
+			events = self.events[resource]
+			if events[-1].timestamp > xrange:
+				xrange = events[-1].timestamp
+		
+		# iterate through registered resources
+		for resource in self.events.keys():
+			# initialize resource statistics data
+			events = self.events[resource]
+			if events[-1].timestamp > xrange:
+				xrange = events[-1].timestamp
+			# resource indexing map 
+			index = {}
+			
+			self.pageIndex = 1
+			self.resourceIndex = 1
+			self.file = plotter.createFile("%s-%d" % (resource, self.pageIndex))
+			self.file.create()
+			
+			for event in events:
+				if event.type == Event.Types.ALLOC:
+					if event.res_id in index:
+						index[event.res_id].refCount += 1
+						continue
+					else:
+						# store the event in dictionary for event lookup speedup.
+						index[event.res_id] = self.Index(event);
+						
+				if event.type == Event.Types.FREE:
+					if event.res_id not in index:
+						continue
+					ievent = index[event.res_id]
+					ievent.refCount -= 1
+					if ievent.refCount > 0:
+						continue
+					# TODO: plot the timeline
+					size = ievent.event.res_size
+					if size > yrange:
+						yrange = size
+					self.addLifeline(resource, ievent.event.timestamp, event.timestamp, size)
+
+#					if self.pageIndex > 10:
+#						break
+						
+					del index[event.res_id]
+
+			# plot all unallocated resources					
+			for res_id, ievent in index.iteritems():
+				self.addLifeline(resource, ievent.event.timestamp, xrange, ievent.event.res_size)	
+
+			self.file.close()
+			
+		plotter.setTitle("Resource life-time")
+		plotter.setAxisX("time (secs)", xrange)
+		plotter.setAxisY("size", yrange, "%.1s%c")
+			
+		if self.resourceIndex + (self.pageIndex - 1) * self.PAGE_LIMIT > self.DETAILS_LIMIT:
+			plotter.setDataStyle("lines")
+		else:
+			plotter.setDataStyle("linespoints")
+			
+		plotter.plot()
+	
+
 class ActivityProcessor(Processor):
 	"""
 	The ActivityProcessor class generates 'activity' report.
 	The activity report contains graphs illustrating the resource
 	allocation rate per time slice.
 	"""
-	GNUPLOT_CONFIG = "timeline.cfg"
-	
+
 	class Stats:
 		"""
 		Resource allocation activity statistics 
@@ -469,16 +643,13 @@ class ActivityProcessor(Processor):
 			self.peakFrees = self.Data()
 	# /class Stats
 
-	def writeReport(self, stream):
+	def writeReport(self, plotter):
 		"Writes the end report"
 		xrange = 0
 		yrange = 0
 		y2range= 0
-		plotData = ""
 		# peak statistics list
 		stats = {}
-		# data file list
-		files = []
 		
 		# calculate the X axis range and activity time slice
 		for resource in self.events.keys():
@@ -503,12 +674,9 @@ class ActivityProcessor(Processor):
 			stats[resource] = stat
 
 			# initialize peak statistics data files
-			stat.peakSize.file = self.DataFile("%s-size-peak.dat" % resource)
-			files.append(stat.peakSize.file)
-			stat.peakAllocs.file = self.DataFile("%s-allocs-peak.dat" % resource)
-			files.append(stat.peakAllocs.file)
-			stat.peakFrees.file = self.DataFile("%s-frees-peak.dat" % resource)
-			files.append(stat.peakFrees.file)
+			stat.peakSize.file = plotter.createFile("%s-size-peak.dat" % resource)
+			stat.peakAllocs.file = plotter.createFile("%s-allocs-peak.dat" % resource)
+			stat.peakFrees.file = plotter.createFile("%s-frees-peak.dat" % resource)
 
 			# initialize resource statistics data
 			events = self.events[resource]
@@ -521,14 +689,9 @@ class ActivityProcessor(Processor):
 			# iterate through available contexts
 			for context in contexts:
 				# create the data files for the resource-context filter
-				fileRate = self.DataFile("%s-size-%x.dat" % (resource, context.value), "%s (rate:%s)" % (resource, context.name))
-				fileAllocs = self.DataFile("%s-allocs-%x.dat" % (resource, context.value), "%s (allocs:%s)" % (resource, context.name))
-				fileFrees = self.DataFile("%s-frees-%x.data" % (resource, context.value), "%s (frees:%s)" % (resource, context.name))
-				 
-				# store data files so they can be removed afterwards
-				files.append(fileRate)
-				files.append(fileAllocs)
-				files.append(fileFrees)
+				fileRate = plotter.createFile("%s-size-%x.dat" % (resource, context.value), "%s (rate:%s)" % (resource, context.name))
+				fileAllocs = plotter.createFile("%s-allocs-%x.dat" % (resource, context.value), "%s (allocs:%s)" % (resource, context.name))
+				fileFrees = plotter.createFile("%s-frees-%x.data" % (resource, context.value), "%s (frees:%s)" % (resource, context.name))
 				 
 				# resource indexing map 
 				index = {}
@@ -624,17 +787,15 @@ class ActivityProcessor(Processor):
 				fileFrees.close()
 				
 				if hasData:
-					if plotData != "":
-						plotData += ", "
-					plotData += "\"%s\" using ($1/1000):2 title column(2)" % fileRate.getFilename()
-					plotData += ", \"%s\" using ($1/1000):2 title column(2) axes x1y2" % fileAllocs.getFilename()
-					plotData += ", \"%s\" using ($1/1000):2 title column(2) axes x1y2" % fileFrees.getFilename()
+					plotter.addGraph(fileRate, "($1/1000)", "2", "column(2)")
+					plotter.addGraph(fileAllocs, "($1/1000)", "2", "column(2)", "x1y2")
+					plotter.addGraph(fileFrees, "($1/1000)", "2", "column(2)", "x1y2")
 				 
 			# peak marker data.
 			# Peak markers are vertical lines, drawn at the time of the max peak
-			plotData += ", \"%s\" using ($1/1000):2 title column(2)" % stat.peakSize.file.getFilename()
-			plotData += ", \"%s\" using ($1/1000):2 title column(2)" % stat.peakAllocs.file.getFilename()
-			plotData += ", \"%s\" using ($1/1000):2 title column(2)" % stat.peakFrees.file.getFilename()
+			plotter.addGraph(stat.peakSize.file, "($1/1000)", "2", "column(2)")
+			plotter.addGraph(stat.peakAllocs.file, "($1/1000)", "2", "column(2)")
+			plotter.addGraph(stat.peakFrees.file, "($1/1000)", "2", "column(2)")
 			
 		# iterate through registered resources to generate peak allocation data files
 		for resource in self.events.keys():
@@ -662,14 +823,13 @@ class ActivityProcessor(Processor):
 		#	
 		# generate gnuplot configuration file:
 		#
-		plotter = Plotter(self.GNUPLOT_CONFIG, self.timestampOffset, Options.isPng and Plotter.PNG or Plotter.POSTSCRIPT)
 		plotter.setTitle("Allocation/deallocation rate")
 		
 		plotter.setAxisX("time (secs)", xrange)
 		plotter.setAxisY("amount per %s sec" % slice.getText(), yrange, "%.1s%c")
 		plotter.setAxisY2("count per %s sec" % slice.getText(), y2range)
 			
-		plotter.setLineStyle("lines")
+		plotter.setDataStyle("lines")
 		
 		# Write summary report
 		
@@ -727,18 +887,8 @@ class ActivityProcessor(Processor):
 		plotter.setBMargin(bmargin)
 		
 		# plot the data files
-		plotter.plot(plotData)
+		plotter.plot()
 		
-		# Convert with gnuplot
-		gnuplot = subprocess.Popen(["gnuplot", self.GNUPLOT_CONFIG], 0, None, None, stream, None, None, None, None, None, \
-								 env={"GNUPLOT_DEFAULT_GDFONT": Options.fonts.NORMAL, \
-									 "GDFONTPATH": Options.GDFONTPATH})
-		gnuplot.wait()
-			
-		for file in files:
-			file.remove()
-		plotter.remove()
-	
 # /class ActivityProcessor
 
 
@@ -748,7 +898,6 @@ class TotalsProcessor(Processor):
 	The 'totals' report contains graph illustrating the total resource 
 	allocation over the time.
 	"""
-	GNUPLOT_CONFIG = "timeline.cfg"
 	
 	class Stats:
 		"""
@@ -776,13 +925,11 @@ class TotalsProcessor(Processor):
 			# total allocations at the peak time
 			self.peakTotals = self.Data()
 	# /class Stats
-			
 		
-	def writeReport(self, stream):
+	def writeReport(self, plotter):
 		"Writes the end report"
 		xrange = 0
 		yrange = 0
-		plotData = ""
 		# leak summing map
 		stats = {}
 		# data file list
@@ -803,14 +950,12 @@ class TotalsProcessor(Processor):
 				xrange = events[-1].timestamp
 
 			# initialize peak statistics data files
-			stat.peakFile = self.DataFile("%s-peak.dat" % resource)
-			files.append(stat.peakFile)
+			stat.peakFile = plotter.createFile("%s-peak.dat" % resource)
 
 			# iterate through available contexts
 			for context in contexts:
 				# create the data file for the resource-context filter
-				file = self.DataFile("%s-%x.dat" % (resource, context.value), "%s (%s)" % (resource, context.name))
-				files.append(file)
+				file = plotter.createFile("%s-%x.dat" % (resource, context.value), "%s (%s)" % (resource, context.name))
 					
 				# resource indexing map 
 				index = {}
@@ -864,12 +1009,10 @@ class TotalsProcessor(Processor):
 						yrange = total
 				file.close()
 				if hasData:
-					if plotData != "":
-						plotData += ", "
-					plotData += "\"%s\" using ($1/1000):2 title column(2)" % file.getFilename()
+					plotter.addGraph(file, "($1/1000)", "2", "column(2)")
 			# peak marker data.
 			# Peak markers are vertical lines, drawn at the time of the max peak
-			plotData += ", \"%s\" using ($1/1000):2 title column(2)" % stat.peakFile.getFilename()
+			plotter.addGraph(stat.peakFile, "($1/1000)", "2", "column(2)")
 
 		# iterate through registered resources to generate peak allocation data files
 		for resource in self.events.keys():
@@ -883,13 +1026,12 @@ class TotalsProcessor(Processor):
 		#	
 		# generate gnuplot configuration file:
 		#
-		plotter = Plotter(self.GNUPLOT_CONFIG, self.timestampOffset, Options.isPng and Plotter.PNG or Plotter.POSTSCRIPT)
 		plotter.setTitle("Amount of non-freed allocations")
 		
 		plotter.setAxisX("time (secs)", xrange)
 		plotter.setAxisY("size", yrange, "%.1s%c")
 			
-		plotter.setLineStyle("lines")
+		plotter.setDataStyle("lines")
 		
 		# Write summary report
 		
@@ -963,19 +1105,7 @@ class TotalsProcessor(Processor):
 		plotter.setBMargin(bmargin)
 		
 		# plot the data files
-		plotter.plot(plotData)
-		
-		# Convert with gnuplot
-		gnuplot = subprocess.Popen(["gnuplot", self.GNUPLOT_CONFIG], 0, None, None, stream, None, None, None, None, None, \
-								 env={"GNUPLOT_DEFAULT_GDFONT": Options.fonts.NORMAL, \
-									 "GDFONTPATH": Options.GDFONTPATH})
-		gnuplot.wait()
-		
-		# cleanup gnuplot configuration and data files
-		plotter.remove()
-		
-		for file in files:
-			file.remove();
+		plotter.plot()
 # /class TotalsProcessor
 		
 	
@@ -1023,7 +1153,9 @@ class Parser:
 				
 	def write(self, stream):
 		self.processor.sort()
-		self.processor.writeReport(stream)
+		plotter = Plotter(stream, self.processor.timestampOffset, Options.isPng and Plotter.PNG or Plotter.POSTSCRIPT)
+		self.processor.writeReport(plotter)
+		
 		
 	def getTimestampFromString(self, text):
 		timestamp = 0
@@ -1082,6 +1214,7 @@ class Options:
 				
 			if opt == "-l" or opt == "--lifetime":
 				Options.mode = Options.Modes.LIFETIME
+				parser = Parser(LifetimeProcessor())
 				
 			if opt == "-a" or opt == "--activity":
 				Options.mode = Options.Modes.ACTIVITY
