@@ -24,7 +24,9 @@ class Timestamp:
 	"""
 	This class provides timestamp utility functions
 	"""
-	def format(hours):
+	rxpTimestamp = re.compile("^([0-9]+)\:([0-9]+)\:([0-9]+)\.([0-9]+)$")
+
+	def toString(hours):
 		"Converts timestamp to text format"
 		msecs = hours % 1000		
 		hours /= 1000
@@ -34,9 +36,9 @@ class Timestamp:
 		hours /= 60  
 		return "%02d:%02d:%02d.%03d" % (hours, minutes, seconds, msecs)
 	
-	def formatOffset(offset):
+	def offsetToString(offset):
 		"Converts timestamp offset to text format"
-		text = Timestamp.format(offset)
+		text = Timestamp.toString(offset)
 		text = string.lstrip(text, ":0")
 		text = string.rstrip(text, "0")
 		if text[-1] == '.':
@@ -45,8 +47,17 @@ class Timestamp:
 			text = "0" + text
 		return text
 	
-	format = staticmethod(format)
-	formatOffset = staticmethod(formatOffset)
+	def fromString(text):
+		timestamp = 0
+		match = Timestamp.rxpTimestamp.match(text)
+		if match:
+			timestamp = int(match.group(1)) * 3600000 + int(match.group(2)) * 60000 + int(match.group(3)) * 1000 + int(match.group(4))
+		return timestamp
+
+	
+	toString = staticmethod(toString)
+	offsetToString = staticmethod(offsetToString)
+	fromString = staticmethod(fromString)
 # /class Timestamp
 
 
@@ -86,7 +97,6 @@ class Event:
 	# /class Types
 		
 	timestamp = 0
-	timestampOffset = 0
 	res_size = 0
 	res_id = ""
 	type = Types.UNDEFINED
@@ -135,40 +145,107 @@ class TimeFilter:
 		if end is not None:
 			self.end = end
 
-	def matchesTimestamp(self, timestamp, timestampOffset):
-		absStart = self.start < 0 and timestampOffset - self.start or self.start
-		absEnd = self.end < 0 and timestampOffset - self.end or self.end 
-		print >> sys.stderr, "%s < %s < %s (%s)" % (Timestamp.format(absStart), Timestamp.format(timestamp), 
-											Timestamp.format(absEnd), Timestamp.format(timestampOffset))
-		if absStart > timestamp:
-			return False
-		if absEnd < timestamp:
-			return False
+	def matchesEvent(self, event):
+#		absStart = self.start < 0 and timestampOffset - self.start or self.start
+#		absEnd = self.end < 0 and timestampOffset - self.end or self.end 
+#		print >> sys.stderr, "%s < %s < %s (%s)" % (Timestamp.toString(absStart), Timestamp.toString(timestamp), 
+#											Timestamp.toString(absEnd), Timestamp.toString(timestampOffset))
+#		if absStart > timestamp:
+#			return False
+#		if absEnd < timestamp:
+#			return False
 		return True
 # /class TimeFilter
- 
-class SizeFilter(Filter):
+
+
+class MinTimeFilter:
 	"""
-	Resource size based filter
-	"""		
-	min = 0
-	max = sys.maxint
-	
-	def __init__(self, min, max):
-		if min is not None:
-			self.min = min
-		if max is not None:
-			self.max = max
+	Minimal event time filter
+	"""
+	value = 0
+
+	def __init__(self, value):
+		self.value = value
 		
 	def matchesEvent(self, event):
-		if event.res_size == 0:
-			return True
-		if self.min > event.res_size:
-			return False
-		if self.max < event.res_size:
-			return False
-		return True
-# /class SizeFilter		
+		return event.timestamp >= self.value
+# /class MinTimeFilter
+
+
+class MaxTimeFilter:
+	"""
+	Maximal event time filter
+	"""
+	value = 0
+
+	def __init__(self, value):
+		self.value = value
+		
+	def matchesEvent(self, event):
+		return event.timestamp <= self.value
+# /class MaxTimeFilter
+
+
+class MinTimeOffsetFilter:
+	"""
+	Minimal event time offset filter
+	"""
+	value = 0
+	offset = None
+	
+	def __init__(self, value):
+		self.value = value
+		
+	def matchesEvent(self, event):
+		if self.offset is None:
+			self.offset = event.timestamp
+		return event.timestamp >= self.value + self.offset
+# /class MinTimeOffsetFilter
+
+
+class MaxTimeOffsetFilter:
+	"""
+	Maximal event time offset filter
+	"""
+	value = 0
+	offset = None
+	
+	def __init__(self, value):
+		self.value = value
+		
+	def matchesEvent(self, event):
+		if self.offset is None:
+			self.offset = event.timestamp
+		return event.timestamp <= self.value + self.offset
+# /class MaxTimeOffsetFilter
+
+ 
+class MinSizeFilter(Filter):
+	"""
+	Minimal resource size filter
+	"""		
+	value = 0
+
+	def __init__(self, value):
+		self.value = value
+		
+	def matchesEvent(self, event):
+		return event.res_size == 0 or event.res_size >= self.value
+# /class MinSizeFilter		
+
+
+class MaxSizeFilter(Filter):
+	"""
+	Maximal resource size filter
+	"""		
+	value = 0
+		
+	def __init__(self, value):
+		self.value = value
+		
+	def matchesEvent(self, event):
+		return event.res_size == 0 or event.res_size <= self.value
+# /class MaxSizeFilter		
 			
 class Tic:
 	"""
@@ -353,7 +430,6 @@ class Plotter:
 	
 	file = None
 	terminal = None
-	timestampOffset = 0
 	tables = None
 	files = None
 	stream = None
@@ -361,7 +437,7 @@ class Plotter:
 	# the last index of line style setting
 	lineStyleIndex = 0
 		
-	def __init__(self, stream, timestamp = 0, terminal = POSTSCRIPT):
+	def __init__(self, stream, terminal = POSTSCRIPT):
 		self.file = open(self.CFG_FILENAME, "w")
 		self.tables = []
 		self.files = []
@@ -379,7 +455,6 @@ class Plotter:
 		else:
 			raise NamedError("Unknown terminal type: %s" % terminal)
 		self.terminal = terminal
-		self.timestampOffset = timestamp
 		self.stream = stream
 		
 		# write graph legend outside graph
@@ -393,33 +468,32 @@ class Plotter:
 		"Sets graph line style"
 		self.file.write("set style data %s\n" % style)
 		
-	def setAxisX(self, label, range, format = None):
+	def setAxisX(self, label, min, max, format = None):
 		"Sets X axis"
 		# set label
 		self.file.write("set xlabel \"%s\" offset 0,-4\n" % label)
 		# set  range
-		frange = float(range) / 1000
-		self.file.write("set xrange[0.000:%.3f]\n" % (frange))
+		self.file.write("set xrange[%d:%d]\n" % (min, max))
 		# set the X axis tic label format, not used as tics are printed manually
 		# file.write("set format x \"+%.3f\"\n")
 
 		# place autotics outside range to avoid interference with manual tics
-		self.file.write("set xtics %f,%f\n" % (frange + 1, frange + 1))
+		self.file.write("set xtics %f,%f\n" % (max * 2, max * 2))
 		
 		# set ticks
 		self.file.write("set xtics rotate\n")
+		range = max - min
 		step = Tic(range / 10, True)
-		fstep = float(step.value) / 1000
-		tic = 0
-		while tic <= range - step.value:
-			self.file.write("set xtics add (\"%s\\n+%s\" %f)\n" % (Timestamp.format(self.timestampOffset + tic), Timestamp.formatOffset(tic), float(tic) / 1000))
+		tic = min
+		while tic <= max - step.value:
+			self.file.write("set xtics add (\"%s\\n+%s\" %d)\n" % (Timestamp.toString(tic), Timestamp.offsetToString(tic - min), tic))
 			tic += step.value
-		self.file.write("set xtics add (\"%s\\n+%s\" %f)\n" % (Timestamp.format(self.timestampOffset + range), Timestamp.formatOffset(range), frange))
+		self.file.write("set xtics add (\"%s\\n+%s\" %d)\n" % (Timestamp.toString(max), Timestamp.offsetToString(range), max))
 			
 			
-	def setAxisY(self, label, range, format):
+	def setAxisY(self, label, min, max, format):
 		"Sets Y axis"
-		self.file.write("set yrange[0:%d]\n" % (range))
+		self.file.write("set yrange[%d:%d]\n" % (min, max))
 		
 		self.file.write("set format y \"%s\"\n" % format)
 		self.file.write("set ytics out\n")
@@ -427,10 +501,10 @@ class Plotter:
 		self.file.write("set ylabel \"%s\"\n" % label)
 	
 	
-	def setAxisY2(self, label, range, format = None):
+	def setAxisY2(self, label, min, max, format = None):
 		"Sets Y2 axis"
 		
-		self.file.write("set y2range[0:%d]\n" % (range))
+		self.file.write("set y2range[%d:%d]\n" % (min, max))
 		
 		self.file.write("set y2tics out\n")
 		self.file.write("set ytics nomirror\n")
@@ -528,7 +602,6 @@ class Processor:
 			
 	events = None
 	contexts = None
-	timestampOffset = 0
 	
 	def __init__(self):
 		self.events = {}
@@ -565,16 +638,12 @@ class Processor:
 		"Registers tracked resource"
 		self.events[resource] = []
 
-	def setTimestampOffset(self, offset):
-		"Sets the initial timestamp value from where the offsets are calculated"
-		self.timestampOffset = offset	
-		
 	def sort(self):
 		for resource in self.events.keys():
 			self.events[resource] = sorted(self.events[resource], key = operator.attrgetter("index"))
 			self.events[resource] = sorted(self.events[resource], key = operator.attrgetter("timestamp"))
 			
-	def isEventActive(self, event):
+	def isEventInRange(self, event):
 		for filter in Options.filters:
 			if not filter.matchesEvent(event):
 				return False
@@ -609,7 +678,7 @@ class LifetimeProcessor(Processor):
 		def addLifeline(self, startTimestamp, endTimestamp, size, style):
 			"Adds resource lifeline to the report graph"
 			self.file.add(startTimestamp, size, endTimestamp, size)
-			self.plotter.addGraph(self.file, "($%d/1000)" % (self.resourceIndex * 2 - 1), "%d" % (self.resourceIndex * 2), "\"\"", None, style)
+			self.plotter.addGraph(self.file, "%d" % (self.resourceIndex * 2 - 1), "%d" % (self.resourceIndex * 2), "\"\"", None, style)
 			self.resourceIndex += 1
 			if self.resourceIndex > self.RECORD_LIMIT:
 				self.file.close()
@@ -634,32 +703,31 @@ class LifetimeProcessor(Processor):
 	
 	def writeReport(self, plotter):
 		"Writes the end report"
-		xrange = 0
-		yrange = 0
+		xrangeMin = None
+		xrangeMax = 0
+		yrangeMin = 0
+		yrangeMax = 0
 		
 		lsMain = plotter.setLineStyle(1, "blue")
 		totalGraphs = 0
 
-		for resource in self.events.keys():
-			# initialize resource statistics data
-			events = self.events[resource]
-			if events[-1].timestamp > xrange:
-				xrange = events[-1].timestamp
-		
 		# iterate through registered resources
 		for resource in self.events.keys():
 			# initialize resource statistics data
 			events = self.events[resource]
-			if events[-1].timestamp > xrange:
-				xrange = events[-1].timestamp
 			# resource indexing map 
 			index = {}
 
 			pager = self.Pager(plotter, resource)			
 			
 			for event in events:
-				if not self.isEventActive(event):
+				if not self.isEventInRange(event):
 					continue
+				if xrangeMin is None:
+					xrangeMin = event.timestamp
+				if xrangeMax < event.timestamp:
+					xrangeMax = event.timestamp
+					
 				if event.type == Event.Types.ALLOC:
 					if event.res_id in index:
 						index[event.res_id].refCount += 1
@@ -677,8 +745,8 @@ class LifetimeProcessor(Processor):
 						continue
 					# TODO: plot the timeline
 					size = ievent.event.res_size
-					if size > yrange:
-						yrange = size
+					if size > yrangeMax:
+						yrangeMax = size
 					pager.addLifeline(ievent.event.timestamp, event.timestamp, size, lsMain)
 
 					if pager.pageIndex > self.PAGE_LIMIT:
@@ -688,14 +756,14 @@ class LifetimeProcessor(Processor):
 
 			# plot all unallocated resources					
 			for res_id, ievent in index.iteritems():
-				pager.addLifeline(ievent.event.timestamp, xrange, ievent.event.res_size, lsMain)	
+				pager.addLifeline(ievent.event.timestamp, xrangeMax, ievent.event.res_size, lsMain)	
 			
 			totalGraphs += pager.getTotal()
 			pager.finish();
 			
 		plotter.setTitle("Resource life-time")
-		plotter.setAxisX("time (secs)", xrange)
-		plotter.setAxisY("size", yrange, "%.1s%c")
+		plotter.setAxisX("time (secs)", xrangeMin, xrangeMax)
+		plotter.setAxisY("size", yrangeMin, yrangeMax, "%.1s%c")
 			
 		if totalGraphs > self.DETAILS_LIMIT:
 			plotter.setDataStyle("lines")
@@ -735,24 +803,31 @@ class ActivityProcessor(Processor):
 
 	def writeReport(self, plotter):
 		"Writes the end report"
-		xrange = 0
-		yrange = 0
-		y2range= 0
+		yrangeMin = 0
+		yrangeMax = 0
+		y2rangeMin = 0
+		y2rangeMax = 0
+		xrangeMin = None
+		xrangeMax = 0
 		# peak statistics list
 		stats = {}
 		
-		# calculate the X axis range and activity time slice
+		# calculate the activity time slice based on unfiltered X axis range
+		xrangeFullMax = 0
+		xrangeFullMin = sys.maxint
 		for resource in self.events.keys():
 			events = self.events[resource]
-			if events[-1].timestamp > xrange:
-				xrange = events[-1].timestamp
-		
+			if events[-1].timestamp > xrangeFullMax:
+				xrangeFullMax = events[-1].timestamp
+			if events[0].timestamp < xrangeFullMin:
+				xrangeFullMin = events[0].timestamp
 		
 		if Options.slice == 0:
-			slice = Tic(xrange / 100, True)
+			slice = Tic((xrangeFullMax - xrangeFullMin) / 100, True)
 		else:
 			slice = Tic(Options.slice, False)
 		
+
 		contexts = [Context(Context.MASK_ALL, "all allocations")]
 		if len(self.contexts) > 0:
 			contexts.append(Context(Context.MASK_NONE, "no contexts"))
@@ -771,10 +846,9 @@ class ActivityProcessor(Processor):
 			# initialize resource statistics data
 			events = self.events[resource]
 			
-			lastTimestamp = events[-1].timestamp
 			step = slice.value / 2
-			if step == 0:
-				step = 0.001
+			if step < 1:
+				step = 1
 			
 			# iterate through available contexts
 			for context in contexts:
@@ -796,35 +870,43 @@ class ActivityProcessor(Processor):
 				# flag indicating if the filter has any data
 				hasData = False
 				 
-				timestamp = 0
+				timestamp = xrangeFullMin
 				it = iter(events)
 				event = it.next()
-				while True:
+				
+				lastSlice = False
+				while not lastSlice:
 					try:
 						while event.timestamp <= timestamp:
-							if event.type == Event.Types.ALLOC:
-								if event.res_id in index:
-									index[event.res_id].refCount += 1
-								else:
-									# store the event in dictionary for event lookup speedup.
-									index[event.res_id] = self.Index(event);
-									#
-									total += event.res_size
-									allocs += 1
-									sliceEvents.append(event)
-									
-							if event.type == Event.Types.FREE:
-								if event.res_id in index:
-									ievent = index[event.res_id]
-									ievent.refCount -= 1
-									if ievent.refCount <= 0:
-										del index[event.res_id]
-									frees +=1
-									sliceEvents.append(event)
-									
+							if self.isEventInRange(event):
+								if xrangeMin is None:
+									xrangeMin = timestamp
+								if timestamp > xrangeMax:
+									xrangeMax = timestamp
+								if event.type == Event.Types.ALLOC:
+									if event.res_id in index:
+										index[event.res_id].refCount += 1
+									else:
+										# store the event in dictionary for event lookup speedup.
+										index[event.res_id] = self.Index(event);
+										#
+										total += event.res_size
+										allocs += 1
+										sliceEvents.append(event)
+										
+								if event.type == Event.Types.FREE:
+									if event.res_id in index:
+										ievent = index[event.res_id]
+										ievent.refCount -= 1
+										if ievent.refCount <= 0:
+											del index[event.res_id]
+										frees +=1
+										sliceEvents.append(event)
+						
 							event = it.next()
 						
 					except StopIteration:
+						lastSlice = True
 						pass
 
 					# remove allocation events outside time slice
@@ -857,57 +939,51 @@ class ActivityProcessor(Processor):
 					fileFrees.write(event.timestamp, frees)
 					
 					hasData = True
-					if total > yrange:
-						yrange = total
-					if allocs > y2range:
-						y2range = allocs
-					if frees > y2range:
-						y2range = frees
+					if total > yrangeMax:
+						yrangeMax = total
+					if allocs > y2rangeMax:
+						y2rangeMax = allocs
+					if frees > y2rangeMax:
+						y2rangeMax = frees
 
-					if timestamp == lastTimestamp:
-						break
 					timestamp += step
-					# calculate the activity of the last timestamp even if it did 
-					# not match slice point.
-					if timestamp > lastTimestamp:
-						timestamp = lastTimestamp
 
 				fileRate.close()
 				fileAllocs.close()
 				fileFrees.close()
 				
 				if hasData:
-					plotter.addGraph(fileRate, "($1/1000)", "2", "column(2)")
-					plotter.addGraph(fileAllocs, "($1/1000)", "2", "column(2)", "x1y2")
-					plotter.addGraph(fileFrees, "($1/1000)", "2", "column(2)", "x1y2")
+					plotter.addGraph(fileRate, "1", "2", "column(2)")
+					plotter.addGraph(fileAllocs, "1", "2", "column(2)", "x1y2")
+					plotter.addGraph(fileFrees, "1", "2", "column(2)", "x1y2")
 				 
 			# peak marker data.
 			# Peak markers are vertical lines, drawn at the time of the max peak
-			plotter.addGraph(stat.peakSize.file, "($1/1000)", "2", "column(2)")
-			plotter.addGraph(stat.peakAllocs.file, "($1/1000)", "2", "column(2)")
-			plotter.addGraph(stat.peakFrees.file, "($1/1000)", "2", "column(2)")
+			plotter.addGraph(stat.peakSize.file, "1", "2", "column(2)")
+			plotter.addGraph(stat.peakAllocs.file, "1", "2", "column(2)")
+			plotter.addGraph(stat.peakFrees.file, "1", "2", "column(2)")
 			
 		# iterate through registered resources to generate peak allocation data files
 		for resource in self.events.keys():
 			timestamp = stats[resource].peakSize.timestamp
 			file = stats[resource].peakSize.file
-			file.create("%s (peak rate:%s)" % (resource, Timestamp.format(self.timestampOffset + timestamp)))
-			file.write(timestamp, 0)
-			file.write(timestamp, yrange)
+			file.create("%s (peak rate:%s)" % (resource, Timestamp.toString(timestamp)))
+			file.write(timestamp, yrangeMin)
+			file.write(timestamp, yrangeMax)
 			file.close()
 			
 			timestamp = stats[resource].peakAllocs.timestamp
 			file = stats[resource].peakAllocs.file
-			file.create("%s (peak allocs:%s)" % (resource, Timestamp.format(self.timestampOffset + timestamp)))
-			file.write(timestamp, 0)
-			file.write(timestamp, yrange)
+			file.create("%s (peak allocs:%s)" % (resource, Timestamp.toString(timestamp)))
+			file.write(timestamp, yrangeMin)
+			file.write(timestamp, yrangeMax)
 			file.close()
 			
 			timestamp = stats[resource].peakFrees.timestamp
 			file = stats[resource].peakFrees.file
-			file.create("%s (peak frees:%s)" % (resource, Timestamp.format(self.timestampOffset + timestamp)))
-			file.write(timestamp, 0)
-			file.write(timestamp, yrange)
+			file.create("%s (peak frees:%s)" % (resource, Timestamp.toString(timestamp)))
+			file.write(timestamp, yrangeMin)
+			file.write(timestamp, yrangeMax)
 			file.close()
 
 		#	
@@ -915,9 +991,9 @@ class ActivityProcessor(Processor):
 		#
 		plotter.setTitle("Allocation/deallocation rate")
 		
-		plotter.setAxisX("time (secs)", xrange)
-		plotter.setAxisY("amount per %s sec" % slice.getText(), yrange, "%.1s%c")
-		plotter.setAxisY2("count per %s sec" % slice.getText(), y2range)
+		plotter.setAxisX("time (secs)", xrangeMin, xrangeMax)
+		plotter.setAxisY("amount per %s sec" % slice.getText(), yrangeMin, yrangeMax, "%.1s%c")
+		plotter.setAxisY2("count per %s sec" % slice.getText(), y2rangeMin, y2rangeMax)
 			
 		plotter.setDataStyle("lines")
 		
@@ -1018,8 +1094,10 @@ class TotalsProcessor(Processor):
 		
 	def writeReport(self, plotter):
 		"Writes the end report"
-		xrange = 0
-		yrange = 0
+		xrangeMin = None
+		xrangeMax = 0
+		yrangeMin = 0
+		yrangeMax = 0
 		# leak summing map
 		stats = {}
 		# data file list
@@ -1036,8 +1114,6 @@ class TotalsProcessor(Processor):
 			stats[resource] = stat
 			#
 			events = self.events[resource]
-			if events[-1].timestamp > xrange:
-				xrange = events[-1].timestamp
 
 			# initialize peak statistics data files
 			stat.peakFile = plotter.createFile("%s-peak.dat" % resource)
@@ -1058,7 +1134,14 @@ class TotalsProcessor(Processor):
 				for event in events:
 					if not event.matchContext(context):
 						continue
+					if not self.isEventInRange(event):
+						continue
 					
+					if xrangeMin is None:
+						xrangeMin = event.timestamp
+					if xrangeMax  < event.timestamp:
+						xrangeMax = event.timestamp
+						
 					if event.type == Event.Types.ALLOC:
 						if event.res_id in index:
 							index[event.res_id].refCount += 1
@@ -1095,22 +1178,27 @@ class TotalsProcessor(Processor):
 						
 					file.write(event.timestamp, total)
 					hasData = True
-					if total > yrange:
-						yrange = total
+					if total > yrangeMax:
+						yrangeMax = total
 				file.close()
 				if hasData:
-					plotter.addGraph(file, "($1/1000)", "2", "column(2)")
+					plotter.addGraph(file, "1", "2", "column(2)")
 			# peak marker data.
 			# Peak markers are vertical lines, drawn at the time of the max peak
-			plotter.addGraph(stat.peakFile, "($1/1000)", "2", "column(2)")
+			plotter.addGraph(stat.peakFile, "1", "2", "column(2)")
 
+		if xrangeMin is None:
+			print >> sys.stderr, "No events matching the specified criteria"
+			plotter.cleanup()
+			sys.exit(0)
+			
 		# iterate through registered resources to generate peak allocation data files
 		for resource in self.events.keys():
 			file = stats[resource].peakFile
 			timestamp = stats[resource].peakTimestamp
-			file.create("%s (peak:%s)\n" % (resource, Timestamp.format(self.timestampOffset + timestamp)))
-			file.write(timestamp, 0)
-			file.write(timestamp, yrange)
+			file.create("%s (peak:%s)\n" % (resource, Timestamp.toString(timestamp)))
+			file.write(timestamp, yrangeMin)
+			file.write(timestamp, yrangeMax)
 			file.close()
 
 		#	
@@ -1118,8 +1206,8 @@ class TotalsProcessor(Processor):
 		#
 		plotter.setTitle("Amount of non-freed allocations")
 		
-		plotter.setAxisX("time (secs)", xrange)
-		plotter.setAxisY("size", yrange, "%.1s%c")
+		plotter.setAxisX("time (secs)", xrangeMin, xrangeMax)
+		plotter.setAxisY("size", yrangeMin, yrangeMax, "%.1s%c")
 			
 		plotter.setDataStyle("lines")
 		
@@ -1208,9 +1296,7 @@ class Parser:
 	reAlloc = re.compile("^([0-9]+)\.(?: @([0-9a-fA-F]+)|) [^[]*\[([^\]]+)\][^(<]+(?:<([^>]+)>|)\(([^)]+)\) = (0x[a-fA-F0-9]+)(.*)$")
 	reFree = re.compile("^([0-9]+)\.(?: @([0-9a-fA-F]+)|) [^[]*\[([^\]]+)\][^(<]+(?:<([^>]+)>|)\((0x[a-fA-F0-9]+)\)$")
 	reResource = re.compile("\<([0-9a-z]+)\> : ([^ ]+) \(([^\)]+)\)")
-	reTimestamp = re.compile("^([0-9]+)\:([0-9]+)\:([0-9]+)\.([0-9]+)$")
 	reContext = re.compile("^\@ ([0-9a-fA-F]+) : (.*)$")
-	timestampOffset = None
 	
 	def __init__(self, processor):
 		self.processor = processor
@@ -1226,28 +1312,14 @@ class Parser:
 				context = match.group(2)
 				if context is None:
 					context = 0
-				timestamp = self.getTimestampFromString(match.group(3))
-				if not Options.timeFilter.matchesTimestamp(timestamp, self.timestampOffset or timestamp):
-					continue
-				if self.timestampOffset is None:
-					self.timestampOffset = timestamp
-					self.processor.setTimestampOffset(self.timestampOffset)
-				timestamp -= self.timestampOffset
-				self.processor.registerAlloc(int(match.group(1)), context, timestamp, match.group(4), match.group(6), int(match.group(5)))
+				self.processor.registerAlloc(int(match.group(1)), context, Timestamp.fromString(match.group(3)), match.group(4), match.group(6), int(match.group(5)))
 				continue
 			match = self.reFree.match(line)
 			if match:
 				context = match.group(2)
 				if context is None:
 					context = 0
-				timestamp = self.getTimestampFromString(match.group(3))
-				if not Options.timeFilter.matchesTimestamp(timestamp, self.timestampOffset or timestamp):
-					continue
-				if self.timestampOffset is None:
-					self.timestampOffset = timestamp
-					self.processor.setTimestampOffset(self.timestampOffset)
-				timestamp -= self.timestampOffset
-				self.processor.registerFree(int(match.group(1)), context, self.getTimestampFromString(match.group(3)), match.group(4), match.group(5))
+				self.processor.registerFree(int(match.group(1)), context, Timestamp.fromString(match.group(3)), match.group(4), match.group(5))
 				continue
 			match = self.reResource.match(line)
 			if match:
@@ -1258,22 +1330,12 @@ class Parser:
 				self.processor.registerContext(int(match.group(1), 16), match.group(2))
 				continue
 			
-		if self.timestampOffset is None:
-			print >> sys.stderr, "The specified time period does not contain any events"
-			sys.exit(0)
 				
 	def write(self, stream):
 		self.processor.sort()
-		plotter = Plotter(stream, self.processor.timestampOffset, Options.isPng and Plotter.PNG or Plotter.POSTSCRIPT)
+		plotter = Plotter(stream, Options.isPng and Plotter.PNG or Plotter.POSTSCRIPT)
 		self.processor.writeReport(plotter)
 		
-		
-	def getTimestampFromString(self, text):
-		timestamp = 0
-		match = self.reTimestamp.match(text)
-		if match:
-			timestamp = int(match.group(1)) * 3600000 + int(match.group(2)) * 60000 + int(match.group(3)) * 1000 + int(match.group(4))
-		return timestamp
 # /class Parser	
 	
 
@@ -1360,7 +1422,10 @@ class Options:
 					sys.exit(2)
 				min = Options.parseSize(match.group(1))
 				max = Options.parseSize(match.group(2))
-				Options.filters.append(SizeFilter(min, max))
+				if min is not None:
+					Options.filters.append(MinSizeFilter(min))
+				if max is not None:
+					Options.filters.append(MaxSizeFilter(max))
 				
 			if opt == "--filter-time":
 				match = re.match("([0-9:.]*)-([0-9:.]*)", val)
@@ -1370,7 +1435,10 @@ class Options:
 					sys.exit(2)
 				start = Options.parseTime(match.group(1))
 				end = Options.parseTime(match.group(2))
-				Options.timeFilter = TimeFilter(start, end)
+				if start is not None:
+					Options.filters.append(start > 0 and MinTimeFilter(start) or MinTimeOffsetFilter(-start))
+				if end is not None:
+					Options.filters.append(end > 0 and MaxTimeFilter(end) or MaxTimeOffsetFilter(-end))
 				
 		if parser is None:
 			print >> sys.stderr, "No report type specified."
@@ -1393,6 +1461,8 @@ class Options:
 		return int(match.group(1)) * mod
 	
 	def parseTime(text):
+		if text == "":
+			return None
 		match = re.match("([0-9]+):([0-9]+):([0-9]+)(?:\.([0-9]+)|)", text)
 		if match is None:
 			return -int(text)
