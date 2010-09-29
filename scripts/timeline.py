@@ -22,12 +22,12 @@ import sys, string, re, os, getopt, subprocess, operator
 
 class Timestamp:
 	"""
-	This class provides timestamp utility functions
+	This class provides timestamp utility functions.
 	"""
 	rxpTimestamp = re.compile("^([0-9]+)\:([0-9]+)\:([0-9]+)\.([0-9]+)$")
 
 	def toString(hours):
-		"Converts timestamp to text format"
+		"Converts integer timestamp (milliseconds since midnight) to text format HH:MM:SS.sss"
 		msecs = hours % 1000		
 		hours /= 1000
 		seconds = hours % 60
@@ -36,8 +36,10 @@ class Timestamp:
 		hours /= 60  
 		return "%02d:%02d:%02d.%03d" % (hours, minutes, seconds, msecs)
 	
+	toString = staticmethod(toString)
+	
 	def offsetToString(offset):
-		"Converts timestamp offset to text format"
+		"Converts timestamp offset (milliseconds) to text format +[HH:][MM:][SS][.sss]"
 		text = Timestamp.toString(offset)
 		text = string.lstrip(text, ":0")
 		text = string.rstrip(text, "0")
@@ -47,23 +49,23 @@ class Timestamp:
 			text = "0" + text
 		return text
 	
+	offsetToString = staticmethod(offsetToString)
+	
 	def fromString(text):
+		"Converts text format timestamp HH:MM:SS.sss into integer value (milliseconds since midnight)"
 		timestamp = 0
 		match = Timestamp.rxpTimestamp.match(text)
 		if match:
 			timestamp = int(match.group(1)) * 3600000 + int(match.group(2)) * 60000 + int(match.group(3)) * 1000 + int(match.group(4))
 		return timestamp
 
-	
-	toString = staticmethod(toString)
-	offsetToString = staticmethod(offsetToString)
 	fromString = staticmethod(fromString)
 # /class Timestamp
 
 
 class Context:
 	"""
-	This class contains context allocation implementation.
+	This class contains allocation context implementation.
 	"""
 	# context masks 
 	MASK_NONE = 0
@@ -79,16 +81,18 @@ class Context:
 		self.name = name
 
 	def isMaskAll(self):
+		"Checks if the context value covers all allocations ignoring their context"
 		return self.value == Context.MASK_ALL
 	
 	def isMaskNone(self):
+		"Checks if the context value is empty, masking allocations without contexts"
 		return self.value == Context.MASK_NONE
 # /class Context
 
 
 class Event:
 	"""
-	The allocation/deallocation event
+	This class contains allocation/deallocation call event implementation.
 	"""
 	class Types:
 		UNDEFINED = 0
@@ -112,7 +116,7 @@ class Event:
 		self.index = index
 		
 	def matchContext(self, context):
-		"Checks if the event matches the specified context mask"
+		"Checks if the event matches the specified context"
 		if context.isMaskNone():
 			if self.context != 0:
 				return False
@@ -127,6 +131,7 @@ class Filter:
 	"""
 
 	def matchesEvent(self, event):
+		"Checks if the filter matches the event"
 		return False
 	
 # /class Filter
@@ -134,7 +139,7 @@ class Filter:
 
 class MinTimeFilter:
 	"""
-	Minimal event time filter
+	Minimal event time filter, matching events with timestamp greater or equal.
 	"""
 	value = 0
 
@@ -148,7 +153,7 @@ class MinTimeFilter:
 
 class MaxTimeFilter:
 	"""
-	Maximal event time filter
+	Maximal event time filter, matching events with timestamp less or equal.
 	"""
 	value = 0
 
@@ -162,7 +167,8 @@ class MaxTimeFilter:
 
 class MinTimeOffsetFilter:
 	"""
-	Minimal event time offset filter
+	Minimal event time offset filter, matching events with relative timestamp greater or equal.
+	The relative timestamp is counted from the first timestamp matching previous filters.
 	"""
 	value = 0
 	offset = None
@@ -179,7 +185,9 @@ class MinTimeOffsetFilter:
 
 class MaxTimeOffsetFilter:
 	"""
-	Maximal event time offset filter
+	Maximal event time offset filter, matching events with relative tiemstamp less or equal.
+	The relative timestamp is counted from the first timestamp matching previous filters.
+	Practically it means log duration.
 	"""
 	value = 0
 	offset = None
@@ -196,7 +204,7 @@ class MaxTimeOffsetFilter:
  
 class MinSizeFilter(Filter):
 	"""
-	Minimal resource size filter
+	Minimal resource size filter, matching events with resource size grater or equal.
 	"""		
 	value = 0
 
@@ -210,7 +218,7 @@ class MinSizeFilter(Filter):
 
 class MaxSizeFilter(Filter):
 	"""
-	Maximal resource size filter
+	Maximal resource size filter, matching events with resource size less or equal.
 	"""		
 	value = 0
 		
@@ -224,7 +232,7 @@ class MaxSizeFilter(Filter):
 
 class MinIndexFilter(Filter):
 	"""
-	Minimal event index filter
+	Minimal event index filter, matching events with call record index greater or equal.
 	"""		
 	value = 0
 
@@ -238,7 +246,7 @@ class MinIndexFilter(Filter):
 
 class MaxIndexFilter(Filter):
 	"""
-	Maximal event index filter
+	Maximal event index filter, matching events with call record index less or equal.
 	"""		
 	value = 0
 		
@@ -279,6 +287,7 @@ class Tic:
 		self.format = "%%.%df" % decimal
 	
 	def getText(self):
+		"Returns tic value converted into text format"
 		if not self.text:
 			self.text = self.format % (float(self.value) / 1000)
 		return self.text	
@@ -295,7 +304,7 @@ class Plotter:
 	
 	class Table:
 		"""
-		The Table class provides gnuplot table emulation with labels
+		The Table class provides table emulation with gnuplot labels.
 		"""
 		
 		class Column:
@@ -331,6 +340,7 @@ class Plotter:
 				self.cells = []
 				
 			def setCell(self, row, text, align):
+				"Sets new cell containing text at the specified row"
 				if row + 1 > len(self.cells):
 					self.cells.extend(None for rows in range(row + 1 - len(self.cells)))
 				self.cells[row] = self.Cell(text, align)
@@ -353,10 +363,12 @@ class Plotter:
 			self.col = col
 			self.columns = []
 		
-		def addColumn(self, size):
-			self.columns.append(self.Column(size))
+		def addColumn(self, width):
+			"Adds a new column of the specified width"
+			self.columns.append(self.Column(width))
 		
 		def setText(self, row, col, text, align = "right"):
+			"Sets value of the cell at row,col with text"
 			if col > len(self.columns):
 				raise NameError("Table.setText: column value(%d) exceeding column count(%d)" % (col, len(self.columns)))
 			self.columns[col].setCell(row, text, align)
@@ -364,6 +376,7 @@ class Plotter:
 				self.rows = row
 			
 		def write(self, file):
+			"Writes table into gnulot configuration file"
 			offset = self.col
 			for column in self.columns:
 				offset += column.write(file, self.rows + self.row, offset)
@@ -371,10 +384,20 @@ class Plotter:
 		
 	class DataFile:
 		"""
-		This class represents gnuplot data file
+		This class represents gnuplot data file.
+		
+		The data file can be used in two ways:
+		1) write a point (x,y coordinates) with write() function. This method is used to
+		   plot simple graph (totals, activity reports)
+		2) store a pair of points in the cache with add() function , and write the cache
+		   in the file on file closure, drawing multiple graphs consisting of a single line.
+		   This method is used to plot graph for lifetime reports.
 		"""
 		
 		class Cache:
+			"""
+			This class is used to store coordinates of the point pairs for add() function.
+			"""
 			x1 = 0
 			y1 = 0
 			x2 = 0
@@ -387,16 +410,19 @@ class Plotter:
 				self.y2 = y2
 		# /class Cache
 		
+		# the target file name
 		_filename = None
-		cache = None
+		# the cache for storing point pairs used by add() function
+		_cache = None
 		
 		def __init__(self, filename, title = None):
 			self._filename = filename
-			self.cache = []
+			self._cache = []
 			if title is not None:
 				self.create(title)
 			
 		def create(self, title = None):
+			"Creates data file and write title if specified"
 			self.file = open(self._filename, "w")
 			if self.file is None:
 				raise NameError("Failed to create data file: %s" % filename)
@@ -404,30 +430,37 @@ class Plotter:
 				self.file.write("Resource \"%s\"\n" % title)
 			
 		def write(self, x, y):
+			"Writes a single graph point into data file"
 			self.file.write("%d %d\n" % (x, y))
 			
 		def add(self, x1, y1, x2, y2):
-			self.cache.append(self.Cache(x1, y1, x2, y2))
+			"Stores the point pair into cache"
+			self._cache.append(self._cache(x1, y1, x2, y2))
 			
 		def close(self):
-			for line in self.cache:
+			"Flushes cache and closes the file"
+			for line in self._cache:
 				self.file.write("%d %d " % (line.x1, line.y1))
 			self.file.write("\n")
-			for line in self.cache:
+			for line in self._cache:
 				self.file.write("%d %d " % (line.x2, line.y2))
 			self.file.write("\n")
 				
 			self.file.close()
 			
 		def remove(self):
+			"Deletes the target file"
 			os.remove(self._filename)
 			
 		def getFilename(self):
+			"Retrieves name of the target file"
 			return self._filename
 	# /class DataFile
-		
+	
+	# gnuplot terminal modes
 	PNG = 1
 	POSTSCRIPT = 2
+	# gnuplot configuration file name
 	CFG_FILENAME = "timeline.cfg"
 	
 	file = None
