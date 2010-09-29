@@ -132,32 +132,6 @@ class Filter:
 # /class Filter
 
 
-class TimeFilter:
-	"""
-	Time based event filter
-	"""
-	start = 0
-	end = sys.maxint
-	
-	def __init__(self, start, end):
-		if start is not None:
-			self.start = start
-		if end is not None:
-			self.end = end
-
-	def matchesEvent(self, event):
-#		absStart = self.start < 0 and timestampOffset - self.start or self.start
-#		absEnd = self.end < 0 and timestampOffset - self.end or self.end 
-#		print >> sys.stderr, "%s < %s < %s (%s)" % (Timestamp.toString(absStart), Timestamp.toString(timestamp), 
-#											Timestamp.toString(absEnd), Timestamp.toString(timestampOffset))
-#		if absStart > timestamp:
-#			return False
-#		if absEnd < timestamp:
-#			return False
-		return True
-# /class TimeFilter
-
-
 class MinTimeFilter:
 	"""
 	Minimal event time filter
@@ -246,6 +220,34 @@ class MaxSizeFilter(Filter):
 	def matchesEvent(self, event):
 		return event.res_size == 0 or event.res_size <= self.value
 # /class MaxSizeFilter		
+
+
+class MinIndexFilter(Filter):
+	"""
+	Minimal event index filter
+	"""		
+	value = 0
+
+	def __init__(self, value):
+		self.value = value
+		
+	def matchesEvent(self, event):
+		return event.index >= self.value
+# /class MinIndexFilter		
+
+
+class MaxIndexFilter(Filter):
+	"""
+	Maximal event index filter
+	"""		
+	value = 0
+		
+	def __init__(self, value):
+		self.value = value
+		
+	def matchesEvent(self, event):
+		return event.index <= self.value
+# /class MaxIndexFilter		
 			
 class Tic:
 	"""
@@ -1380,7 +1382,8 @@ class Options:
 										 "slice=",
 										 "png",
 										 "filter-size=",
-										 "filter-time="])
+										 "filter-time=",
+										 "filter-index="])
 		except getopt.GetoptError, err:
 			print >> sys.stderr, str(err) 
 			Options.displayUsage()
@@ -1439,6 +1442,20 @@ class Options:
 					Options.filters.append(start > 0 and MinTimeFilter(start) or MinTimeOffsetFilter(-start))
 				if end is not None:
 					Options.filters.append(end > 0 and MaxTimeFilter(end) or MaxTimeOffsetFilter(-end))
+					
+			if opt == "--filter-index":
+				match = re.match("([0-9]*)-([0-9]*)", val)
+				if match is None:
+					print >> sys.stderr, "Invalid size filter value: %s" % val
+					Options.displayUsage()
+					sys.exit(2)
+				min = Options.parseSize(match.group(1))
+				max = Options.parseSize(match.group(2))
+				if min is not None:
+					Options.filters.append(MinIndexFilter(min))
+				if max is not None:
+					Options.filters.append(MaxIndexFilter(max))
+				
 				
 		if parser is None:
 			print >> sys.stderr, "No report type specified."
