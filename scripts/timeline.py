@@ -1431,7 +1431,7 @@ class Options:
 					Options.filters.append(MaxSizeFilter(max))
 				
 			if opt == "--filter-time":
-				match = re.match("([0-9:.]*)-([0-9:.]*)", val)
+				match = re.match("([0-9:.+]*)-([0-9:.+]*)", val)
 				if match is None:
 					print >> sys.stderr, "Invalid timestamp filter value: %s" % val
 					Options.displayUsage()
@@ -1442,6 +1442,9 @@ class Options:
 					Options.filters.append(start > 0 and MinTimeFilter(start) or MinTimeOffsetFilter(-start))
 				if end is not None:
 					Options.filters.append(end > 0 and MaxTimeFilter(end) or MaxTimeOffsetFilter(-end))
+					
+				print >> sys.stderr, "%s-%s" % ((start and Timestamp.toString(start) or ""), (end and Timestamp.toString(end) or ""))
+				sys.exit(0)	
 					
 			if opt == "--filter-index":
 				match = re.match("([0-9]*)-([0-9]*)", val)
@@ -1478,17 +1481,20 @@ class Options:
 		return int(match.group(1)) * mod
 	
 	def parseTime(text):
-		if text == "":
-			return None
-		match = re.match("([0-9]+):([0-9]+):([0-9]+)(?:\.([0-9]+)|)", text)
+		match = re.match("([+]|)(?:([0-9]+):|)(?:([0-9]+):|)(?:([0-9]+)|)(?:\.([0-9]+)|)", text)
 		if match is None:
-			return -int(text)
-		timestamp = int(match.group(1)) * 60 * 60 * 1000
-		timestamp += int(match.group(2)) * 60 * 1000
-		timestamp += int(match.group(3)) * 1000
+			return None
+		timestamp = 0
+		if match.group(2) is not None:
+			timestamp += int(match.group(2)) *  60 * 1000
+		if match.group(3) is not None:
+			timestamp *= 60
+			timestamp += int(match.group(3)) * 60 * 1000
 		if match.group(4) is not None:
-			timestamp += int(match.group(4))
-		return timestamp
+			timestamp += int(match.group(4)) * 1000
+		if match.group(5) is not None:
+			timestamp += int(match.group(5).ljust(3, '0'))
+		return match.group(1) and -timestamp or timestamp
 	
 	def displayUsage():
 		print \
