@@ -518,8 +518,7 @@ static void write_initial_data()
 
 	pipe_buffer_reset();
 	write_handshake(SP_RTRACE_PROTO_VERSION_MAJOR, SP_RTRACE_PROTO_VERSION_MINOR, BUILD_ARCH);
-	write_output_settings(*sp_rtrace_options->output_dir ? sp_rtrace_options->output_dir : NULL,
-				*sp_rtrace_options->postproc ? sp_rtrace_options->postproc : NULL);
+	write_output_settings(sp_rtrace_options->output_dir, sp_rtrace_options->postproc);
 	write_process_info();
 	write_module_info(0, module_info.name, module_info.version_major, module_info.version_minor);
 	/* write MI packets for all tracing modules */

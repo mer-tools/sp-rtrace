@@ -400,7 +400,7 @@ static void read_text_data(rd_t* rd, FILE* fp)
 	int comment_index = 0;
 
 	/* read and parse the rest of file */
-	while (fgets(line, sizeof(line), fp)) {
+	while (fgets(line, sizeof(line), fp) && !postproc_abort) {
 		/* check if the line contains backtrace record */
 		if (dlist_first(&last_calls) && parse_backtrace(line, &bt[bt_index])) {
 			bt_index++;
@@ -431,9 +431,14 @@ static void read_text_data(rd_t* rd, FILE* fp)
 		 * to process all trace records belonging to single backtrace and
 		 * thus a backtrace data object can be created and stored.
 		 */
-		if (bt_index) {
+		if ( (bt_index || *line == '\n') && dlist_first(&last_calls) ) {
 			store_backtrace(rd, &last_calls, bt, bt_index);
 			bt_index = 0;
+		}
+		
+		/* empty line indicates end of a backtrace */
+		if (*line == '\n') {
+			continue;
 		}
 
 		/* check if the line contains function call record */

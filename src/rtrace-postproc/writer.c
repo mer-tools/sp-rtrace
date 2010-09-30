@@ -25,6 +25,7 @@
 #include <time.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 #include "writer.h"
 #include "filter.h"
@@ -228,5 +229,10 @@ void write_trace_calls(fmt_data_t* fmt)
 	}
 	else {
 		dlist_foreach2(&fmt->rd->calls, (op_binary_t)write_function_call, fmt);
+	}
+
+	if (fmt->comment) {
+		fmt->comment = dlist_foreach2_in(&fmt->rd->comments, fmt->comment,
+				(op_binary_t)comment_check_index, (void*)(long)LONG_MAX, (op_binary_t)formatter_write_comment, fmt->fp);
 	}
 }

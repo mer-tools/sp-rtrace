@@ -42,7 +42,7 @@ struct option rtrace_long_opt[] = {
 		 {"follow-forks", 0, 0, 'f'},
 		 {"backtrace-depth", 1, 0, 'b'},
 		 {"disable-timestamps", 0, 0, 'T'},
-		 {"postproc", 1, 0, 'P'},
+		 {"postproc", 2, 0, 'P'},
 		 {"toggle-signal", 1, 0, 'S'},
 		 {"disable-packet-buffering", 0, 0, 'B'},
 		 {"execute", 1, 0, 'x'},
@@ -159,7 +159,7 @@ char *rtrace_env_opt[] = {
 };
 
 /* sp_rtrace short option list */
-char* rtrace_short_opt = "i:o:mp:a:st:fb:TAP:S:Bhx:lLF";
+char* rtrace_short_opt = "i:o:mp:a:st:fb:TAP::S:Bhx:lLF";
 
 void rtrace_args_add_opt(rtrace_args_t* args, char opt, const char* value)
 {
@@ -189,7 +189,7 @@ int rtrace_args_scan_env(rtrace_args_t* args, const char* app)
 	for (i = 0; i < MAX_OPT; i++) {
 		if (!rtrace_env_opt[i]) continue;
 		const char* env = getenv(rtrace_env_opt[i]);
-		if (env && *env) {
+		if (env) {
 			struct option* opt = &rtrace_long_opt[i];
 			rtrace_args_add_opt(args, opt->val, opt->has_arg ? env : NULL);
 		}

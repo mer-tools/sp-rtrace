@@ -27,6 +27,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <limits.h>
 
 #include "formatter.h"
 #include "sp_rtrace_proto.h"
@@ -98,7 +99,7 @@ int formatter_write_fcall(const rd_fcall_t*  call, FILE* fp)
 int formatter_write_ftrace(const rd_ftrace_t* trace, FILE* fp)
 {
 	int i, size = trace->nframes;
-	char buffer[1024];
+	char buffer[PATH_MAX];
 	for (i = 0; i < size; i++) {
 		char* ptr = buffer;
 		ptr += sprintf(ptr, "\t0x%lx", trace->frames[i]);
@@ -108,6 +109,7 @@ int formatter_write_ftrace(const rd_ftrace_t* trace, FILE* fp)
 		*ptr++ = '\n';
 		fwrite(buffer, 1, ptr - buffer, fp);
 	}
+	fputc('\n', fp);
 	return 0;
 }
 

@@ -272,7 +272,7 @@ static int open_postproc_pipe()
 		char* argv[32], *ptr = rtrace_options.postproc;
 		int argc = 0;
 		char output_dir[512];
-
+		
 		argv[argc++] = SP_RTRACE_POSTPROC;
 		/* forward --output-dir option to post-processor */
 		if (rtrace_options.output_dir) {
@@ -280,12 +280,14 @@ static int open_postproc_pipe()
 			argv[argc++] = output_dir;
 		}
 		/* break argument string into separate arguments */
-		while (argc < (int)sizeof(argv) / (int)sizeof(argv[0]) - 1) {
-			argv[argc++] = ptr;
-			ptr = strchr(ptr, ' ');
-			if (!ptr) break;
-			*ptr++ = '\0';
-			while (*ptr == ' ') ptr++;
+		if (*ptr) {
+			while (argc < (int)sizeof(argv) / (int)sizeof(argv[0]) - 1) {
+				argv[argc++] = ptr;
+				ptr = strchr(ptr, ' ');
+				if (!ptr) break;
+				*ptr++ = '\0';
+				while (*ptr == ' ') ptr++;
+			}
 		}
 		argv[argc] = NULL;
 
@@ -773,7 +775,7 @@ int main(int argc, char* argv[])
 			break;
 
 		case 'P':
-			rtrace_options.postproc = strdup_a(optarg);
+			rtrace_options.postproc = strdup_a(optarg ? optarg : "");
 			break;
 
 		case 'S':

@@ -69,6 +69,8 @@ postproc_options_t postproc_options = {
 	.filter_resource = 0,
 };
 
+volatile sig_atomic_t postproc_abort = 0;
+
 /**
  * Free options resources allocated during command line parsing.
  *
@@ -208,6 +210,7 @@ static void write_rtrace_log(rd_t* rd)
  */
 static void sigint_handler(int sig __attribute((unused)))
 {
+	postproc_abort = 1;
 }
 
 /**
@@ -246,6 +249,7 @@ int main(int argc, char* argv[])
 	/* parse command line options */
 	int opt;
 	opterr = 0;
+	
 	while ( (opt = getopt_long(argc, argv, "i:o:f:cs:ahrlC:R:", long_options, NULL)) != -1) {
 		switch(opt) {
 		case 'h':

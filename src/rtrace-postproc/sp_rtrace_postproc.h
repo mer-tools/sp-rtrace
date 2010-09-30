@@ -31,6 +31,7 @@
  */
 
 #include <stdbool.h>
+#include <signal.h>
 
 #include "common/data_ops.h"
 
@@ -52,6 +53,7 @@ typedef struct postproc_options_t {
 
 extern postproc_options_t postproc_options;
 
+extern volatile sig_atomic_t postproc_abort;
 
 
 #endif
