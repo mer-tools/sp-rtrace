@@ -245,7 +245,7 @@ int main(int argc, char* argv[])
 	};
 	/* parse command line options */
 	int opt;
-
+	opterr = 0;
 	while ( (opt = getopt_long(argc, argv, "i:o:f:cs:ahrlC:R:", long_options, NULL)) != -1) {
 		switch(opt) {
 		case 'h':
@@ -300,12 +300,18 @@ int main(int argc, char* argv[])
 				exit (-1);
 			}
 			break;
-
-		default:
-			fprintf(stderr, "ERROR: Unknown option %x(%c)\n", opt, opt);
+			
+		case '?':
+			fprintf(stderr, "ERROR: Unknown sp-rtrace-postproc option: %c\n", optopt);
 			display_usage();
 			exit (-1);
+		
 		}
+	}
+	if (optind < argc) {
+		fprintf(stderr, "ERROR: Unknown sp-rtrace-postproc argument: %s\n", argv[optind]);
+		display_usage();
+		exit(-1);
 	}
 	rd_t* rd = rd_create();
 	if (rd == NULL) {

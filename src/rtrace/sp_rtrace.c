@@ -723,6 +723,7 @@ int main(int argc, char* argv[])
 
 	/* parse command line options */
 	int opt = 0;
+	opterr = 0;
 
 	while ( opt != 'x' && (opt = getopt_long(argc, argv, rtrace_short_opt, rtrace_long_opt, NULL)) != -1) {
 		switch(opt) {
@@ -799,8 +800,8 @@ int main(int argc, char* argv[])
 			rtrace_options.mode = MODE_LISTEN;
 			break;
 
-		default:
-			fprintf(stderr, "ERROR: Unknown option %x(%c)\n", opt, opt);
+		case '?':
+			fprintf(stderr, "ERROR: Unknown sp-rtrace option: %c\n", optopt);
 			display_usage();
 			exit (-1);
 		}

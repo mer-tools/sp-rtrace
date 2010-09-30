@@ -416,6 +416,7 @@ int main(int argc, char* argv[])
 	};
 	/* parse command line options */
 	int opt;
+	opterr = 0;
 
 	while ( (opt = getopt_long(argc, argv, "i:o:hm:pkt:", long_options, NULL)) != -1) {
 		switch(opt) {
@@ -457,11 +458,16 @@ int main(int argc, char* argv[])
 			resolve_options.keep_resolved = true;
 			break;
 
-		default:
-			fprintf(stderr, "ERROR: Unknown option %x(%c)\n", opt, opt);
+		case '?':
+			fprintf(stderr, "ERROR: Unknown sp-resolve option: %c\n", optopt);
 			display_usage();
 			exit (-1);
 		}
+	}
+	if (optind < argc) {
+		fprintf(stderr, "ERROR: Unknown sp-rtrace-resolve argument: %s\n", argv[optind]);
+		display_usage();
+		exit(-1);
 	}
 
 	resolve();
