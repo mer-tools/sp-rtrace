@@ -457,7 +457,7 @@ static void read_text_data(rd_t* rd, FILE* fp)
 				RD_FCALL(data)->res_type = (rd_resource_t*)dlist_first(&rd->resources);
 			}
 
-			dlist_add_sorted_r(&rd->calls, data, (op_binary_t)compare_calls);
+			dlist_add(&rd->calls, data);
 			ref_node_t* ref = (ref_node_t*)dlist_create_node(sizeof(ref_node_t));
 			ref->ref = data;
 			dlist_add(&last_calls, ref);
@@ -513,6 +513,8 @@ static void read_text_data(rd_t* rd, FILE* fp)
 
 	free(bt);
 	free(args);
+
+	dlist_sort(&rd->calls, (op_binary_t)compare_calls);
 }
 
 

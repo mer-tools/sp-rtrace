@@ -242,4 +242,13 @@ dlist_node_t* dlist_foreach2_in(dlist_t* list, dlist_node_t* from,
 		op_binary_t do_while, void* data_while, op_binary_t do_what, void* data_what);
 
 
+/**
+ * Sorts the list by the specified comparison function.
+ *
+ * @param[in] list      the list.
+ * @param[in] compare   the comparison function.
+ *
+ */
+void dlist_sort(dlist_t* list, op_binary_t compare);
+
 #endif

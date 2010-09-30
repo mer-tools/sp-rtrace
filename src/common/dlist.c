@@ -27,6 +27,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <memory.h>
+#include <stdbool.h>
 
 #include "dlist.h"
 #include "utils.h"
@@ -236,4 +237,103 @@ dlist_node_t* dlist_foreach2_in(dlist_t* list, dlist_node_t* from,
 	    do_what(node, data_what);
 	}
 	return from;
+}
+
+/**
+ * List segment structure.
+ */
+typedef struct {
+    dlist_node_t* head;
+    dlist_node_t* tail;
+} segment_t;
+
+typedef struct {
+    dlist_node_t node;
+    int value;
+    char* name;
+} node_t;
+
+#define VALUE(x) ((node_t*)x)->value
+
+/**
+ * Merge two segments
+ */
+static void merge_segments(segment_t* segment1, segment_t* segment2, op_binary_t compare)
+{
+    dlist_node_t* node1 = segment1->tail;
+    dlist_node_t* node2 = segment2->tail;
+
+    segment1->head->next = segment2->tail;
+    segment2->tail->prev = segment1->head;
+
+    while (true) {
+        while (compare(node1, node2) <= 0) {
+            if (node1 == segment1->head) {
+                node1->next = node2;
+                node2->prev = node1;
+                return;
+            }
+            node1 = node1->next;
+        }
+        if (node1 != segment1->tail) node1->prev->next = node2;
+        node2->prev = node1->prev;
+        while (compare(node2, node1) < 0) {
+            if (node2 == segment2->head) {
+                node1->prev = node2;
+                node2->next = node1;
+                return;
+            }
+            node2 = node2->next;
+        }
+        node1->prev = node2->prev;
+        node1->prev->next = node1;
+    }
+}
+
+/**
+ * Sorts the segment by the specified comparison function.
+ *
+ * @param[in] segment   the segment to sort.
+ * @param[in] compare   the comparison function.
+ */
+static void dlist_sort_segment(segment_t* segment, op_binary_t compare)
+{
+    dlist_node_t* node1 = segment->tail;
+    dlist_node_t* node2 = segment->tail;
+
+    while (node2 != segment->head) {
+        node1 = node1->next;
+        node2 = node2->next;
+        if (node2 == segment->head) break;
+        node2 = node2->next;
+    }
+    /* segment contains 0 or 1 record, no sorting necessary */
+    if (node1 == segment->tail) return;
+
+    /* split into two segments */
+    segment_t segment1 = {.tail = segment->tail, .head = node1->prev};
+    segment_t segment2 = {.tail = node1, .head = segment->head};
+    /* sort the new segments */
+    dlist_sort_segment(&segment1, compare);
+    dlist_sort_segment(&segment2, compare);
+
+    /* 'merge' the segments back */
+    segment->tail = compare(segment1.tail, segment2.tail) <= 0 ? segment1.tail : segment2.tail;
+    segment->head = compare(segment1.head, segment2.head) > 0 ? segment1.head : segment2.head;
+
+    merge_segments(&segment1, &segment2, compare);
+}
+
+void dlist_sort(dlist_t* list, op_binary_t compare)
+{
+    /* list contains one or no records, no sorting necessary */
+    if (list->head == list->tail) return;
+
+    segment_t segment = {.head = list->head, .tail = list->tail};
+    dlist_sort_segment(&segment, compare);
+
+    list->head = segment.head;
+    list->head->next = NULL;
+    list->tail = segment.tail;
+    list->tail->prev = NULL;
 }

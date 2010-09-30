@@ -617,6 +617,38 @@ RT_CASE(iterate_range_binary)
 	return RT_OK;
 }
 
+/**
+ * Sorting test case.
+ */
+
+long dump_node(node_t* node)
+{
+    fprintf(stderr, "value=%d\n", node->value);
+}
+
+RT_CASE(sort)
+{
+    node_t nodes[] = {
+            {.value = 4, .name = "four"},
+            {.value = 1, .name = "one"},
+            {.value = 6, .name = "six"},
+            {.value = 2, .name = "two"},
+            {.value = 3, .name = "three"},
+        };
+    node_t nodes_sorted[] = {
+            {.value = 1, .name = "one"},
+            {.value = 2, .name = "two"},
+            {.value = 3, .name = "three"},
+            {.value = 4, .name = "four"},
+            {.value = 6, .name = "six"},
+        };
+    dlist_t list;
+    dlist_init(&list);
+    populate_list(&list, nodes, RT_SIZEOF(nodes));
+    dlist_sort(&list, (op_binary_t)compare_nodes);
+    RT_ASSERT(verify_list(&list, nodes_sorted, RT_SIZEOF(nodes)) == RT_OK);
+    dlist_free(&list, (op_unary_t)free_node);
+}
 
 
 /**
@@ -640,6 +672,7 @@ int main()
 	RT_RUN_CASE(iterate_binary);
 	RT_RUN_CASE(iterate_range_unary);
 	RT_RUN_CASE(iterate_range_binary);
+	RT_RUN_CASE(sort);
 
 	return 0;
 }
