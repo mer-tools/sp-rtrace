@@ -300,6 +300,20 @@ static void merge_segments(segment_t* segment1, segment_t* segment2, op_binary_t
  */
 static void dlist_sort_segment(segment_t* segment, op_binary_t compare)
 {
+    /* First check primitive cases */
+    /* segment contains single item - so it's already sorted */
+    if (segment->tail == segment->head) return;
+    /* segment contains two items - swap if necessary */
+    if (segment->tail->next == segment->head) {
+        if (compare(segment->tail, segment->head) > 0) {
+            segment->head = segment->tail;
+            segment->tail = segment->head->next;
+            segment->tail->next = segment->head;
+            segment->head->prev = segment->tail;
+        }
+        return;
+    }
+    /* segment contains 3+ items - proceed with recursive sorting */
     dlist_node_t* node1 = segment->tail;
     dlist_node_t* node2 = segment->tail;
 
@@ -310,8 +324,6 @@ static void dlist_sort_segment(segment_t* segment, op_binary_t compare)
         if (node2 == segment->head) break;
         node2 = node2->next;
     }
-    /* segment contains 0 or 1 record, no sorting necessary */
-    if (node1 == segment->tail) return;
 
     /* split into two segments */
     segment_t segment1 = {.tail = segment->tail, .head = node1->prev};
