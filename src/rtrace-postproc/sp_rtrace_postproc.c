@@ -97,6 +97,8 @@ static void display_usage()
 			"  -i <path>    - the input file path. Standard input used by default.\n"
 			"  -o <path>    - the output directory. Standard output is used if\n"
 			"                 not set.\n"
+			"  -t           - convert to the text format (optional, the output is always\n"
+			"                 written in text format).\n"
 			"  -l           - filter out matching allocs & frees i.e. list only 'leaks'.\n"
 			"  -c           - compress trace by joining identical backtraces.\n"
 			"  -r           - resolve function addresses in backtraces.\n"
@@ -235,7 +237,6 @@ int main(int argc, char* argv[])
 	struct option long_options[] = {
 			 {"input-file", 1, 0, 'i'},
 			 {"output-dir", 1, 0, 'o'},
-			 {"format", 1, 0, 'f'},
 			 {"filter-leaks", 0, 0, 'l'},
 			 {"compress", 0, 0, 'c'},
 			 {"sort", 1, 0, 's'},
@@ -243,6 +244,7 @@ int main(int argc, char* argv[])
 			 {"resolve", 0, 0, 'r'},
 			 {"context", 1, 0, 'C'},
 			 {"resource", 1, 0, 'R'},
+			 {"text", 0, 0, 't'},
 			 {"help", 0, 0, 'h'},
 			 {0, 0, 0, 0}
 	};
@@ -250,7 +252,7 @@ int main(int argc, char* argv[])
 	int opt;
 	opterr = 0;
 	
-	while ( (opt = getopt_long(argc, argv, "i:o:f:cs:ahrlC:R:", long_options, NULL)) != -1) {
+	while ( (opt = getopt_long(argc, argv, "i:o:tcs:ahrlC:R:", long_options, NULL)) != -1) {
 		switch(opt) {
 		case 'h':
 			display_usage();
@@ -310,6 +312,8 @@ int main(int argc, char* argv[])
 			display_usage();
 			exit (-1);
 		
+		case 't':
+			break;
 		}
 	}
 	if (optind < argc) {
@@ -326,7 +330,7 @@ int main(int argc, char* argv[])
 	/* validate options and set default values */
 	if (postproc_options.compress) {
 		if (!postproc_options.compare_leaks)
-			postproc_options.compare_leaks = (op_binary_t)leaks_compare_by_size_desc;
+			postproc_options.compare_leaks = (op_binary_t)leaks_compare_by_size_asc;
 	}
 	else if (postproc_options.compare_leaks) {
 		fprintf(stderr, "ERROR: --sort option should be used with --filter-leaks and "

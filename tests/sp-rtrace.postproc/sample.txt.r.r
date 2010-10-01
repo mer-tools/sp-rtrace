@@ -1,19 +1,20 @@
-version=1.0, arch=i486-linux-gnu, time=2010.9.21 16:04:56, process=../bin/alloc_test, pid=11492, 
+version=1.0, arch=i486-linux-gnu, time=2010.10.1 14:13:59, process=../bin/alloc_test, pid=31018, 
 <1> : memory (memory allocation in bytes)
-: /lib/tls/i686/cmov/libc-2.11.1.so => 0x110000-0x263000
-: /lib/ld-2.11.1.so => 0x412000-0x42d000
-: /lib/tls/i686/cmov/libpthread-2.11.1.so => 0x46e000-0x483000
-: /usr/lib/sp-rtrace/libsp-rtrace-main.so.1.0.0 => 0x6bb000-0x6c1000
-: /lib/tls/i686/cmov/librt-2.11.1.so => 0x97e000-0x985000
-: /lib/tls/i686/cmov/libm-2.11.1.so => 0xb12000-0xb36000
-: /usr/lib/sp-rtrace/libsp-rtrace-memory.so.1.0.0 => 0xeec000-0xeee000
-: /lib/tls/i686/cmov/libdl-2.11.1.so => 0xfe9000-0xfeb000
+: /usr/lib/sp-rtrace/libsp-rtrace-memory.so.1.0.0 => 0x197000-0x199000
+: /lib/ld-2.11.1.so => 0x35a000-0x375000
+: /lib/libgcc_s.so.1 => 0x3fe000-0x41b000
+: /lib/tls/i686/cmov/libpthread-2.11.1.so => 0x64f000-0x664000
+: /lib/tls/i686/cmov/libm-2.11.1.so => 0x684000-0x6a8000
+: /lib/tls/i686/cmov/libdl-2.11.1.so => 0x7b5000-0x7b7000
+: /usr/lib/sp-rtrace/libsp-rtrace-main.so.1.0.0 => 0xb23000-0xb28000
+: /lib/tls/i686/cmov/libc-2.11.1.so => 0xdc9000-0xf1c000
+: /lib/tls/i686/cmov/librt-2.11.1.so => 0xf93000-0xf9a000
 : /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test => 0x8048000-0x8049000
 # heap status information:
-#   heap bottom 0x92a8000
-#   heap top 0x92c9000
-#   lowest block 0x92a8008
-#   highest block 0x92af600
+#   heap bottom 0x8ea0000
+#   heap top 0x8ec1000
+#   lowest block 0x8ea0008
+#   highest block 0x8ea7600
 #   non-mapped space allocated from system 135168
 #   number of free chunks 1
 #   number of fastbin blocks 0
@@ -26,616 +27,545 @@ version=1.0, arch=i486-linux-gnu, time=2010.9.21 16:04:56, process=../bin/alloc_
 #   top-most, releasable (via malloc_trim) space 104968
 # tracing module: [0] main (1.0)
 # tracing module: [1] memory (1.0)
-1. [16:58:52.521] malloc(1003) = 0x92a8008
-	0x8048570 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-2. [16:58:52.521] malloc(1002) = 0x92a87c0
-	0x8048533 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-3. [16:58:52.521] malloc(1001) = 0x92a8bb0
-	0x80484f6 one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-4. [16:58:52.521] malloc(1000) = 0x92a8fa0
-	0x80484c6 zero from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x804850b one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-5. [16:58:52.521] malloc(2000) = 0x92a9390
-	0x80484e2 zero from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x804850b one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-6. [16:58:52.521] free(0x92a9390)
-	0x804851f one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-7. [16:58:52.521] malloc(2001) = 0x92a9390
-	0x804851f one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-8. [16:58:52.521] free(0x92a9390)
-	0x804855c two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-9. [16:58:52.521] malloc(2002) = 0x92a9390
-	0x804855c two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-10. [16:58:52.521] free(0x92a9390)
-	0x8048599 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-11. [16:58:52.521] malloc(2003) = 0x92a9390
-	0x8048599 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-12. [16:58:52.521] free(0x92a9390)
-	0x8048570 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-13. [16:58:52.521] malloc(1003) = 0x92a9390
-	0x8048570 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-14. [16:58:52.521] malloc(1002) = 0x92a9780
-	0x8048533 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-15. [16:58:52.521] malloc(1001) = 0x92a9b70
-	0x80484f6 one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-16. [16:58:52.521] malloc(1000) = 0x92a9f60
-	0x80484c6 zero from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x804850b one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-17. [16:58:52.521] malloc(2000) = 0x92aa350
-	0x80484e2 zero from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x804850b one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-18. [16:58:52.521] free(0x92aa350)
-	0x804851f one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-19. [16:58:52.521] malloc(2001) = 0x92aa350
-	0x804851f one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-20. [16:58:52.521] free(0x92aa350)
-	0x804855c two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-21. [16:58:52.521] malloc(2002) = 0x92aa350
-	0x804855c two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-22. [16:58:52.521] free(0x92aa350)
-	0x8048599 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-23. [16:58:52.521] malloc(2003) = 0x92aa350
-	0x8048599 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-24. [16:58:52.521] free(0x92aa350)
-	0x8048570 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-25. [16:58:52.521] malloc(1003) = 0x92aa350
-	0x8048570 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-26. [16:58:52.521] malloc(1002) = 0x92aa740
-	0x8048533 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-27. [16:58:52.521] malloc(1001) = 0x92aab30
-	0x80484f6 one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-28. [16:58:52.521] malloc(1000) = 0x92aaf20
-	0x80484c6 zero from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x804850b one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-29. [16:58:52.521] malloc(2000) = 0x92ab310
-	0x80484e2 zero from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x804850b one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-30. [16:58:52.521] free(0x92ab310)
-	0x804851f one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-31. [16:58:52.521] malloc(2001) = 0x92ab310
-	0x804851f one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-32. [16:58:52.521] free(0x92ab310)
-	0x804855c two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-33. [16:58:52.521] malloc(2002) = 0x92ab310
-	0x804855c two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-34. [16:58:52.521] free(0x92ab310)
-	0x8048599 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-35. [16:58:52.521] malloc(2003) = 0x92ab310
-	0x8048599 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-36. [16:58:52.521] free(0x92ab310)
-	0x8048570 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-37. [16:58:52.521] malloc(1003) = 0x92ab310
-	0x8048570 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-38. [16:58:52.521] malloc(1002) = 0x92ab700
-	0x8048533 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-39. [16:58:52.521] malloc(1001) = 0x92abaf0
-	0x80484f6 one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-40. [16:58:52.521] malloc(1000) = 0x92abee0
-	0x80484c6 zero from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x804850b one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-41. [16:58:52.521] malloc(2000) = 0x92ac2d0
-	0x80484e2 zero from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x804850b one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-42. [16:58:52.521] free(0x92ac2d0)
-	0x804851f one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-43. [16:58:52.521] malloc(2001) = 0x92ac2d0
-	0x804851f one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-44. [16:58:52.521] free(0x92ac2d0)
-	0x804855c two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-45. [16:58:52.521] malloc(2002) = 0x92ac2d0
-	0x804855c two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-46. [16:58:52.521] free(0x92ac2d0)
-	0x8048599 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-47. [16:58:52.521] malloc(2003) = 0x92ac2d0
-	0x8048599 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-48. [16:58:52.521] free(0x92ac2d0)
-	0x8048570 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-49. [16:58:52.521] malloc(1003) = 0x92ac2d0
-	0x8048570 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-50. [16:58:52.521] malloc(1002) = 0x92ac6c0
-	0x8048533 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-51. [16:58:52.521] malloc(1001) = 0x92acab0
-	0x80484f6 one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-52. [16:58:52.521] malloc(1000) = 0x92acea0
-	0x80484c6 zero from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x804850b one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-53. [16:58:52.521] malloc(2000) = 0x92ad290
-	0x80484e2 zero from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x804850b one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-54. [16:58:52.521] free(0x92ad290)
-	0x804851f one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-55. [16:58:52.521] malloc(2001) = 0x92ad290
-	0x804851f one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-56. [16:58:52.521] free(0x92ad290)
-	0x804855c two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-57. [16:58:52.521] malloc(2002) = 0x92ad290
-	0x804855c two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048585 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-58. [16:58:52.521] free(0x92ad290)
-	0x8048599 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-59. [16:58:52.521] malloc(2003) = 0x92ad290
-	0x8048599 three from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485af start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-60. [16:58:52.521] free(0x92ad290)
-	0x8048533 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485cf start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-61. [16:58:52.521] malloc(1002) = 0x92ad290
-	0x8048533 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485cf start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-62. [16:58:52.521] malloc(1001) = 0x92ad680
-	0x80484f6 one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485cf start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-63. [16:58:52.521] malloc(1000) = 0x92ada70
-	0x80484c6 zero from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x804850b one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485cf start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-64. [16:58:52.521] malloc(2000) = 0x92ade60
-	0x80484e2 zero from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x804850b one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485cf start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-65. [16:58:52.521] free(0x92ade60)
-	0x804851f one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485cf start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-66. [16:58:52.521] malloc(2001) = 0x92ade60
-	0x804851f one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485cf start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-67. [16:58:52.521] free(0x92ade60)
-	0x804855c two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485cf start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-68. [16:58:52.521] malloc(2002) = 0x92ade60
-	0x804855c two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485cf start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-69. [16:58:52.521] free(0x92ade60)
-	0x8048533 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485cf start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-70. [16:58:52.521] malloc(1002) = 0x92ade60
-	0x8048533 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485cf start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-71. [16:58:52.521] malloc(1001) = 0x92ae250
-	0x80484f6 one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485cf start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-72. [16:58:52.521] malloc(1000) = 0x92ae640
-	0x80484c6 zero from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x804850b one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485cf start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-73. [16:58:52.521] malloc(2000) = 0x92aea30
-	0x80484e2 zero from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x804850b one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485cf start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-74. [16:58:52.521] free(0x92aea30)
-	0x804851f one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485cf start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-75. [16:58:52.521] malloc(2001) = 0x92aea30
-	0x804851f one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485cf start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-76. [16:58:52.521] free(0x92aea30)
-	0x804855c two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485cf start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-77. [16:58:52.521] malloc(2002) = 0x92aea30
-	0x804855c two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485cf start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-78. [16:58:52.521] free(0x92aea30)
-	0x8048533 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485cf start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-79. [16:58:52.521] malloc(1002) = 0x92aea30
-	0x8048533 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485cf start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-80. [16:58:52.521] malloc(1001) = 0x92aee20
-	0x80484f6 one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485cf start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-81. [16:58:52.521] malloc(1000) = 0x92af210
-	0x80484c6 zero from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x804850b one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485cf start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-82. [16:58:52.521] malloc(2000) = 0x92af600
-	0x80484e2 zero from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x804850b one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485cf start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-83. [16:58:52.521] free(0x92af600)
-	0x804851f one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485cf start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-84. [16:58:52.521] malloc(2001) = 0x92af600
-	0x804851f one from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x8048548 two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485cf start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-85. [16:58:52.521] free(0x92af600)
-	0x804855c two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485cf start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-86. [16:58:52.521] malloc(2002) = 0x92af600
-	0x804855c two from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485cf start from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x80485f1 main from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-	0x126bd6 __libc_start_main from /lib/tls/i686/cmov/libc-2.11.1.so
-	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
-87. [16:58:52.521] free(0x92af600)
+1. [02:34:34.217] malloc(1003) = 0x8ea0008
+	0x8048570 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+2. [02:34:34.217] malloc(1002) = 0x8ea07c0
+	0x8048533 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+3. [02:34:34.217] malloc(1001) = 0x8ea0bb0
+	0x80484f6 one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+4. [02:34:34.217] malloc(1000) = 0x8ea0fa0
+	0x80484c6 zero() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x804850b one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+5. [02:34:34.217] malloc(2000) = 0x8ea1390
+	0x80484e2 zero() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x804850b one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+6. [02:34:34.217] free(0x8ea1390)
+
+7. [02:34:34.217] malloc(2001) = 0x8ea1390
+	0x804851f one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+8. [02:34:34.217] free(0x8ea1390)
+
+9. [02:34:34.217] malloc(2002) = 0x8ea1390
+	0x804855c two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+10. [02:34:34.217] free(0x8ea1390)
+
+11. [02:34:34.217] malloc(2003) = 0x8ea1390
+	0x8048599 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+12. [02:34:34.217] free(0x8ea1390)
+
+13. [02:34:34.217] malloc(1003) = 0x8ea1390
+	0x8048570 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+14. [02:34:34.217] malloc(1002) = 0x8ea1780
+	0x8048533 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+15. [02:34:34.217] malloc(1001) = 0x8ea1b70
+	0x80484f6 one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+16. [02:34:34.217] malloc(1000) = 0x8ea1f60
+	0x80484c6 zero() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x804850b one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+17. [02:34:34.217] malloc(2000) = 0x8ea2350
+	0x80484e2 zero() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x804850b one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+18. [02:34:34.217] free(0x8ea2350)
+
+19. [02:34:34.217] malloc(2001) = 0x8ea2350
+	0x804851f one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+20. [02:34:34.217] free(0x8ea2350)
+
+21. [02:34:34.217] malloc(2002) = 0x8ea2350
+	0x804855c two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+22. [02:34:34.217] free(0x8ea2350)
+
+23. [02:34:34.217] malloc(2003) = 0x8ea2350
+	0x8048599 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+24. [02:34:34.217] free(0x8ea2350)
+
+25. [02:34:34.217] malloc(1003) = 0x8ea2350
+	0x8048570 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+26. [02:34:34.217] malloc(1002) = 0x8ea2740
+	0x8048533 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+27. [02:34:34.217] malloc(1001) = 0x8ea2b30
+	0x80484f6 one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+28. [02:34:34.217] malloc(1000) = 0x8ea2f20
+	0x80484c6 zero() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x804850b one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+29. [02:34:34.217] malloc(2000) = 0x8ea3310
+	0x80484e2 zero() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x804850b one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+30. [02:34:34.217] free(0x8ea3310)
+
+31. [02:34:34.217] malloc(2001) = 0x8ea3310
+	0x804851f one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+32. [02:34:34.217] free(0x8ea3310)
+
+33. [02:34:34.217] malloc(2002) = 0x8ea3310
+	0x804855c two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+34. [02:34:34.217] free(0x8ea3310)
+
+35. [02:34:34.217] malloc(2003) = 0x8ea3310
+	0x8048599 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+36. [02:34:34.217] free(0x8ea3310)
+
+37. [02:34:34.217] malloc(1003) = 0x8ea3310
+	0x8048570 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+38. [02:34:34.217] malloc(1002) = 0x8ea3700
+	0x8048533 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+39. [02:34:34.217] malloc(1001) = 0x8ea3af0
+	0x80484f6 one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+40. [02:34:34.217] malloc(1000) = 0x8ea3ee0
+	0x80484c6 zero() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x804850b one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+41. [02:34:34.217] malloc(2000) = 0x8ea42d0
+	0x80484e2 zero() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x804850b one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+42. [02:34:34.217] free(0x8ea42d0)
+
+43. [02:34:34.217] malloc(2001) = 0x8ea42d0
+	0x804851f one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+44. [02:34:34.217] free(0x8ea42d0)
+
+45. [02:34:34.217] malloc(2002) = 0x8ea42d0
+	0x804855c two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+46. [02:34:34.217] free(0x8ea42d0)
+
+47. [02:34:34.217] malloc(2003) = 0x8ea42d0
+	0x8048599 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+48. [02:34:34.217] free(0x8ea42d0)
+
+49. [02:34:34.217] malloc(1003) = 0x8ea42d0
+	0x8048570 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+50. [02:34:34.217] malloc(1002) = 0x8ea46c0
+	0x8048533 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+51. [02:34:34.217] malloc(1001) = 0x8ea4ab0
+	0x80484f6 one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+52. [02:34:34.217] malloc(1000) = 0x8ea4ea0
+	0x80484c6 zero() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x804850b one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+53. [02:34:34.217] malloc(2000) = 0x8ea5290
+	0x80484e2 zero() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x804850b one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+54. [02:34:34.217] free(0x8ea5290)
+
+55. [02:34:34.217] malloc(2001) = 0x8ea5290
+	0x804851f one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+56. [02:34:34.217] free(0x8ea5290)
+
+57. [02:34:34.217] malloc(2002) = 0x8ea5290
+	0x804855c two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048585 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+58. [02:34:34.217] free(0x8ea5290)
+
+59. [02:34:34.217] malloc(2003) = 0x8ea5290
+	0x8048599 three() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485af start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+60. [02:34:34.217] free(0x8ea5290)
+
+61. [02:34:34.217] malloc(1002) = 0x8ea5290
+	0x8048533 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485cf start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+62. [02:34:34.218] malloc(1001) = 0x8ea5680
+	0x80484f6 one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485cf start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+63. [02:34:34.218] malloc(1000) = 0x8ea5a70
+	0x80484c6 zero() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x804850b one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485cf start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+64. [02:34:34.218] malloc(2000) = 0x8ea5e60
+	0x80484e2 zero() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x804850b one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485cf start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+65. [02:34:34.218] free(0x8ea5e60)
+
+66. [02:34:34.218] malloc(2001) = 0x8ea5e60
+	0x804851f one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485cf start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+67. [02:34:34.218] free(0x8ea5e60)
+
+68. [02:34:34.218] malloc(2002) = 0x8ea5e60
+	0x804855c two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485cf start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+69. [02:34:34.218] free(0x8ea5e60)
+
+70. [02:34:34.218] malloc(1002) = 0x8ea5e60
+	0x8048533 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485cf start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+71. [02:34:34.218] malloc(1001) = 0x8ea6250
+	0x80484f6 one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485cf start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+72. [02:34:34.218] malloc(1000) = 0x8ea6640
+	0x80484c6 zero() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x804850b one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485cf start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+73. [02:34:34.218] malloc(2000) = 0x8ea6a30
+	0x80484e2 zero() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x804850b one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485cf start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+74. [02:34:34.218] free(0x8ea6a30)
+
+75. [02:34:34.218] malloc(2001) = 0x8ea6a30
+	0x804851f one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485cf start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+76. [02:34:34.218] free(0x8ea6a30)
+
+77. [02:34:34.218] malloc(2002) = 0x8ea6a30
+	0x804855c two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485cf start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+78. [02:34:34.218] free(0x8ea6a30)
+
+79. [02:34:34.218] malloc(1002) = 0x8ea6a30
+	0x8048533 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485cf start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+80. [02:34:34.218] malloc(1001) = 0x8ea6e20
+	0x80484f6 one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485cf start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+81. [02:34:34.218] malloc(1000) = 0x8ea7210
+	0x80484c6 zero() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x804850b one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485cf start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+82. [02:34:34.218] malloc(2000) = 0x8ea7600
+	0x80484e2 zero() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x804850b one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485cf start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+83. [02:34:34.218] free(0x8ea7600)
+
+84. [02:34:34.218] malloc(2001) = 0x8ea7600
+	0x804851f one() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x8048548 two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485cf start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+85. [02:34:34.218] free(0x8ea7600)
+
+86. [02:34:34.218] malloc(2002) = 0x8ea7600
+	0x804855c two() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485cf start() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0x80485f1 main() from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+	0xddfbd6 __libc_start_main() from /lib/tls/i686/cmov/libc-2.11.1.so
+	0x8048421 from /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_test
+
+87. [02:34:34.218] free(0x8ea7600)
+

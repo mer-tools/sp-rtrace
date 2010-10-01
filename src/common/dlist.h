@@ -245,6 +245,7 @@ dlist_node_t* dlist_foreach2_in(dlist_t* list, dlist_node_t* from,
 /**
  * Sorts the list by the specified comparison function.
  *
+ * The sorting is based on merge sort algorithm.
  * @param[in] list      the list.
  * @param[in] compare   the comparison function.
  *

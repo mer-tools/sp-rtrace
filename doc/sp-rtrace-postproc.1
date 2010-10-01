@@ -24,10 +24,15 @@ Specifies the input file.
 
 By default the data is read from the standard input.
 .TP
-\fI--format\fP=text|binary (\fI-f\fP text|binary)
-Specifies the input data format.
+\fI--text\fP (\fI-t\fP)
+An optional switch to write output in text format. As the output is 
+always written in text format, this switch does nothing.
 
-By default the binary data is expected.
+The only time when it should be used is when user wants to invoke
+postprocessor from sp-rtrace without any post-processing options 
+(just to convert the binary log into text format):
+
+sp-rtrace -pmemory -s -P -t -x <app>
 .TP
 \fI--filter-leaks\fP (\fI-l\fP)
 Filters leaked resources by removing allocations of the resources that

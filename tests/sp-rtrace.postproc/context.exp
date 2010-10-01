@@ -29,7 +29,11 @@ set src_opts "-g -lsp-rtrace1 -L../src/.libs"
 
 proc test_context_filter { context postproc } {
 	set out_file "$::bin_dir/context.txt.$context.$postproc"
-	exec sp-rtrace-postproc -${context} -${postproc}i $::src_dir/context.txt > $out_file
+	set context_options ""
+	if { $context != ""} {
+		set context_options "-$context"
+	}
+	eval exec sp-rtrace-postproc ${context_options} -${postproc}i $::src_dir/context.txt > $out_file
 	if { ![file exists $out_file] || [file size $out_file] == 0} {
 		fail "Failed to produce trace report: $out_file"
 		return -1

@@ -20,7 +20,7 @@ sleep 1
 
 app_name=${1##*/}
 app_name=${app_name%% *}
-while ps | grep $app_name  ; do
+while pidof $app_name  ; do
 	sleep 1
 done
 

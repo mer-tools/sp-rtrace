@@ -125,6 +125,8 @@ static int write_compressed_backtrace(ftrace_ref_t* trace, fmt_data_t* fmt)
 {
 	dlist_foreach2(&trace->ref->calls, (op_binary_t)write_compressed_function_call, fmt);
 	formatter_write_ftrace(trace->ref, fmt->fp);
+	formatter_printf(fmt->fp, "# allocation summary for the last backtrace: %d block(s) with total size %d\n", 
+			trace->leak_count, trace->leak_size);
 	return 0;
 }
 

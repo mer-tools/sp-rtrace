@@ -1,13 +1,30 @@
-version=1.0, arch=i486-linux-gnu, time=2010.9.21 16:04:57, process=../bin/alloc_context_test, pid=11528, 
+version=1.0, arch=i486-linux-gnu, time=2010.10.1 14:14:00, process=../bin/alloc_context_test, pid=31054, 
 <1> : memory (memory allocation in bytes)
-: /lib/tls/i686/cmov/libdl-2.11.1.so => 0x110000-0x112000
-: /lib/libgcc_s.so.1 => 0x114000-0x131000
-: /lib/tls/i686/cmov/librt-2.11.1.so => 0x5a6000-0x5ad000
-: /lib/tls/i686/cmov/libc-2.11.1.so => 0x5c8000-0x71b000
-: /lib/ld-2.11.1.so => 0x9e6000-0xa01000
-: /lib/tls/i686/cmov/libpthread-2.11.1.so => 0xa4f000-0xa64000
-: /usr/lib/sp-rtrace/libsp-rtrace-main.so.1.0.0 => 0xb2c000-0xb32000
-: /lib/tls/i686/cmov/libm-2.11.1.so => 0xbc6000-0xbea000
-: /usr/lib/libsp-rtrace1.so.1.0.0 => 0xc18000-0xc1c000
-: /usr/lib/sp-rtrace/libsp-rtrace-memory.so.1.0.0 => 0xcbd000-0xcbf000
+: /lib/tls/i686/cmov/libc-2.11.1.so => 0x110000-0x263000
+: /usr/lib/libsp-rtrace1.so.1.0.0 => 0x27d000-0x281000
+: /lib/tls/i686/cmov/libpthread-2.11.1.so => 0x283000-0x298000
+: /lib/tls/i686/cmov/librt-2.11.1.so => 0x32e000-0x335000
+: /lib/tls/i686/cmov/libdl-2.11.1.so => 0x4f9000-0x4fb000
+: /usr/lib/sp-rtrace/libsp-rtrace-main.so.1.0.0 => 0x799000-0x79e000
+: /lib/tls/i686/cmov/libm-2.11.1.so => 0x806000-0x82a000
+: /lib/ld-2.11.1.so => 0xa9c000-0xab7000
+: /usr/lib/sp-rtrace/libsp-rtrace-memory.so.1.0.0 => 0xb93000-0xb95000
+: /lib/libgcc_s.so.1 => 0xd5a000-0xd77000
 : /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_context_test => 0x8048000-0x8049000
+# heap status information:
+#   heap bottom 0x9ce9000
+#   heap top 0x9d0a000
+#   lowest block 0x9ce9008
+#   highest block 0x9cf0600
+#   non-mapped space allocated from system 135168
+#   number of free chunks 1
+#   number of fastbin blocks 0
+#   number of mapped regions 0
+#   space in mapped regions 0
+#   maximum total allocated space 0
+#   space available in freed fastbin blocks 0
+#   total allocated space 30200
+#   total free space 104968
+#   top-most, releasable (via malloc_trim) space 104968
+# tracing module: [0] main (1.0)
+# tracing module: [1] memory (1.0)

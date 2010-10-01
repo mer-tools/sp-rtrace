@@ -241,50 +241,52 @@ dlist_node_t* dlist_foreach2_in(dlist_t* list, dlist_node_t* from,
 
 /**
  * List segment structure.
+ * 
  */
 typedef struct {
     dlist_node_t* head;
     dlist_node_t* tail;
 } segment_t;
 
-typedef struct {
-    dlist_node_t node;
-    int value;
-    char* name;
-} node_t;
-
-#define VALUE(x) ((node_t*)x)->value
-
 /**
- * Merge two segments
+ * Merge two segments.
+ * 
+ * Two sorted segments are merged so that the resulting segment is already sorted.
  */
 static void merge_segments(segment_t* segment1, segment_t* segment2, op_binary_t compare)
 {
     dlist_node_t* node1 = segment1->tail;
     dlist_node_t* node2 = segment2->tail;
 
+    /* concatenate segments: segment1+segment2 */
     segment1->head->next = segment2->tail;
     segment2->tail->prev = segment1->head;
 
     while (true) {
+    	/* find the next node in segment1 that is greater than the segment2:current node */
         while (compare(node1, node2) <= 0) {
             if (node1 == segment1->head) {
+            	/* if segment1 runs out of nodes, the merging is complete */
                 node1->next = node2;
                 node2->prev = node1;
                 return;
             }
             node1 = node1->next;
         }
+        /* insert the segment2:current node before the segment1:current node */
         if (node1 != segment1->tail) node1->prev->next = node2;
         node2->prev = node1->prev;
+        /* find the next node in segment 2 that is greater than the segment1:current node */
         while (compare(node2, node1) < 0) {
             if (node2 == segment2->head) {
+            	/* if segment2 runs out of nodes, the merging is complete */
                 node1->prev = node2;
                 node2->next = node1;
                 return;
             }
             node2 = node2->next;
         }
+        /* insert the segment2:current->prev node before segment1:current node */
         node1->prev = node2->prev;
         node1->prev->next = node1;
     }
@@ -301,6 +303,7 @@ static void dlist_sort_segment(segment_t* segment, op_binary_t compare)
     dlist_node_t* node1 = segment->tail;
     dlist_node_t* node2 = segment->tail;
 
+    /* find the middle node */
     while (node2 != segment->head) {
         node1 = node1->next;
         node2 = node2->next;
@@ -317,10 +320,11 @@ static void dlist_sort_segment(segment_t* segment, op_binary_t compare)
     dlist_sort_segment(&segment1, compare);
     dlist_sort_segment(&segment2, compare);
 
-    /* 'merge' the segments back */
+    /* set the new tail/head nodes for the segment */
     segment->tail = compare(segment1.tail, segment2.tail) <= 0 ? segment1.tail : segment2.tail;
     segment->head = compare(segment1.head, segment2.head) > 0 ? segment1.head : segment2.head;
 
+    /* merge the segments back */
     merge_segments(&segment1, &segment2, compare);
 }
 
@@ -332,6 +336,7 @@ void dlist_sort(dlist_t* list, op_binary_t compare)
     segment_t segment = {.head = list->head, .tail = list->tail};
     dlist_sort_segment(&segment, compare);
 
+    /* set the new tail/head nodes for the list */
     list->head = segment.head;
     list->head->next = NULL;
     list->tail = segment.tail;

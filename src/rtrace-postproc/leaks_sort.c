@@ -61,7 +61,7 @@ static long sort_leak(rd_ftrace_t* trace, leaks_sort_t* sdata)
 	ref->leak_size = 0;
 
 	dlist_foreach2(&trace->calls, (op_binary_t)count_leaks, (void*)ref);
-	dlist_add_sorted(sdata->sorted, ref, sdata->compare);
+	dlist_add(sdata->sorted, ref);
 	return 0;
 }
 
@@ -92,4 +92,5 @@ void leaks_sort(htable_t* htraces, dlist_t* sorted, op_binary_t compare)
 			.compare = compare,
 	};
 	htable_foreach2(htraces, (op_binary_t)sort_leak, (void*)&sort_data);
+	dlist_sort(sorted, compare);
 }

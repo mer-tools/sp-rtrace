@@ -40,7 +40,7 @@ proc check_log { command header_recs mmap_recs malloc_recs free_recs {trace_dept
 	set has_trace 0
 	eval spawn $command
 	expect {
-		-re {([^\r]+)\r\n} {
+		-re {(?n)([^\r]+)\r\n} {
 			set line $expect_out(1,string)
 			if { [regexp {^version.*, arch.*, time=[0-9]+\.[0-9]+\.[0-9]+ [0-9]+:[0-9]+:[0-9]+, .*process.*pid=[0-9]+,} $line] } {
 				set has_header [expr $has_header + 1]
@@ -67,7 +67,7 @@ proc check_log { command header_recs mmap_recs malloc_recs free_recs {trace_dept
 		}
 	}
 	exp_wait
-#	puts "HS:$has_header, MM:$has_mapping, FC+:$has_malloc, FC-:$has_free, BT:$has_trace"
+	#puts "HS:$has_header, MM:$has_mapping, FC+:$has_malloc, FC-:$has_free, BT:$has_trace"
 	if { $has_header < $header_recs } {
 		fail "check_log: expected at least $header_recs header records, got: $has_header"
 		return -1
@@ -81,7 +81,7 @@ proc check_log { command header_recs mmap_recs malloc_recs free_recs {trace_dept
 		return -1
 	}
 	if { $has_free < $free_recs } {
-		fail "check_log: expected at least $free_recs header records, got: $has_free"
+		fail "check_log: expected at least $free_recs free records, got: $has_free"
 		return -1
 	}
 	if { $trace_depth >= 0 && [expr $trace_depth * ($has_free + $has_malloc)] != $has_trace } {
@@ -118,7 +118,7 @@ proc test_startup { bt_depth args } {
 		return -1
 	}
 	# print to standard output and verify if it has at least minimum required records
-	if { [regexp "\-P\-" $args] } {
+	if { [regexp "\-P\-t" $args] } {
 		set rc [check_log "cat $log_file" 1 2 1 1 $bt_depth]
 	} else {
 		set rc [check_log "sp-rtrace-postproc -i$log_file" 1 2 1 1 $bt_depth]
@@ -223,7 +223,7 @@ proc test_toggle_trace { start mode options} {
 			return -1
 		}
 		lappend files $log_file
-		if { [regexp "\-P\-" $options] } {
+		if { [regexp "\-P\-t" $options] } {
 			set rc [check_log "cat $log_file" 1 2 1 1 10]
 		} else {
 			set rc [check_log "sp-rtrace-postproc -i$log_file" 1 2 1 1 10]
@@ -259,10 +259,10 @@ proc test_trace { args } {
 	}
 	
 	# startup tests with tracing enabled
-	if { [test_startup "" "" "-P-"] == 0 } {
+	if { [test_startup "" "" "-P-t"] == 0 } {
 		pass "application startup trace in normal mode with post-processing"
 	}
-	if { [test_startup "" "-m" "-P-"] == 0 } {
+	if { [test_startup "" "-m" "-P-t"] == 0 } {
 		pass "application startup trace in managed mode with post-processing"
 	}
 	if { [test_startup "" ""] == 0 } {
@@ -285,31 +285,31 @@ proc test_trace { args } {
 	if { [test_toggle_trace "-s" "-m" ""] == 0 } {
 		pass "trace toggle in managed mode when started with tracing enabled"
 	}
-	if { [test_toggle_trace "" "" "-P-"] == 0 } {
+	if { [test_toggle_trace "" "" "-P-t"] == 0 } {
 		pass "trace toggle in normal mode with post-processing when started with tracing disabled"
 	}
-	if { [test_toggle_trace "-s" "" "-P-"] == 0 } {
+	if { [test_toggle_trace "-s" "" "-P-t"] == 0 } {
 		pass "trace toggle in normal mode with post-processing when started with tracing enabled"
 	}
-	if { [test_toggle_trace "" "-m" "-P-"] == 0 } {
+	if { [test_toggle_trace "" "-m" "-P-t"] == 0 } {
 		pass "trace toggle in managed mode with post-processing when started with tracing disabled"
 	}
-	if { [test_toggle_trace "-s" "-m" "-P-"] == 0 } {
+	if { [test_toggle_trace "-s" "-m" "-P-t"] == 0 } {
 		pass "trace toggle in managed mode with post-processing when started with tracing enabled"
 	}
 	
 
 	# backtrace depth tests
-	if { [test_startup 0 "-b0" "-P-"] == 0 } {
+	if { [test_startup 0 "-b0" "-P-t"] == 0 } {
 		pass "backtrace depth setting: 0"
 	}
-	if { [test_startup 2 "-b2" "-P-"] == 0 } {
+	if { [test_startup 2 "-b2" "-P-t"] == 0 } {
 		pass "backtrace depth setting: 2"
 	}
-	if { [test_startup 4 "-b4" "-P-"] == 0 } {
+	if { [test_startup 4 "-b4" "-P-t"] == 0 } {
 		pass "backtrace depth setting: 4"
 	}
-	if { [test_startup 10 "-b20" "-P-"] == 0 } {
+	if { [test_startup 10 "-b20" "-P-t"] == 0 } {
 		pass "backtrace depth setting: 20"
 	}
 	
