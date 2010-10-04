@@ -1,30 +1,67 @@
 .TH RTRACE-TIMELINE 1 "2010-08-03" "sp-rtrace"
 .SH NAME
-rtrace-timeline - creates resource usage timeline graphs.
+rtrace-timeline - creates resource usage totals, activity and lifetime reports.
 .SH SYNOPSIS
-rtrace-timeline --type=lifetime|totals|usage [<options>] --in=<file> --out=<file>
+rtrace-timeline -t|-a|-l <options> [-i <infile>] [-o <outfile>]
 .SH DESCRIPTION
-Creates resource lifetime, totals and usage graphs.
-
-Lifetime graph displays life time for resources, starting
-with their allocation and ending with release.
-
-Totals graph displays resource allocation totals over the time.
-
-Usage graph displays resource allocation 'intensity' - the resource
-allocations per time slices.
+rtrace-timeline script is used to create resource allocation totals, 
+activity and lifetime reports:
+.RS
+.IP -t
+Totals report displays total resource usage during the time period.
+.IP -a
+Activity report displays resource allocation/deallocation activity per time
+slice during the time period. The activity values usually are plotted
+at slice/2 intervals.
+.IP -l
+Lifetime report displays resource 'life' from allocation time to
+deallocation time.
+.RE
 
 .SS Options:
 .TP 
-    \fI--slice\fP=<value>
-The time slice in milliseconds for the 'usage' report type. 
+\fI--slice\fP=<value> (\fI-s\fP <value>)
+The time slice in milliseconds for the activity report. By default 1/20th
+of the total time period (X axis range) is used. 
+.TP
+\fI--png\fP (\fI-p\fP)
+Generates png output file. By default postscript file is generated.
 .TP 
-\fI--plot\fP
-Specifies that gnuplot must be invoked automatically to generate graphs.
+\fI--in\fP=<filename> (\fI-i\fP <filename>)
+Specifies the input file name. By default the standard input is used.
 .TP 
-\fI--resources-per-page\fP=<value>
-Specifies the number of resources per page to display for 'lifetime'
-report type.
+\fI--out\fP=<filename> (\fI-o\fP <filename>)
+Specifies the output file name. By default the standard output is used.
+.TP
+\fI--filter-<type>\fP=<filter>
+Specifies input data filter. The filter <type> can be \fIsize\fP, \fIindex\fP or \fItime\fP
+while tile <filter> accepts a pair of values specifying the start/end
+constraints: [<start>]-[<end>]. If the start/end value is omitted the filter matches
+all values less than/greather than. The value syntax depends on the filter
+type:
+.RS
+.IP size)
+filters events by allocation size. The size parameter accepts postfix
+k or m, specifying kilobytes or megabytes. Size filter examples: 
+.nf
+  100-200  : from 100 to 200 bytes
+  10k-     : greater than 10 kbytes
+  -1m      : less than 1 mbyte
+.fi
+.IP index)
+filters events by their index.
+.IP time)
+filters events by allocation/deallocation timestamp. The timestamp format is
+[+][HH:][MM:][SS][.sss] where: HH - hours, MM - minutes, SS - seconds, sss - milliseconds
+and '+' specifies relative timestamp. Relative timestamps are counted either from 
+the report beginning (for filter start values) or from the first event passing 
+the other filters (for filter end values). Time filter examples:
+.nf
+  10.5-12       : from 10.5 seconds to 12 seconds
+  10:00-+30     : from 10 minutes to 10 minutes 30 seconds
+  +1:00-+1:00   : from 1 minute since log start to 1 minute duration 
+.fi
+.RE
 
 .SH SEE ALSO
 .IR rtrace-calltree
