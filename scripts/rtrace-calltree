@@ -521,12 +521,17 @@ class Rtrace:
                 fun = line
                 src = None
             else:
-                # function + src:line
                 fun = line[:pos]
-                match = self.gdb_src_pattern.match(line)
-                if not match:
-                    error_exit("line containing ' at ' doesn't match <src>:<line>:\n%s\n" % line)
-                src,linenro = match.groups()
+                if ':' in line[pos:]:
+                    # function + src:line
+                    match = self.gdb_src_pattern.match(line)
+                    if not match:
+                        error_exit("line containing ' at ' doesn't match <src>:<line>:\n'%s'\n" % line)
+                    src,linenro = match.groups()
+                else:
+                    # function + src
+                    src = line[pos+4:]
+                    linenro = ''
                 if src in joins:
                     return src
         fun = fun.strip()
