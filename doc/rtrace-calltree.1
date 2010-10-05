@@ -233,7 +233,7 @@ If you want to reduce node width without removing any of
 the information, just split the source code file name and
 line number to a separate line:
 .nf
-		-e 's/ at /\\\\nat /'
+		sed -e 's/ at /\\\\nat /' -e 's/ in /\\\\nin /'
 .fi
 .SH DEBUG OPTIONS
 .TP
