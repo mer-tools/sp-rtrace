@@ -587,18 +587,26 @@ class Rtrace:
         trace = []  # current backtrace
         sizes = []  # sizes for each alloc/free for current backtrace
         args = []   # different arguments merged for same backtrace
+        name = ""
         skip = False    # whether to skip rest of the current backtrace
         stack = False   # whether current alloc/free includes stack frames
         include = False # whether to include this backtrace
         for line in self.leaks:
             # new backtrace?
             if line[0] in "0123456789":
+                oldname = name
                 (name,size,addr) = self.get_name_size_addr(line)
+                if name != oldname:
+                    # backtrace is by default omitted from alloc frees,
+                    # but they still need to be handled and separated
+                    # from allocs following them
+                    stack = True
                 # backtrace stack frames collected for previous allocs/frees?
                 if stack:
                     if options.progress:
+                        # show parsing progress
                         debug(line[:line.find('.')])
-                    # there are alloc lines for this backtrace and
+                    # there are included alloc lines for this backtrace and
                     # it's marked for inclusion or all BTs are included?
                     if sizes and (include or not options.include):
                         if args:
