@@ -152,6 +152,9 @@
 # - Handle the new Gdb style sp-rtrace backtrace format
 # 2010-09-29:
 # - Option for specifying size range for included allocations
+# 2010-10-05:
+# - Fixes to parsing BFD resolved traces and traces with resource frees
+#   that don't have backtraces + '*' shortcut to --node option
 #
 # Originally this file (alloc-tree) was a part of libleaks package, but
 # renamed and moved to the sp-rtrace package during libleaks redesign.
@@ -245,12 +248,12 @@ class Node:
         debug(str(self.parents))
         debug("- Children:")
         debug(str(self.children))
-    
+
     def add_size_count(self, size, count):
         "add given size & count to node values"
         self.count += count
         self.size += size
-    
+
     def add_child(self, fun_name):
         "add given child to node"
         if fun_name not in self.children:
@@ -274,14 +277,14 @@ class Node:
             self.parents.remove(fun_name)
         else:
             error_exit("function '%s' not in node parents" % fun_name)
-    
+
     def add_trace(self, trace_id):
-        "add given trace id to node or return zero if it already was in"
+        "add given trace id to node or return False if it already was in"
         if trace_id not in self.traces:
             self.traces.append(trace_id)
-            return 1
+            return True
         else:
-            return 0
+            return False
 
 # ---------------- All items hash handling -------------------
 
@@ -303,6 +306,10 @@ class Graph:
         "print out Graph nodes (in readable format)"
         for name in nodes:
             if name not in self.nodes:
+                if name == '*':
+                    for node in self.nodes.itervalues():
+                        node.show()
+                    break
                 debug("Warning: node '%s' does not exist" % name)
                 continue
             self.nodes[name].show()
@@ -364,7 +371,7 @@ class Graph:
         "merge trace item to graph"
         #debug("DEBUG: merge '%s'" % trace[idx])
         node = self.nodes[trace[idx]]
-        # prevent size addition if this trace function is recursed
+        # prevent size&count addition if this trace function is recursed
         if node.add_trace(self.trace_id):
             node.add_size_count(size, count)
         else:
@@ -1466,7 +1473,15 @@ Options for report output type and looks:
         should use also --ignore-glib/gtk/qt-internals=yes.
 
 
-Additional options for reducing the amount of output data:
+Additional options for filtering which allocations information is
+included to the output data:
+
+    --size-range=[smallest]-[largest], values are sizes of the smallest
+        and largest allocations that will be included to the report.
+
+
+Additional options for reducing the number of backtrace items included
+to the output data:
 
     --limit=value,  value (0.1-100) is used with "graph" and
         "html" report types to limit the number of functions included
@@ -1489,9 +1504,6 @@ Additional options for reducing the amount of output data:
     --include-only=value, value is a string prefix for node names
        for backtraces that should be included into report.  All backtraces
        NOT containing a node name starting with this substring are ignored.
-
-    --size-range=[smallest]-[largest], values are sizes of the smallest
-        and largest allocations that will be included to the report.
 
     --ignore=value, value is a string prefix for node names which should be
         ignored in the backtraces.  Useful for making graphs more readable.
@@ -1538,19 +1550,20 @@ Additional options for reducing the amount of output data:
     --join=value, value is the name for the function, library or source
         code file which nodes should be represented as a single node.
 
-    --trace-args=yes, show trace function (1st) argument instead of its name.
-        This can be used e.g. to see file names in file descriptor traces.
-
     --intermediate=no, leave out nodes with only one parent and child.
 
     --leafs=no, leaves out nodes which have either:
         - one parent and no children, or
         - one child and no parents
 
+    --trace-args=yes, show trace function (1st) argument instead of its name.
+        This can be used e.g. to see file names in file descriptor traces.
+
 
 Debug options:
     
     --node=value -- shows internal information about given node.
+        '*' will show information about all nodes.
 
     --show-references=yes -- show what other nodes refer nodes
         specified with the above option.

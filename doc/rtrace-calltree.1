@@ -99,7 +99,15 @@ clustered together.
 .PP
 Note: this option is useless with recursive backtraces, for UI applications
 you should use also --ignore-glib/gtk/qt-internals=yes.
-.SH REPORT CONTENT FILTERING OPTIONS
+.SH OPTIONS FOR FILTERING INCLUDED ALLOCATIONS
+If you want to dig more into information provided by the timeline
+script and allocation histogram, you can select just a subset
+of the traced allocations to the report.  Options for doing that are:
+.TP
+\fB--size-range\fP=\fI[smallest]\fP-\fI[largest]\fP
+Values are sizes of the smallest and largest allocations that will
+be included to the report.
+.SH OPTIONS FOR FILTERING BACKTRACE CONTENT
 Programs doing a lot of allocations with complex backtraces produce
 so much data that you really cannot analyse it without reducing the
 amount of data.  Options for doing that are:
@@ -118,10 +126,6 @@ the amount of output, see the filtering options.
 \fB--show-below-limit\fP=\fIno\fP
 Do not show nodes summarizing how many called nodes were below
 the specified (or default) limit (see --limit option).
-.TP
-\fB--size-range\fP=\fI[smallest]\fP-\fI[largest]\fP
-Values are sizes of the smallest and largest allocations that will
-be included to the report.
 .TP
 \fB--stop\fP=\fIvalue\fP
 Value is a string prefix of node name where each backtrace parsing
@@ -196,16 +200,16 @@ applications.  You might want to try also these options:
 Value is the name for the function, library or source
 code file which nodes should be represented as a single node.
 .TP
-\fB--trace-args\fP=\fIyes\fP
-Show trace function (1st) argument instead of its name. This can be
-used e.g. to see file names in file descriptor traces.
-.TP
 \fB--intermediate\fP=\fIno\fP
 Leave out nodes with only one parent and child.
 .TP
 \fB--leafs\fP=\fIno\fP
 Leave out nodes which have either one parent and no children, or
 one child and no parents.
+.TP
+\fB--trace-args\fP=\fIyes\fP
+Show trace function (1st) argument instead of its name. This can be
+used e.g. to see file names in file descriptor traces.
 .PP
 Options --stop, --ignore, --include-only, --join and --cluster
 can be given as many times as you wish and they apply to all
@@ -216,7 +220,7 @@ To remove function and method arguments, pipe output through:
 .nf
 		sed -e 's/([^0-9)][^)]*)/()/' -e 's/)(.[^)]*)//'
 .fi
-To remove also source file names, add:
+To remove also source file names and line numbers, add:
 .nf
 		-e 's/ at [^ \\\\]*//'
 .fi
@@ -224,11 +228,18 @@ To remove also paths from the --trace-args file names, add:
 .nf
 		-e 's%/.*[^ ]/%%'
 .fi
+.PP
+If you want to reduce node width without removing any of
+the information, just split the source code file name and
+line number to a separate line:
+.nf
+		-e 's/ at /\\\\nat /'
+.fi
 .SH DEBUG OPTIONS
 .TP
 \fB--node\fP=\fIvalue\fP
 Show internal information about given node. This option can be given
-as many as times as needed.
+as many as times as needed. '*' will show information about all nodes.
 .TP
 \fB--progress\fP=\fIyes\fP
 Show running parsed alloc/free record index number.
