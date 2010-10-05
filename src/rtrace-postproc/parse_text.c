@@ -401,6 +401,8 @@ static void read_text_data(rd_t* rd, FILE* fp)
 
 	/* read and parse the rest of file */
 	while (fgets(line, sizeof(line), fp) && !postproc_abort) {
+		/* discard any temporary (starting with '# ') comments */
+		if (line[0] == '#' && line[1] == ' ') continue;
 		/* check if the line contains backtrace record */
 		if (dlist_first(&last_calls) && parse_backtrace(line, &bt[bt_index])) {
 			bt_index++;
@@ -497,6 +499,9 @@ static void read_text_data(rd_t* rd, FILE* fp)
 			continue;
 		}
 		/* otherwise assume that line contains comment record */
+		if (*line != '#') {
+			fprintf(stderr, "WARNING, unrecognized record, assuming it's a comment: %s", line);
+		}
 		rd_comment_t* comment = dlist_create_node(sizeof(rd_comment_t));
 		comment->index = comment_index;
 		/* strip the trailing LF character */

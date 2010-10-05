@@ -39,6 +39,8 @@ during post-processing and resolving.
    Comments usually start with '#' character for better recognition, but it's
    not a requirement. All lines, not recognized as other record types, will
    be interpreted as comments.
+   Comments where # is followed with ' ' (space) are treated as temporary
+   comments and discarded by the next post-processor run.
      <information>
    Where:
      <information> - any additional information reported by the tracing tool.

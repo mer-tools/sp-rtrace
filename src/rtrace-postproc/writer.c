@@ -51,7 +51,7 @@
  */
 static int write_module_info(rd_minfo_t* minfo, FILE* fp)
 {
-	TRY(formatter_printf(fp, "# tracing module: [%x] %s (%d.%d)\n", minfo->id, minfo->name, minfo->vmajor, minfo->vminor));
+	TRY(formatter_printf(fp, "## tracing module: [%x] %s (%d.%d)\n", minfo->id, minfo->name, minfo->vmajor, minfo->vminor));
 	return 0;
 }
 
@@ -132,9 +132,9 @@ static int write_compressed_function_call(ref_node_t* node, fmt_data_t* fmt)
 static int write_compressed_backtrace(ftrace_ref_t* trace, fmt_data_t* fmt)
 {
 	dlist_foreach2(&trace->ref->calls, (op_binary_t)write_compressed_function_call, fmt);
-	TRY(formatter_write_ftrace(trace->ref, fmt->fp));
-    TRY(formatter_printf(fmt->fp, "# allocation summary: %d block(s) with total size %d\n",
+	TRY(formatter_printf(fmt->fp, "# allocation summary: %d block(s) with total size %d\n",
             trace->leak_count, trace->leak_size));
+	TRY(formatter_write_ftrace(trace->ref, fmt->fp));
 	return 0;
 }
 
@@ -147,21 +147,21 @@ static int write_compressed_backtrace(ftrace_ref_t* trace, fmt_data_t* fmt)
  */
 static void write_heap_information(FILE* fp, rd_hinfo_t* hinfo)
 {
-	TRY(formatter_printf(fp, "# heap status information:\n"));
-	TRY(formatter_printf(fp, "#   heap bottom 0x%lx\n", hinfo->heap_bottom));
-	TRY(formatter_printf(fp, "#   heap top 0x%lx\n", hinfo->heap_top));
-	TRY(formatter_printf(fp, "#   lowest block 0x%lx\n", hinfo->lowest_block));
-	TRY(formatter_printf(fp, "#   highest block 0x%lx\n", hinfo->highest_block));
-	TRY(formatter_printf(fp, "#   non-mapped space allocated from system %d\n", hinfo->arena));
-	TRY(formatter_printf(fp, "#   number of free chunks %d\n", hinfo->ordblks));
-	TRY(formatter_printf(fp, "#   number of fastbin blocks %d\n", hinfo->smblks));
-	TRY(formatter_printf(fp, "#   number of mapped regions %d\n", hinfo->hblks));
-	TRY(formatter_printf(fp, "#   space in mapped regions %d\n", hinfo->hblkhd));
-	TRY(formatter_printf(fp, "#   maximum total allocated space %d\n", hinfo->usmblks));
-	TRY(formatter_printf(fp, "#   space available in freed fastbin blocks %d\n", hinfo->fsmblks));
-	TRY(formatter_printf(fp, "#   total allocated space %d\n", hinfo->uordblks));
-	TRY(formatter_printf(fp, "#   total free space %d\n", hinfo->fordblks));
-	TRY(formatter_printf(fp, "#   top-most, releasable (via malloc_trim) space %d\n", hinfo->keepcost));
+	TRY(formatter_printf(fp, "## heap status information:\n"));
+	TRY(formatter_printf(fp, "##   heap bottom 0x%lx\n", hinfo->heap_bottom));
+	TRY(formatter_printf(fp, "##   heap top 0x%lx\n", hinfo->heap_top));
+	TRY(formatter_printf(fp, "##   lowest block 0x%lx\n", hinfo->lowest_block));
+	TRY(formatter_printf(fp, "##   highest block 0x%lx\n", hinfo->highest_block));
+	TRY(formatter_printf(fp, "##   non-mapped space allocated from system %d\n", hinfo->arena));
+	TRY(formatter_printf(fp, "##   number of free chunks %d\n", hinfo->ordblks));
+	TRY(formatter_printf(fp, "##   number of fastbin blocks %d\n", hinfo->smblks));
+	TRY(formatter_printf(fp, "##   number of mapped regions %d\n", hinfo->hblks));
+	TRY(formatter_printf(fp, "##   space in mapped regions %d\n", hinfo->hblkhd));
+	TRY(formatter_printf(fp, "##   maximum total allocated space %d\n", hinfo->usmblks));
+	TRY(formatter_printf(fp, "##   space available in freed fastbin blocks %d\n", hinfo->fsmblks));
+	TRY(formatter_printf(fp, "##   total allocated space %d\n", hinfo->uordblks));
+	TRY(formatter_printf(fp, "##   total free space %d\n", hinfo->fordblks));
+	TRY(formatter_printf(fp, "##   top-most, releasable (via malloc_trim) space %d\n", hinfo->keepcost));
 }
 
 typedef struct {
