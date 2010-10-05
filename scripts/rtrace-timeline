@@ -617,50 +617,18 @@ class Processor:
 			self.refCount = 1
 	# /class Index
 			
-			
-	events = None
-	contexts = None
-	
-	def __init__(self):
-		self.events = {}
-		self.contexts = []
-	
-	def registerAlloc(self, index, context, timestamp, res_type, res_id, res_size):
-		"Registers resource allocation"
-		resource = res_type;
-		if resource is None:
-			resource = self.events.keys()[0]
-		if resource not in self.events:
-			print >> sys.stderr, "Unknown resource: %s" % resource
-			sys.exit(2)
-		self.events[resource].append(Event(Event.Types.ALLOC, index, context, timestamp, res_id, res_size))
+	parser = None		
+
+	def __init__(self, parser):
+		self.parser = parser
 		
-	def registerFree(self, index, context, timestamp, res_type, res_id):
-		"Registers resource deallocation"
-		resource = res_type;
-		if resource is None:
-			resource = self.events.keys()[0]
-		if resource not in self.events:
-			print >> sys.stderr, "Unknown resource: %s" % resource
-			sys.exit(2)
-		self.events[resource].append(Event(Event.Types.FREE, index, context, timestamp, res_id, 0))
-		
-	def registerContext(self, value, name):
-		"Registers context declaration"
-		self.contexts.append(Context(value, name))
+	def generateReport(self, stream):
+		plotter = Plotter(stream, Options.isPng and Plotter.PNG or Plotter.POSTSCRIPT)
+		self.writeReport(plotter)
 		
 	def writeReport(self, plotter):
 		"Writes the end report"
 		
-	def registerResource(self, resource):
-		"Registers tracked resource"
-		self.events[resource] = []
-
-	def sort(self):
-		for resource in self.events.keys():
-			self.events[resource] = sorted(self.events[resource], key = operator.attrgetter("index"))
-			self.events[resource] = sorted(self.events[resource], key = operator.attrgetter("timestamp"))
-			
 	def isEventInRange(self, event):
 		for filter in Options.filters:
 			if not filter.matchesEvent(event):
@@ -748,7 +716,10 @@ class LifetimeProcessor(Processor):
 	# /class Stats
 		
 	DETAILS_LIMIT = 20
-	
+
+	def getId(self):
+		return "lifetime"
+
 	def writeReport(self, plotter):
 		"Writes the end report"
 		xrangeMin = None
@@ -758,8 +729,8 @@ class LifetimeProcessor(Processor):
 		
 
 		totalAllocs = 0
-		for resource in self.events.keys():
-			for event in self.events[resource]:
+		for resource in self.parser.events.keys():
+			for event in self.parser.events[resource]:
 				if event.type == Event.Types.ALLOC and self.isEventInRange(event):
 					totalAllocs += 1
 
@@ -770,18 +741,18 @@ class LifetimeProcessor(Processor):
 		contexts = [Context(Context.MASK_ALL, "all allocations")]
 		if totalAllocs > self.DETAILS_LIMIT:
 			writer = self.ContextWriter(plotter)
-			if len(self.contexts) > 0:
+			if len(self.parser.contexts) > 0:
 				contexts.append(Context(Context.MASK_NONE, "no contexts"))
-				contexts.extend(self.contexts)
+				contexts.extend(self.parser.contexts)
 		else:
 			writer = self.EventWriter(plotter)
 			
 		stats = {}
 		
 		# iterate through registered resources
-		for resource in self.events.keys():
+		for resource in self.parser.events.keys():
 			# initialize resource statistics data
-			events = self.events[resource]
+			events = self.parser.events[resource]
 			# resource indexing map 
 			index = {}
 			stat = self.Stats()
@@ -909,7 +880,7 @@ class LifetimeProcessor(Processor):
 
 		# write summary data
 		resourceIndex = 2
-		for resource in self.events.keys():
+		for resource in self.parser.events.keys():
 			stat = stats[resource]
 			table.setText(resourceIndex, 0, resource, "left")
 			table.setText(resourceIndex, 1, "min", "center")
@@ -968,6 +939,9 @@ class ActivityProcessor(Processor):
 			self.peakFrees = self.Data()
 	# /class Stats
 
+	def getId(self):
+		return "activity"
+
 	def writeReport(self, plotter):
 		"Writes the end report"
 		yrangeMin = 0
@@ -982,8 +956,8 @@ class ActivityProcessor(Processor):
 		# calculate the activity time slice based on unfiltered X axis range
 		xrangeFullMax = 0
 		xrangeFullMin = sys.maxint
-		for resource in self.events.keys():
-			events = self.events[resource]
+		for resource in self.parser.events.keys():
+			events = self.parser.events[resource]
 			if events[-1].timestamp > xrangeFullMax:
 				xrangeFullMax = events[-1].timestamp
 			if events[0].timestamp < xrangeFullMin:
@@ -996,12 +970,12 @@ class ActivityProcessor(Processor):
 		
 
 		contexts = [Context(Context.MASK_ALL, "all allocations")]
-		if len(self.contexts) > 0:
+		if len(self.parser.contexts) > 0:
 			contexts.append(Context(Context.MASK_NONE, "no contexts"))
-			contexts.extend(self.contexts)
+			contexts.extend(self.parser.contexts)
 
 		# iterate through registered resources
-		for resource in self.events.keys():
+		for resource in self.parser.events.keys():
 			stat = self.Stats()
 			stats[resource] = stat
 
@@ -1011,7 +985,7 @@ class ActivityProcessor(Processor):
 			stat.peakFrees.file = plotter.createFile("%s-frees-peak.dat" % resource)
 
 			# initialize resource statistics data
-			events = self.events[resource]
+			events = self.parser.events[resource]
 			
 			step = slice.value / 2
 			if step < 1:
@@ -1134,7 +1108,7 @@ class ActivityProcessor(Processor):
 		yrangeMax = yrangeMax * 105 / 100	
 			
 		# iterate through registered resources to generate peak allocation data files
-		for resource in self.events.keys():
+		for resource in self.parser.events.keys():
 			timestamp = stats[resource].peakSize.timestamp
 			file = stats[resource].peakSize.file
 			file.create("%s (peak rate:%s)" % (resource, Timestamp.toString(timestamp)))
@@ -1195,7 +1169,7 @@ class ActivityProcessor(Processor):
 
 		# write summary data
 		resourceIndex = 2
-		for resource in self.events.keys():
+		for resource in self.parser.events.keys():
 			stat = stats[resource]
 			table.setText(resourceIndex, 0, resource, "left")
 			table.setText(resourceIndex, 1, "peak size", "center")
@@ -1263,6 +1237,9 @@ class TotalsProcessor(Processor):
 	# /class Stats
 	
 	overheadData = {"memory": 8}
+
+	def getId(self):
+		return "totals"
 		
 	def writeReport(self, plotter):
 		"Writes the end report"
@@ -1276,16 +1253,16 @@ class TotalsProcessor(Processor):
 		files = []
 
 		contexts = [Context(Context.MASK_ALL, "all allocations")]
-		if len(self.contexts) > 0:
+		if len(self.parser.contexts) > 0:
 			contexts.append(Context(Context.MASK_NONE, "no contexts"))
-			contexts.extend(self.contexts)
+			contexts.extend(self.parser.contexts)
 		
 		# iterate through registered resources
-		for resource in self.events.keys():
+		for resource in self.parser.events.keys():
 			stat = self.Stats()
 			stats[resource] = stat
 			#
-			events = self.events[resource]
+			events = self.parser.events[resource]
 
 			# initialize peak statistics data files
 			stat.peakFile = plotter.createFile("%s-peak.dat" % resource)
@@ -1386,7 +1363,7 @@ class TotalsProcessor(Processor):
 		yrangeMax = yrangeMax * 105 / 100	
 			
 		# iterate through registered resources to generate peak allocation data files
-		for resource in self.events.keys():
+		for resource in self.parser.events.keys():
 			file = stats[resource].peakFile
 			timestamp = stats[resource].peakTimestamp
 			file.create("%s (peak:%s)\n" % (resource, Timestamp.toString(timestamp)))
@@ -1449,7 +1426,7 @@ class TotalsProcessor(Processor):
 		
 		# write summary data
 		resourceIndex = 3
-		for resource in self.events.keys():
+		for resource in self.parser.events.keys():
 			stat = stats[resource]
 			table.setText(resourceIndex, 0, resource, "left")
 			table.setText(resourceIndex, 1, "peak", "center")
@@ -1491,8 +1468,12 @@ class Parser:
 	reResource = re.compile("\<([0-9a-z]+)\> : ([^ ]+) \(([^\)]+)\)")
 	reContext = re.compile("^\@ ([0-9a-fA-F]+) : (.*)$")
 	
-	def __init__(self, processor):
-		self.processor = processor
+	events = None
+	contexts = None
+	
+	def __init__(self):
+		self.events = {}
+		self.contexts = []
 		
 	def read(self, stream):
 		for line in stream:
@@ -1505,29 +1486,58 @@ class Parser:
 				context = match.group(2)
 				if context is None:
 					context = 0
-				self.processor.registerAlloc(int(match.group(1)), context, Timestamp.fromString(match.group(3)), match.group(4), match.group(6), int(match.group(5)))
+				self.registerAlloc(int(match.group(1)), context, Timestamp.fromString(match.group(3)), match.group(4), match.group(6), int(match.group(5)))
 				continue
 			match = self.reFree.match(line)
 			if match:
 				context = match.group(2)
 				if context is None:
 					context = 0
-				self.processor.registerFree(int(match.group(1)), context, Timestamp.fromString(match.group(3)), match.group(4), match.group(5))
+				self.registerFree(int(match.group(1)), context, Timestamp.fromString(match.group(3)), match.group(4), match.group(5))
 				continue
 			match = self.reResource.match(line)
 			if match:
-				self.processor.registerResource(match.group(2))
+				self.registerResource(match.group(2))
 				continue
 			match = self.reContext.match(line)
 			if match:
-				self.processor.registerContext(int(match.group(1), 16), match.group(2))
+				self.registerContext(int(match.group(1), 16), match.group(2))
 				continue
 			
+		# sort the events by timestamp/index
+		for resource in self.events.keys():
+			self.events[resource] = sorted(self.events[resource], key = operator.attrgetter("index"))
+			self.events[resource] = sorted(self.events[resource], key = operator.attrgetter("timestamp"))
 				
-	def write(self, stream):
-		self.processor.sort()
-		plotter = Plotter(stream, Options.isPng and Plotter.PNG or Plotter.POSTSCRIPT)
-		self.processor.writeReport(plotter)
+
+	def registerAlloc(self, index, context, timestamp, res_type, res_id, res_size):
+		"Registers resource allocation"
+		resource = res_type;
+		if resource is None:
+			resource = self.events.keys()[0]
+		if resource not in self.events:
+			print >> sys.stderr, "Unknown resource: %s" % resource
+			sys.exit(2)
+		self.events[resource].append(Event(Event.Types.ALLOC, index, context, timestamp, res_id, res_size))
+		
+	def registerFree(self, index, context, timestamp, res_type, res_id):
+		"Registers resource deallocation"
+		resource = res_type;
+		if resource is None:
+			resource = self.events.keys()[0]
+		if resource not in self.events:
+			print >> sys.stderr, "Unknown resource: %s" % resource
+			sys.exit(2)
+		self.events[resource].append(Event(Event.Types.FREE, index, context, timestamp, res_id, 0))
+		
+	def registerContext(self, value, name):
+		"Registers context declaration"
+		self.contexts.append(Context(value, name))
+		
+	def registerResource(self, resource):
+		"Registers tracked resource"
+		self.events[resource] = []
+
 		
 # /class Parser	
 	
@@ -1553,7 +1563,7 @@ class Options:
 	
 	mode = Modes.NONE
 	streamIn = sys.stdin
-	streamOut = sys.stdout
+	outFilename= None
 	slice = 0
 	
 	isPng = False
@@ -1580,26 +1590,24 @@ class Options:
 			Options.displayUsage()
 			sys.exit(2)
 		
-		parser = None;
+		parser = Parser()
+		processors = []
 		
 		for opt, val in opts:
 			if opt == "-t" or opt == "--totals":
-				Options.mode = Options.Modes.TOTALS
-				parser = Parser(TotalsProcessor())
+				processors.append(TotalsProcessor(parser))
 				
 			if opt == "-l" or opt == "--lifetime":
-				Options.mode = Options.Modes.LIFETIME
-				parser = Parser(LifetimeProcessor())
+				processors.append(LifetimeProcessor(parser))
 				
 			if opt == "-a" or opt == "--activity":
-				Options.mode = Options.Modes.ACTIVITY
-				parser = Parser(ActivityProcessor())
+				processors.append(ActivityProcessor(parser))
 				
 			if opt == "-i" or opt == "--in":
 				Options.streamIn = open(val, "r")
 				
 			if opt == "-o" or opt == "--out":
-				Options.streamOut = open(val, "w")
+				Options.outFilename = val
 			
 			if opt == "-s" or opt == "--slice":
 				Options.slice = int(val)
@@ -1648,12 +1656,12 @@ class Options:
 					Options.filters.append(MaxIndexFilter(max))
 				
 				
-		if parser is None:
+		if len(processors) is None:
 			print >> sys.stderr, "No report type specified."
 			Options.displayUsage()
 			sys.exit(2)
 			
-		return parser
+		return parser, processors
 			
 	def parseSize(text):
 		if text == "":
@@ -1722,7 +1730,11 @@ Usage:
 	                         10:00-+30     : from 10 minutes to 10 minutes 30 seconds
 	                         +1:00-+1:00   : from 1 minute since log start to 1 minute duration 
 	                        
-	                       
+    Note that it's possible to generate multiple reports at the same time by specifying more
+    than one report generation option (-t, -l -a). In this mode output file (-o) should be
+    always specified and the report filenames will have the follwing format:
+    <filename>-<report type>.<extension> where <filename>.<extension> is the specified output
+    file and <report type> is totals, activity or lifetime respectively.	                       
 """
 
 		
@@ -1737,8 +1749,22 @@ Usage:
 #
 # main()
 #
-parser = Options.parse(sys.argv[1:])
-parser.read(Options.streamIn)
-parser.write(Options.streamOut)
+parser, processors = Options.parse(sys.argv[1:])
+if Options.outFilename is None and len(processors) > 1:
+	print >> sys.stderr, "Standard output can be used only for a single report type"
+	Options.displayUsage()
+	sys.exit(2)	
 
+
+parser.read(Options.streamIn)
+
+streamOut = sys.stdout
+id = ""
+for proc in processors:
+	if Options.outFilename is not None:
+		filename = os.path.splitext(Options.outFilename)
+		if len(processors) > 1:
+			id = "-%s" % proc.getId()
+		streamOut = open("%s%s%s" % (filename[0], id, filename[1]), "w");
+	proc.generateReport(streamOut)
 

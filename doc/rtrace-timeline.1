@@ -18,6 +18,12 @@ Lifetime report displays resource 'life' from allocation time to
 deallocation time.
 .RE
 
+Note that it's possible to generate multiple reports at the same time by specifying more
+than one report generation option (-t, -l -a). In this mode output file (-o) should be
+always specified and the report filenames will have the follwing format:
+<filename>-<report type>.<extension> where <filename>.<extension> is the specified output
+file and <report type> is totals, activity or lifetime respectively.	                       
+
 .SS Options:
 .TP 
 \fI--slice\fP=<value> (\fI-s\fP <value>)
