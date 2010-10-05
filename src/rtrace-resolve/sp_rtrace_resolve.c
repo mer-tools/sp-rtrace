@@ -54,6 +54,7 @@
 #include <libiberty.h>
 #include <stdbool.h>
 #include <signal.h>
+#include <string.h>
 
 #include "common/utils.h"
 #include "common/rtrace_data.h"
@@ -238,7 +239,7 @@ static void mmap_resolve_address_file(rs_mmap_t* mmap, rs_cache_t* rs)
 		else {
 			if (n == 2) resolved_name[strlen(resolved_name) - 1] = '\0';
 			if (fputs(rs_resolve_address(rs, address, resolved_name), mmap->fout) == EOF) {
-				fprintf(stderr, "ERROR: while writing resolved data to file, disk full?\n");
+				fprintf(stderr, "ERROR: while writing resolved data to index file (%s)\n", strerror(errno));
 				exit (-1);
 			}
 		}
@@ -294,7 +295,10 @@ static void do_resolve(FILE *fpin, FILE *fpout)
 				int index = parse_backtrace_index(line, &rs);
 				/* backtrace record with memory mapping, index it */
 				if (index >= 0) {
-					fprintf(findex, "^%d\n", index);
+					if (fprintf(findex, "^%d\n", index) == 0) {
+						fprintf(stderr, "ERROR: while writing index data to file (%s)\n", strerror(errno));
+						exit (-1);
+					}
 					continue;
 				}
 				pout = line;
@@ -312,7 +316,7 @@ static void do_resolve(FILE *fpin, FILE *fpout)
 			if (resolver_abort) return;
 			parse_index_record(line, &rs);
 			if (fputs(line, fpout) == EOF) {
-				fprintf(stderr, "ERROR: while writing assembled data to file, disk full?\n");
+				fprintf(stderr, "ERROR: while writing assembled data to file (%s)\n", strerror(errno));
 				exit (-1);
 			}
 		}
@@ -329,7 +333,10 @@ static void do_resolve(FILE *fpin, FILE *fpout)
 			pout = parse_mmap_record(line, &rs);
 			if (!pout) pout = parse_backtrace_record(line, &rs);
 			if (!pout) pout = line;
-			fputs(pout, fpout);
+			if (fputs(pout, fpout) == EOF) {
+				fprintf(stderr, "ERROR: while writing resolved data to file (%s)\n", strerror(errno));
+				exit (-1);
+			}
 		}
 	}
 	rs_cache_free(&rs);

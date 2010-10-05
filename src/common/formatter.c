@@ -45,21 +45,21 @@ int formatter_write_header(const formatter_header_t* header, FILE* fp)
 	}
 	buffer[size++] = '\n';
 	buffer[size] = '\0';
-	fputs(buffer, fp);
+	if (fputs(buffer, fp) == EOF) return -errno;
 	return 0;
 }
 
 
 int formatter_write_mmap(const rd_mmap_t* mmap, FILE* fp)
 {
-	fprintf(fp, ": %s => 0x%lx-0x%lx\n", mmap->module, mmap->from, mmap->to);
+	if (fprintf(fp, ": %s => 0x%lx-0x%lx\n", mmap->module, mmap->from, mmap->to) == 0) return -errno;
 	return 0;
 }
 
 
 int formatter_write_comment(const rd_comment_t* comment, FILE* fp)
 {
-	fputs(comment->text, fp);
+	if (fputs(comment->text, fp) == EOF) return -errno;
 	return 0;
 }
 
@@ -92,7 +92,7 @@ int formatter_write_fcall(const rd_fcall_t*  call, FILE* fp)
 		ptr += sprintf(ptr, "(0x%lx)", call->res_id);
 	}
 	*ptr++ = '\n';
-	fwrite(buffer, 1, ptr - buffer, fp);
+	if (fwrite(buffer, 1, ptr - buffer, fp) < ptr - buffer) return -errno;
 	return 0;
 }
 
@@ -107,22 +107,22 @@ int formatter_write_ftrace(const rd_ftrace_t* trace, FILE* fp)
 			ptr += sprintf(ptr, " %s", trace->resolved_names[i]);
 		}
 		*ptr++ = '\n';
-		fwrite(buffer, 1, ptr - buffer, fp);
+		if (fwrite(buffer, 1, ptr - buffer, fp) < ptr - buffer) return -errno;
 	}
-	fputc('\n', fp);
+	if (fputc('\n', fp) == EOF) return -errno;
 	return 0;
 }
 
 
 int formatter_write_context(const rd_context_t* context, FILE* fp)
 {
-	fprintf(fp, "@ %x : %s\n", (int)context->id, context->name);
+	if (fprintf(fp, "@ %x : %s\n", (int)context->id, context->name) == 0) return -errno;
 	return 0;
 }
 
 int formatter_write_resource(const rd_resource_t* resource, FILE* fp)
 {
-	fprintf(fp, "<%x> : %s (%s)\n", 1 << ((int)resource->id - 1), resource->type, resource->desc);
+	if (fprintf(fp, "<%x> : %s (%s)\n", 1 << ((int)resource->id - 1), resource->type, resource->desc) == 0) return -errno;
 	return 0;
 }
 
@@ -132,7 +132,7 @@ int formatter_write_fargs(const rd_fargs_t* args, FILE* fp)
 	int index = 1;
 
 	while (*ptr) {
-		fprintf(fp, "\t$%d = %s\n", index++, *ptr++);
+		if (fprintf(fp, "\t$%d = %s\n", index++, *ptr++) == 0) return -errno;
 	}
 	return 0;
 }
@@ -145,7 +145,8 @@ int formatter_printf(FILE* fp, const char* format, ...)
 {
 	va_list args;
 	va_start(args, format);
-	vfprintf(fp, format, args);
+	int rc = vfprintf(fp, format, args);
 	va_end(args);
+	if (rc == 0) return -errno;
 	return 0;
 }

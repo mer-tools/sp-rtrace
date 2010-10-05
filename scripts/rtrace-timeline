@@ -218,7 +218,7 @@ class MinSizeFilter(Filter):
 		self.value = value
 		
 	def matchesEvent(self, event):
-		return event.res_size == 0 or event.res_size >= self.value
+		return event.type == Event.Types.FREE or event.res_size >= self.value
 # /class MinSizeFilter		
 
 
@@ -232,7 +232,7 @@ class MaxSizeFilter(Filter):
 		self.value = value
 		
 	def matchesEvent(self, event):
-		return event.res_size == 0 or event.res_size <= self.value
+		return event.type == Event.Types.FREE or event.res_size <= self.value
 # /class MaxSizeFilter		
 
 
@@ -589,6 +589,10 @@ class Plotter:
 		for file in self.files:
 			file.remove();
 			
+	def setKey(self, key):
+		self.file.write("set key %s\n" % key)
+
+		
 # /class Plotter	
 
 
@@ -830,20 +834,21 @@ class LifetimeProcessor(Processor):
 							continue
 						ievent = index[event.res_id]
 						ievent.refCount -= 1
-
-						file = writer.prepareEvent(resource, event)
-						file.write(ievent.event.timestamp, size)
-						file.write(event.timestamp, size)
-						file.writeSeparator()
-						writer.flushEvent()
-
-						del index[event.res_id]
+						
+						if ievent.refCount == 0:
+							file = writer.prepareEvent(resource, ievent.event)
+							file.write(ievent.event.timestamp, ievent.event.res_size)
+							file.write(event.timestamp, ievent.event.res_size)
+							file.writeSeparator()
+							writer.flushEvent()
+	
+							del index[event.res_id]
 	
 				if xrangeMax == xrangeMin:
 					xrangeMax += 1
 				# plot all unallocated resources					
 				for res_id, ievent in index.iteritems():
-					file = writer.prepareEvent(resource, event)
+					file = writer.prepareEvent(resource, ievent.event)
 					file.write(ievent.event.timestamp, ievent.event.res_size)
 					file.write(xrangeMax, ievent.event.res_size)
 					file.writeSeparator()
@@ -857,12 +862,12 @@ class LifetimeProcessor(Processor):
 				if totals % 2 == 0:
 					statMedian = (statMedian + allocs[totals / 2]) / 2
 					
-				file = plotter.createFile("%s-%s-average" % (resource, context.name), "%s (average:%d)" % (resource, statAverage))
+				file = plotter.createFile("%s-%x-average" % (resource, context.value), "%s (average:%d)" % (resource, statAverage))
 				plotter.addGraph(file, "1", "2", "column(2)")
 				file.write(xrangeMin, statAverage)
 				file.write(xrangeMax, statAverage)
 				file.close();
-				file = plotter.createFile("%s-%s-median" % (resource, context.name), "%s (median:%d)" % (resource, statMedian))
+				file = plotter.createFile("%s-%x-median" % (resource, context.value), "%s (median:%d)" % (resource, statMedian))
 				plotter.addGraph(file, "1", "2", "column(2)")
 				file.write(xrangeMin, statMedian)
 				file.write(xrangeMax, statMedian)
@@ -926,9 +931,12 @@ class LifetimeProcessor(Processor):
 			bmargin = 9 + table.rows
 		if bmargin < 15:
 			bmargin = 15
+			
+		#if totalAllocs < self.DETAILS_LIMIT and bmargin < totalAllocs + 5:
+
+		plotter.setKey("right outside")
 		plotter.setBMargin(bmargin)
-			
-			
+
 		plotter.plot()
 	
 
@@ -1059,8 +1067,8 @@ class ActivityProcessor(Processor):
 										ievent.refCount -= 1
 										if ievent.refCount <= 0:
 											del index[event.res_id]
-										frees +=1
-										sliceEvents.append(event)
+											frees +=1
+											sliceEvents.append(event)
 						
 							event = it.next()
 						

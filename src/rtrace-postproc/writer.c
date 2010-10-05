@@ -34,6 +34,14 @@
 
 #include "common/formatter.h"
 
+#define TRY(x) {\
+	int rc = x;\ 
+	if (rc < 0) {\
+		fprintf(stderr, "Error while writing output data (%s)\n", strerror(-rc));\
+		exit (-1);\
+	}\
+}
+
 /**
  * Writes module information log record into text log.
  *
@@ -43,7 +51,7 @@
  */
 static int write_module_info(rd_minfo_t* minfo, FILE* fp)
 {
-	formatter_printf(fp, "# tracing module: [%x] %s (%d.%d)\n", minfo->id, minfo->name, minfo->vmajor, minfo->vminor);
+	TRY(formatter_printf(fp, "# tracing module: [%x] %s (%d.%d)\n", minfo->id, minfo->name, minfo->vmajor, minfo->vminor));
 	return 0;
 }
 
@@ -79,9 +87,9 @@ static int write_function_call(rd_fcall_t* call, fmt_data_t* fmt)
 	}
 
 	/* then write the function call itself */
-	formatter_write_fcall(call, fmt->fp);
-	if (call->args) formatter_write_fargs(call->args, fmt->fp);
-	if (call->trace) formatter_write_ftrace(call->trace, fmt->fp);
+	TRY(formatter_write_fcall(call, fmt->fp));
+	if (call->args) TRY(formatter_write_fargs(call->args, fmt->fp));
+	if (call->trace) TRY(formatter_write_ftrace(call->trace, fmt->fp));
 	return 0;
 }
 
@@ -105,8 +113,8 @@ static int write_compressed_function_call(ref_node_t* node, fmt_data_t* fmt)
 	}
 
 	/* then write the function call itself */
-	formatter_write_fcall(call, fmt->fp);
-	if (call->args) formatter_write_fargs(call->args, fmt->fp);
+	TRY(formatter_write_fcall(call, fmt->fp));
+	if (call->args) TRY(formatter_write_fargs(call->args, fmt->fp));
 	return 0;
 }
 
@@ -124,9 +132,9 @@ static int write_compressed_function_call(ref_node_t* node, fmt_data_t* fmt)
 static int write_compressed_backtrace(ftrace_ref_t* trace, fmt_data_t* fmt)
 {
 	dlist_foreach2(&trace->ref->calls, (op_binary_t)write_compressed_function_call, fmt);
-	formatter_write_ftrace(trace->ref, fmt->fp);
-    formatter_printf(fmt->fp, "# allocation summary: %d block(s) with total size %d\n",
-            trace->leak_count, trace->leak_size);
+	TRY(formatter_write_ftrace(trace->ref, fmt->fp));
+    TRY(formatter_printf(fmt->fp, "# allocation summary: %d block(s) with total size %d\n",
+            trace->leak_count, trace->leak_size));
 	return 0;
 }
 
@@ -139,21 +147,21 @@ static int write_compressed_backtrace(ftrace_ref_t* trace, fmt_data_t* fmt)
  */
 static void write_heap_information(FILE* fp, rd_hinfo_t* hinfo)
 {
-	formatter_printf(fp, "# heap status information:\n");
-	formatter_printf(fp, "#   heap bottom 0x%lx\n", hinfo->heap_bottom);
-	formatter_printf(fp, "#   heap top 0x%lx\n", hinfo->heap_top);
-	formatter_printf(fp, "#   lowest block 0x%lx\n", hinfo->lowest_block);
-	formatter_printf(fp, "#   highest block 0x%lx\n", hinfo->highest_block);
-	formatter_printf(fp, "#   non-mapped space allocated from system %d\n", hinfo->arena);
-	formatter_printf(fp, "#   number of free chunks %d\n", hinfo->ordblks);
-	formatter_printf(fp, "#   number of fastbin blocks %d\n", hinfo->smblks);
-	formatter_printf(fp, "#   number of mapped regions %d\n", hinfo->hblks);
-	formatter_printf(fp, "#   space in mapped regions %d\n", hinfo->hblkhd);
-	formatter_printf(fp, "#   maximum total allocated space %d\n", hinfo->usmblks);
-	formatter_printf(fp, "#   space available in freed fastbin blocks %d\n", hinfo->fsmblks);
-	formatter_printf(fp, "#   total allocated space %d\n", hinfo->uordblks);
-	formatter_printf(fp, "#   total free space %d\n", hinfo->fordblks);
-	formatter_printf(fp, "#   top-most, releasable (via malloc_trim) space %d\n", hinfo->keepcost);
+	TRY(formatter_printf(fp, "# heap status information:\n"));
+	TRY(formatter_printf(fp, "#   heap bottom 0x%lx\n", hinfo->heap_bottom));
+	TRY(formatter_printf(fp, "#   heap top 0x%lx\n", hinfo->heap_top));
+	TRY(formatter_printf(fp, "#   lowest block 0x%lx\n", hinfo->lowest_block));
+	TRY(formatter_printf(fp, "#   highest block 0x%lx\n", hinfo->highest_block));
+	TRY(formatter_printf(fp, "#   non-mapped space allocated from system %d\n", hinfo->arena));
+	TRY(formatter_printf(fp, "#   number of free chunks %d\n", hinfo->ordblks));
+	TRY(formatter_printf(fp, "#   number of fastbin blocks %d\n", hinfo->smblks));
+	TRY(formatter_printf(fp, "#   number of mapped regions %d\n", hinfo->hblks));
+	TRY(formatter_printf(fp, "#   space in mapped regions %d\n", hinfo->hblkhd));
+	TRY(formatter_printf(fp, "#   maximum total allocated space %d\n", hinfo->usmblks));
+	TRY(formatter_printf(fp, "#   space available in freed fastbin blocks %d\n", hinfo->fsmblks));
+	TRY(formatter_printf(fp, "#   total allocated space %d\n", hinfo->uordblks));
+	TRY(formatter_printf(fp, "#   total free space %d\n", hinfo->fordblks));
+	TRY(formatter_printf(fp, "#   top-most, releasable (via malloc_trim) space %d\n", hinfo->keepcost));
 }
 
 typedef struct {
@@ -163,9 +171,9 @@ typedef struct {
 
 static void write_leaks(rd_resource_t* res, leaks_t* leaks)
 {
-	formatter_printf(leaks->fp, "# Resource - %s (%s):\n", res->type, res->desc);
+	TRY(formatter_printf(leaks->fp, "# Resource - %s (%s):\n", res->type, res->desc));
 	int index = ffs(res->id) - 1;
-	formatter_printf(leaks->fp, "# %d block(s) leaked with total size of %d bytes\n", leaks->leaks[index].count, leaks->leaks[index].total_size);
+	TRY(formatter_printf(leaks->fp, "# %d block(s) leaked with total size of %d bytes\n", leaks->leaks[index].count, leaks->leaks[index].total_size));
 
 }
 
@@ -201,7 +209,7 @@ void write_trace_environment(fmt_data_t* fmt)
 			{.key = NULL, .value = NULL}
 	};
 	/* write header data */
-	formatter_write_header(header, fmt->fp);
+	TRY(formatter_write_header(header, fmt->fp));
 
 	/* write heap information if exists */
 	if (fmt->rd->hinfo) write_heap_information(fmt->fp, fmt->rd->hinfo);
