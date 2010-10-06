@@ -393,6 +393,8 @@ typedef struct rd_t {
 	rd_hinfo_t* hinfo;
 	/* resource registry */
 	dlist_t resources;
+	/* mask of applied filters */
+	unsigned int filter;
 } rd_t;
 
 

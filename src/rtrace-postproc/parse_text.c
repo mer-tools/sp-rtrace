@@ -27,6 +27,7 @@
 #include <limits.h>
 
 #include "common/sp_rtrace_proto.h"
+#include "common/header.h"
 #include "sp_rtrace_postproc.h"
 
 #include "parse_text.h"
@@ -39,11 +40,8 @@
  * @param[in] rd     the resource trace data.
  * @param[in] line   the trace log header.
  */
-static void parse_header(rd_t* rd, char* line)
+static void parse_header(rd_t* rd, const char* line)
 {
-	char* ptr = line;
-	char key[128], value[512];
-
 	/* create handshake and process info packets which are construed
 	 * from header data.
 	 * TODO: Add endianness & pointer size data to header ?
@@ -51,42 +49,41 @@ static void parse_header(rd_t* rd, char* line)
 	rd->hshake = calloc_a(1, sizeof(rd_hshake_t));
 	rd->pinfo = calloc_a(1, sizeof(rd_pinfo_t));
 
-	while (ptr && *ptr) {
-		if (sscanf(ptr, "%[^=]=%[^,]", key, value) == 2) {
-			if (!strcmp(key, SP_RTRACE_FORMATTER_HEADER_VERSION)) {
-				int vmajor, vminor;
-				if (sscanf(value, "%d.%d", &vmajor, &vminor) == 2) {
-					rd->hshake->vmajor = vmajor;
-					rd->hshake->vminor = vminor;
-				}
-			}
-			else if (!strcmp(key, SP_RTRACE_FORMATTER_HEADER_ARCH)) {
-				rd->hshake->arch = strdup_a(value);
-			}
-			else if (!strcmp(key, SP_RTRACE_FORMATTER_HEADER_TIMESTAMP)) {
-				struct tm tm = {.tm_isdst = daylight};
-				if (sscanf(value, "%d.%d.%d %d:%d:%d", &tm.tm_year, &tm.tm_mon, &tm.tm_mday,
-						&tm.tm_hour, &tm.tm_min, &tm.tm_sec) == 6) {
-					tm.tm_year -= 1900;
-					tm.tm_mon--;
-					rd->pinfo->timestamp.tv_sec = mktime(&tm);
-					rd->pinfo->timestamp.tv_usec = 0;
-				}
-			}
-			else if (!strcmp(key, SP_RTRACE_FORMATTER_HEADER_PROCESS)) {
-				rd->pinfo->name = strdup_a(value);
-			}
-			else if (!strcmp(key, SP_RTRACE_FORMATTER_HEADER_PID)) {
-				rd->pinfo->pid = atoi(value);
-			}
-		}
-		/* move cursor to the next key=value pair */
-		ptr = strchr(ptr, ',');
-		if (ptr) {
-			ptr++;
-			while (*ptr == ' ') ptr++;
+	header_t header;
+	header_read(&header, line);
+	
+	if (header.fields[HEADER_VERSION]) {
+		int vmajor, vminor;
+		if (sscanf(header.fields[HEADER_VERSION], "%d.%d", &vmajor, &vminor) == 2) {
+			rd->hshake->vmajor = vmajor;
+			rd->hshake->vminor = vminor;
 		}
 	}
+	if (header.fields[HEADER_ARCH]) {
+		rd->hshake->arch = strdup_a(header.fields[HEADER_ARCH]);
+	}
+
+	if (header.fields[HEADER_TIMESTAMP]) {
+		struct tm tm = {.tm_isdst = daylight};
+		if (sscanf(header.fields[HEADER_TIMESTAMP], "%d.%d.%d %d:%d:%d", &tm.tm_year, &tm.tm_mon, &tm.tm_mday,
+				&tm.tm_hour, &tm.tm_min, &tm.tm_sec) == 6) {
+			tm.tm_year -= 1900;
+			tm.tm_mon--;
+			rd->pinfo->timestamp.tv_sec = mktime(&tm);
+			rd->pinfo->timestamp.tv_usec = 0;
+		}
+	}
+
+	if (header.fields[HEADER_PROCESS]) {
+		rd->pinfo->name = strdup_a(header.fields[HEADER_PROCESS]);
+	}
+	if (header.fields[HEADER_PID]) {
+		rd->pinfo->pid = atoi(header.fields[HEADER_PID]);
+	}
+	if (header.fields[HEADER_FILTER]) {
+		rd->filter = header_get_filter(&header);
+	}
+	header_free(&header);
 }
 
 /**

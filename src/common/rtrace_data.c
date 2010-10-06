@@ -187,7 +187,8 @@ rd_t* rd_create()
 	rd->hshake = NULL;
 	rd->pinfo = NULL;
 	rd->hinfo = NULL;
-
+	
+	rd->filter = 0;
 	return rd;
 }
 

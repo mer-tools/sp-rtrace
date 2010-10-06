@@ -33,9 +33,10 @@
 #include "sp_rtrace_postproc.h"
 
 #include "common/formatter.h"
+#include "common/header.h"
 
 #define TRY(x) {\
-	int rc = x;\ 
+	int rc = x;\
 	if (rc < 0) {\
 		fprintf(stderr, "Error while writing output data (%s)\n", strerror(-rc));\
 		exit (-1);\
@@ -199,17 +200,26 @@ void write_trace_environment(fmt_data_t* fmt)
 	struct tm* tm = localtime(&fmt->rd->pinfo->timestamp.tv_sec);
 	sprintf(timestamp, "%d.%d.%d %02d:%02d:%02d", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
 
-	/* initialize header data structure */
-	formatter_header_t header[] = {
-			{.key = SP_RTRACE_FORMATTER_HEADER_VERSION, .value = version},
-			{.key = SP_RTRACE_FORMATTER_HEADER_ARCH, .value = fmt->rd->hshake->arch},
-			{.key = SP_RTRACE_FORMATTER_HEADER_TIMESTAMP, .value = timestamp},
-			{.key = SP_RTRACE_FORMATTER_HEADER_PROCESS, .value = fmt->rd->pinfo->name},
-			{.key = SP_RTRACE_FORMATTER_HEADER_PID, .value = spid},
-			{.key = NULL, .value = NULL}
+	header_t header =  {
+			.fields = { 
+					version,                // HEADER_VERSION
+					fmt->rd->hshake->arch,  // HEADER_ARCH 
+					timestamp,              // HEADER_TIMESTAMP
+					fmt->rd->pinfo->name,   // HEADER_PROCESS
+					spid,                   // HEADER_PID
+					NULL                    // HEADER_FILTER
+			},
 	};
+	unsigned int filter = fmt->rd->filter;
+	/* reset filter mask by leaving only permanent filters (leaks, resolve) */ 
+	filter &= (FILTER_MASK_RESET);
+	/* set filter mask according to options */
+	if (postproc_options.compress) filter |= FILTER_MASK_COMPRESS;
+	if (postproc_options.filter_leaks) filter |= FILTER_MASK_LEAKS;
+	header_set_filter(&header, filter);
+	
 	/* write header data */
-	TRY(formatter_write_header(header, fmt->fp));
+	TRY(formatter_write_header(&header, fmt->fp));
 
 	/* write heap information if exists */
 	if (fmt->rd->hinfo) write_heap_information(fmt->fp, fmt->rd->hinfo);

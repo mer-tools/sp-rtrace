@@ -39,26 +39,7 @@
 #include <stdarg.h>
 
 #include "rtrace_data.h"
-
-
-#define SP_RTRACE_FORMATTER_HEADER_VERSION         "version"
-#define SP_RTRACE_FORMATTER_HEADER_ARCH            "arch"
-#define SP_RTRACE_FORMATTER_HEADER_TIMESTAMP       "time"
-#define SP_RTRACE_FORMATTER_HEADER_PROCESS         "process"
-#define SP_RTRACE_FORMATTER_HEADER_PID             "pid"
-
-/**
- * The report header key-value pair.
- *
- * The report header consists of a set of key=value pairs.
- * This structure is used to store the header information.
- */
-typedef struct {
-	const char* key;
-	const char* value;
-} formatter_header_t;
-
-
+#include "header.h"
 
 /**
  * Writes the log header consisting of key=value pairs.
@@ -67,7 +48,7 @@ typedef struct {
  * @param[in] fp      the output stream.
  * @return            0 - success.
  */
-int formatter_write_header(const formatter_header_t* header, FILE* fp);
+int formatter_write_header(const header_t* header, FILE* fp);
 
 /**
  * Writes memory map record.

@@ -43,12 +43,13 @@ sp_rtrace_LDADD = -ldl
 
 sp_rtrace_postproc_SOURCES = rtrace-postproc/sp_rtrace_postproc.c rtrace-postproc/parse_binary.c \
     rtrace-postproc/parse_text.c rtrace-postproc/leaks_sort.c rtrace-postproc/writer.c rtrace-postproc/filter.c \
-    common/rtrace_data.c common/htable.c common/dlist.c common/utils.c common/formatter.c
+    common/rtrace_data.c common/htable.c common/dlist.c common/utils.c common/formatter.c common/header.c
 sp_rtrace_postproc_CFLAGS = $(AM_CFLAGS)
 sp_rtrace_postproc_LDFLAGS = -Wl,-z,defs
 
 sp_rtrace_resolve_SOURCES = rtrace-resolve/sp_rtrace_resolve.c common/utils.c common/rtrace_data.c common/dlist.c \
-	rtrace-resolve/sarray.c common/htable.c rtrace-resolve/namecache.c rtrace-resolve/resolver.c 
+	rtrace-resolve/sarray.c common/htable.c rtrace-resolve/namecache.c rtrace-resolve/resolver.c common/header.c\
+	common/formatter.c
 sp_rtrace_resolve_CFLAGS = $(AM_CFLAGS)
 sp_rtrace_resolve_LDFLAGS = -Wl,-z,defs
 sp_rtrace_resolve_LDADD = -lbfd

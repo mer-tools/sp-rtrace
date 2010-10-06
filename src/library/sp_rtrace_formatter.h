@@ -41,9 +41,9 @@
  * @param[in] timestamp     the report creation time (if NULL the current time is used).
  * @param[in] pid           the traced process identifier.
  * @param[in] process_name  the traced process name.
- * @return
+ * @return                  0 - success, -errno - failure
  */
-void sp_rtrace_print_header(FILE* fp, const char* version, const char* arch,
+int sp_rtrace_print_header(FILE* fp, const char* version, const char* arch,
 		const struct timeval *timestamp, int pid, const char* process_name);
 
 /**
@@ -53,9 +53,9 @@ void sp_rtrace_print_header(FILE* fp, const char* version, const char* arch,
  * @param[in] module  the module name.
  * @param[in] from    the starting memory address.
  * @param[in] to      the ending memory address.
- * @return
- */
-void sp_rtrace_print_mmap(FILE* fp, const char* module, void* from, void* to);
+ * @return            0 - success, -errno - failure
+*/
+int sp_rtrace_print_mmap(FILE* fp, const char* module, void* from, void* to);
 
 /**
  * Prints function call information.
@@ -69,9 +69,9 @@ void sp_rtrace_print_mmap(FILE* fp, const char* module, void* from, void* to);
  * @param[in] res_size   the allocated resource size. Set 0 to specify deallocation call.
  * @param[in] res_id     the resource identifier.
  * @param[in] res_type   the resource type name (can be NULL).
- * @return
+ * @return               0 - success, -errno - failure
  */
-void sp_rtrace_print_call(FILE* fp, int index, unsigned int context, unsigned int timestamp,
+int sp_rtrace_print_call(FILE* fp, int index, unsigned int context, unsigned int timestamp,
 		const char* name, int res_size, void* res_id, const char* res_type);
 
 
@@ -82,9 +82,9 @@ void sp_rtrace_print_call(FILE* fp, int index, unsigned int context, unsigned in
  * @param[in] frames    the frame addresses.
  * @param[in] resolved  the resolved address function names (can be NULL).
  * @param[in] nframes   the number of frame addresses.
- * @return
+ * @return              0 - success, -errno - failure
  */
-void sp_rtrace_print_trace(FILE* fp, void** frames, char** resolved, int nframes);
+int sp_rtrace_print_trace(FILE* fp, void** frames, char** resolved, int nframes);
 
 /**
  * Prints single backtrace step.
@@ -92,9 +92,9 @@ void sp_rtrace_print_trace(FILE* fp, void** frames, char** resolved, int nframes
  * @param[in] fp        the output stream.
  * @param[in] addr      the frame return address.
  * @param[in] resolved  the resolved address name.
- * @return
+ * @return              0 - success, -errno - failure
  */
-void sp_rtrace_print_trace_step(FILE* fp, void* addr, const char* resolved);
+int sp_rtrace_print_trace_step(FILE* fp, void* addr, const char* resolved);
 
 /**
  * Prints context registry record.
@@ -102,9 +102,9 @@ void sp_rtrace_print_trace_step(FILE* fp, void* addr, const char* resolved);
  * @param[in] fp    the output stream.
  * @param[in] id    the context identifier.
  * @param[in] name  the context name.
- * @return
+ * @return          0 - success, -errno - failure
  */
-void sp_rtrace_print_context(FILE* fp, unsigned int id, const char* name);
+int sp_rtrace_print_context(FILE* fp, unsigned int id, const char* name);
 
 
 /**
@@ -114,9 +114,9 @@ void sp_rtrace_print_context(FILE* fp, unsigned int id, const char* name);
  * @param[in] id    the resource identifier.
  * @param[in] type  the resource type.
  * @param[in] desc  the resource description.
- * @return
+ * @return          0 - success, -errno - failure
  */
-void sp_rtrace_print_resource(FILE* fp, unsigned int id, const char* type, const char* desc);
+int sp_rtrace_print_resource(FILE* fp, unsigned int id, const char* type, const char* desc);
 
 /**
  * Prints comment.
@@ -124,18 +124,18 @@ void sp_rtrace_print_resource(FILE* fp, unsigned int id, const char* type, const
  * @param[in] fp      the output stream.
  * @param[in] format  the comment format template.
  * @param[in] ...     the template data.
- * @return
+ * @return            0 - success, -errno - failure
  */
-void sp_rtrace_print_comment(FILE* fp, const char* format, ...);
+int sp_rtrace_print_comment(FILE* fp, const char* format, ...);
 
 /**
  * Prints function arguments.
  *
  * @param[in] fp     the output stream.
  * @param[in] args   a NULL terminated function argument textual interpretation array.
- * @return
+ * @return           0 - success, -errno - failure
  */
-void sp_rtrace_print_args(FILE* fp, char** args);
+int sp_rtrace_print_args(FILE* fp, char** args);
 
 
 #endif

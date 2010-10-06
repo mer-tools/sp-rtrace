@@ -58,6 +58,8 @@
 
 #include "common/utils.h"
 #include "common/rtrace_data.h"
+#include "common/header.h"
+#include "common/formatter.h"
 #include "namecache.h"
 #include "resolver.h"
 #include "sp_rtrace_resolve.h"
@@ -343,6 +345,37 @@ static void do_resolve(FILE *fpin, FILE *fpout)
 }
 
 /**
+ * Copies header from input to output stream.
+ * 
+ * This function reads header line (the firt line in source stream), parses it's
+ * fields, checks architecture, appends 'resolve' filter tag and writes the resulting
+ * header into output stream.
+ * @param[in] fpin   the input stream.
+ * @param[in] fpout  the output stream.
+ */
+static void read_header(FILE* fpin, FILE* fpout)
+{
+	char line[4096];
+	if (fgets(line, sizeof(line), fpin) == NULL) {
+		fprintf(stderr, "ERROR: while reading input stream (%s)\n", strerror(errno));
+		exit (-1);
+	}
+	header_t header;
+	header_read(&header, line);
+	
+	/* check source stream architecture */
+	if (strcmp(header.fields[HEADER_ARCH], BUILD_ARCH)) {
+		fprintf(stderr, "ERROR: unsupported architecture: %s (expected %s)\n",
+				header.fields[HEADER_ARCH], BUILD_ARCH);
+	    exit (-1);
+	}
+	/* set the resolve filter tag */
+	header_set_filter(&header, header_get_filter(&header) | FILTER_MASK_RESOLVE);
+	/* write the header into output file */
+	formatter_write_header(&header, fpout);
+}
+
+/**
  * Resolves backtrace data.
  *
  * This function prepares input and output streams and calls
@@ -378,6 +411,7 @@ static void resolve()
     	exit (-1);
     }
 
+    read_header(fpin, fpout);
 	do_resolve(fpin, fpout);
 
 	namecache_release();

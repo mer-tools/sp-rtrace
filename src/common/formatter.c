@@ -35,13 +35,14 @@
 /*
  * rd_* data formatting function implementation
  */
-int formatter_write_header(const formatter_header_t* header, FILE* fp)
+int formatter_write_header(const header_t* header, FILE* fp)
 {
 	char buffer[2048];
-	int size = 0;
-	while (header->key) {
-		size += sprintf(buffer + size,"%s=%s, ", header->key, header->value ? header->value : "");
-		header++;
+	int size = 0, i;
+	for (i = 0; i < HEADER_MAX; i++) {
+		if (header->fields[i]) {
+			size += sprintf(buffer + size, "%s=%s, ", header_fields[i], header->fields[i]);
+		}
 	}
 	buffer[size++] = '\n';
 	buffer[size] = '\0';
@@ -92,7 +93,7 @@ int formatter_write_fcall(const rd_fcall_t*  call, FILE* fp)
 		ptr += sprintf(ptr, "(0x%lx)", call->res_id);
 	}
 	*ptr++ = '\n';
-	if (fwrite(buffer, 1, ptr - buffer, fp) < ptr - buffer) return -errno;
+	if (fwrite(buffer, 1, ptr - buffer, fp) < (size_t)(ptr - buffer)) return -errno;
 	return 0;
 }
 
@@ -107,7 +108,7 @@ int formatter_write_ftrace(const rd_ftrace_t* trace, FILE* fp)
 			ptr += sprintf(ptr, " %s", trace->resolved_names[i]);
 		}
 		*ptr++ = '\n';
-		if (fwrite(buffer, 1, ptr - buffer, fp) < ptr - buffer) return -errno;
+		if (fwrite(buffer, 1, ptr - buffer, fp) < (size_t)(ptr - buffer)) return -errno;
 	}
 	if (fputc('\n', fp) == EOF) return -errno;
 	return 0;

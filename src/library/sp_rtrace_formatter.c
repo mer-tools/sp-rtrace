@@ -27,12 +27,13 @@
 #include <time.h>
 #include <stdarg.h>
 #include <sys/time.h>
+#include <errno.h>
 
 #include "sp_rtrace_formatter.h"
 #include "common/formatter.h"
 #include "common/sp_rtrace_proto.h"
 
-void sp_rtrace_print_header(FILE* fp, const char* version, const char* arch,
+int sp_rtrace_print_header(FILE* fp, const char* version, const char* arch,
 		const struct timeval *timestamp, int pid, const char* process_name)
 {
 	struct timeval tv;
@@ -49,27 +50,28 @@ void sp_rtrace_print_header(FILE* fp, const char* version, const char* arch,
 	char pid_s[10];
 	sprintf(pid_s, "%d", pid);
 
-	const formatter_header_t header[] = {
-			{.key = SP_RTRACE_FORMATTER_HEADER_VERSION, .value = version},
-			{.key = SP_RTRACE_FORMATTER_HEADER_ARCH, .value = arch},
-			{.key = SP_RTRACE_FORMATTER_HEADER_TIMESTAMP, .value = timestamp_s},
-			{.key = SP_RTRACE_FORMATTER_HEADER_PID, .value = pid_s},
-			{.key = SP_RTRACE_FORMATTER_HEADER_PROCESS, .value = process_name},
-			{.key = NULL, .value = NULL}
+	const header_t header=  {
+			.fields = { 
+					(char*)version,       // HEADER_VERSION
+					(char*)arch,          // HEADER_ARCH 
+					timestamp_s,          // HEADER_TIMESTAMP
+					pid_s,                // HEADER_PROCESS
+					(char*)process_name,  // HEADER_PID
+					NULL                  // HEADER_FILTER
+			},
 	};
-
-	formatter_write_header(header, fp);
+	return formatter_write_header(&header, fp);
 }
 
 
-void sp_rtrace_print_mmap(FILE* fp, const char* module, void* from, void* to)
+int sp_rtrace_print_mmap(FILE* fp, const char* module, void* from, void* to)
 {
 	const rd_mmap_t mmap = {.module = (char*)module, .from = (pointer_t)from, .to = (pointer_t)to};
-	formatter_write_mmap(&mmap, fp);
+	return formatter_write_mmap(&mmap, fp);
 }
 
 
-void sp_rtrace_print_call(FILE* fp, int index, unsigned int context, unsigned int timestamp,
+int sp_rtrace_print_call(FILE* fp, int index, unsigned int context, unsigned int timestamp,
 		const char* name, int res_size, void* res_id, const char* res_type)
 {
 	rd_resource_t resource = {
@@ -85,56 +87,65 @@ void sp_rtrace_print_call(FILE* fp, int index, unsigned int context, unsigned in
 			.res_size = res_size,
 			.res_type = res_type ? &resource : NULL,
 	};
-	formatter_write_fcall(&call, fp);
+	return formatter_write_fcall(&call, fp);
 }
 
 
-void sp_rtrace_print_trace(FILE* fp, void** frames, char** resolved, int nframes)
+int sp_rtrace_print_trace(FILE* fp, void** frames, char** resolved, int nframes)
 {
 	const rd_ftrace_t trace = {.frames = (pointer_t*)frames, .nframes = nframes, .resolved_names = (char**)resolved};
-	formatter_write_ftrace(&trace, fp);
+	return formatter_write_ftrace(&trace, fp);
 }
 
 
-void sp_rtrace_print_trace_step(FILE* fp, void* addr, const char* resolved)
+int sp_rtrace_print_trace_step(FILE* fp, void* addr, const char* resolved)
 {
+	int rc = 0;
 	if (resolved) {
-		fprintf(fp, "\t0x%lx %s\n", (pointer_t)addr, resolved);
+		rc = fprintf(fp, "\t0x%lx %s\n", (pointer_t)addr, resolved);
 	}
 	else {
-		fprintf(fp, "\t0x%lx\n", (pointer_t)addr);
+		rc = fprintf(fp, "\t0x%lx\n", (pointer_t)addr);
 	}
+	if (rc == 0) {
+		return -errno;
+	}
+	return 0;
 }
 
 
-void sp_rtrace_print_context(FILE* fp, unsigned int id, const char* name)
+int sp_rtrace_print_context(FILE* fp, unsigned int id, const char* name)
 {
 	const rd_context_t context = {.id = id, .name = (char*)name};
-	formatter_write_context(&context, fp);
+	return formatter_write_context(&context, fp);
 }
 
 
-void sp_rtrace_print_resource(FILE* fp, unsigned int id, const char* type, const char* desc)
+int sp_rtrace_print_resource(FILE* fp, unsigned int id, const char* type, const char* desc)
 {
 	rd_resource_t resource = {.id = id, .type = (char*)type, .desc = (char*)desc};
-	formatter_write_resource(&resource, fp);
+	return formatter_write_resource(&resource, fp);
 }
 
 
 
-void sp_rtrace_print_comment(FILE* fp, const char* format, ...)
+int sp_rtrace_print_comment(FILE* fp, const char* format, ...)
 {
 	va_list args;
 	va_start(args, format);
-	vfprintf(fp, format, args);
+	int rc = vfprintf(fp, format, args);
 	va_end(args);
+	if (rc == 0) {
+		return -errno;
+	}
+	return 0;
 }
 
 
-void sp_rtrace_print_args(FILE* fp, char** args)
+int sp_rtrace_print_args(FILE* fp, char** args)
 {
 	const rd_fargs_t fargs = {.args = (char**)args};
-	formatter_write_fargs(&fargs, fp);
+	return formatter_write_fargs(&fargs, fp);
 }
 
 
