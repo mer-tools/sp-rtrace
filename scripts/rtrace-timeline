@@ -377,7 +377,7 @@ class Plotter:
 		def setText(self, row, col, text, align = "right"):
 			"Sets value of the cell at row,col with text"
 			if col > len(self.columns):
-				raise NameError("Table.setText: column value(%d) exceeding column count(%d)" % (col, len(self.columns)))
+				raise RuntimeError("Table.setText: column value(%d) exceeding column count(%d)" % (col, len(self.columns)))
 			self.columns[col].setCell(row, text, align)
 			if row > self.rows:
 				self.rows = row
@@ -406,7 +406,7 @@ class Plotter:
 			"Creates data file and write title if specified"
 			self.file = open(self._filename, "w")
 			if self.file is None:
-				raise NameError("Failed to create data file: %s" % filename)
+				raise RuntimeError("Failed to create data file: %s" % filename)
 			if title is not None:
 				self.file.write("Resource \"%s\"\n" % title)
 			
@@ -437,20 +437,28 @@ class Plotter:
 	# gnuplot configuration file name
 	CFG_FILENAME = "timeline.cfg"
 	
+	# the configuration file
 	file = None
+	# the terminal mode (PNG|POSTSCRIPT)
 	terminal = None
+	# the tables to plot
 	tables = None
+	# the involved data files
 	files = None
+	# the output stream
 	stream = None
+	# the graphs to plot. Usually there is a one data file for one graph
 	graphs = None
 	# the last index of line style setting
 	lineStyleIndex = 0
 		
 	def __init__(self, stream, terminal = POSTSCRIPT):
-		self.file = open(self.CFG_FILENAME, "w")
+		# initialize list values
 		self.tables = []
 		self.files = []
 		self.graphs = []
+		# create configuration file
+		self.file = open(self.CFG_FILENAME, "w")
 		if self.file is None:
 			print >> sys.stderr, "Failed to create configuration file: %s" % self.CFG_FILENAME
 			sys.exit(2)
@@ -463,6 +471,7 @@ class Plotter:
 			self.file.write("set terminal postscript eps enhanced color\n")
 		else:
 			raise NamedError("Unknown terminal type: %s" % terminal)
+
 		self.terminal = terminal
 		self.stream = stream
 		
@@ -470,15 +479,16 @@ class Plotter:
 		self.file.write("set key bmargin\n")
 		
 	def setTitle(self, title):
-		"Sets report title"
+		"Sets report title. The report title is printed at the top of the graph."
 		self.file.write("set title \"%s\"\n" % title)
 		
 	def setDataStyle(self, style):	
-		"Sets graph line style"
+		"Sets graph line style. The lines|linespoints styles are used in script,"
+		"however the style can be any valid gnuplot data line style"
 		self.file.write("set style data %s\n" % style)
 		
 	def setAxisX(self, label, min, max, format = None):
-		"Sets X axis"
+		"Sets X axis range (min-max) and formatting."
 		if min == max:
 			max += 1
 		range = max - min
@@ -505,7 +515,7 @@ class Plotter:
 			
 			
 	def setAxisY(self, label, min, max, format):
-		"Sets Y axis"
+		"Sets Y axis range (min-max) and formatting."
 		if min == max:
 			max += 1
 		self.file.write("set yrange[%d:%d]\n" % (min, max))
@@ -517,7 +527,7 @@ class Plotter:
 	
 	
 	def setAxisY2(self, label, min, max, format = None):
-		"Sets Y2 axis"
+		"Sets Y2 axis range and formatting."
 		
 		self.file.write("set y2range[%d:%d]\n" % (min, max))
 		
@@ -527,15 +537,17 @@ class Plotter:
 		self.file.write("set y2label \"%s\"\n" % label)
 
 	def setBMargin(self, value):
+		"Sets bottom margin value. Used to reserve space for statstics at the bottom of the page."
 		self.file.write("set bmargin %d\n" % value)
 
-	def addGraph(self, file, col, row, title = "\"\"", axis = None, style = None):
-		"Adds a file based graph to plot"
+	def addGraph(self, file, colX, colY, title = "\"\"", axis = None, style = None):
+		"Adds a graph based on datafile file  to the plot. colX, colY identifies the "
+		"columns containing data X/Y data."
 		if len(self.graphs):
 			data = ","
 		else:
 			data = ""
-		data += "\"%s\" using %s:%s" % (file.getFilename(), col, row)
+		data += "\"%s\" using %s:%s" % (file.getFilename(), colX, colY)
 		if style is not None:
 			data += " ls %d" % style
 		data += " title %s" % title
@@ -545,7 +557,7 @@ class Plotter:
 		self.graphs.append(data)
 			
 	def plot(self):
-		"Sets the tables and plots the data files"
+		"Sets the tables and plots the data files. The control/data file cleanup is performed afterwards."
 		for table in self.tables:
 			table.write(self.file)
 			
@@ -563,6 +575,7 @@ class Plotter:
 		self.cleanup()
 	
 	def setLineStyle(self, type, color):
+		"Creates new line style and returns its index."
 		self.lineStyleIndex += 1
 		self.file.write("set style line %d lt %s lc rgb \"%s\"\n" % (self.lineStyleIndex, type, color))
 		return self.lineStyleIndex
@@ -578,6 +591,7 @@ class Plotter:
 		return table
 	
 	def createFile(self, filename, title = None):
+		"Creates new data file. This file will be automatically removed after plotting."
 		file = self.DataFile(filename, title)
 		self.files.append(file)
 		return file
@@ -590,6 +604,7 @@ class Plotter:
 			file.remove();
 			
 	def setKey(self, key):
+		"Sets the data legend position."
 		self.file.write("set key %s\n" % key)
 
 		
@@ -598,16 +613,13 @@ class Plotter:
 
 class Processor:
 	"""
-	This class stores the allocation/deallocation events for further 
-	processing. It servers as base class for specific post-processing
-	tasks.
+	The base class for report generators.
 	"""
 	
 	class Index:
 		"""
-		This class is used to index resources by their identifiers, which
-		should increase event lookups by resource identifiers, required
-		for freed resource allocation event removal.
+		This class is used to index resources by their identifiers. It's 
+		used to minimize event lookups by resource identifier times.
 		"""
 		event = None
 		refCount = 0
@@ -622,14 +634,23 @@ class Processor:
 	def __init__(self, parser):
 		self.parser = parser
 		
+	def getId(self):
+		"Returns the report identifier. Used in output file templates when multiple "
+		"reports are requested."
+		raise NotImplementedError()
+	
 	def generateReport(self, stream):
+		"Generates report."
 		plotter = Plotter(stream, Options.isPng and Plotter.PNG or Plotter.POSTSCRIPT)
 		self.writeReport(plotter)
 		
 	def writeReport(self, plotter):
-		"Writes the end report"
+		"Writes the end report. This function must be overloaded by report generators to "
+		"provide report generation functionality."
+		raise NotImplementedError()
 		
 	def isEventInRange(self, event):
+		"Checks if the event matches the filters specified in Options."
 		for filter in Options.filters:
 			if not filter.matchesEvent(event):
 				return False
@@ -641,37 +662,50 @@ class Processor:
 class LifetimeProcessor(Processor):
 	"""
 	The LifetimeProcessor class generates resource life time
-	report. This report contains lines, illustrating resource
+	report. This report contains lines displaying resource
 	allocation and release times.
 	"""
 
 	class Writer():
 		"""
 		Base class for lifetime graph writers.
+		The lifetime graphs has two resolution levels - event resolution
+		and context resolution.
+		Event resolution is used when log contains limited amount of resources
+		and each resource can be displayed in a different style and color. 
+		Context resolution is used when log contains a large amount of resources
+		and marking each resource with different style would only make a mess. 
+		In this case resources are colored by their allocation contexts.
 		"""
+		# the data file
 		_file = None
+		# a reference to the plotter
 		_plotter = None
 		
 		def __init__(self, plotter):
 			self._plotter = plotter
 			
 		def prepareContext(self, resource, context):
+			"Prepares (creates and adds to plotter) context resolution data file."
 			return self._file
 	
 		def prepareEvent(self, resource, event):
+			"Prepares (creates and adds to plotter) event resolution data file."
 			return self._file
 		
 		def flushContext(self):
+			"Flushes context resolution data file (simply closes it)."
 			pass
 		
 		def flushEvent(self):
+			"Flushes event resolution data file (simply closes it)."
 			pass
 		
 	# /class Writer
 		
 	class ContextWriter(Writer):
 		"""
-		Writes lifetime graph in context resolution.
+		Context resolution graph writer.
 		"""
 		def prepareContext(self, resource, context):
 			self._file = self._plotter.createFile("%s-%x.dat" % (resource, context.value), "%s (%s)" % (resource, context.name))	
@@ -684,7 +718,7 @@ class LifetimeProcessor(Processor):
 			
 	class EventWriter(Writer):
 		"""
-		Writes lifetime graph in event resolution.
+		Event resolution graph writer.
 		"""
 		def prepareEvent(self, resource, event):
 			self._file = self._plotter.createFile("%s-%d.dat" % (resource, event.index), "%s (%s)" % (resource, event.res_id))	
@@ -696,17 +730,27 @@ class LifetimeProcessor(Processor):
 	# /class EventWriter
 		
 	class Stats:
-		
+		"""
+		Resource lifetime statistics.
+		"""
 		class Data:
+			"""
+			Resource lifetime statistics data.
+			"""
+			# allocation sie
 			size = 0
+			# number of allocations of this size
 			count = 0
+			# time of the first allocation of this size
 			timestamp = 0
 			
 			def __init__(self):
 				pass
 		# /class Data
 		
+		# the minimal allocation size statistics
 		min = None
+		# the maximal allocation size statistics
 		max = None
 		
 		def __init__(self):
@@ -715,19 +759,24 @@ class LifetimeProcessor(Processor):
 			self.min.size = sys.maxint
 	# /class Stats
 		
+	# Amount of allocations that separates event view from resolution view.
+	# If the log contains less than DETAILS_LIMIT allocations the event resolution is used.
+	# Otherwise the context resolution is used.
 	DETAILS_LIMIT = 20
 
 	def getId(self):
+		"Returns the lifetime report id"
 		return "lifetime"
 
 	def writeReport(self, plotter):
-		"Writes the end report"
+		"Writes the lifetime report"
+		# reset X,Y axis range
 		xrangeMin = None
 		xrangeMax = 0
 		yrangeMin = 0
 		yrangeMax = 0
 		
-
+		# count the total number of allocations to choose resolution
 		totalAllocs = 0
 		for resource in self.parser.events.keys():
 			for event in self.parser.events[resource]:
@@ -737,14 +786,18 @@ class LifetimeProcessor(Processor):
 		if totalAllocs == 0:
 			print >> sys.stderr, "No allocations matching the specified filter"
 			sys.exit(2)
-			
+		
+		# initialize context filters
 		contexts = [Context(Context.MASK_ALL, "all allocations")]
+		
 		if totalAllocs > self.DETAILS_LIMIT:
+			# switch to context resolution mode and populate context filter array
 			writer = self.ContextWriter(plotter)
 			if len(self.parser.contexts) > 0:
 				contexts.append(Context(Context.MASK_NONE, "no contexts"))
 				contexts.extend(self.parser.contexts)
 		else:
+			# switch to event resolution mode
 			writer = self.EventWriter(plotter)
 			
 		stats = {}
@@ -755,17 +808,24 @@ class LifetimeProcessor(Processor):
 			events = self.parser.events[resource]
 			# resource indexing map 
 			index = {}
+			# initialize resource statistics
 			stat = self.Stats()
 			stats[resource] = stat
 			
+			# iterate through context filters
 			for context in contexts:
 				file = writer.prepareContext(resource, context)
 				allocs = []
 				total = 0
 				
+				# iterate through events
 				for event in events:
+					# skip events not matching context/filters
+					if not event.matchContext(context):
+						continue
 					if not self.isEventInRange(event):
 						continue
+					# update X axis range values
 					if xrangeMin is None:
 						xrangeMin = event.timestamp
 					if xrangeMax < event.timestamp:
@@ -773,14 +833,16 @@ class LifetimeProcessor(Processor):
 						
 					if event.type == Event.Types.ALLOC:
 						if event.res_id in index:
+							# resource is already indexed, increase reference counter
 							index[event.res_id].refCount += 1
 							continue
 						else:
-							# store the event in dictionary for event lookup speedup.
+							# index the event by resource id.
 							index[event.res_id] = self.Index(event);
 							allocs.append(event.res_size)
 							total += event.res_size
 
+							# update Y axis range value
 							size = event.res_size
 							if size > yrangeMax:
 								yrangeMax = size
@@ -802,22 +864,30 @@ class LifetimeProcessor(Processor):
 							
 					if event.type == Event.Types.FREE:
 						if event.res_id not in index:
+							# ignore resources allocation of which was not registered
 							continue
+						# decrement resource reference counter
 						ievent = index[event.res_id]
 						ievent.refCount -= 1
-						
+
+						# check if the resource was really deleted						
 						if ievent.refCount == 0:
 							file = writer.prepareEvent(resource, ievent.event)
+							# plot the resource lifetime
 							file.write(ievent.event.timestamp, ievent.event.res_size)
 							file.write(event.timestamp, ievent.event.res_size)
 							file.writeSeparator()
+							#
 							writer.flushEvent()
-	
+							
+							# remove deleted resource from index.
 							del index[event.res_id]
 	
+				# Adjust X axis range to contain at least single point
 				if xrangeMax == xrangeMin:
 					xrangeMax += 1
-				# plot all unallocated resources					
+					
+				# plot all allocated, but not freed resources					
 				for res_id, ievent in index.iteritems():
 					file = writer.prepareEvent(resource, ievent.event)
 					file.write(ievent.event.timestamp, ievent.event.res_size)
@@ -833,6 +903,7 @@ class LifetimeProcessor(Processor):
 				if totals % 2 == 0:
 					statMedian = (statMedian + allocs[totals / 2]) / 2
 					
+				# plot the statistics lines
 				file = plotter.createFile("%s-%x-average" % (resource, context.value), "%s (average:%d)" % (resource, statAverage))
 				plotter.addGraph(file, "1", "2", "column(2)")
 				file.write(xrangeMin, statAverage)
@@ -846,7 +917,7 @@ class LifetimeProcessor(Processor):
 		
 				writer.flushContext()
 	
-		# increase Y  range, so top graph isn't hidden beyond the axis	
+		# increase Y  range, so the top graph isn't hidden beyond the axis	
 		yrangeMax = yrangeMax * 105 / 100	
 
 		plotter.setTitle("Resource life-time")
@@ -878,7 +949,7 @@ class LifetimeProcessor(Processor):
 		table.setText(0, 3, "Count", "center")
 		table.setText(0, 4, "Time", "center")
 
-		# write summary data
+		# write statistics data
 		resourceIndex = 2
 		for resource in self.parser.events.keys():
 			stat = stats[resource]
@@ -896,16 +967,17 @@ class LifetimeProcessor(Processor):
 			
 			resourceIndex += 2
 		
-		# Reserve space at the bottom for leak data
+		# Reserve space at the bottom for statistics data
 		bmargin = len(contexts) + 9
 		if bmargin < 9 + table.rows:
 			bmargin = 9 + table.rows
 		if bmargin < 15:
 			bmargin = 15
 			
-		#if totalAllocs < self.DETAILS_LIMIT and bmargin < totalAllocs + 5:
-
-		plotter.setKey("right outside")
+		# if the legend contains too many graphs - write it at the left side instead of the bottom.
+		if totalAllocs < self.DETAILS_LIMIT and bmargin < totalAllocs + 5:
+			plotter.setKey("right outside")
+			
 		plotter.setBMargin(bmargin)
 
 		plotter.plot()
@@ -914,8 +986,11 @@ class LifetimeProcessor(Processor):
 class ActivityProcessor(Processor):
 	"""
 	The ActivityProcessor class generates 'activity' report.
-	The activity report contains graphs illustrating the resource
-	allocation rate per time slice.
+	The activity report contains graphs displaying the resource allocation rate per time slice.
+	The allocation rate is calculated by going through events by time based steps and calculating
+	the allocation rate for each step by dividing the total allocation size with total allocation
+	number for all allocations during the last time slice period. 
+	Usually the step value is set to half of the specified time slice.
 	"""
 
 	class Stats:
@@ -940,17 +1015,20 @@ class ActivityProcessor(Processor):
 	# /class Stats
 
 	def getId(self):
+		"Returns activity report id."
 		return "activity"
 
 	def writeReport(self, plotter):
-		"Writes the end report"
+		"Writes the activity report"
+		# reset X, Y, Y2 axis range
 		yrangeMin = 0
 		yrangeMax = 0
 		y2rangeMin = 0
 		y2rangeMax = 0
 		xrangeMin = None
 		xrangeMax = 0
-		# peak statistics list
+		
+		# initialize statistics container
 		stats = {}
 		
 		# calculate the activity time slice based on unfiltered X axis range
@@ -968,7 +1046,7 @@ class ActivityProcessor(Processor):
 		else:
 			slice = Tic(Options.slice, False)
 		
-
+		# initialize context filters
 		contexts = [Context(Context.MASK_ALL, "all allocations")]
 		if len(self.parser.contexts) > 0:
 			contexts.append(Context(Context.MASK_NONE, "no contexts"))
@@ -976,17 +1054,19 @@ class ActivityProcessor(Processor):
 
 		# iterate through registered resources
 		for resource in self.parser.events.keys():
+			# initialize resource statistics data
 			stat = self.Stats()
 			stats[resource] = stat
 
-			# initialize peak statistics data files
+			# create statistics data files
 			stat.peakSize.file = plotter.createFile("%s-size-peak.dat" % resource)
 			stat.peakAllocs.file = plotter.createFile("%s-allocs-peak.dat" % resource)
 			stat.peakFrees.file = plotter.createFile("%s-frees-peak.dat" % resource)
 
-			# initialize resource statistics data
+			# 
 			events = self.parser.events[resource]
 			
+			# calculate step value for statistics checkpoints
 			step = slice.value / 2
 			if step < 1:
 				step = 1
@@ -1018,17 +1098,21 @@ class ActivityProcessor(Processor):
 				lastSlice = False
 				while not lastSlice:
 					try:
+						# process events inside the next step time period
 						while event.timestamp <= timestamp:
-							if self.isEventInRange(event):
+							if event.matchContext(context) and self.isEventInRange(event):
+								# update X axis range
 								if xrangeMin is None:
 									xrangeMin = timestamp
 								if timestamp > xrangeMax:
 									xrangeMax = timestamp
+									
 								if event.type == Event.Types.ALLOC:
 									if event.res_id in index:
+										# resource is already indexed, increase reference counter
 										index[event.res_id].refCount += 1
 									else:
-										# store the event in dictionary for event lookup speedup.
+										# index the event by resource id
 										index[event.res_id] = self.Index(event);
 										#
 										total += event.res_size
@@ -1037,16 +1121,19 @@ class ActivityProcessor(Processor):
 										
 								if event.type == Event.Types.FREE:
 									if event.res_id in index:
+										# decrement resource reference counter
 										ievent = index[event.res_id]
 										ievent.refCount -= 1
+										# check if the resource was really removed
 										if ievent.refCount <= 0:
 											del index[event.res_id]
 											frees +=1
 											sliceEvents.append(event)
-						
+											
 							event = it.next()
 						
 					except StopIteration:
+						# ran out of events, finish processing.
 						lastSlice = True
 						pass
 
@@ -1073,13 +1160,14 @@ class ActivityProcessor(Processor):
 							stat.peakFrees.count = frees
 							stat.peakFrees.size = total
 							stat.peakFrees.timestamp = event.timestamp
-					#
-						
+
+					# write graphs
 					fileRate.write(event.timestamp, total)
 					fileAllocs.write(event.timestamp, allocs)
 					fileFrees.write(event.timestamp, frees)
 					
 					hasData = True
+					# update Y, Y2 axis ranges
 					if total > yrangeMax:
 						yrangeMax = total
 					if allocs > y2rangeMax:
@@ -1093,12 +1181,13 @@ class ActivityProcessor(Processor):
 				fileAllocs.close()
 				fileFrees.close()
 				
+				# plot the graphs
 				if hasData:
 					plotter.addGraph(fileRate, "1", "2", "column(2)")
 					plotter.addGraph(fileAllocs, "1", "2", "column(2)", "x1y2")
 					plotter.addGraph(fileFrees, "1", "2", "column(2)", "x1y2")
 				 
-			# peak marker data.
+			# plot statistics markers
 			# Peak markers are vertical lines, drawn at the time of the max peak
 			plotter.addGraph(stat.peakSize.file, "1", "2", "column(2)")
 			plotter.addGraph(stat.peakAllocs.file, "1", "2", "column(2)")
@@ -1205,8 +1294,7 @@ class ActivityProcessor(Processor):
 class TotalsProcessor(Processor):
 	"""
 	The TotalsProcessor class generates 'totals' report.
-	The 'totals' report contains graph illustrating the total resource 
-	allocation over the time.
+	The 'totals' report contains graph displaying the total resource allocation over the time.
 	"""
 	
 	class Stats:
@@ -1218,11 +1306,17 @@ class TotalsProcessor(Processor):
 			size = 0
 		# /class Data
 		
+		# 'leaked' allocations at the end of report
 		endLeaks = None
+		# 'leaked' allocations at the peak time
 		peakLeaks = None
+		# total allocations at the end of report
 		endTotals = None
+		# total allocations at the peak time
 		peakTotals = None
+		# peak allocation timestamp
 		peakTimestamp = 0
+		# peak allocation data file
 		peakFile = None
 
 		def __init__(self):
@@ -1236,22 +1330,27 @@ class TotalsProcessor(Processor):
 			self.peakTotals = self.Data()
 	# /class Stats
 	
+	# resource overhead index used for overhead graph
+	# Overhead graph estimates the real memory usage by adding overhead value to each allocation.
+	# Overhead values are stored in dictionary as <resource>:<overhead> pairs. If resource has no
+	# overhead value, the overhead graph is omitted.
 	overheadData = {"memory": 8}
 
 	def getId(self):
+		"Returns totals report id"
 		return "totals"
 		
 	def writeReport(self, plotter):
-		"Writes the end report"
+		"Writes the totals report"
+		# reset X,Y axis range
 		xrangeMin = None
 		xrangeMax = 0
 		yrangeMin = 0
 		yrangeMax = 0
-		# leak summing map
+		# initialize statistics container
 		stats = {}
-		# data file list
-		files = []
-
+		
+		# initialize context filters
 		contexts = [Context(Context.MASK_ALL, "all allocations")]
 		if len(self.parser.contexts) > 0:
 			contexts.append(Context(Context.MASK_NONE, "no contexts"))
@@ -1266,7 +1365,8 @@ class TotalsProcessor(Processor):
 
 			# initialize peak statistics data files
 			stat.peakFile = plotter.createFile("%s-peak.dat" % resource)
-			
+
+			# initialize overhead graph			
 			overhead = 0
 			overheadValue = 0
 			if resource in self.overheadData:
@@ -1294,6 +1394,7 @@ class TotalsProcessor(Processor):
 					if not self.isEventInRange(event):
 						continue
 					
+					# update X axis range
 					if xrangeMin is None:
 						xrangeMin = event.timestamp
 					if xrangeMax  < event.timestamp:
@@ -1308,6 +1409,8 @@ class TotalsProcessor(Processor):
 							index[event.res_id] = self.Index(event);
 							#
 							total += event.res_size
+							
+							# update statistics only when events aren't filtered by contexts
 							if context.isMaskAll():
 								stat.endLeaks.size += event.res_size
 								stat.endLeaks.count += 1
@@ -1330,6 +1433,7 @@ class TotalsProcessor(Processor):
 						if ievent.refCount > 0:
 							continue
 						total -= ievent.event.res_size
+						# update statistics only when events aren't filtered by contexts
 						if context.isMaskAll():
 							stat.endLeaks.size -= ievent.event.res_size
 							stat.endLeaks.count -= 1
@@ -1339,7 +1443,9 @@ class TotalsProcessor(Processor):
 					file.write(event.timestamp, total)
 					if overheadFile is not None:
 						overheadFile.write(event.timestamp, overhead)
+						
 					hasData = True
+					# update the Y axis range
 					if total > yrangeMax:
 						yrangeMax = total
 					if overhead > yrangeMax:
@@ -1468,7 +1574,9 @@ class Parser:
 	reResource = re.compile("\<([0-9a-z]+)\> : ([^ ]+) \(([^\)]+)\)")
 	reContext = re.compile("^\@ ([0-9a-fA-F]+) : (.*)$")
 	
+	# event list
 	events = None
+	# context list
 	contexts = None
 	
 	def __init__(self):
@@ -1476,6 +1584,7 @@ class Parser:
 		self.contexts = []
 		
 	def read(self, stream):
+		"Reads and parses the input stream"
 		for line in stream:
 			# don't attempt to parse backtrace records
 			if line[0] == '\t':
@@ -1546,12 +1655,6 @@ class Options:
 	"""
 	This class contains options parser implementation.
 	"""
-	class Modes: 
-		NONE = 0
-		TOTALS = 1
-		LIFETIME = 2
-		ACTIVITY = 3
-	# /class Modes
 
 	class Fonts:
 		NORMAL = "LiberationSans"
@@ -1560,19 +1663,27 @@ class Options:
 	# /class Fonts
 
 	GDFONTPATH = "/usr/share/fonts/truetype/ttf-liberation"
-	
-	mode = Modes.NONE
+
+		
 	streamIn = sys.stdin
+	# output filename
 	outFilename= None
+	# the output file extension
+	outExtension = ".eps"
+	# time slice value for activity report
 	slice = 0
 	
+	# true when png output is requested
 	isPng = False
+	
+	#
 	fonts = Fonts()
 	
+	# filter list
 	filters = []
-	timeFilter = None
 	
 	def parse(argv):
+		"Parses the command line arguments and initializes options."
 		try:
 			opts, args = getopt.gnu_getopt(argv, "tlao:i:s:p", 
 										["totals", 
@@ -1615,6 +1726,7 @@ class Options:
 			if opt == "-p" or opt == "--png":
 				Options.isPng =  True
 				Options.fonts.NORMAL = "LiberationSans-Regular"
+				Options.outExtension = ".png"
 			
 			if opt == "--filter-size":
 				match = re.match("([0-9kmKM]*)-([0-9kmKM]*)", val)
@@ -1656,7 +1768,7 @@ class Options:
 					Options.filters.append(MaxIndexFilter(max))
 				
 				
-		if len(processors) is None:
+		if len(processors) < 1:
 			print >> sys.stderr, "No report type specified."
 			Options.displayUsage()
 			sys.exit(2)
@@ -1664,6 +1776,7 @@ class Options:
 		return parser, processors
 			
 	def parseSize(text):
+		"Parses filter size value"
 		if text == "":
 			return None
 		match = re.match("([0-9]+)([kmKM]?)", text)
@@ -1677,6 +1790,7 @@ class Options:
 		return int(match.group(1)) * mod
 	
 	def parseTime(text):
+		"Parses filter time value"
 		match = re.match("([+]|)(?:([0-9]+):|)(?:([0-9]+):|)(?:([0-9]+)|)(?:\.([0-9]+)|)", text)
 		if match is None:
 			return None
@@ -1733,8 +1847,8 @@ Usage:
     Note that it's possible to generate multiple reports at the same time by specifying more
     than one report generation option (-t, -l -a). In this mode output file (-o) should be
     always specified and the report filenames will have the follwing format:
-    <filename>-<report type>.<extension> where <filename>.<extension> is the specified output
-    file and <report type> is totals, activity or lifetime respectively.	                       
+    <filename>-<totals|activity|lifetime>.<eps|png> where <filename> is the specified output
+    file.	                       
 """
 
 		
@@ -1762,9 +1876,8 @@ streamOut = sys.stdout
 id = ""
 for proc in processors:
 	if Options.outFilename is not None:
-		filename = os.path.splitext(Options.outFilename)
 		if len(processors) > 1:
 			id = "-%s" % proc.getId()
-		streamOut = open("%s%s%s" % (filename[0], id, filename[1]), "w");
+		streamOut = open("%s%s%s" % (Options.outFilename, id, Options.outExtension), "w")
 	proc.generateReport(streamOut)
 
