@@ -304,6 +304,8 @@ static void* trace_calloc(size_t nmemb, size_t size)
 static void* trace_realloc(void* ptr, size_t size)
 {
 	void* rc = trace_off.realloc(ptr, size);
+	/* unlock backtrace after the original function has been called */
+	backtrace_lock = 0;
 	/* if allocation was successful or the requested size was 0,
 	 *  and the old pointer was not NULL - register old pointer freeing */
 	if ((rc || !size) && ptr) {
@@ -424,7 +426,9 @@ void* realloc(void* ptr, size_t size)
 		}
 		return ptr_new;
 	}
-	return trace_rt->realloc(ptr, size);
+	void* ptrrc;
+	BT_EXECUTE_LOCKED(ptrrc = trace_rt->realloc(ptr, size), trace_off.realloc(ptr, size));
+	return ptrrc;
 }
 
 int posix_memalign(void **memptr, size_t alignment, size_t size)

@@ -104,6 +104,11 @@ backtracing functionality. Reducing backtrace depth improves performance,
 but gives less information of the function call origins.
 
 By default the backtrace depth is 10.
+.TP
+\fI--libunwind\fP (\fI-A\fP)
+Forces to use libunwind for stack frame unwinding. Use it with caution, as for 
+example on arm targets it uses more time and requires debug symbols.
+
 .SS Process managing options:
 .TP
 \fI--toggle\fP=<pid> (\fI-t\fP <pid>)

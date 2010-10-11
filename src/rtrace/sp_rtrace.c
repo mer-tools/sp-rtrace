@@ -83,6 +83,7 @@ rtrace_options_t rtrace_options = {
 		.mode = MODE_UNDEFINED,
 		.pid_postproc = 0,
 		.output_file = NULL,
+		.libunwind = false,
 };
 
 /**
@@ -116,6 +117,8 @@ static void display_usage()
 			"                    processing\n"
 			"  -A              - enable backtraces for all functions. By default\n"
 			"                    only allocation function backtraces are reported.\n"
+			"  -u              - use libunwind instead of libc backtrace() function\n"
+			"                    for stack trace unwinding.\n"
 			"  Note that options should be always before the execute (-x)\n"
 			"  switch.\n"
 			"\n"
@@ -193,6 +196,7 @@ static void set_environment()
 	if (rtrace_options.disable_packet_buffering) setenv(rtrace_env_opt[OPT_DISABLE_PACKET_BUFFERING], OPT_ENABLE, 1);
 	if (rtrace_options.start) setenv(rtrace_env_opt[OPT_START], OPT_ENABLE, 1);
 	if (rtrace_options.backtrace_all) setenv(rtrace_env_opt[OPT_BACKTRACE_ALL], OPT_ENABLE, 1);
+	if (rtrace_options.libunwind) setenv(rtrace_env_opt[OPT_LIBUNWIND], OPT_ENABLE, 1);
 
 	if (rtrace_options.audit) setenv("LD_AUDIT", rtrace_options.audit, 1);
 
@@ -785,7 +789,11 @@ int main(int argc, char* argv[])
 		case 'B':
 			rtrace_options.disable_packet_buffering = true;
 			break;
-
+		
+		case 'u':
+			rtrace_options.libunwind = true;
+			break;
+			
 		case 'h':
 			display_usage();
 			exit (0);

@@ -70,6 +70,8 @@ typedef struct rtrace_options_t {
 	char* output_file;
 	/* true if backtraces must be reported for all functions */
 	bool backtrace_all;
+	/* true if libunwind must be used for backtrace resolving */
+	bool libunwind;
 } rtrace_options_t;
 
 extern rtrace_options_t rtrace_options;

@@ -49,6 +49,7 @@
 #include "common/debug_log.h"
 #include "common/sp_rtrace_proto.h"
 #include "common/utils.h"
+#include "libunwind_support.h"
 
 /* module information */
 static sp_rtrace_module_info_t module_info = {
@@ -75,6 +76,8 @@ volatile sig_atomic_t backtrace_lock = 0;
 /* heap statistics */
 static struct mallinfo heap_info;
 static pointer_t heap_bottom = 0;
+
+static fn_backtrace_t backtrace_impl = backtrace;
 
 /**
  * The default options.
@@ -681,7 +684,7 @@ int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* n
 			exit (-1);
 		}
 		while (__sync_bool_compare_and_swap(&backtrace_lock, 0, tid));
-		nframes = backtrace(bt_frames, bt_depth);
+		nframes = backtrace_impl(bt_frames, bt_depth);
 		backtrace_lock = 0;
 	}
 	char* buffer = pipe_buffer_lock(), *ptr = buffer + SP_RTRACE_PROTO_TYPE_SIZE;
@@ -870,7 +873,18 @@ bool sp_rtrace_initialize()
 		if (env_enable && *env_enable == '1') {
 			sp_rtrace_options->enable = true;
 		}
-
+		
+		/* read libunwind setting */
+		const char* env_libunwind = getenv(rtrace_env_opt[OPT_LIBUNWIND]);
+		if (env_libunwind && *env_libunwind == '1') {
+			LOG("Use libunwind for stack frame unwinding");
+			backtrace_impl = libunwind_initialize();
+			if (backtrace_impl == NULL) {
+				fprintf(stderr, "WARNING: libunwind backtracing option specified, but libunwind_unitialize returned NULL. "
+						"Switching to standard backtrace() implementation.\n");
+				backtrace_impl = backtrace;
+			}
+		}
 		if (sp_rtrace_options->enable) {
 			fd_proc = open_pipe();
 			write_initial_data();

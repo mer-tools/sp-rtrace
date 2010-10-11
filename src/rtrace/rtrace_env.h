@@ -67,6 +67,7 @@ enum {
 	OPT_LISTEN,
 	OPT_HELP,
 	OPT_BACKTRACE_ALL,
+	OPT_LIBUNWIND,
 	MAX_OPT                      //!< MAX_OPT
 };
 
