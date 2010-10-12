@@ -4,7 +4,7 @@ lib_LTLIBRARIES = libsp-rtrace1.la libsp-rtrace-main.la \
 	libsp-rtrace-shmseg.la libsp-rtrace-file.la
 
 libsp_rtrace1_la_SOURCES = library/sp_rtrace_context.c library/sp_rtrace_formatter.c \
-	common/formatter.c common/dlist.c common/htable.c common/utils.c common/rtrace_data.c
+	common/formatter.c common/dlist.c common/htable.c common/utils.c common/rtrace_data.c common/header.c
 libsp_rtrace1_la_LDFLAGS = -version-info $(VERSION_MAJOR):$(VERSION_MINOR)
 libsp_rtrace1_la_LIBADD = -ldl
 
