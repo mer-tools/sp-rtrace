@@ -71,7 +71,7 @@ static int fd_proc = 0;
 static char pipe_path[sizeof(SP_RTRACE_PIPE_PATTERN) + 16];
 
 /* backtrace lock for thread synchronization */
-volatile sig_atomic_t backtrace_lock = 0;
+volatile sync_entity_t backtrace_lock = 0;
 
 /* heap statistics */
 static struct mallinfo heap_info;
@@ -272,8 +272,7 @@ static int pipe_buffer_flush()
  */
 static char* pipe_buffer_lock()
 {
-	while ( !(sync_bool_compare_and_swap(&pipe_buffer_locked, 0, 1))) {
-	}
+	while ( !sync_bool_compare_and_swap(&pipe_buffer_locked, 0, 1));
 	return pipe_buffer_head;
 
 }
@@ -662,7 +661,6 @@ int sp_rtrace_write_context_registry(int context_id, const char* name)
 	return size;
 }
 
-
 int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* name, size_t res_size, pointer_t id, const char** args)
 {
 	if (!sp_rtrace_options->enable) return 0;
@@ -683,7 +681,7 @@ int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* n
 			fprintf(stderr, "ERROR: infinite recursion detected backtrace() calling %s()\n", name);
 			exit (-1);
 		}
-		while (__sync_bool_compare_and_swap(&backtrace_lock, 0, tid));
+		while (!sync_bool_compare_and_swap(&backtrace_lock, 0, tid));
 		nframes = backtrace_impl(bt_frames, bt_depth);
 		backtrace_lock = 0;
 	}
@@ -800,7 +798,7 @@ void sp_rtrace_store_heap_info()
 bool sp_rtrace_initialize()
 {
 	static volatile int initialize_lock = 0;
-	if (__sync_bool_compare_and_swap(&initialize_lock, 0, 1)) {
+	if (sync_bool_compare_and_swap(&initialize_lock, 0, 1)) {
 		/* first check if the environment is ready */
 		const char* env_ready = getenv(SP_RTRACE_READY);
 		if (!env_ready) {

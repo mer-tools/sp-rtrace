@@ -30,8 +30,10 @@
 #ifndef SP_RTRACE_MODULE_H_
 #define SP_RTRACE_MODULE_H_
 
+#include "common/utils.h"
+
 /* backtrace synchronization variable, used in functions that are called by backtrace() */
-extern volatile sig_atomic_t backtrace_lock;
+extern volatile sync_entity_t backtrace_lock;
 
 /*
  * Synchronization macros to prevent recursive deadlocks if the tracked
@@ -64,7 +66,7 @@ extern volatile sig_atomic_t backtrace_lock;
  * This macro is used to execute the traced function.
  */
 #define BT_LOCK_AND_EXECUTE(expression)   \
-	while (__sync_bool_compare_and_swap(&backtrace_lock, 0, __tid)); \
+	while (!sync_bool_compare_and_swap(&backtrace_lock, 0, __tid)); \
 	expression; \
 	backtrace_lock = 0;
 
