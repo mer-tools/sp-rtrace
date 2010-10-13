@@ -691,7 +691,7 @@ int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* n
 	ptr += write_dword(ptr, SP_RTRACE_PROTO_FUNCTION_CALL);
 
 	ptr += write_dword(ptr, res_type);
-	ptr += write_dword(ptr, sp_context_mask);
+	ptr += write_dword(ptr, sp_rtrace_get_call_context());
 
 	int timestamp = 0;
 	if (sp_rtrace_options->enable_timestamps) {
@@ -888,6 +888,8 @@ bool sp_rtrace_initialize()
 			write_initial_data();
 			enable_tracing(true);
 		}
+		/* initialize call context support */
+		sp_rtrace_init_context();
 		return true;
 	}
 	return false;

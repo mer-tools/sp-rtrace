@@ -28,102 +28,63 @@
 
 #include "sp_rtrace_context.h"
 
-static void initialize();
+#include "common/utils.h"
+
+/* the global call context mask */
+static unsigned int context_mask = 0;
 
 /*
- * runtime context function references
+ * The context_index and sp_context_registry aren't static to allow
+ * tools to dump context registry contents into file.
  */
-static int (*create_context)(const char* name);
-static void (*enter_context)(int context_id);
-static void (*exit_context)(int context_id);
 
-/*
- * Empty context functions. Used when the original context implementation
- * functions are not available.
- */
-static int empty_create_context(const char* name __attribute((unused)))
+/* The next free call context_id. */
+unsigned int context_index = 0;
+
+
+/* context lock for thread synchronization */
+static volatile int context_lock = 0;
+
+
+/* The call context registry. */
+char sp_context_registry[SP_CONTEXT_REGISTRY_SIZE][SP_CONTEXT_NAME_SIZE];
+
+unsigned int sp_context_create(const char* name)
 {
-	return 0;
-}
-
-static void empty_enter_context(int context_id __attribute((unused)))
-{
-}
-
-static void empty_exit_context(int context_id __attribute((unused)))
-{
-}
-
-
-/*
- * Context function initialization routines.
- */
-static int init_create_context(const char* name)
-{
-	initialize();
-	return create_context(name);
-}
-
-static void init_enter_context(int context_id)
-{
-	initialize();
-	enter_context(context_id);
-}
-
-static void init_exit_context(int context_id)
-{
-	initialize();
-	exit_context(context_id);
-}
-
-/* Set the runtime context function references to initialization routines */
-static int (*create_context)(const char* name) = init_create_context;
-static void (*enter_context)(int context_id) = init_enter_context;
-static void (*exit_context)(int context_id) = init_exit_context;
-
-/**
- * Initializes the runtime context function references.
- *
- * This function attempts to set context function references to the original
- * context functions. If the original context implementation is not available
- * empty functions are used (in other words the context functionality is
- * disabled)
- * @return
- */
-static void initialize()
-{
-	create_context = (int(*)(const char*))dlsym(RTLD_DEFAULT, "sp_context_create");
-	enter_context = (void(*)(int))dlsym(RTLD_DEFAULT, "sp_context_enter");
-	exit_context = (void(*)(int))dlsym(RTLD_DEFAULT, "sp_context_exit");
-
-	if (create_context == NULL || enter_context == NULL ||
-		exit_context == NULL) {
-		create_context = empty_create_context;
-		enter_context = empty_enter_context;
-		exit_context = empty_exit_context;
+	unsigned int context_id = 0;
+	
+	while(!sync_bool_compare_and_swap(&context_lock, 0, 1));
+	if (context_index < SP_CONTEXT_REGISTRY_SIZE - 1) {
+		context_id = 1 << context_index;
+		strncpy(sp_context_registry[context_index], name, SP_CONTEXT_NAME_SIZE);
+		sp_context_registry[context_index][SP_CONTEXT_NAME_SIZE - 1] = '\0';
+		context_index++;
 	}
-	else {
+	context_lock = 0;
+	return context_id;
+}
+
+void sp_context_enter(unsigned int context_id)
+{
+	if ( (1 << context_index) > context_id ) {
+		context_mask |= context_id;
 	}
 }
 
-/*
- * Public API implementation
- */
-int sp_rtrace_context_try_create(const char* name)
+void sp_context_exit(unsigned int context_id)
 {
-	return create_context(name);
+	if ( (1 << context_index) > context_id ) {
+		context_mask &= (~context_id);
+	}
 }
 
-
-void sp_rtrace_context_try_enter(int context_id)
+unsigned int sp_context_get_mask()
 {
-	enter_context(context_id);
+	return context_mask;
 }
 
-
-void sp_rtrace_context_try_exit(int context_id)
+unsigned int sp_context_get_count()
 {
-	exit_context(context_id);
+	return context_index;
 }
-
 

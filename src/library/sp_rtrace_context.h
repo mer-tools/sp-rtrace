@@ -27,48 +27,60 @@
 /**
  * @file sp_rtrace_context.h
  * Resource tracing client side API for call context implementation.
- *
- * The sp_context_try_* functions tries to locate the context library
- * sp_context_* functions and call them. If the original function
- * can't be located an empty (dummy) function is used instead.
- * This way the call context mechanism will be used when the
- * context library is available, but will not affect program
- * execution otherwise.
  */
 
-/**
- * Tries to load and call sp_context_create() function.
- *
- * This function creates a new call context with the specified
- * name and returns its identifier. The context API supports maximum of
- * 32 call contexts.
- * @param[in] name    the call context name.
- * @return            the call context id. The id is a bit value (1,2,4,8..).
- *                    0 means failure.
- */
-int sp_rtrace_context_try_create(const char* name);
+/* the size of the call context name */
+#define SP_CONTEXT_NAME_SIZE      32
+
+/* The size of the call context registry. Currently the call context is
+ * implemented as a unsigned int bitmask, the maximum size is sizeof(int) */
+#define SP_CONTEXT_REGISTRY_SIZE  sizeof(int)
+
+/* the context registry */
+char sp_context_registry[SP_CONTEXT_REGISTRY_SIZE][SP_CONTEXT_NAME_SIZE];
+
 
 /**
- * Tries to load and call sp_context_enter() function.
+ * Creates call context mask.
  *
- * This function activates the specified call context, which will be reported
- * in all consequent function call traces until deactivated.
+ * @param[in] name   the call context name.
+ * @return           the call context id (the value of the bit in the context
+ *                   mask - 1,2,4...). 0 is returned if the call context
+ *                   creation failed.
+ */
+unsigned int sp_context_create(const char* name);
+
+/**
+ * Enters call context.
+ *
  * @param[in] context_id   the call context id.
  * @return
  */
-void sp_rtrace_context_try_enter(int context_id);
+void sp_context_enter(unsigned int context_id);
+
 
 /**
- * Tries to load and call sp_context_exit() function.
+ * Exits call context.
  *
- * This function deactivates the specified call context so it will not be reported
- * in function call traces anymore.
  * @param[in] context_id   the call context id.
  * @return
  */
-void sp_rtrace_context_try_exit(int context_id);
+void sp_context_exit(unsigned int context_id);
 
 
+/**
+ * Retrieves the current call context.
+
+ * @return  the current call context.
+ */
+unsigned int sp_context_get_mask();
+
+/**
+ * Retrieves the number of registered contexts.
+
+ * @return  the number of registered contexts.
+ */
+unsigned int sp_context_get_count();
 
 #endif
 
