@@ -8,8 +8,8 @@ libsp_rtrace1_la_SOURCES = library/sp_rtrace_context.c library/sp_rtrace_formatt
 libsp_rtrace1_la_LDFLAGS = -version-info $(VERSION_MAJOR):$(VERSION_MINOR)
 libsp_rtrace1_la_LIBADD = -ldl
 
-libsp_rtrace_main_la_SOURCES = modules/sp_rtrace_main.c rtrace/rtrace_env.c modules/sp_context_impl.c common/utils.c \
-	modules/libunwind_support.c
+libsp_rtrace_main_la_SOURCES = modules/sp_rtrace_main.c rtrace/rtrace_env.c common/utils.c \
+	modules/libunwind_support.c modules/sp_context_impl.c
 libsp_rtrace_main_la_LDFLAGS = -version-info $(VERSION_MAJOR):$(VERSION_MINOR)
 libsp_rtarce_main_la_CGLAGS = -rdynamic
 libsp_rtrace_main_la_LIBADD = -lrt -ldl -lpthread

@@ -23,6 +23,7 @@
 #include "config.h"
 
 #include <stdlib.h>
+#include <dlfcn.h>
 #include <string.h>
 
 #include "sp_context_impl.h"
@@ -30,41 +31,48 @@
 
 #include "common/utils.h"
 
-/* the global call context mask */
-unsigned int sp_context_mask = 0;
-
-/*
- * The sp_context_index and sp_context_registry aren't static to allow
- * tools to dump context registry contents into file.
+/**
+ * Empty call context function, used when context library is not available.
+ * @return
  */
+static int empty_get_call_context()
+{
+	return 0;
+}
 
-/* The next free call context_id. */
-volatile size_t sp_context_index = 0;
+int sp_rtrace_init_context()
+{
+	void* fn = dlsym(RTLD_DEFAULT, "sp_context_get_mask");
+	if (fn) {
+		sp_rtrace_get_call_context = fn;
+	}
+	return sp_rtrace_get_call_context();
+}
 
-/* The call context registry. */
-char sp_context_registry[SP_CONTEXT_REGISTRY_SIZE][SP_CONTEXT_NAME_SIZE];
+int (*sp_rtrace_get_call_context)() = empty_get_call_context;
+
+
+/**
+ * Override the default sp_context_create() implementation to report context
+ * creation events.
+ */
+static unsigned int (*rt_context_create)(const char* name);
 
 unsigned int sp_context_create(const char* name)
 {
-	int index = sync_fetch_and_add(&sp_context_index, 1);
-	if (index >= (int)SP_CONTEXT_REGISTRY_SIZE) {
-		--sp_context_index;
-		return 0;
+	int id = rt_context_create(name);
+	if (id) {
+		sp_rtrace_write_context_registry(id, name);
 	}
-	strncpy(sp_context_registry[index], name, SP_CONTEXT_NAME_SIZE);
-	sp_context_registry[index][SP_CONTEXT_NAME_SIZE - 1] = '\0';
-	unsigned int context_id = 1 << index;
-	sp_rtrace_write_context_registry(context_id, name);
-	return context_id;
+	return id;
 }
 
-void sp_context_enter(unsigned int context_id)
+unsigned int init_context_create(const char* name) 
 {
-	sp_context_mask |= context_id;
+	rt_context_create = dlsym(RTLD_NEXT, "sp_context_create");
+	return rt_context_create(name);
 }
 
-void sp_context_exit(unsigned int context_id)
-{
-	sp_context_mask &= (~context_id);
-}
+static unsigned int (*rt_context_create)(const char* name) = init_context_create;
+
 
