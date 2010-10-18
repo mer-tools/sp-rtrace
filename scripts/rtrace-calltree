@@ -537,7 +537,7 @@ class Rtrace:
                     src,linenro = match.groups()
                 else:
                     # function + src
-                    src = line[pos+4:]
+                    src = line[pos+4:].strip()
                     linenro = ''
                 if src in joins:
                     return src
@@ -1305,7 +1305,7 @@ class Options:
                 "g_type_", "g_object_", "g_signal_",
                 "g_enum_", "g_quark_", "g_param_", "g_pattern_spec_",
                 "g_hash_table_", "g_slist_", "g_list_", "g_array_",
-                "g_malloc", "g_try_", "g_mem_", "g_slice_",
+                "g_malloc", "g_realloc", "g_try_", "g_mem_", "g_slice_",
                 "g_strdup", "g_strndup", "g_memdup",
                 "g_main_context_", "g_main_dispatch",
                 "g_closure_", "g_cclosure_"
