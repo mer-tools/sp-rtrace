@@ -55,8 +55,8 @@ int sp_rtrace_print_header(FILE* fp, const char* version, const char* arch,
 					(char*)version,       // HEADER_VERSION
 					(char*)arch,          // HEADER_ARCH 
 					timestamp_s,          // HEADER_TIMESTAMP
-					pid_s,                // HEADER_PROCESS
-					(char*)process_name,  // HEADER_PID
+					(char*)process_name,  // HEADER_PROCESS
+					pid_s,                // HEADER_PID
 					NULL                  // HEADER_FILTER
 			},
 	};

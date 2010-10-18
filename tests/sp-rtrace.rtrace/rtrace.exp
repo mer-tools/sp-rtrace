@@ -42,7 +42,7 @@ proc check_log { command header_recs mmap_recs malloc_recs free_recs {trace_dept
 	expect {
 		-re {(?n)([^\r]+)\r\n} {
 			set line $expect_out(1,string)
-			if { [regexp {^version.*, arch.*, time=[0-9]+\.[0-9]+\.[0-9]+ [0-9]+:[0-9]+:[0-9]+, .*process.*pid=[0-9]+,} $line] } {
+			if { [regexp {^version.*, arch.*, timestamp=[0-9]+\.[0-9]+\.[0-9]+ [0-9]+:[0-9]+:[0-9]+, .*process.*pid=[0-9]+,} $line] } {
 				set has_header [expr $has_header + 1]
 				exp_continue
 			}

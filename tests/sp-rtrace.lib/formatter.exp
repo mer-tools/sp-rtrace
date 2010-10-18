@@ -40,15 +40,15 @@ proc check_print_header { version arch time pid process } {
 
 	spawn $::bin_dir/$::out_file header $version $arch $time $pid $process
 	expect {
-		-re {version=([^,]+), arch=([^,]+), time=([^,]+), pid=([^,]+), process=([^,]+),} {
+		-re {version=([^,]+), arch=([^,]+), timestamp=([^,]+), process=([^,]+), pid=([^,]+),} {
 			set out_version $expect_out(1,string)
 			set out_arch $expect_out(2,string)
 			set out_time $expect_out(3,string)
-			set out_pid $expect_out(4,string)
-			set out_process $expect_out(5,string)
+			set out_process $expect_out(4,string)
+			set out_pid $expect_out(5,string)
 		} 
 	}
-	exp_close
+#	exp_close
 	exp_wait
 	if { $out_version != $version } {
 		fail "Wrong header version field. Expected '$version', got '$out_version'"

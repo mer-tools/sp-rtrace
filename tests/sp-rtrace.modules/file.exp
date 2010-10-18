@@ -21,21 +21,22 @@
 # 02r10-1301 USA
 #
 
-set src_dir "sp-rtrace.lib"
-set out_file "context_fail_test"
-set src_deps "$src_dir/$out_file.c"
-set src_opts "-L$lib_dir -lsp-rtrace1 -O3"
 
-#
-# test case for context without sp-rtrace-main module 
-#
-proc test_context_fail { args } {
-	rt_run_test $::out_file
+set src_dir "sp-rtrace.modules"
+set out_file "file_test"
+set src_deps "$src_dir/$out_file.c"
+set src_opts "-O0"
+
+proc test_file_module { args } {
+	test_module file open:1 close:1 fopen:1 creat:1 open64:1 dup:1 dup2:1 fcntl:1 \
+		fdopen:1 pipe:1 socket:1 socketpair:1 inotify_init:1 \
+		fopen:1 freopen:1 fclose:1 fcloseall:1
 }
 
 set result [rt_compile $src_dir $out_file $src_deps $src_opts]
 if { $result == "" } {
-	rt_test test_context_fail
+	rt_test test_file_module
 } else {
 	fail  "failed to compile $src_dir/$out_file.c:\n $result"
 }
+

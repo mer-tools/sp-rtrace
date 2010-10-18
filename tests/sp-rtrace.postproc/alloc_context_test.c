@@ -45,23 +45,23 @@ static void* zero()
 
 void*  one()
 {
-	sp_rtrace_context_try_enter(context1);
+	sp_context_enter(context1);
 	if (malloc(1001) == NULL) {
 		exit (-1);
 	}
 	free(zero());
-	sp_rtrace_context_try_exit(context1);
+	sp_context_exit(context1);
 	return malloc(2001);
 }
 
 void* two()
 {
-	sp_rtrace_context_try_enter(context2);
+	sp_context_enter(context2);
 	if (malloc(1002) == NULL) {
 		exit (-1);
 	}
 	free(one());
-	sp_rtrace_context_try_exit(context2);
+	sp_context_exit(context2);
 	return malloc(2002);
 }
 
@@ -76,8 +76,8 @@ void* three()
 
 void start()
 {
-	context1 = sp_rtrace_context_try_create("first context");
-	context2 = sp_rtrace_context_try_create("second context");
+	context1 = sp_context_create("first context");
+	context2 = sp_context_create("second context");
 
 	int i;
 	for (i = 0; i < 5; i++) {

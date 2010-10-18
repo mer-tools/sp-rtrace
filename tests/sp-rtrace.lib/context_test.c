@@ -38,22 +38,19 @@ RT_INIT();
 
 RT_CASE(context)
 {
-	int* context_mask = (int*)dlsym(RTLD_DEFAULT, "sp_context_mask");
-	RT_ASSERT(context_mask != NULL);
-
-	int context1 = sp_rtrace_context_try_create("context1");
+	int context1 = sp_context_create("context1");
 	RT_ASSERT(context1 != 0);
-	int context2 = sp_rtrace_context_try_create("context2");
+	int context2 = sp_context_create("context2");
 	RT_ASSERT(context2 != 0);
 
-	sp_rtrace_context_try_enter(context1);
-	RT_ASSERT(*context_mask == context1);
-	sp_rtrace_context_try_enter(context2);
-	RT_ASSERT(*context_mask == context1 | context2);
-	sp_rtrace_context_try_exit(context1);
-	RT_ASSERT(*context_mask == context2);
-	sp_rtrace_context_try_exit(context2);
-	RT_ASSERT(*context_mask == 0);
+	sp_context_enter(context1);
+	RT_ASSERT(sp_context_get_mask() == context1);
+	sp_context_enter(context2);
+	RT_ASSERT(sp_context_get_mask() == context1 | context2);
+	sp_context_exit(context1);
+	RT_ASSERT(sp_context_get_mask() == context2);
+	sp_context_exit(context2);
+	RT_ASSERT(sp_context_get_mask() == 0);
 
 	return RT_OK;
 }
