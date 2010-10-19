@@ -5,33 +5,33 @@ lib_LTLIBRARIES = libsp-rtrace1.la libsp-rtrace-main.la \
 
 libsp_rtrace1_la_SOURCES = library/sp_rtrace_context.c library/sp_rtrace_formatter.c \
 	common/formatter.c common/dlist.c common/htable.c common/utils.c common/rtrace_data.c common/header.c
-libsp_rtrace1_la_LDFLAGS = -version-info $(VERSION_MAJOR):$(VERSION_MINOR)
+libsp_rtrace1_la_LDFLAGS = $(VERSION_INFO)
 libsp_rtrace1_la_LIBADD = -ldl
 
 libsp_rtrace_main_la_SOURCES = modules/sp_rtrace_main.c rtrace/rtrace_env.c common/utils.c \
 	modules/libunwind_support.c modules/sp_context_impl.c
-libsp_rtrace_main_la_LDFLAGS = -version-info $(VERSION_MAJOR):$(VERSION_MINOR)
+libsp_rtrace_main_la_LDFLAGS = $(VERSION_INFO)
 libsp_rtarce_main_la_CGLAGS = -rdynamic
 libsp_rtrace_main_la_LIBADD = -lrt -ldl -lpthread
 
 libsp_rtrace_memory_la_SOURCES = modules/sp_rtrace_memory.c
 libsp_rtarce_memory_la_CGLAGS = -rdynamic
-libsp_rtrace_memory_la_LDFLAGS = -version-info $(VERSION_MAJOR):$(VERSION_MINOR)
+libsp_rtrace_memory_la_LDFLAGS = $(VERSION_INFO)
 libsp_rtrace_memory_la_LIBADD = -ldl -lpthread 
 
 libsp_rtrace_memtransfer_la_SOURCES = modules/sp_rtrace_memtransfer.c
 libsp_rtarce_memtransfer_la_CGLAGS = -rdynamic
-libsp_rtrace_memtransfer_la_LDFLAGS = -version-info $(VERSION_MAJOR):$(VERSION_MINOR)
+libsp_rtrace_memtransfer_la_LDFLAGS = $(VERSION_INFO)
 libsp_rtrace_memtransfer_la_LIBADD = -ldl 
 
 libsp_rtrace_shmseg_la_SOURCES = modules/sp_rtrace_shmseg.c common/htable.c common/dlist.c
 libsp_rtarce_shmseg_la_CGLAGS = -rdynamic
-libsp_rtrace_shmseg_la_LDFLAGS = -version-info $(VERSION_MAJOR):$(VERSION_MINOR)
+libsp_rtrace_shmseg_la_LDFLAGS = $(VERSION_INFO)
 libsp_rtrace_shmseg_la_LIBADD = -ldl 
 
 libsp_rtrace_file_la_SOURCES = modules/sp_rtrace_file.c 
 libsp_rtarce_file_la_CGLAGS = -rdynamic
-libsp_rtrace_file_la_LDFLAGS = -version-info $(VERSION_MAJOR):$(VERSION_MINOR)
+libsp_rtrace_file_la_LDFLAGS = $(VERSION_INFO)
 libsp_rtrace_file_la_LIBADD = -ldl -lpthread 
 
 bin_PROGRAMS = sp-rtrace sp-rtrace-postproc sp-rtrace-resolve sp-rtrace-allocmap

@@ -23,8 +23,6 @@ else
 endif
 
 # shared library versions
-export VERSION_MAJOR=1
-export VERSION_MINOR=0
 
 configure:
 	autoreconf -f -i -v
