@@ -99,7 +99,7 @@ static void display_usage()
 			"  -o <path>    - the output file path. Standard output is used by default.\n"
 			"  -m <mode>    - The operation mode, where <mode> can be either multi-pass or\n"
 			"                 single-cache.\n"
-			"  -t <method>  - The resolving method, where <method> can be either elf or"
+			"  -t <method>  - The resolving method, where <method> can be either elf or\n"
 			"                 bfd.\n"
 			"  -p           - keep the path of the source file (by default the path\n"
 			"                 is stripped leaving only the file name.\n"
