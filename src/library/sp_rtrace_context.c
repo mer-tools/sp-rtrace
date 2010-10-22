@@ -66,14 +66,14 @@ unsigned int sp_context_create(const char* name)
 
 void sp_context_enter(unsigned int context_id)
 {
-	if ( (1 << context_index) > context_id ) {
+	if ( ((unsigned int)1 << context_index) > context_id ) {
 		context_mask |= context_id;
 	}
 }
 
 void sp_context_exit(unsigned int context_id)
 {
-	if ( (1 << context_index) > context_id ) {
+	if ( ((unsigned int)1 << context_index) > context_id ) {
 		context_mask &= (~context_id);
 	}
 }
