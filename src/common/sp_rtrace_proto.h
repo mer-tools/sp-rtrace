@@ -38,7 +38,7 @@
 #include "common/debug_log.h"
 
 
-#define SP_RTRACE_PROTO_PACKET_TYPE(b1, b2, b3, b4) (b1 | (b2 << 8) | (b2 << 16) | (b2 << 24))
+#define SP_RTRACE_PROTO_PACKET_TYPE(b1, b2, b3, b4) (b1 | (b2 << 8) | (b3 << 16) | (b4 << 24))
 
 /* packet types */
 #define SP_RTRACE_PROTO_MODULE_INFO        SP_RTRACE_PROTO_PACKET_TYPE('M', 'I', 'N', 'F')
