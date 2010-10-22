@@ -354,8 +354,7 @@ static int read_generic_packet(rd_t* rd, const char* data, int size)
 		    fcall_prev = NULL;
 			break;
 		}
-		case SP_RTRACE_PROTO_OUTPUT_SETTINGS:
-		case SP_RTRACE_PROTO_RESOURCE_REGISTRY: {
+		case SP_RTRACE_PROTO_OUTPUT_SETTINGS: {
 			break;
 		}
 
