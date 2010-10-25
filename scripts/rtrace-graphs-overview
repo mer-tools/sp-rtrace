@@ -1,8 +1,7 @@
 #!/bin/sh
 #
-# This automatically resolves all leak reports in current directory,
-# generates overview dot files for them and generates graphs from
-# the dot files.
+# A helper script to generate several overview graphs of the given
+# resource traces, both timelines and a callgraph.
 #
 # This file is part of sp-rtrace.
 #
@@ -40,95 +39,322 @@
 # 2010-09-21
 # - Update filtering options
 # - Remove extra arguments from function signatures to get graphs smaller
+# 2010-10-22
+# - Complete rewrite to handle both binary & text traces and
+#   whether they're already processed or not.
+# - The files to process need now to be given to the script.
 #
 # Originally this file was a part of sp-libleaks package, but moved
 # to the sp-rtrace package during libleaks redesign.
 
 
-count=0
+usage ()
+{
+	name=${0##*/}
+	cat << EOF
 
-if [ $# -gt 0 ]; then
-	echo "usage: ${0##*/}"
+$name is a helper script to generate several overview
+graphs of the given resource traces. Graphs include both timelines
+in PNG format and a callgraph as PostScript file.
+
+By default input is expected to be an unprocessed binary trace file,
+but in case you want to do the address resolving on another device
+(with correct binaries and debug symbols), it can also handle already
+processed ASCII trace files.  These won't be post-processed or
+resolved.
+
+If tools needed for producing the graphs (Gnuplot, Graphviz) are
+missing, script will just provide the input files for these tools.
+
+EOF
+	# ' <- jed editor shell-mode workaround
+
+	echo "usage: $name <resource trace files>"
 	echo
-	echo "Resolves all *.rtrace.txt files in current directory"
-	echo "(unless corresponding *.rtrace.txt.resolved files exist)"
-	echo "and generates overview callgraphs out of them using"
-	echo "rtrace-calltree, python and GraphViz."
+	echo "ERROR: $1!"
 	exit 1
+}
+
+
+# args missing?
+if [ $# -lt 1 ]; then
+	usage "no resource trace files given"
 fi
 
-# if path given for script, make sure rest of things can be
-# executed from that path too (helps testing it)
+# check which trace files are binary, which are textual or something else
+texts=""
+binaries=""
+echo "Identifying trace file types:"
+for src in $*; do
+	echo $src|tr A-Z a-z|grep -q -e '\.png$' -e '\.ps$' -e '\.eps'
+	if [ $? -eq 0 ]; then
+		echo " - $src, SKIPPING (PNG/EPS/PS files are results, not inputs)"
+	elif [ \! -f $src ]; then
+		usage "given '$src' trace file doesn't exist"
+	elif [ "$(dd if=$src bs=1 count=1 2> /dev/null)" = "$(printf '\xF0')" ]; then
+		echo "- $src: binary"
+		binaries="$binaries $src"
+	elif [ "$(dd if=$src bs=8 count=1 2> /dev/null)" = "version=" ]; then
+		echo "- $src: ASCII"
+		texts="$texts $src"
+	else
+		usage "file '$src' is neither binary nor text trace file"
+	fi
+done
+
+if [ -z "$binaries" ] && [ -z "$texts" ]; then
+	usage "no suitable trace files given"
+fi
+
+
+# if a path is given for the script, make sure rest of things
+# can be executed from that path too (helps testing it)
 if [ \! -z "${0%/*}" ]; then
 	export PATH=$PATH:${0%/*}
 fi
 
-# -------------------------------------------------------------------
-# resolve function names in all trace files
-echo "Resolving all unresolved addresses in resource trace files..."
-for trace in *.rtrace.txt
-do
-	resolved=${trace%.txt}.resolved
-	if [ -f $resolved ] && [ $resolved -nt $trace ]; then
+if [ \! -z "$binaries" ]; then
+	if [ -z "$(which sp-rtrace-postproc)" ]; then
+		echo "WARNING: sp-rtrace-postproc missing, skipping binary traces!"
+		binaries=""
+		if [ -z "$texts" ]; then
+			echo "No other files to process..."
+			exit 1
+		fi
+	fi
+fi
+
+# how many files were processed
+count=0
+
+# ----------------------------------------------
+
+# create timeline input files from binary traces
+# 
+# they are created separately from binary files because
+# they need also freeing information and such files can
+# be much smaller when backtrace information is removed
+timelines=""
+if [ \! -z "$binaries" ]; then
+	echo
+	echo "Converting binary trace files for timeline use:"
+fi
+for src in $binaries; do
+	dst=$src-timeline.txt
+	echo "- $src -> $dst..."
+	# newer target file?
+	if [ -f $dst ] && [ $dst -nt $src ]; then
+		echo $texts|grep -q $dst
+		if [ $? -eq 0 ]; then
+			echo "  Already included into given arguments, ignoring."
+		else
+			echo "  Exists already, skipping re-conversion."
+			timelines="$timelines $dst"
+		fi
 		continue
 	fi
-
-	if [ -z $(which sp-rtrace-resolve) ]; then
-		echo "ERROR: 'sp-rtrace-resolve' utility missing from PATH"
+	# merge & remove backtrace information
+	echo "  < sp-rtrace-postproc -c | awk '/^[^\t]/{print}' > "
+	sp-rtrace-postproc -c < $src | awk '/^[^\t]/{print}' > $dst
+	if [ $? -eq 0 ]; then
+		timelines="$timelines $dst"
+	else
+		echo "  ERROR: conversion failed!"
+		rm $dst
 		exit 1
 	fi
-	if [ -z $(which sp-rtrace-postproc) ]; then
-		echo "ERROR: 'sp-rtrace-postproc' utility missing from PATH"
-		exit 1
-	fi
+done
 
-	echo "Removing freed allocations and resolving traces: $trace -> $resolved"
-	sp-rtrace-postproc -lcri $trace > $resolved
-	if [ $? != 0 ]; then
-		rm $resolved
-		echo "ERROR: 'sp-rtrace-resolve' call failed"
+# Check ASCII timeline inputs
+if [ \! -z "$texts" ]; then
+	echo
+	echo "Checking ASCII trace files for timeline use:"
+fi
+for src in $texts; do
+	head -1 $src | grep -q leaks
+	if [ $? -eq 0 ]; then
+		echo "- $src -> SKIPPING"
+		echo "  (useless as freed resources are removed)"
+		continue
+	fi
+	# can be used as such
+	echo "- $src -> OK"
+	timelines="$timelines $src"
+done
+
+# if no timeline tool, skip graphs
+if [ \! -z "$timelines" ]; then
+	if [ -z "$(which rtrace-timeline)" ]; then
+		echo "WARNING: rtrace-timeline missing, skipping timelines creation!"
+		timelines=""
+	fi
+fi
+
+# create timelines
+if [ \! -z "$timelines" ]; then
+	echo
+	echo "Creating total, activity and lifetime timelines:"
+fi
+for src in $timelines; do
+	dst=${src%.txt}
+	echo "- $src -> $dst-*.png..."
+	if [ \! -z "$(ls $dst-*.png 2> /dev/null)" ]; then
+		echo "  Skipping, PNG files already created"
+		continue
+	fi
+	echo "  rtrace-timeline -a -l -t -p -i $src -o $dst"
+	rtrace-timeline -a -l -t -p -i $src -o $dst
+	if [ $? -ne 0 ]; then
+		echo "  ERROR: timelines creation failed!"
 		exit 1
 	fi
 	count=$(($count+1))
 done
 
-# -------------------------------------------------------------------
-# generate dot files for all resolved traces
-echo "Generating overview .dot files of non-freed resource allocations..."
-for resolved in *.rtrace.resolved
-do
-	dot=${resolved%.resolved}.dot
-	if [ -f $dot ] && [ $dot -nt $resolved ]; then
+# ----------------------------------------------
+
+# create callgraph input files from binary traces
+callgraphs=""
+if [ \! -z "$binaries" ]; then
+	echo
+	echo "Converting binary trace files for callgraph use:"
+fi
+for src in $binaries; do
+	dst=$src-callgraph.txt
+	echo "- $src -> $dst..."
+	# newer target file?
+	if [ -f $dst ] && [ $dst -nt $src ]; then
+		echo $texts|grep -q $dst
+		if [ $? -eq 0 ]; then
+			echo "  Already included into given arguments, ignoring."
+		else
+			echo "  Exists already, skipping re-conversion."
+			callgraphs="$callgraphs $dst"
+		fi
 		continue
 	fi
-	if [ -z $(which rtrace-calltree) ]; then
-		echo "ERROR: 'rtrace-calltree' utility missing from PATH"
+	# merge & remove leaks & resolve
+	echo "  < sp-rtrace-postproc -clr >"
+	sp-rtrace-postproc -clr < $src > $dst
+	if [ $? -eq 0 ]; then
+		callgraphs="$callgraphs $dst"
+	else
+		echo "  ERROR: conversion failed!"
+		rm $dst
 		exit 1
 	fi
-	# sed command removes args from function & method
-	# signatures, including pointers to functions
-	echo "Generating call tree: $resolved -> $dot"
-	rtrace-calltree --type=graph --limit=3 --emph-limit=9 \
-	--ignore-libc-allocs=yes --ignore-glib-internals=yes --ignore-qt-internals=yes \
-	--ignore="libmeegotouch" --show-below-limit=no $resolved |\
-	sed -e 's/([^0-9)][^)]*)/()/' -e 's/)(.[^)]*)//' > $dot
-	if [ $? != 0 ]; then
-		rm $dot
-		echo "ERROR: 'rtrace-calltree' call failed"
-		exit 1
-	fi
-	count=$(($count+1))
 done
 
-# -------------------------------------------------------------------
-# generate postscript files of all dot files
-dotted=0
-echo "Converting allocation graph to PostScript files..."
-for dot in *.rtrace.dot
-do
-	ps=${dot%.dot}.ps
-	if [ -f $ps ] && [ $ps -nt $dot ]; then
-		dotted=$((dotted+1))
+# Check ASCII callgraph inputs
+if [ \! -z "$texts" ]; then
+	echo
+	echo "Checking & converting ASCII trace files for callgraph use:"
+fi
+for src in $texts; do
+	# is all necessary filtering and resolving already done?
+	if [ \! -z "$(head -1 $src|grep leaks|grep compress|grep resolve)" ]; then
+		# can be used as such
+		echo "- $src, OK (as is)"
+		callgraphs="$callgraphs $src"
+		continue
+	fi
+	dst=${src%.txt}-callgraph.txt
+	echo "- $src -> $dst..."
+	# newer target file?
+	if [ -f $dst ] && [ $dst -nt $src ]; then
+		echo $texts|grep -q $dst
+		if [ $? -eq 0 ]; then
+			echo "  Already included into given arguments, ignoring."
+		else
+			echo "  Exists already, skipping re-conversion."
+			callgraphs="$callgraphs $dst"
+		fi
+		continue
+	fi
+	# filter & resolve
+	head -1 $src|grep -q resolve
+	if [ $? -eq 0 ]; then
+		echo "  Already resolved, doing just freed resources removal and backtrace"
+		echo "  merging, for speed reasons.  Remove 'resolve' flag from first line"
+		echo "  in trace to trigger resolving:"
+		echo "  < sp-rtrace-postproc -cl >"
+		sp-rtrace-postproc -cl < $src > $dst
+	else
+		# non-resolved files might not have backtraces...
+		if [ -z "$(awk '/^[\t]/{print $1; exit}' $src)" ]; then
+			echo "  SKIPPING, no backtraces"
+			continue
+		fi
+		echo "  < sp-rtrace-postproc -clr >"
+		sp-rtrace-postproc -clr < $src > $dst
+	fi
+	if [ $? -eq 0 ]; then
+		callgraphs="$callgraphs $dst"
+	else
+		echo "  ERROR: conversion failed!"
+		rm $dst
+		exit 1
+	fi
+done
+
+# if no callgraph tool, skip graphs
+if [ \! -z "$callgraphs" ]; then
+	if [ -z "$(which rtrace-calltree)" ]; then
+		echo "WARNING: rtrace-calltree missing, skipping callgraphs creation!"
+		callgraphs=""
+	fi
+fi
+
+# create callgraphs
+if [ \! -z "$callgraphs" ]; then
+	echo
+	echo "Creating callgraphs:"
+fi
+for src in $callgraphs; do
+	dst=${src%.txt}.dot
+	echo "- $src -> $dst..."
+	# newer target file?
+	if [ -f $dst ] && [ $dst -nt $src ]; then
+		echo "  Skipping, GraphViz dot file already created"
+		continue
+	fi
+	# Try to reduce overview to reasonable amount of nodes:
+	# - use fairly large node alloc percentage limit
+	# - remove all nodes related to code "book keeping"
+	# - don't show many nodes below limit were called
+	#   (means alloc amounts don't add up though...)
+	rtrace-calltree \
+		--type=graph --limit=5 --emph-limit=10 \
+		--ignore-libc-allocs=yes --ignore-glib-internals=yes \
+		--ignore-qt-internals=yes --ignore="libmeegotouch" \
+		--show-below-limit=no $resolved $src > $dst.tmp
+	if [ $? -ne 0 ]; then
+		echo "  ERROR: callgraph creation failed!"
+		rm $dst.tmp
+		exit 1
+	fi
+	# Try to reduce node widths to reasonable sizes
+	# by using sed to:
+	# - remove method signature arguments
+	# - split file & libnames to their own row
+	sed 	-e 's/([^0-9)][^)]*)/()/' -e 's/)(.[^)]*)//' \
+		-e 's/ at /\\nat /' -e 's/ in /\\nin /' \
+		$dst.tmp > $dst
+	rm $dst.tmp
+done
+
+# generate postscript files from .dot files
+if [ \! -z "$callgraphs" ]; then
+	echo
+	echo "Converting callgraphs to PostScript:"
+fi
+for i in $callgraphs; do
+	src=${i%.txt}.dot
+	dst=${i%.txt}.eps
+	echo "- $src -> $dst"
+	# newer target file?
+	if [ -f $dst ] && [ $dst -nt $src ]; then
+		echo "  Skipping, PostScript file already created"
 		continue
 	fi
 	if [ -z $(which dot) ]; then
@@ -138,33 +364,46 @@ do
 		echo "  (configure GraphViz with '--without-x')"
 		exit 1
 	fi
-
-	echo "converting function call graphs: $dot -> $ps"
-	dot -Tps $dot > $ps
-	if [ $? != 0 ]; then
-		rm $ps
-		echo "ERROR: 'dot' (GraphViz) call failed"
+	dot -Tps $src > $dst
+	if [ $? -ne 0 ]; then
+		rm $dst
+		echo "ERROR: conversion failed"
 		exit 1
 	fi
 	count=$(($count+1))
 done
 
+echo
+echo "---------------------------------------------------------"
+
 if [ $count -eq 0 ]; then
-	if [ $dotted -eq 0 ]; then
-		echo "WARNING: No .rtrace.txt, .resolved or .dot files to process."
-	else
-		echo "All .rtrace.txt, .resolved or .dot files already processed. Remove files to re-created them:"
-		ls *.rtrace.txt *.rtrace.resolved *.rtrace.dot *.rtrace.ps
-	fi
+	echo
+	echo "WARNING: None of the *-timeline-*.png nor *-callgraph.eps"
+	echo "         files needed processing."
+	echo
+	echo "Remove these to get them re-processed/re-created:"
+	ls *-timeline-*.png *-callgraph.eps *-timeline.txt *-callgraph.txt
 	exit 1
 fi
 
 echo
-echo "REPORTS:"
-ls *.ps|sed 's/^/- /'
+echo "TIMELINE REPORTS:"
+reports=""
+for i in $timelines; do
+	# '*' wildcard, so cannot use xargs like below
+	reports="$reports ${i%.txt}-*.png"
+done
+ls $reports|sed 's/^/- /'
+
+echo
+echo "CALLGRAPH REPORTS:"
+for i in $callgraphs; do
+	echo "${i%.txt}.eps"
+done|xargs ls|sed 's/^/- /'
+
 echo
 echo "DONE!"
 echo
 echo "Please use the 'rtrace-graphs-function' script to get more detailed"
 echo "callgraphs about things done through specific functions for:"
-ls *.rtrace.txt|sed 's/^/- /'
+ls $callgraphs|sed 's/^/- /'
