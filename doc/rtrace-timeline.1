@@ -2,10 +2,10 @@
 .SH NAME
 rtrace-timeline - creates resource usage totals, activity and lifetime reports.
 .SH SYNOPSIS
-rtrace-timeline -t|-a|-l <options> [-i <infile>] [-o <outfile>]
+rtrace-timeline -t|-a|-l|-s <options> [-i <infile>] [-o <outfile>]
 .SH DESCRIPTION
 rtrace-timeline script is used to create resource allocation totals, 
-activity and lifetime reports:
+activity, lifetime and statistics reports:
 .RS
 .IP -t
 Totals report displays total resource usage during the time period.
@@ -16,6 +16,9 @@ at slice/2 intervals.
 .IP -l
 Lifetime report displays resource 'life' from allocation time to
 deallocation time.
+.IP -s
+Statistics report displayes number of allocations and total size per
+allocation size.
 .RE
 
 Note that it's possible to generate multiple reports at the same time by specifying more
@@ -32,12 +35,26 @@ of the total time period (X axis range) is used.
 .TP
 \fI--png\fP (\fI-p\fP)
 Generates png output file. By default postscript file is generated.
+.TP
+\fI--wxt\fP (\fI-w\fP)
+Displays interactive report window. This output type allows to zoom into custom
+parts of the report.
 .TP 
 \fI--in\fP=<filename> (\fI-i\fP <filename>)
 Specifies the input file name. By default the standard input is used.
 .TP 
 \fI--out\fP=<filename> (\fI-o\fP <filename>)
 Specifies the output file name. By default the standard output is used.
+.TP 
+\fI--scalex\fP=<scale> 
+Scales the output report X axis size by the \fIscale\fP value.
+.TP 
+\fI--scaley\fP=<scale> 
+Scales the output report Y axis size by the \fIscale\fP value.
+.TP 
+\fI--scale\fP=<scale> 
+Scales the output report size by the \fIscale\fP value. --scale=<value>
+is equivalent to --scalex=<value> --scaley=<value> options.
 .TP
 \fI--filter-<type>\fP=<filter>
 Specifies input data filter. The filter <type> can be \fIsize\fP, \fIindex\fP or \fItime\fP
