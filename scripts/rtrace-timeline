@@ -742,11 +742,12 @@ class Processor:
 				
 # /class Processor		
 		
-class StatsProcessor(Processor):
+class HistogramProcessor(Processor):
 	"""
-	The StatsProcessor generates statistics about allocation numbers/total size per
+	The HistogramProcessor generates statistics about allocation numbers/total size per
 	resource size.
 	"""
+	mode = None
 	
 	class Alloc:
 		total = 0
@@ -756,7 +757,6 @@ class StatsProcessor(Processor):
 	class Stats:
 		count = 0
 		total = 0
-		overhead = 0
 		allocs = None
 	
 		def __init__(self):
@@ -766,15 +766,18 @@ class StatsProcessor(Processor):
 			return self.allocs[len(self.allocs) / 2]
 	# /class Stats
 		
+	def __init__(self, parser, mode):
+		Processor.__init__(self, parser)
+		self.mode = mode
+		
 	def getId(self):
 		"Returns the stats report id"
-		return "stats"
+		return "histogram-%s" % self.mode
 
 	def writeReport(self, plotter):
-		"Writes the stats report"
+		"Writes the histogram report"
 
 		yrangeMax = 0
-		yrange2Max = 0
 			
 		# histogram data: size -> resource -> context
 		data = {}
@@ -817,8 +820,6 @@ class StatsProcessor(Processor):
 						if resource not in data[event.res_size]:
 							data[event.res_size][resource] = self.Alloc()
 						data[event.res_size][resource].total += 1
-						if data[event.res_size][resource].total > yrangeMax:
-							yrangeMax = data[event.res_size][resource].total
 						
 				if event.type == Event.Types.FREE:
 					if event.res_id not in index:
@@ -856,79 +857,57 @@ class StatsProcessor(Processor):
 					allocs.append(size)
 	
 		# create data file.
-		fileCount = plotter.createFile("stats-count.dat")
-		fileCount.create()
-		fileTotals = plotter.createFile("stats-totals.dat")
-		fileTotals.create()
+		fileData = plotter.createFile("timeline.dat")
+		fileData.create()
 		
 		# create line styles
-		ltUnfreedCount = plotter.setLineStyle(None, "#FF0000")
-		ltUnfreedTotals = plotter.setLineStyle(None, "#FF0000")
-		ltFreedCount = plotter.setLineStyle(None, "#00FF00")
-		ltFreedTotals = plotter.setLineStyle(None, "#00FF00")
+		ltUnfreed = plotter.setLineStyle(None, "#FF0000")
+		ltFreed = plotter.setLineStyle(None, "#00FF00")
 		
 		# write data header 
 		index = 2
-		fileCount.writeText("size")
-		fileTotals.writeText("size")
+		fileData.writeText("size")
 		for resource in self.parser.events:
-			fileCount.writeText("\t%s allocation count (unfreed)" % (resource))
-			fileCount.writeText("\t%s allocation count (freed)" % (resource))
-			fileTotals.writeText("\t%s total size (unfreed)" % (resource))
-			fileTotals.writeText("\t%s total size (freed)" % (resource))
-			plotter.addGraph(fileCount, "%d" % index, "xtic(1)", "col", None, ltUnfreedCount, "newhistogram \"Allocation count\", ")
-			plotter.addGraph(fileCount, "%d" % (index + 1), "xtic(1)", "col", None, ltFreedCount)
-			plotter.addGraph(fileTotals, "%d" % index, "xtic(1)", "col", "x1y2", ltUnfreedTotals, "newhistogram \"Allocation size\", ")
-			plotter.addGraph(fileTotals, "%d" % (index + 1), None, "col", "x1y2", ltFreedTotals)
+			fileData.writeText("\t%s allocation %s (unfreed)" % (resource, self.mode))
+			fileData.writeText("\t%s allocation %s (freed)" % (resource, self.mode))
+			plotter.addGraph(fileData, "%d" % index, "xtic(1)", "col", None, ltUnfreed, "newhistogram \"Allocation size\", ")
+			plotter.addGraph(fileData, "%d" % (index + 1), "xtic(1)", "col", None, ltFreed)
 			index += 2
 				
-		fileCount.writeText("\n")
-		fileTotals.writeText("\n")
+		fileData.writeText("\n")
 		
 		# write data		
 		for size in keys:
-			fileCount.writeText("%d" % size)	
-			fileTotals.writeText("%d" % size)	
+			fileData.writeText("%d" % size)	
 			for resource in self.parser.events:
 				alloc = data[size][resource]
 				if alloc is None:
-					fileCount.writeText("\t-")
-					fileCount.writeText("\t-")
-					fileTotals.writeText("\t-")
-					fileTotals.writeText("\t-")
+					fileData.writeText("\t-\t-")
 				else:
-					fileCount.writeText("\t%d" % (alloc.total - alloc.freed))
-					fileCount.writeText("\t%d" % alloc.freed)
-					if resource in self.overheadData:
-						overhead = self.overheadData[resource]
-					else:
-						overhead = 0
 					unfreed = alloc.total - alloc.freed
-					sizeTotal = alloc.total * (int(size) + overhead)
-					fileTotals.writeText("\t%d.1" % ((int(size) + overhead) * unfreed))
-					fileTotals.writeText("\t%d.2" % ((int(size) + overhead) * alloc.freed))
-					if yrange2Max < sizeTotal:
-						yrange2Max = sizeTotal
+					if self.mode == "count":
+						fileData.writeText("\t%d\t%d" % (unfreed, alloc.freed))
+						if yrangeMax < alloc.total:
+							yrangeMax = alloc.total
+					else:
+						fileData.writeText("\t%d\t%d" % ((int(size) * unfreed), int(size) * alloc.freed))
+						if yrangeMax < alloc.total * int(size):
+							yrangeMax = alloc.total * int(size)
 					
 					# calculate statistics
 					statsFreed.count += alloc.freed
 					statsFreed.total += alloc.freed * int(size)
-					statsFreed.overhead += alloc.freed * overhead
 					
 					statsUnfreed.count += unfreed
 					statsUnfreed.total += unfreed * int(size)
-					statsUnfreed.overhead += unfreed * overhead
 							
-			fileCount.writeText("\n")
-			fileTotals.writeText("\n")
+			fileData.writeText("\n")
 			
-		fileCount.close()
-		fileTotals.close()
+		fileData.close()
 		
 		plotter.setTitle("Resource allocation size statistics")
-		plotter.setAxisY("Allocation count", 0, yrangeMax, "%.1s%c")
-		plotter.setAxisY2("Total size", 0, yrange2Max , "%.1s%c")
-		plotter.setGrid("ytics y2tics")
+		plotter.setAxisY("Allocation %s" % self.mode, 0, yrangeMax, "%.1s%c")
+		plotter.setGrid("ytics")
 		plotter.setAxisX("Allocation size", None, None, None, "0")
 		plotter.setStyle("data histogram")
 		plotter.setStyle("histogram rowstacked")
@@ -943,19 +922,13 @@ class StatsProcessor(Processor):
 		table.addColumn(12)
 		# allocation count
 		table.addColumn(10)
-		# allocation overhead
-		table.addColumn(12)
 		# allocation size
-		table.addColumn(12)
-		# allocation size + overhead
 		table.addColumn(12)
 
 		table.setText(0, 0, "Allocs", "center")
 		table.setText(0, 1, "Median", "center")
 		table.setText(0, 2, "Count", "center")
 		table.setText(0, 3, "Total Size", "center")
-		table.setText(0, 4, "Overhead", "center")
-		table.setText(0, 5, "Summary size", "center")
 		
 		table.setText(2, 0, "freed", "right")
 		table.setText(3, 0, "unfreed", "right")
@@ -973,19 +946,12 @@ class StatsProcessor(Processor):
 		table.setText(2, 3, "%d" % statsFreed.total)
 		table.setText(3, 3, "%d" % statsUnfreed.total)
 		table.setText(4, 3, "%d" % (statsFreed.total + statsUnfreed.total))
-
-		table.setText(2, 4, "%d" % statsFreed.overhead)
-		table.setText(3, 4, "%d" % statsUnfreed.overhead)
-		table.setText(4, 4, "%d" % (statsFreed.overhead + statsUnfreed.overhead))
-
-
-		table.setText(2, 5, "%d" % (statsFreed.overhead + statsFreed.total))
-		table.setText(3, 5, "%d" % (statsUnfreed.overhead + statsUnfreed.total))
-		table.setText(4, 5, "%d" % (statsFreed.overhead + statsUnfreed.overhead + statsFreed.total + statsUnfreed.total))
-
+		
+		plotter.setBMargin(10)
+		plotter.setKey("invert")
 		plotter.plot()
 	
-# /class StatsProcessor
+# /class HistogramProcessor
 
 
 class LifetimeProcessor(Processor):
@@ -1997,9 +1963,9 @@ class Options:
 		
 	streamIn = sys.stdin
 	# output filename
-	outFilename= None
+	outFilename = None
 	# the output file extension
-	outExtension = ".eps"
+	outExtension = None
 	# time slice value for activity report
 	slice = 0
 	
@@ -2023,16 +1989,17 @@ class Options:
 	def parse(argv):
 		"Parses the command line arguments and initializes options."
 		try:
-			opts, args = getopt.gnu_getopt(argv, "tlaso:i:S:pw", 
+			opts, args = getopt.gnu_getopt(argv, "tlahHo:i:S:ew", 
 										["totals", 
 										 "lifetime",
 										 "activity", 
 										 "in=",
 										 "out=",
 										 "slice=",
-										 "png",
+										 "e[s",
 										 "wxt",
-										 "stats",
+										 "histogram-count",
+										 "histogram-size"
 										 "scale=",
 										 "scalex=",
 										 "scaley="
@@ -2063,8 +2030,12 @@ class Options:
 				processors.append(ActivityProcessor(parser))
 				continue
 
-			if opt == "-s" or opt == "--stats":
-				processors.append(StatsProcessor(parser))
+			if opt == "-h" or opt == "--histogram-count":
+				processors.append(HistogramProcessor(parser, "count"))
+				continue
+
+			if opt == "-H" or opt == "--histogram-size":
+				processors.append(HistogramProcessor(parser, "size"))
 				continue
 				
 			if opt == "-i" or opt == "--in":
@@ -2079,10 +2050,9 @@ class Options:
 				Options.slice = int(val)
 				continue
 				
-			if opt == "-p" or opt == "--png":
-				terminal = PngTerminal()
-				Options.fonts.NORMAL = "LiberationSans-Regular"
-				Options.outExtension = ".png"
+			if opt == "-e" or opt == "--eps":
+				terminal = EpsTerminal()
+				Options.outExtension = ".eps"
 				continue
 			
 			if opt == "-w" or opt == "--wxt":
@@ -2164,8 +2134,11 @@ class Options:
 		
 		# set the output terminal	
 		if terminal is None:
-			terminal = EpsTerminal()
+			terminal = PngTerminal()
+			Options.outExtension = ".png"
+
 		Options.terminal = terminal
+
 		
 		return parser, processors
 			
@@ -2219,10 +2192,11 @@ Usage:
     -l         generate report of resource life times.
     -a         generate report of resource allocation/deallocation
                activity.
-    -s         generate report of allocation number/totals per size.
+    -h         generate allocation number per resource size histogram.
+    -H         generate total allocation size per resource siize histogram.
     -S <msec>  the time slice for acivity report. By default it's 1/20th
                of the total time period (X axis range).
-    -p         generate png file (eps file is generated by default).
+    -e         generate postscript (eps) file (png file is generated by default).
     -w         display interactive report window.
     -i <file>  input file.
     -o <file>  output file.
