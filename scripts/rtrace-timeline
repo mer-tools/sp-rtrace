@@ -355,7 +355,7 @@ class WxtTerminal(Terminal):
 	"""
 	
 	def init(self, file):
-		file.write("set terminal wxt enhanced\n")
+		file.write("set terminal wxt enhanced size 1024,728\n")
 		
 	def finish(self, file):
 		file.write("pause -1 \"The graph is displayed in other window. Hit enter when you are finished viewing it...\\n\"\n")
@@ -603,7 +603,7 @@ class Plotter:
 		"Sets bottom margin value. Used to reserve space for statstics at the bottom of the page."
 		self.file.write("set bmargin %d\n" % value)
 
-	def addGraph(self, file, colX, colY, title = "\"\"", axis = None, style = None, prefix = None):
+	def addGraph(self, file, colX, colY, title = "\"\"", axis = None, style = None, prefix = None, ):
 		"Adds a graph based on datafile file  to the plot. colX, colY identifies the "
 		"columns containing data X/Y data."
 		if len(self.graphs):
@@ -645,7 +645,12 @@ class Plotter:
 	def setLineStyle(self, type, color):
 		"Creates new line style and returns its index."
 		self.lineStyleIndex += 1
-		self.file.write("set style line %d lt %s lc rgb \"%s\"\n" % (self.lineStyleIndex, type, color))
+		self.file.write("set style line %d" % self.lineStyleIndex)
+		if type is not None:
+			self.file.write(" lt %s" % type)
+		if color is not None:
+			self.file.write(" linecolor rgb \"%s\"" % color)
+		self.file.write("\n")
 		return self.lineStyleIndex
 		
 	def createTable(self, row, col):
@@ -749,10 +754,16 @@ class StatsProcessor(Processor):
 	# /class Alloc
 	
 	class Stats:
-		median = 0
 		count = 0
 		total = 0
 		overhead = 0
+		allocs = None
+	
+		def __init__(self):
+			self.allocs = []
+			
+		def getMedian(self):
+			return self.allocs[len(self.allocs) / 2]
 	# /class Stats
 		
 	def getId(self):
@@ -800,9 +811,6 @@ class StatsProcessor(Processor):
 						# index the event by resource id.
 						index[event.res_id] = self.Index(event);
 						
-						# store allocation size to calculate median value
-						allocs.append(event.res_size)
-						
 						# store histogram statistics
 						if event.res_size not in data:
 							data[event.res_size] = {}
@@ -835,17 +843,29 @@ class StatsProcessor(Processor):
 		for size in data:
 			keys.append(size)
 		keys.sort()
-		
-		# calculate median value
-		allocs.sort()
-		statsFreed.median = allocs[len(allocs) / 2]
-		statsUnfreed.median = statsFreed.median
-		
+
+		# calculate median values
+		for size in keys:
+			for resource in self.parser.events:
+				alloc = data[size][resource]
+				for index in range(0, alloc.freed):
+					statsFreed.allocs.append(size)
+					allocs.append(size)
+				for index in range(0, alloc.total - alloc.freed):
+					statsUnfreed.allocs.append(size)
+					allocs.append(size)
+	
 		# create data file.
 		fileCount = plotter.createFile("stats-count.dat")
 		fileCount.create()
 		fileTotals = plotter.createFile("stats-totals.dat")
 		fileTotals.create()
+		
+		# create line styles
+		ltUnfreedCount = plotter.setLineStyle(None, "#FF0000")
+		ltUnfreedTotals = plotter.setLineStyle(None, "#FF0000")
+		ltFreedCount = plotter.setLineStyle(None, "#00FF00")
+		ltFreedTotals = plotter.setLineStyle(None, "#00FF00")
 		
 		# write data header 
 		index = 2
@@ -856,10 +876,10 @@ class StatsProcessor(Processor):
 			fileCount.writeText("\t%s allocation count (freed)" % (resource))
 			fileTotals.writeText("\t%s total size (unfreed)" % (resource))
 			fileTotals.writeText("\t%s total size (freed)" % (resource))
-			plotter.addGraph(fileCount, "%d" % index, "xtic(1)", "col", None, None, "newhistogram \"Allocation count\", ")
-			plotter.addGraph(fileCount, "%d" % (index + 1), "xtic(1)", "col")
-			plotter.addGraph(fileTotals, "%d" % index, "xtic(1)", "col", "x1y2", None, "newhistogram \"Total size\", ")
-			plotter.addGraph(fileTotals, "%d" % (index + 1), None, "col", "x1y2")
+			plotter.addGraph(fileCount, "%d" % index, "xtic(1)", "col", None, ltUnfreedCount, "newhistogram \"Allocation count\", ")
+			plotter.addGraph(fileCount, "%d" % (index + 1), "xtic(1)", "col", None, ltFreedCount)
+			plotter.addGraph(fileTotals, "%d" % index, "xtic(1)", "col", "x1y2", ltUnfreedTotals, "newhistogram \"Allocation size\", ")
+			plotter.addGraph(fileTotals, "%d" % (index + 1), None, "col", "x1y2", ltFreedTotals)
 			index += 2
 				
 		fileCount.writeText("\n")
@@ -906,10 +926,10 @@ class StatsProcessor(Processor):
 		fileTotals.close()
 		
 		plotter.setTitle("Resource allocation size statistics")
-		plotter.setAxisY("number", 0, yrangeMax, "%.1s%c")
-		plotter.setAxisY2("total size", 0, yrange2Max , "%.1s%c")
+		plotter.setAxisY("Allocation count", 0, yrangeMax, "%.1s%c")
+		plotter.setAxisY2("Total size", 0, yrange2Max , "%.1s%c")
 		plotter.setGrid("ytics y2tics")
-		plotter.setAxisX("size", None, None, None, "0")
+		plotter.setAxisX("Allocation size", None, None, None, "0")
 		plotter.setStyle("data histogram")
 		plotter.setStyle("histogram rowstacked")
 		plotter.setStyle("fill solid 0.2")
@@ -920,28 +940,31 @@ class StatsProcessor(Processor):
 		# name column
 		table.addColumn(10)
 		# median
-		table.addColumn(10)
+		table.addColumn(12)
 		# allocation count
-		table.addColumn(8)
+		table.addColumn(10)
 		# allocation overhead
-		table.addColumn(10)
+		table.addColumn(12)
 		# allocation size
-		table.addColumn(10)
+		table.addColumn(12)
 		# allocation size + overhead
-		table.addColumn(10)
+		table.addColumn(12)
 
 		table.setText(0, 0, "Allocs", "center")
 		table.setText(0, 1, "Median", "center")
 		table.setText(0, 2, "Count", "center")
-		table.setText(0, 3, "Size", "center")
+		table.setText(0, 3, "Total Size", "center")
 		table.setText(0, 4, "Overhead", "center")
-		table.setText(0, 5, "Total size", "center")
+		table.setText(0, 5, "Summary size", "center")
 		
 		table.setText(2, 0, "freed", "right")
 		table.setText(3, 0, "unfreed", "right")
-		table.setText(4, 0, "total", "right")
+		table.setText(4, 0, "both", "right")
 
-		table.setText(4, 1, "%d" % statsFreed.median)
+		table.setText(2, 1, "%d" % statsFreed.getMedian())
+		table.setText(3, 1, "%d" % statsUnfreed.getMedian())
+		table.setText(4, 1, "%d" % (allocs[len(allocs) / 2]))
+
 		
 		table.setText(2, 2, "%d" % statsFreed.count)
 		table.setText(3, 2, "%d" % statsUnfreed.count)
@@ -955,15 +978,15 @@ class StatsProcessor(Processor):
 		table.setText(3, 4, "%d" % statsUnfreed.overhead)
 		table.setText(4, 4, "%d" % (statsFreed.overhead + statsUnfreed.overhead))
 
+
 		table.setText(2, 5, "%d" % (statsFreed.overhead + statsFreed.total))
 		table.setText(3, 5, "%d" % (statsUnfreed.overhead + statsUnfreed.total))
 		table.setText(4, 5, "%d" % (statsFreed.overhead + statsUnfreed.overhead + statsFreed.total + statsUnfreed.total))
 
 		plotter.plot()
-
-	
 	
 # /class StatsProcessor
+
 
 class LifetimeProcessor(Processor):
 	"""
