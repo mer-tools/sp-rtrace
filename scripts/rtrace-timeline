@@ -488,7 +488,8 @@ class Plotter:
 			
 		def remove(self):
 			"Deletes the target file"
-			os.remove(self._filename)
+			if os.path.isfile(self._filename):
+				os.remove(self._filename)
 			
 		def getFilename(self):
 			"Retrieves name of the target file"
@@ -744,8 +745,10 @@ class Processor:
 		
 class HistogramProcessor(Processor):
 	"""
-	The HistogramProcessor generates statistics about allocation numbers/total size per
+	The HistogramProcessor generates statistics about allocation count/total size per
 	resource size.
+	The generated report type (count or size) depends on the mode parameter passed
+	in constructor.
 	"""
 	mode = None
 	
@@ -755,6 +758,7 @@ class HistogramProcessor(Processor):
 	# /class Alloc
 	
 	class Stats:
+		"Stores allocation (freed/unfreed) statistics"
 		count = 0
 		total = 0
 		allocs = None
@@ -763,7 +767,9 @@ class HistogramProcessor(Processor):
 			self.allocs = []
 			
 		def getMedian(self):
-			return self.allocs[len(self.allocs) / 2]
+			"Calculates median allocation size"
+			nallocs = len(self.allocs)
+			return nallocs and self.allocs[nallocs / 2] or 0
 	# /class Stats
 		
 	def __init__(self, parser, mode):
@@ -782,6 +788,8 @@ class HistogramProcessor(Processor):
 		# histogram data: size -> resource -> context
 		data = {}
 		
+		# Histogram reports supports only single resource. 
+		# Show a warning message and exit otherwise.
 		if len(self.parser.events) > 1:
 			resources = ""
 			for resource in self.parser.events:
@@ -792,8 +800,6 @@ class HistogramProcessor(Processor):
 			                     "Use --filter-resource options to filter a single resource." % resources
 			sys.exit(-1)
 			
-		allocs = []
-
 		# iterate through registered resources
 		for resource in self.parser.events:
 			events = self.parser.events[resource]
@@ -834,10 +840,18 @@ class HistogramProcessor(Processor):
 						data[ievent.event.res_size][resource].freed += 1
 						# remove deleted resource from index.
 						del index[event.res_id]
+
+			# check if the data was gathered 
+			if len(data) == 0:
+				print >> sys.stderr, "ERROR: Either the input file does not contain any events "\
+				                     "or no events are matching the specified filter."
+				plotter.cleanup()
+				sys.exit(0)
 			
 		# initialize statistics data
 		statsFreed = self.Stats()
 		statsUnfreed = self.Stats()
+		statsSumm = self.Stats()
 		
 		# index by size
 		keys = []				
@@ -845,35 +859,37 @@ class HistogramProcessor(Processor):
 			keys.append(size)
 		keys.sort()
 
+
 		# calculate median values
 		for size in keys:
 			for resource in self.parser.events:
 				alloc = data[size][resource]
 				for index in range(0, alloc.freed):
 					statsFreed.allocs.append(size)
-					allocs.append(size)
+					statsSumm.allocs.append(size)
 				for index in range(0, alloc.total - alloc.freed):
 					statsUnfreed.allocs.append(size)
-					allocs.append(size)
+					statsSumm.allocs.append(size)
 	
 		# create data file.
 		fileData = plotter.createFile("timeline.dat")
 		fileData.create()
 		
-		# create line styles
+		# create line styles for freed and unfreed bars
 		ltUnfreed = plotter.setLineStyle(None, "#FF0000")
 		ltFreed = plotter.setLineStyle(None, "#00FF00")
 		
 		# write data header 
+
+		# Histogram data starts with second column (the first column contains
+		# allocation size).
 		index = 2
 		fileData.writeText("size")
 		for resource in self.parser.events:
-			fileData.writeText("\t%s allocation %s (unfreed)" % (resource, self.mode))
-			fileData.writeText("\t%s allocation %s (freed)" % (resource, self.mode))
-			plotter.addGraph(fileData, "%d" % index, "xtic(1)", "col", None, ltUnfreed, "newhistogram \"Allocation size\", ")
-			plotter.addGraph(fileData, "%d" % (index + 1), "xtic(1)", "col", None, ltFreed)
+			plotter.addGraph(fileData, "%d" % index, "xtic(1)", "\"%s allocation %s (unfreed)\"" % (resource, self.mode), \
+							 None, ltUnfreed, "newhistogram \"Resource size\", ")
+			plotter.addGraph(fileData, "%d" % (index + 1), "xtic(1)", "\"%s allocation %s (freed)\"" % (resource, self.mode), None, ltFreed)
 			index += 2
-				
 		fileData.writeText("\n")
 		
 		# write data		
@@ -905,14 +921,23 @@ class HistogramProcessor(Processor):
 			
 		fileData.close()
 		
-		plotter.setTitle("Resource allocation size statistics")
-		plotter.setAxisY("Allocation %s" % self.mode, 0, yrangeMax, "%.1s%c")
+		# set the plot properties
+		if self.mode == "size":
+			ylabel = "Total allocation size"
+			title = "Total allocation size per resource size"
+		else:
+			ylabel = "Allocation count"
+			title = "Allocation count per resource size"
+		plotter.setTitle(title)
+		plotter.setAxisY(ylabel, 0, yrangeMax, "%.1s%c")
 		plotter.setGrid("ytics")
-		plotter.setAxisX("Allocation size", None, None, None, "0")
+		plotter.setAxisX("Resource size", None, None, None, "0")
 		plotter.setStyle("data histogram")
 		plotter.setStyle("histogram rowstacked")
 		plotter.setStyle("fill solid 0.2")
 		plotter.setSeparator("\\t")
+
+		# write statistics table
 
 		# define table headers
 		table = plotter.createTable(1, 1)
@@ -936,8 +961,7 @@ class HistogramProcessor(Processor):
 
 		table.setText(2, 1, "%d" % statsFreed.getMedian())
 		table.setText(3, 1, "%d" % statsUnfreed.getMedian())
-		table.setText(4, 1, "%d" % (allocs[len(allocs) / 2]))
-
+		table.setText(4, 1, "%d" % statsSumm.getMedian())
 		
 		table.setText(2, 2, "%d" % statsFreed.count)
 		table.setText(3, 2, "%d" % statsUnfreed.count)
@@ -949,6 +973,7 @@ class HistogramProcessor(Processor):
 		
 		plotter.setBMargin(10)
 		plotter.setKey("invert")
+		
 		plotter.plot()
 	
 # /class HistogramProcessor
@@ -1079,8 +1104,9 @@ class LifetimeProcessor(Processor):
 					totalAllocs += 1
 
 		if totalAllocs == 0:
-			print >> sys.stderr, "No allocations matching the specified filter"
-			sys.exit(2)
+			print >> sys.stderr, "ERROR: Either the input file does not contain any events "\
+				                     "or no events are matching the specified filter."
+			sys.exit(0)
 		
 		# initialize context filters
 		contexts = [Context(Context.MASK_ALL, "all allocations")]
@@ -1194,7 +1220,7 @@ class LifetimeProcessor(Processor):
 				allocs.sort()
 				totals = len(allocs)
 				statAverage = total / totals;
-				statMedian = allocs[totals / 2 - 1]
+				statMedian = totals and allocs[totals / 2 - 1] or 0
 				if totals % 2 == 0:
 					statMedian = (statMedian + allocs[totals / 2]) / 2
 					
@@ -1487,6 +1513,13 @@ class ActivityProcessor(Processor):
 			plotter.addGraph(stat.peakSize.file, "1", "2", "column(2)")
 			plotter.addGraph(stat.peakAllocs.file, "1", "2", "column(2)")
 			plotter.addGraph(stat.peakFrees.file, "1", "2", "column(2)")
+
+		# Check if the gathered data is not empty
+		if yrangeMax == 0:		
+			print >> sys.stderr, "ERROR: Either the input file does not contain any events "\
+			                     "or no events are matching the specified filter."
+			plotter.cleanup()
+			sys.exit(0)
 		
 		# increase Y  range, so top graph isn't hidden beyond the axis	
 		yrangeMax = yrangeMax * 105 / 100	
@@ -1749,8 +1782,10 @@ class TotalsProcessor(Processor):
 				plotter.addGraph(overheadFile, "1", "2", "column(2)")
 				overheadFile.close()
 
-		if xrangeMin is None:
-			print >> sys.stderr, "No events matching the specified criteria"
+		# Check if the gathered data is not empty
+		if yrangeMax == 0:		
+			print >> sys.stderr, "ERROR: Either the input file does not contain any events "\
+			                     "or no events are matching the specified filter."
 			plotter.cleanup()
 			sys.exit(0)
 	
@@ -1999,10 +2034,10 @@ class Options:
 										 "eps",
 										 "wxt",
 										 "histogram-count",
-										 "histogram-size"
+										 "histogram-size",
 										 "scale=",
 										 "scalex=",
-										 "scaley="
+										 "scaley=",
 										 "filter-size=",
 										 "filter-time=",
 										 "filter-index=",
