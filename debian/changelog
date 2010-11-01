@@ -1,8 +1,32 @@
 sp-rtrace (1.2) unstable; urgency=low
 
-  * Fixes: NB#194298 - sp-rtrace: add automake to build-deps.
+  * rtrace-timeline script rewrite:
+    - total non-freed allocations timeline chart
+    - allocation activity timeline chart
+    - allocation life-time timeline chart
+    - allocation count & size per alloc size histograms
+    - possible to generate all charts at the same time
+    - options for filtering allocations & deallocations based on
+      allocation record, timestamp or size range and scaling chart
+    Fixes: NB#153186
+  * rtrace-graphs-overview script rewrite:
+    - resource file includes information about filtering done on it
+    - handle both binary and ascii files
+    - input files need now to be specified
+    - generate also (all) timeline charts
+  * rtrace-callgree updates:
+    - ignore deallocation backtraces
+    - option to filter allocations based on size range
+    - updates to glib/qt function/method ignore shortcuts
+  * Experimental support for using libunwind to collect backtraces
+  * Binary and ASCII trace file formats changed
+  * Context API library changes needed by functracer
+  * Post-processing speed and memory usage improvements
+  * Force i486 architecture for x86 (Sbox). Fixes: NB#201366
+    (GCC version specific atomic ops issue)
+  * Automake&libtool added to build-deps. Fixes: NB#194298
 
- -- Tommi Rantala <ext-tommi.1.rantala@nokia.com>  Tue, 28 Sep 2010 14:35:51 +0300
+ -- Tommi Rantala <ext-tommi.1.rantala@nokia.com>  Mon,  1 Nov 2010 18:25:51 +0300
 
 sp-rtrace (1.1) unstable; urgency=low
 
