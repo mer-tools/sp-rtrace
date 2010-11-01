@@ -436,16 +436,18 @@ static void stop_tracing()
  */
 static void begin_tracing()
 {
-	fprintf(stderr, "INFO: Tracing started. Trace output will be produced after "
-		   "tracing is stopped. To stop tracing either use toggle option "
-		   "again or terminate the target process.\n");
 	if (rtrace_options.manage_preproc) {
 		/* The pre-processor is managed by the tracing module.
 		 * Simply send toggle signal and exit.
 		 */
+		fprintf(stderr, "INFO: toggling tracing for the process started in managed mode.\n");
 		kill(rtrace_options.pid, rtrace_options.toggle_signal);
 	}
 	else {
+		fprintf(stderr, "INFO: Tracing started. Trace output will be produced after "
+			   "tracing is stopped. To stop tracing either use toggle option "
+			   "again or terminate the target process.\n");
+
 		char pipe_path[128];
 		/* setup data flow */
 
