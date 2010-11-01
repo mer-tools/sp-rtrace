@@ -1,11 +1,11 @@
 .TH RTRACE-TIMELINE 1 "2010-08-03" "sp-rtrace"
 .SH NAME
-rtrace-timeline - creates resource usage totals, activity and lifetime reports.
+rtrace-timeline - create resource usage total, activity, lifetime and histogram reports.
 .SH SYNOPSIS
-rtrace-timeline -t|-a|-l|-s <options> [-i <infile>] [-o <outfile>]
+rtrace-timeline -t|-a|-l|-c|-s <options> [-i <infile>] [-o <outfile>]
 .SH DESCRIPTION
 rtrace-timeline script is used to create resource allocation totals, 
-activity, lifetime and statistics reports:
+activity, lifetime and histogram statistics reports:
 .RS
 .IP -t
 Totals report displays total resource usage during the time period.
@@ -25,10 +25,10 @@ allocation size.
 .RE
 
 Note that it's possible to generate multiple reports at the same time by specifying more
-than one report generation option (-t, -l -a). In this mode output file (-o) should be
-always specified and the report filenames will have the follwing format:
-<filename>-<totals|activity|lifetime>.<eps|png> where <filename> is the specified output
-file.
+than one report generation option (-t, -a, -l -c, -s). In this mode output file (-o)
+should be always specified and the report filenames will have the follwing format:
+<filename>-<totals|activity|lifetime|histogram-(count|size)>.<eps|png> where <filename>
+is the specified output file.
 
 .SS Options:
 .TP 
