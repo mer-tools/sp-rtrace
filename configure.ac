@@ -42,15 +42,24 @@ AC_CHECK_LIB([rt], [clock_gettime],
   [AC_MSG_ERROR([rt library is required])],
 )
 
-# libatomic-ops is required for the older armel toolchain
-AS_IF(test $DEB_BUILD_GNU_TYPE == arm-linux-gnueabi,
-  [AS_VERSION_COMPARE($($CC -dumpversion), "4.3.3", 
-    [AC_CHECK_HEADER([atomic_ops.h], 
-      AC_DEFINE(USE_LAOPS, 1, [Use libatomic-ops instead of __sync_* gcc builtins]),
-      AC_MSG_ERROR([libatomic-ops is required when compiling for arm with $CC version less than 4.3.3])
-      )],
-  )]
-)
+case $build in
+  i486-*|i586-*|i686-*)
+    CFLAGS="$CFLAGS -march=i486"
+    ;;
+  arm-*)
+    # libatomic-ops is required for the older armel toolchain
+    AS_VERSION_COMPARE($($CC -dumpversion), "4.3.3", 
+      [AC_CHECK_HEADER([atomic_ops.h], 
+        AC_DEFINE(USE_LAOPS, 1, [Use libatomic-ops instead of __sync_* gcc builtins]),
+        AC_MSG_ERROR([libatomic-ops is required when compiling for arm with $CC version less than 4.3.3])
+        )],
+    )
+    ;;
+  *)
+    AC_MSG_ERROR([Unsupported architecture: $build])
+    ;;
+esac
+    
 
 # optional libunwind support
 AC_CHECK_HEADER([libunwind.h], AC_DEFINE(USE_LUNWIND, 1, [Add libunwind support]))

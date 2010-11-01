@@ -202,7 +202,7 @@ static void set_environment()
 	if (rtrace_options.audit) setenv("LD_AUDIT", rtrace_options.audit, 1);
 
 	char preload[PATH_MAX], *ppreload = preload;
-	ppreload += sprintf(preload, SP_RTRACE_LIB_PATH "/%s:", SP_RTRACE_MAIN_MODULE);
+	ppreload += sprintf(preload, SP_RTRACE_LIB_PATH "%s:", SP_RTRACE_MAIN_MODULE);
 
 	if (rtrace_options.preload) {
 		char* module = strtok(rtrace_options.preload, ":");
@@ -212,10 +212,12 @@ static void set_environment()
 				ppreload += sprintf(ppreload, "%s:", module);
 			}
 			else {
-				ppreload += sprintf(ppreload, SP_RTRACE_LIB_PATH "/libsp-rtrace-%s.so:", module);
+				ppreload += sprintf(ppreload, SP_RTRACE_LIB_PATH "libsp-rtrace-%s.so:", module);
 			}
 			module = strtok(NULL, ":");
 		}
+		*ppreload++ = '\n';
+		*ppreload++ = '\0';
 	}
 	if (query_scratchbox()) {
 		LOG("scratchbox environment detected");
