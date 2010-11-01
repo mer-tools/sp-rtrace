@@ -43,6 +43,8 @@
 # - Complete rewrite to handle both binary & text traces and
 #   whether they're already processed or not.
 # - The files to process need now to be given to the script.
+# 2010-11-01
+# - Adapt to rtrace-timeline option changes
 #
 # Originally this file was a part of sp-libleaks package, but moved
 # to the sp-rtrace package during libleaks redesign.
@@ -63,7 +65,7 @@ but in case you want to do the address resolving on another device
 processed ASCII trace files.  These won't be post-processed or
 resolved.
 
-If tools needed for producing the graphs (Gnuplot, Graphviz) are
+If tools needed for producing the graphs or the intermediate files are
 missing, script will just provide the input files for these tools.
 
 EOF
@@ -202,8 +204,8 @@ for src in $timelines; do
 		echo "  Skipping, PNG files already created"
 		continue
 	fi
-	echo "  rtrace-timeline -a -l -t -p -i $src -o $dst"
-	rtrace-timeline -a -l -t -p -i $src -o $dst
+	echo "  rtrace-timeline -t -a -l -c -s -i $src -o $dst"
+	rtrace-timeline -t -a -l -c -s -i $src -o $dst
 	if [ $? -ne 0 ]; then
 		echo "  ERROR: timelines creation failed!"
 		exit 1
