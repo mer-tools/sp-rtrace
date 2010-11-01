@@ -1,15 +1,15 @@
-.TH RTRACE-CALLTREE 1 "2010-08-03" "sp-rtrace"
+.TH RTRACE-CALLTREE 1 "2010-11-01" "sp-rtrace"
 .SH NAME
 rtrace-calltree - post-processing for rtrace reports
 .SH SYNOPSIS
 rtrace-calltree [options] <rtrace report>  >  report.[txt|dot|html]
 .SH DESCRIPTION
 \fIrtrace-calltree\fP can produce different reports from rtrace
-resource allocations reports.
+resource allocation/deallocation reports.
 From these reports you can see for example which of the functions
 account for most of the resource usage and how
 the resource allocations are divided between the functions they call.
-Rtrace leak report is sp-rtrace report post-processed with -c[l]r
+Rtrace report is sp-rtrace report post-processed with -c[l]r
 option.
 .PP
 \fIrtrace-calltree\fP works by accumulating the allocations upwards in
@@ -22,21 +22,30 @@ addresses instead of function/method names are ignored.
 \fIrtrace-calltree\fP supports several different output report types:
 .TP
 \fBstats\fP
-(ASCII) allocation histogram and allocation statistics.
-This is the default report type.
+(ASCII) allocation histogram and allocation statistics. This is the
+default report type and typically needs much less memory than the
+\fIrtrace-timeline\fP graphical histogram generation.
+.PP
+(\fIrtrace-timeline\fP intermediate data structures need to store every
+allocation and deallocation record separately whereas \fIrtrace-calltree\fP
+stores only allocation sizes.)
+.PP
+Useful for detecting inefficient data structure usage in code which
+can be analyzed further by using the --size-range option with
+the callgraph output.
 .TP
 \fBgraph\fP
-A callgraph of the largest allocations.  This is probably the most
-interesting report, but you normally need to specify quite a lot of
-additional options to get exactly what you want.  Using this is
-explained more in detail with the (PDF) analysis document coming
-with the \fIsp-rtrace\fP package.
+A callgraph of backtraces through which most of the allocations are
+done. This is probably the most interesting report, but you normally
+need to specify quite a lot of additional options to get exactly what
+you want.  Using this will be explained more in detail with the (PDF)
+analysis document coming with the \fIsp-rtrace\fP package.
 .PP
 Note that number of called functions and amount of allocations do not
-always match exactly between caller and called functions.  This is not
-an error. Main reason is that nodes for functions which are not involved
-in enough allocations are left out of graphs, but their share of
-allocs is still counted in the shown nodes.
+always match exactly between caller and called functions.  This can be
+for several reasons, either the backtraces were not deep enough to go
+up to main, there were debug symbols missing to get proper backtraces
+or --show-below-limit=no option was used.
 .PP
 Graphs are output in \fIdot\fP format.  You will need GraphViz package
 to generate PostScript, SVG, PNG etc. formats out of them.
@@ -125,7 +134,10 @@ the amount of output, see the filtering options.
 .TP
 \fB--show-below-limit\fP=\fIno\fP
 Do not show nodes summarizing how many called nodes were below
-the specified (or default) limit (see --limit option).
+the specified (or default) limit (see --limit option).  Because
+their share of allocs is still counted in the shown nodes, this
+means that the values shown in the callgraph won't add up
+(which can confuse people reading the callgraph).
 .TP
 \fB--stop\fP=\fIvalue\fP
 Value is a string prefix of node name where each backtrace parsing
@@ -158,11 +170,11 @@ backtraces although they were matched by --ignore or --ignore-middle.
 Shortcut to ignore lower level freetype and fontconfig allocation functions.
 .TP
 \fB--ignore-libc-allocs\fP=\fIyes\fP
-Shortcut to ignore lower level C-library and C++ allocation/free functions
+Shortcut to ignore lower level C-library and C++ allocation functions
 to make graphs more readable.
 .TP
 \fB--ignore-glib-internals\fP=\fIyes\fP
-Shortcut to ignore several lowest level allocation/free, standard data
+Shortcut to ignore several lowest level allocation, standard data
 structure handling and recursed functions called by Glib programs.
 You might want to try also these options:
 .nf
@@ -188,7 +200,7 @@ applications.  You might want to try also these options:
 .fi
 .TP
 \fB--ignore-qt-internals\fP=\fIyes\fP
-Shortcut to ignore lower level Qt allocation/free, standard data
+Shortcut to ignore lower level Qt allocation, standard data
 structure handling and marshalling/recursed functions called by Qt
 applications.  You might want to try also these options:
 .nf
@@ -254,6 +266,7 @@ Currently user needs to generate each report type separately,
 \fIrtrace-calltree\fP cannot create multiple reports in the same run.
 .SH SEE ALSO
 .IR sp-rtrace (1),
+.IR rtrace-timeline (1),
 .IR rtrace-graphs-function (1),
 .IR rtrace-graphs-overview (1),
 .IR valgrind (1),

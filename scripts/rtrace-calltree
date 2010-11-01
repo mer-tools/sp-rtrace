@@ -155,6 +155,9 @@
 # 2010-10-05:
 # - Fixes to parsing BFD resolved traces and traces with resource frees
 #   that don't have backtraces + '*' shortcut to --node option
+# 2010-11-01:
+# - Ignore frees completely, don't count them as zero sized allocs
+#   (use -1 for free sizes and ignoring stack with negative sizes)
 #
 # Originally this file (alloc-tree) was a part of libleaks package, but
 # renamed and moved to the sp-rtrace package during libleaks redesign.
@@ -197,13 +200,14 @@ class TotalStats:
         self.size_with_overhead = 0
     
     def add_sizes(self, sizes):
-        "add list of given sizes to earlier sizes, return how many bytes added"
-        self.sizes += sizes
+        "add list of given positive sizes to earlier sizes, return their sum"
         size = 0
         for s in sizes:
             size += s
+        if size >= 0:
+            self.sizes += sizes
         return size
-    
+
     def complete(self):
         "calculate memory allocation count, overhead, total and median"
         self.sizes.sort()
@@ -383,9 +387,12 @@ class Graph:
 
     def update(self, trace, sizes, address):
         "update graph with given trace[], size, count, topmost address"
-        count = len(sizes)
         size = self.stats.add_sizes(sizes)
+        if size < 0:
+            # negative sizes come from frees, ignore them
+            return
         self.trace_id += 1
+        count = len(sizes)
         idx = 0
         for line in trace:
             if line in self.nodes:
@@ -461,6 +468,9 @@ class Graph:
         self.stats.complete()
         alloc_overhead = self.stats.alloc_overhead
         total_size = self.stats.size_with_overhead
+        if not total_size:
+            debug("WARNING: allocation total is zero, all percentages will be bogus!")
+            total_size = 0.1
         idx = 0
         for node in self.nodes.itervalues():
             node.percentage = 100.0 * (node.size + node.count*alloc_overhead) / total_size
@@ -562,13 +572,13 @@ class Rtrace:
             return fun
     
     def get_name_size_addr(self, line):
-        "return name and size & ID for alloc, zero for freed size or None for no match"
+        "return name and size & ID for alloc, but negative sizes for frees"
         match = self.alloc_pattern.match(line)
         if match:
             return (match.group(1), int(match.group(2)), int(match.group(3), 16))
         match = self.free_pattern.match(line)
         if match:
-            return (match.group(1), 0, int(match.group(2), 16))
+            return (match.group(1), -1, int(match.group(2), 16))
         error_exit("this alloc/free line doesn't match the patterns:\n%s" % line)
     
     def ignore(self, line, options):
@@ -604,9 +614,9 @@ class Rtrace:
                 oldname = name
                 (name,size,addr) = self.get_name_size_addr(line)
                 if name != oldname:
-                    # backtrace is by default omitted from alloc frees,
-                    # but they still need to be handled and separated
-                    # from allocs following them
+                    # backtrace can be missing for previous alloc
+                    # or free but it still needs to be handled and
+                    # separated from backtraces following them
                     stack = True
                 # backtrace stack frames collected for previous allocs/frees?
                 if stack:
@@ -939,8 +949,8 @@ class AsciiReport:
         else:
             s = "Total of: number of allocs * (size + alloc overhead)"
         print """
-Statistics about the non-freed allocations
-==========================================
+Statistics about the allocations
+================================
 
  size:  | %s:
 --------|------------------------------------------------------------------""" % s
@@ -1293,8 +1303,7 @@ class Options:
                 if not self.get_bool(name, arg, value):
                     continue
                 self.ignore += [
-                "malloc", "realloc", "calloc", "free",
-                "operator new", "operator delete",
+                "malloc", "realloc", "calloc", "operator new",
                 "memdup", "strdup", "strndup"
                 ]
             elif option == "ignore-glib-internals":
@@ -1323,7 +1332,7 @@ class Options:
                 if not self.get_bool(name, arg, value):
                     continue
                 self.ignore += [
-                "libQt", "qMalloc", "qRealloc", "qFree",
+                "libQt", "qMalloc", "qRealloc",
                 "QString::", "QByteArray::", "QMutex",
                 "QHashData::", "QListData::", "QMapData::",
                 "QVectorData::", "QString in ", "QEventLoop::",
@@ -1522,12 +1531,11 @@ to the output data:
         and fontconfig allocation functions.
 
     --ignore-libc-allocs=yes, shortcut to ignore lower level C and
-        C++ allocation/free functions to make graphs more readable.
+        C++ allocation functions to make graphs more readable.
 
     --ignore-glib-internals=yes, shortcut to ignore several lowest level
-        allocation/free, standard data structure handling and recursed
-        functions called by Glib programs.  You might want to try also
-        these options:
+        allocation, standard data structure handling and recursed functions
+        called by Glib programs.  You might want to try also these options:
         --intermediate=no --leafs=no --show-below-limit=no 
         --ignore=dcgettext --ignore=tsearch
         --join=ld-<version>.so
@@ -1540,8 +1548,8 @@ to the output data:
         --ignore=gdk_window_ --ignore=_gdk_window_
         --join=fontconfig
 
-    --ignore-qt-internals=yes, shortcut to ignore lower level Qt
-        allocation/free, standard data structure handling and
+    --ignore-qt-internals=yes, shortcut to ignore lower level
+        Qt allocation, standard data structure handling and
         marshalling/recursed functions called by Qt applications.
         You might want to try also these options:
           --ignore-glib-internals=yes
