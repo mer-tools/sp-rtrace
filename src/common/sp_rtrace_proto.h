@@ -169,9 +169,9 @@ static inline int read_string(const char* ptr, char* value, int size)
 	unsigned short len = 0;
 	ptr += read_word(ptr, &len);
 	if (len >= size) return -EINVAL;
+	value[len] = '\0';
 	if (len) {
 		memcpy(value, ptr, len);
-		value[len] = '\0';
 		return len + sizeof(short);
 	}
 	return SP_RTRACE_PROTO_TYPE_SIZE;
@@ -195,9 +195,12 @@ static inline int read_stringa(const char* ptr, char** value)
 		fprintf(stderr, "ERROR: read_stringa: failed to allocate %d bytes of memory\n", len + 1);
 		exit (-1);
 	}
-	memcpy(*value, ptr, len);
 	(*value)[len] = '\0';
-	return len ? len + sizeof(short) : SP_RTRACE_PROTO_TYPE_SIZE;
+	if (len) {
+		memcpy(*value, ptr, len);
+		return len + sizeof(short);
+	}
+	return SP_RTRACE_PROTO_TYPE_SIZE;
 }
 
 
@@ -282,7 +285,7 @@ static size_t write_string(char* ptr, const char* str)
 			*ptr++ = *str++;
 		}
 		int size = ptr - (char*)psize;
-		/* pad the string wihth '\0' to ensure aligment of the whole package */
+		/* pad the string with '\0' to ensure alignment of the whole package */
 		while (size & (SP_RTRACE_PROTO_ALIGN - 1)) {
 			size++;
 			*ptr++ = '\0';
