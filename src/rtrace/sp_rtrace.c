@@ -36,7 +36,6 @@
 #include <limits.h>
 #include <unistd.h>
 #include <getopt.h>
-#include <stdbool.h>
 #include <dirent.h>
 #include <dlfcn.h>
 #include <ctype.h>
@@ -216,8 +215,6 @@ static void set_environment()
 			}
 			module = strtok(NULL, ":");
 		}
-		*ppreload++ = '\n';
-		*ppreload++ = '\0';
 	}
 	if (query_scratchbox()) {
 		LOG("scratchbox environment detected");
@@ -421,7 +418,6 @@ static void disconnect_input(const char* pipe_path)
  *
  * The tracing is stopped simply by sending toggle signal to the
  * target process.
- * TODO: --follow-forks option support.
  * @return
  */
 static void stop_tracing()
@@ -442,7 +438,7 @@ static void begin_tracing()
 		/* The pre-processor is managed by the tracing module.
 		 * Simply send toggle signal and exit.
 		 */
-		fprintf(stderr, "INFO: toggling tracing for the process started in managed mode.\n");
+		fprintf(stderr, "INFO: toggling tracing for the process %d started in managed mode.\n", rtrace_options.pid);
 		kill(rtrace_options.pid, rtrace_options.toggle_signal);
 	}
 	else {
@@ -474,6 +470,88 @@ static void begin_tracing()
 	}
 }
 
+
+/**
+ * Checks if pid is a child process of ppid.
+ * 
+ * @param[in] pid   the child process to check.
+ * @param[in] ppid  the parent process to check.
+ * @return
+ */
+bool is_child_procses_of(int pid, int ppid)
+{
+	int rc = false;
+	char buffer[1024];
+	sprintf(buffer, "/proc/%d/status", pid);
+	FILE* fp = fopen(buffer, "r");
+	if (fp) {
+		while (fgets(buffer, sizeof(buffer), fp)) {
+			int tpid;
+			if (sscanf(buffer, "PPid:\t%d", &tpid) == 1) {
+				rc = (ppid == tpid);
+				break;
+			}
+		}
+		fclose(fp);
+	}
+	return rc;
+}
+
+
+/**
+ * Spawn sp-rtrace to toggle tracing for the specified child process.
+ * 
+ * @param[in] cpid   the child process id.
+ */
+void toggle_child_process(int cpid)
+{
+	int pid = fork();
+	if (pid) return;
+	
+	char spid[16];
+	sprintf(spid, "%d", cpid);
+		
+	char* args[10] = {SP_RTRACE_PREPROC, "--follow-forks", "-t", spid};
+	char** parg = args + 4;
+	if (rtrace_options.toggle_signal_name) {
+		*parg++ = "-S";
+		*parg++ = rtrace_options.toggle_signal_name;
+	}
+	if (rtrace_options.manage_preproc) {
+		*parg++ = "-m";
+	}
+	*parg++ = NULL;
+	execv(INSTALL_DIR "/bin/" SP_RTRACE_PREPROC, args);
+}
+
+
+/**
+ * Toggles tracing for child processes.
+ * 
+ * This function iterates /proc/ filesystem and spawns sp-rtrace toggle
+ * process for every child process.
+ */
+static void toggle_child_processes(int pid)
+{
+	DIR* dir = opendir("/proc");
+	if (dir == NULL) {
+		fprintf(stderr, "ERROR: failed to open /proc/ directory\n");
+		return;
+	}
+	struct dirent *de;
+	while ((de = readdir(dir)) != NULL) {
+		if (de->d_type == DT_DIR) {
+			int cpid = atoi(de->d_name);
+			if (cpid && is_child_procses_of(cpid, pid)) {
+				toggle_child_process(cpid);
+			}
+		}
+	}
+	closedir(dir);
+	
+}
+
+
 /**
  * Toggles tracing for process rtrace_options.pid.
  *
@@ -481,6 +559,9 @@ static void begin_tracing()
  */
 static void toggle_tracing()
 {
+	if (rtrace_options.follow_forks) {
+		toggle_child_processes(rtrace_options.pid);
+	}
 	char pipe_path[128];
 	snprintf(pipe_path, sizeof(pipe_path), SP_RTRACE_PIPE_PATTERN "%d", rtrace_options.pid);
 

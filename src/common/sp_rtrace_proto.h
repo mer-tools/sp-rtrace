@@ -77,10 +77,12 @@
 
 /* data alignment for binary packages */
 #define SP_RTRACE_PROTO_ALIGN	4
-/* adjust size to be aligned according to the binary packget alignment */
+/* adjust size to be aligned according to the binary packet alignment */
 #define SP_RTRACE_PROTO_ALIGN_SIZE(size) 	size += (SP_RTRACE_PROTO_ALIGN - (size & (SP_RTRACE_PROTO_ALIGN - 1))) & (SP_RTRACE_PROTO_ALIGN - 1)
 /* size of the packet type field */
 #define SP_RTRACE_PROTO_TYPE_SIZE		 4
+/* size of the packet length field */
+#define SP_RTRACE_PROTO_LENGTH_SIZE      4
 
 /* optional alignment check for protocol data write/read helpers */
 #if defined(ALIGN_CHECK) && defined(DEBUG_INFO)

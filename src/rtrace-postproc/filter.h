@@ -79,7 +79,7 @@ void filter_resource(rd_t* rd);
  * @param[in] rd  the resource trace data storage.
  * @return
  */
-void find_lowhigh_blocks(rd_t* rd);
+void filter_find_lowhigh_blocks(rd_t* rd);
 
 
 /**
@@ -92,7 +92,7 @@ void find_lowhigh_blocks(rd_t* rd);
  * @param[in] leaks  the leak summary data.
  * @return
  */
-long sum_leaks(rd_fcall_t* call, leak_data_t* leaks);
+long filter_sum_leaks(rd_fcall_t* call, leak_data_t* leaks);
 
 
 /**
@@ -101,7 +101,14 @@ long sum_leaks(rd_fcall_t* call, leak_data_t* leaks);
  *
  * @param[in] rd   the resource trace data storage.
  */
-void update_resource_visibility(rd_t* rd);
+void filter_update_resource_visibility(rd_t* rd);
 
+
+/**
+ * Updates backtrace length to be less or equal to the specified size.
+ * 
+ * @param rd
+ */
+void filter_trim_backtraces(rd_t* rd);
 
 #endif /* FILTER_H*/

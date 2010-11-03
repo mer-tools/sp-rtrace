@@ -35,6 +35,7 @@ const char* header_fields[HEADER_MAX] = {
 		"process",
 		"pid",
 		"filter",
+		"backtrace depth",
 };
 
 /* hader filter field tags */

@@ -83,6 +83,12 @@ static void parse_header(rd_t* rd, const char* line)
 	if (header.fields[HEADER_FILTER]) {
 		rd->filter = header_get_filter(&header);
 	}
+	if (header.fields[HEADER_BACKTRACE_DEPTH]) {
+		rd->pinfo->backtrace_depth = atoi(header.fields[HEADER_BACKTRACE_DEPTH]);
+	}
+	else {
+		rd->pinfo->backtrace_depth = -1;
+	}
 	header_free(&header);
 }
 

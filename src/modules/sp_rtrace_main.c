@@ -447,6 +447,8 @@ static int write_process_info()
 	 * this packet and update timestamp if its zero */
 	ptr += write_dword(ptr, 0);
 	ptr += write_dword(ptr, 0);
+	/* store backtrace depth setting */
+	ptr += write_dword(ptr, sp_rtrace_options->backtrace_depth);
 	/* store process name */
 	char proc_name[PATH_MAX];
 	get_proc_name(proc_name, sizeof(proc_name));
