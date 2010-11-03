@@ -34,30 +34,36 @@
 # - If destination file is older than source file, re-create it
 # - If files are already generated, don't check for / complain
 #  about tools needed to generate them
+# 2010-11-03
+# - Rewrite to handle both binary & text traces and whether they're
+#   already processed or not.
 #
 # Originally this file was a part of sp-libleaks package, but moved
 # to the sp-rtrace package during libleaks redesign.
 
+usage ()
+{
+	name=${0##*/}
+	cat << EOF
+
+$name generates graphs of resource allocation backtraces
+going through the functions with given name prefix in all the given trace
+files.  The graphs are saved to a subdirectory with a same name.
+
+Good values for <limit> are 0.1 - 5, depending on the trace file contents.
+
+To re-generate the graphs (with new limit), just remove the directory.
+
+EOF
+	echo "usage: $name <function prefix> <limit> <trace files>"
+	echo
+	echo "ERROR: $1!"
+	exit 1
+}
+
 # check command line args
 if [ $# -lt 3 ]; then
-	echo "Generates graphs of unfreed resource allocations going"
-	echo "through given functions matching given function name prefix"
-	echo "in all given trace files. The graphs are saved to"
-	echo "a subdirectory with the given function name (prefix)."
-	echo
-	echo "Good values for <limit> are 0.1 - 2, depending on the trace"
-	echo "file contents."
-	echo
-	echo "To re-generate the files, just remove the directory."
-	echo
-	echo "usage: ${0##*/} <function name> <limit> <trace files>"
-	exit 1
-fi
-
-# if path given for script, make sure rest of things can be
-# executed from that path too (helps testing it)
-if [ \! -z "${0%/*}" ]; then
-	export PATH=$PATH:${0%/*}
+	usage "not enough arguments"
 fi
 
 fun=$1
@@ -65,8 +71,14 @@ limit=$2
 shift
 shift
 
+# if path given for script, make sure rest of things can be
+# executed from that path too (helps testing it)
+if [ \! -z "${0%/*}" ]; then
+	export PATH=$PATH:${0%/*}
+fi
+
 # check for required utilities
-function check_resolve
+check_resolve ()
 {
 	if [ -z $(which sp-rtrace-resolve) ]; then
 		echo "ERROR: 'sp-rtrace-resolve' utility missing from PATH"
@@ -77,14 +89,14 @@ function check_resolve
 		exit 1
 	fi
 }
-function check_calltree
+check_calltree ()
 {
 	if [ -z $(which rtrace-calltree) ]; then
 		echo "ERROR: 'rtrace-calltree' utility missing from PATH"
 		exit 1
 	fi
 }
-function check_dot
+check_dot ()
 {
 	if [ -z $(which dot) ]; then
 		echo "ERROR: 'dot' utility is missing from PATH"
@@ -95,49 +107,106 @@ function check_dot
 	fi
 }
 
+convert_binary ()
+{
+	# merge & remove leaks & resolve
+	echo "- Resolving and removing freed allocations from binary trace..."
+	echo "  sp-rtrace-postproc -clr < $srt > $dst"
+	sp-rtrace-postproc -clr < $src > $dst
+	if [ $? -ne 0 ]; then
+		echo "  ERROR: conversion failed!"
+		rm $dst
+		exit 1
+	fi
+}
+# ASCII trace allows skipping unnecessary steps
+convert_ascii ()
+{
+	# is all necessary filtering and resolving already done?
+	if [ \! -z "$(head -1 $src|grep leaks|grep compress|grep resolve)" ]; then
+		# can be used as such
+		echo "- Can be used without post-processing."
+		dst=$src
+		return
+	fi
+	# filter & resolve
+	head -1 $src|grep -q resolve
+	if [ $? -eq 0 ]; then
+		echo "- Already resolved, doing just freed resources removal and backtrace"
+		echo "  merging, for speed reasons.  Remove 'resolve' flag from first line"
+		echo "  in trace to trigger resolving:"
+		echo "    sp-rtrace-postproc -cl < $src > $dst"
+		sp-rtrace-postproc -cl < $src > $dst
+	else
+		# non-resolved files might not have backtraces...
+		if [ -z "$(awk '/^[\t]/{print $1; exit}' $src)" ]; then
+			echo "  ERROR: '$src' has no backtraces"
+			exit 1
+		fi
+		echo "- Removing freed allocations and resolving traces:"
+		echo "  sp-rtrace-postproc -clr < $src > $dst"
+		sp-rtrace-postproc -clr < $src > $dst
+	fi
+	if [ $? -ne 0 ]; then
+		echo "  ERROR: conversion failed!"
+		rm $dst
+		exit 1
+	fi
+}
+
 mkdir -p $fun
 
 # process all given trace files
 echo "-------------------------------------------------------------------"
 count=0
-for trace in $*
+for src in $*
 do
-	echo "Processing '$trace'..."
-	if [ \! -f ]; then
-		echo "ERROR: Given file '$trace' missing!"
-		exit 1
+	echo "Post-processing '$src'..."
+	if [ \! -f $src ]; then
+		usage "given '$src' trace file doesn't exist"
 	fi
-	resolved=${trace%.txt}.resolved
-	if [ \! -f $resolved ] || [ $resolved -ot $trace ]; then
-		check_resolve
-		echo "Removing freed allocations and resolving traces: $trace -> $resolved"
-		sp-rtrace-postproc -lcri $trace > $resolved
-		if [ $? != 0 ]; then
-			rm $resolved
-			echo "ERROR: 'sp-rtrace-postproc/-resolve' call failed"
-			exit 1
-		fi
+	dst=${src%-callgraph.txt}
+	dst=${dst%.txt}-callgraph.txt
+	echo "'$src' -> '$dst'"
+
+	if [ "$src" = "$dst" ]; then
+		echo "- File is already post-processed."
+	elif [ -f $dst ] && [ $dst -nt $src ]; then
+		echo "- Post-processed '$dst' trace exists already."
+	elif [ "$(dd if=$src bs=1 count=1 2> /dev/null)" = "$(printf '\xF0')" ]; then
+		convert_binary
+	elif [ "$(dd if=$src bs=8 count=1 2> /dev/null)" = "version=" ]; then
+		convert_ascii
+	else
+		usage "'$src' is neither binary nor text trace file"
 	fi
-	dot=$fun/${resolved%.resolved}.dot
-	if [ \! -f $dot ] || [ $dot -ot $resolved ]; then
+
+	# remove path & extention
+	dot=${dst##*/}
+	dot=${dot%.txt}
+	# add own extention
+	dot=$fun/$dot.dot
+	if [ \! -f $dot ] || [ $dot -ot $dst ]; then
 		check_calltree
-		echo "Generating call tree: $resolved -> $dot"
+		echo "Generating call tree..."
+		echo "'$dst' -> '$dot'"
 		rtrace-calltree --type=graph --limit=$limit --emph-limit=4 \
 		--include-only=$fun --ignore-libc-allocs=yes \
-		$resolved > $dot
+		$dst > $dot
 		if [ $? != 0 ]; then
 			rm $dot
 			echo "ERROR: 'rtrace-calltree' call failed"
 			exit 1
 		fi
 	fi
-	ps=${dot%.dot}.ps
-	if [ \! -f $ps ] || [ $ps -ot $dot ]; then
+	eps=${dot%.dot}.eps
+	if [ \! -f $eps ] || [ $eps -ot $dot ]; then
 		check_dot
-		echo "Plotting function call graph: $dot -> $ps"
-		dot -Tps $dot > $ps
+		echo "Plotting function call graph..."
+		echo "'$dot' -> '$eps'"
+		dot -Tps $dot > $eps
 		if [ $? != 0 ]; then
-			rm $ps
+			rm $eps
 			echo "ERROR: 'dot' (GraphViz) call failed"
 			exit 1
 		fi
@@ -157,6 +226,6 @@ echo "and showing nodes for functions through which went at least $limit%"
 echo "of those allocations."
 echo
 echo $fun/
-ls $fun/*.ps $fun/*.dot|sed 's/^/- /'
+ls $fun/*.eps $fun/*.dot|sed 's/^/- /'
 echo
 echo "DONE!"
