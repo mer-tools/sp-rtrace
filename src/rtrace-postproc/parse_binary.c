@@ -276,7 +276,7 @@ static int read_generic_packet(rd_t* rd, const char* data, int size)
 {
 	static rd_resource_t* res_index[33];
 	/* first check if the packet contains enough data to read size value */
-	if (size < 2) return -1;
+	if (size < SP_RTRACE_PROTO_LENGTH_SIZE) return -1;
 
 	static rd_fcall_t* fcall_prev = NULL;
 	unsigned int len, type;
