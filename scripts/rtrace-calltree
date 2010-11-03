@@ -172,7 +172,7 @@ of the functions account for most of the resource usage and how the
 resource allocations are divided between the functions they call.
 """
 
-import sys, re
+import os, sys, re
 
 
 def debug(msg):
@@ -1420,11 +1420,11 @@ class Options:
                 debug("- %s" % name)
     
     def validate_input(self, app):
-        if not self.tracefile:
-            self.help(app, "resource trace report missing")
+        if not os.path.isfile(self.tracefile):
+            self.help(app, "resource trace report '%s' missing" % self.tracefile)
         fi = open(self.tracefile, "r")
-        if ord(fi.read(1)) == 0xf0:
-            self.help(app, "input file appears to be in binary format")
+        if fi.read(8) != "version=":
+            self.help(app, "'%s' isn't an ASCII resource trace file" % self.tracefile)
         fi.close()
     
     def bool_str(self, value):
