@@ -129,20 +129,21 @@ convert_ascii ()
 		dst=$src
 		return
 	fi
+	# check that there's something to callgraph...
+	depth=$(head -1 $src|sed 's/^.*depth=\([0-9]\+\),.*$/\1/')
+	if [ -z "$depth" ] || [ $depth -lt 2 ]; then
+		echo "  SKIPPING, backtrace depth $depth < 2"
+		continue
+	fi
 	# filter & resolve
 	head -1 $src|grep -q resolve
 	if [ $? -eq 0 ]; then
 		echo "- Already resolved, doing just freed resources removal and backtrace"
 		echo "  merging, for speed reasons.  Remove 'resolve' flag from first line"
 		echo "  in trace to trigger resolving:"
-		echo "    sp-rtrace-postproc -cl < $src > $dst"
+		echo "  sp-rtrace-postproc -cl < $src > $dst"
 		sp-rtrace-postproc -cl < $src > $dst
 	else
-		# non-resolved files might not have backtraces...
-		if [ -z "$(awk '/^[\t]/{print $1; exit}' $src)" ]; then
-			echo "  ERROR: '$src' has no backtraces"
-			exit 1
-		fi
 		echo "- Removing freed allocations and resolving traces:"
 		echo "  sp-rtrace-postproc -clr < $src > $dst"
 		sp-rtrace-postproc -clr < $src > $dst

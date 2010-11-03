@@ -159,8 +159,8 @@ for src in $binaries; do
 		continue
 	fi
 	# merge & remove backtrace information
-	echo "  < sp-rtrace-postproc -c | awk '/^[^\t]/{print}' > "
-	sp-rtrace-postproc -c < $src | awk '/^[^\t]/{print}' > $dst
+	echo "  sp-rtrace-postproc -c -b 0 < $src > $dst"
+	sp-rtrace-postproc -c -b 0 < $src > $dst
 	if [ $? -eq 0 ]; then
 		timelines="$timelines $dst"
 	else
@@ -241,7 +241,7 @@ for src in $binaries; do
 		continue
 	fi
 	# merge & remove leaks & resolve
-	echo "  < sp-rtrace-postproc -clr >"
+	echo "  sp-rtrace-postproc -clr < $src > $dst"
 	sp-rtrace-postproc -clr < $src > $dst
 	if [ $? -eq 0 ]; then
 		callgraphs="$callgraphs $dst"
@@ -278,21 +278,22 @@ for src in $texts; do
 		fi
 		continue
 	fi
+	# check that there's something to callgraph...
+	depth=$(head -1 $src|sed 's/^.*depth=\([0-9]\+\),.*$/\1/')
+	if [ -z "$depth" ] || [ $depth -lt 2 ]; then
+		echo "  SKIPPING, backtrace depth $depth < 2"
+		continue
+	fi
 	# filter & resolve
 	head -1 $src|grep -q resolve
 	if [ $? -eq 0 ]; then
 		echo "  Already resolved, doing just freed resources removal and backtrace"
 		echo "  merging, for speed reasons.  Remove 'resolve' flag from first line"
 		echo "  in trace to trigger resolving:"
-		echo "  < sp-rtrace-postproc -cl >"
+		echo "  sp-rtrace-postproc -cl < $src > $dst"
 		sp-rtrace-postproc -cl < $src > $dst
 	else
-		# non-resolved files might not have backtraces...
-		if [ -z "$(awk '/^[\t]/{print $1; exit}' $src)" ]; then
-			echo "  SKIPPING, no backtraces"
-			continue
-		fi
-		echo "  < sp-rtrace-postproc -clr >"
+		echo "  sp-rtrace-postproc -clr < $src > $dst"
 		sp-rtrace-postproc -clr < $src > $dst
 	fi
 	if [ $? -eq 0 ]; then
