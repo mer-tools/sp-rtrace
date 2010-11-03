@@ -43,8 +43,9 @@
 # - Complete rewrite to handle both binary & text traces and
 #   whether they're already processed or not.
 # - The files to process need now to be given to the script.
-# 2010-11-01
+# 2010-11-03
 # - Adapt to rtrace-timeline option changes
+# - Save the resulting dot files & images to *-overview/ subdirectory
 #
 # Originally this file was a part of sp-libleaks package, but moved
 # to the sp-rtrace package during libleaks redesign.
@@ -128,6 +129,8 @@ fi
 
 # how many files were processed
 count=0
+# result directory name
+dir="overview"
 
 # ----------------------------------------------
 
@@ -142,7 +145,7 @@ if [ \! -z "$binaries" ]; then
 	echo "Converting binary trace files for timeline use:"
 fi
 for src in $binaries; do
-	dst=$src-timeline.txt
+	dst=${src%.txt}-timeline.txt
 	echo "- $src -> $dst..."
 	# newer target file?
 	if [ -f $dst ] && [ $dst -nt $src ]; then
@@ -198,7 +201,9 @@ if [ \! -z "$timelines" ]; then
 	echo "Creating total, activity and lifetime timelines:"
 fi
 for src in $timelines; do
-	dst=${src%.txt}
+	mkdir -p $dir
+	dst=${src##*/}
+	dst=$dir/${dst%.txt}
 	echo "- $src -> $dst-*.png..."
 	if [ \! -z "$(ls $dst-*.png 2> /dev/null)" ]; then
 		echo "  Skipping, PNG files already created"
@@ -221,8 +226,8 @@ if [ \! -z "$binaries" ]; then
 	echo
 	echo "Converting binary trace files for callgraph use:"
 fi
-for src in $binaries; do
-	dst=$src-callgraph.txt
+for src in $binaries; do	
+	dst=${src%.txt}-callgraph.txt
 	echo "- $src -> $dst..."
 	# newer target file?
 	if [ -f $dst ] && [ $dst -nt $src ]; then
@@ -313,7 +318,9 @@ if [ \! -z "$callgraphs" ]; then
 	echo "Creating callgraphs:"
 fi
 for src in $callgraphs; do
-	dst=${src%.txt}.dot
+	mkdir -p $dir
+	dst=${src##*/}
+	dst=$dir/${dst%.txt}.dot
 	echo "- $src -> $dst..."
 	# newer target file?
 	if [ -f $dst ] && [ $dst -nt $src ]; then
@@ -351,8 +358,11 @@ if [ \! -z "$callgraphs" ]; then
 	echo "Converting callgraphs to PostScript:"
 fi
 for i in $callgraphs; do
-	src=${i%.txt}.dot
-	dst=${i%.txt}.eps
+	mkdir -p $dir
+	i=${i##*/}
+	i=${i%.txt}
+	src=$dir/$i.dot
+	dst=$dir/$i.eps
 	echo "- $src -> $dst"
 	# newer target file?
 	if [ -f $dst ] && [ $dst -nt $src ]; then
@@ -384,7 +394,8 @@ if [ $count -eq 0 ]; then
 	echo "         files needed processing."
 	echo
 	echo "Remove these to get them re-processed/re-created:"
-	ls *-timeline-*.png *-callgraph.eps *-timeline.txt *-callgraph.txt
+	ls $dir/*-timeline-*.png $dir/*-callgraph.eps
+	ls *-timeline.txt *-callgraph.txt
 	exit 1
 fi
 
@@ -392,15 +403,19 @@ echo
 echo "TIMELINE REPORTS:"
 reports=""
 for i in $timelines; do
+	name=${i##*/}
+	name=${name%.txt}
 	# '*' wildcard, so cannot use xargs like below
-	reports="$reports ${i%.txt}-*.png"
+	reports="$reports $dir/$name-*.png"
 done
 ls $reports|sed 's/^/- /'
 
 echo
 echo "CALLGRAPH REPORTS:"
 for i in $callgraphs; do
-	echo "${i%.txt}.eps"
+	name=${i##*/}
+	name=${name%.txt}
+	echo "$dir/$name.eps"
 done|xargs ls|sed 's/^/- /'
 
 echo
