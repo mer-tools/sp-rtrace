@@ -49,6 +49,7 @@ typedef struct postproc_options_t {
 	int filter_resource;
 	op_binary_t compare_leaks;
 	int pid_resolve;
+	int backtrace_depth;
 } postproc_options_t;
 
 extern postproc_options_t postproc_options;

@@ -185,7 +185,7 @@ static void write_leaks(rd_resource_t* res, leaks_t* leaks)
 void write_leak_summary(fmt_data_t* fmt)
 {
 	leaks_t leaks = {.fp = fmt->fp};
-	dlist_foreach2(&fmt->rd->calls, (op_binary_t)sum_leaks, leaks.leaks);
+	dlist_foreach2(&fmt->rd->calls, (op_binary_t)filter_sum_leaks, leaks.leaks);
 
 	dlist_foreach2(&fmt->rd->resources, (op_binary_t)write_leaks, &leaks);
 }
@@ -194,12 +194,13 @@ void write_leak_summary(fmt_data_t* fmt)
 void write_trace_environment(fmt_data_t* fmt)
 {
 	/* prepare version and timestamp strings */
-	char version[8], timestamp[64], spid[8];
+	char version[8], timestamp[64], spid[8], btdepth[16];
 	sprintf(spid, "%d", fmt->rd->pinfo->pid);
 	sprintf(version, "%d.%d", fmt->rd->hshake->vmajor, fmt->rd->hshake->vminor);
 	struct tm* tm = localtime(&fmt->rd->pinfo->timestamp.tv_sec);
 	sprintf(timestamp, "%d.%d.%d %02d:%02d:%02d", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
-
+	sprintf(btdepth, "%d", fmt->rd->pinfo->backtrace_depth);
+	
 	header_t header =  {
 			.fields = { 
 					version,                // HEADER_VERSION
@@ -207,7 +208,8 @@ void write_trace_environment(fmt_data_t* fmt)
 					timestamp,              // HEADER_TIMESTAMP
 					fmt->rd->pinfo->name,   // HEADER_PROCESS
 					spid,                   // HEADER_PID
-					NULL                    // HEADER_FILTER
+					NULL,                    // HEADER_FILTER
+					fmt->rd->pinfo->backtrace_depth == -1 ? NULL : btdepth, // HEADER_BACKTRACE_DEPTH
 			},
 	};
 	unsigned int filter = fmt->rd->filter;

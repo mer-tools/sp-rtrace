@@ -254,6 +254,23 @@ static void resource_filter_mask(rd_resource_t* resource, dlist_t* list)
 	}
 }
 
+/**
+ * Trims backtrace size to be less or equal to the maximum backtrace depth.
+ * 
+ * This function simply updates backtrace 'size' property without raellocating
+ * the real data. 
+ * @param trace 
+ * @param fmt
+ * @return
+ */
+static int trim_backtrace(rd_ftrace_t* trace, int backtrace_depth)
+{
+	if (trace->nframes > backtrace_depth) {
+		trace->nframes = backtrace_depth;
+	}
+	return 0;
+}
+
 /*
  * Public API
  */
@@ -286,7 +303,7 @@ void filter_resource(rd_t* rd)
 	dlist_foreach2(&rd->calls, (op_binary_t)fcall_filter_resource, (void*)rd);
 }
 
-void update_resource_visibility(rd_t* rd)
+void filter_update_resource_visibility(rd_t* rd)
 {
 	if (dlist_first(&rd->resources) && dlist_first(&rd->resources) == dlist_last(&rd->resources)) {
 		/* if only one resource is present, reset its index and hide it */
@@ -296,14 +313,14 @@ void update_resource_visibility(rd_t* rd)
 	}
 }
 
-void find_lowhigh_blocks(rd_t* rd)
+void filter_find_lowhigh_blocks(rd_t* rd)
 {
 	rd->hinfo->lowest_block = (pointer_t)~0L;
 	dlist_foreach2(&rd->calls, (op_binary_t)fcall_find_lowhigh_blocks, (void*)rd->hinfo);
 }
 
 
-long sum_leaks(rd_fcall_t* call, leak_data_t* leaks)
+long filter_sum_leaks(rd_fcall_t* call, leak_data_t* leaks)
 {
 	if (call->type == SP_RTRACE_FTYPE_ALLOC) {
 		/* Resource type 0 is used when only when one resource type is present, to
@@ -314,4 +331,15 @@ long sum_leaks(rd_fcall_t* call, leak_data_t* leaks)
 		leak->total_size += call->res_size;
 	}
 	return 0;
+}
+
+
+void filter_trim_backtraces(rd_t* rd)
+{
+	/* update backtrace depth in the process info packet */
+	rd->pinfo->backtrace_depth = postproc_options.backtrace_depth;
+
+	/* trim the backtraces. Note that only backtrace size is changed, the allocated memory
+	 * is not reallocated */
+	htable_foreach2(&rd->ftraces, (op_binary_t)trim_backtrace, (void*)rd->pinfo->backtrace_depth);
 }

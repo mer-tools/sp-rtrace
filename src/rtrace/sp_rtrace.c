@@ -216,8 +216,6 @@ static void set_environment()
 			}
 			module = strtok(NULL, ":");
 		}
-		*ppreload++ = '\n';
-		*ppreload++ = '\0';
 	}
 	if (query_scratchbox()) {
 		LOG("scratchbox environment detected");

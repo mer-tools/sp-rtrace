@@ -54,13 +54,13 @@ generates appropriate output file name and passes it to the resolver with
 The resolver is launched with full caching mode and elf resolving method 
 enabled. To use other resolving options the resolver must be used separately.
 .TP
-\fI--context\fP <mask> (\fI-C\fP <mask>)
+\fI--context\fP=<mask> (\fI-C\fP <mask>)
 Filters function call records matching the specified context id mask.
 .TP
-\fI--resource\fP <mask> (\fI-R\fP <mask>)
+\fI--resource\fP=<mask> (\fI-R\fP <mask>)
 Filters function call records matching the specified resource type mask.
 .TP
-\fI--sort\fP <order> (\fI-s\fP <order>)
+\fI--sort\fP=<order> (\fI-s\fP <order>)
 Sets the backtrace sorting order for --compress and --filter-leaks 
 options. Where <order> can be:
   size      - sort by a total leak size of a backtrace
@@ -74,6 +74,11 @@ options. Where <order> can be:
 
 By default the backtraces are sorted by a total leak size 
 in descending order.
+.TP
+\fI--backtrace-depth\fP=<max_depth> (\fI-b\fP <max_depth>)
+Sets maximum backtrace depth. Any funciton stack traces larger
+than \fImax_depth\fP value will be trimmed to the \fImax_depth\fP
+value.
 
 .SH EXAMPLES
 .TP

@@ -67,6 +67,7 @@ postproc_options_t postproc_options = {
 	.compare_leaks = 0,
 	.pid_resolve = 0,
 	.filter_resource = 0,
+	.backtrace_depth = -1,
 };
 
 volatile sig_atomic_t postproc_abort = 0;
@@ -106,6 +107,7 @@ static void display_usage()
 			"  -R <mask>    - filter by resource type <mask>.\n"
 			"  -s <order>   - sort leaks by the specified order -\n"
 			"                 size, size-asc, count, count-asc.\n"
+			"  -b <depth>   - set maximum backtrace depth.\n"
 			"  -h           - this help page.\n"
 	);
 }
@@ -246,13 +248,14 @@ int main(int argc, char* argv[])
 			 {"resource", 1, 0, 'R'},
 			 {"text", 0, 0, 't'},
 			 {"help", 0, 0, 'h'},
+			 {"backtrace-depth", 1, 0, 'b'},
 			 {0, 0, 0, 0}
 	};
 	/* parse command line options */
 	int opt;
 	opterr = 0;
 	
-	while ( (opt = getopt_long(argc, argv, "i:o:tcs:ahrlC:R:", long_options, NULL)) != -1) {
+	while ( (opt = getopt_long(argc, argv, "i:o:tcs:ahrlC:R:b:", long_options, NULL)) != -1) {
 		switch(opt) {
 		case 'h':
 			display_usage();
@@ -278,6 +281,10 @@ int main(int argc, char* argv[])
 			postproc_options.resolve = true;
 			break;
 
+		case 'b':
+			postproc_options.backtrace_depth = atoi(optarg);
+			break;
+			
 		case 's':
 			if (!strcmp(optarg, "size"))
 				postproc_options.compare_leaks = (op_binary_t)leaks_compare_by_size_desc;
@@ -369,6 +376,9 @@ int main(int argc, char* argv[])
 		exit (-1);
 	}
 
+	if (postproc_options.backtrace_depth != -1) {
+		filter_trim_backtraces(rd);
+	}
 
 	/* apply selected post-processing options */
 	if (postproc_options.filter_resource) {
@@ -383,9 +393,9 @@ int main(int argc, char* argv[])
 		filter_context(rd);
 	}
 	if (rd->hinfo) {
-		find_lowhigh_blocks(rd);
+		filter_find_lowhigh_blocks(rd);
 	}
-	update_resource_visibility(rd);
+	filter_update_resource_visibility(rd);
 
 	/* write resulting output */
 	write_rtrace_log(rd);
