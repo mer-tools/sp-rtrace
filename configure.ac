@@ -55,6 +55,8 @@ case $build in
         )],
     )
     ;;
+	x86_64*)
+	;;
   *)
     AC_MSG_ERROR([Unsupported architecture: $build])
     ;;

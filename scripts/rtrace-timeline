@@ -580,7 +580,7 @@ class Plotter:
 			min = tic
 			
 			# set label
-			self.file.write("set xlabel \"%s\" offset 0,-4\n" % label)
+			self.file.write("set xlabel \"%s\" offset 0,0\n" % label)
 			# set  range
 			self.file.write("set xrange[%d:%d]\n" % (min, max))
 			# set the X axis tic label format, not used as tics are printed manually
@@ -1352,7 +1352,7 @@ class ReportGenerator:
 		"Initializes generator. As options aren't fully processed during __init__, the initialize() "
 		"method can be used to initialize options dependant resources."
 
-	def processEventInContext(self, resource, context, event):
+	def processEventInContext(self, resource, context, event, allocData):
 		""
 		raise NotImplementedError()
 	
@@ -1361,6 +1361,142 @@ class ReportGenerator:
 		raise NotImplementedError()
 #/class ReportGenerator		
 
+
+class LifetimeGenerator(ReportGenerator):
+	"""
+	The LifetimeGenerator class generates resource life time
+	report. This report contains lines displaying resource
+	allocation and release times.
+	"""
+
+	class Stats:
+		"""
+		Resource lifetime statistics.
+		"""
+		class Data:
+			"""
+			Resource lifetime statistics data.
+			"""
+			# allocation sie
+			size = 0
+			# number of allocations of this size
+			count = 0
+			# time of the first allocation of this size
+			timestamp = 0
+			
+			def __init__(self):
+				pass
+		# /class Data
+		
+		# the minimal allocation size statistics
+		min = None
+		# the maximal allocation size statistics
+		max = None
+		
+		def __init__(self):
+			self.min = self.Data()
+			self.max = self.Data()
+			self.min.size = sys.maxint
+	# /class Stats
+	
+	
+	class ContextData:
+		"Context data container"
+		fileLifetime = None
+		total = 0
+		allocs = None
+		
+		def __init__(self, file):
+			self.fileLifetime = file
+			self.allocs = []
+	
+	class ResourceData:
+		"Resource data container"
+		stats = None
+		contexts = None
+		
+		def __init__(self):
+			self.stats = LifetimeGenerator.Stats()
+			self.contexts = {}
+	#/class ResourceData
+
+	# axis range
+	xrangeMin = None
+	xrangeMax = 0
+	yrangeMin = 0
+	yrangeMax = 0
+	
+	#
+	totalLifelines = 0
+	DETAILS_LIMIT = 20
+	
+	def __init__(self):
+		ReportGenerator.__init__(self, "lifetime")
+		self.stats = {}
+		self.data = {}
+
+		self.stats = {}
+		self.data = {}
+
+
+	def processEventInContext(self, resource, context, event, allocData):
+		# create data containers if necessary
+		if resource not in self.data:
+			self.data[resource] = self.ResourceData()
+			
+		if context.value not in self.data[resource].contexts:
+			file = self.plotter.createFile("%s-%s-context-%x.dat" % (self.getId(), resource, context.value), "%s (%s)" % (resource, context.name))
+			self.data[resource].contexts[context.value] = self.ContextData(file)
+			
+		resourceData = self.data[resource]
+		contextData = resourceData.contexts[context.value]
+		stats = resourceData.stats
+		
+		if self.xrangeMin is None:
+			self.xrangeMin = event.timestamp
+		if self.xrangeMax < event.timestamp:
+			self.xrangeMax = event.timestamp
+			
+		if event.type == Event.Types.ALLOC:
+			# index the event by resource id.
+			contextData.allocs.append(event.res_size)
+			contextData.total += event.res_size
+
+			# update Y axis range value
+			size = event.res_size
+			if size > self.yrangeMax:
+				self.yrangeMax = size
+				
+			# gather statistics
+			if event.res_size < stats.min.size:
+				stats.min.size = event.res_size
+				stats.min.count = 0
+				stats.min.timestamp = event.timestamp
+			if event.res_size == stats.min.size:
+				stats.min.count += 1
+			if event.res_size > stats.max.size:
+				stats.max.size = event.res_size
+				stats.max.count = 0
+				stats.max.timestamp = event.timestamp
+			if event.res_size == stats.max.size:
+				stats.max.count += 1
+					
+		if event.type == Event.Types.FREE:
+			contextData.fileLifetime.write(allocData.timestamp, allocData.size)
+			contextData.fileLifetime.write(event.timestamp, allocData.size)
+			contextData.fileLifetime.writeSeparator()
+			
+			if self.totalLifelines < self.DETAILS_LIMIT:
+				file = self.plotter.createFile("%s-%s-%d.dat" % (self.getId(), resource, event.index), "%s (%s)" % (resource, event.res_id))
+				file.write(allocData.timestamp, allocData.size)
+				file.write(event.timestamp, allocData.size)
+				file.writeSeparator()
+			
+			self.totalLifelines += 1
+			
+		
+	
+# /class LifetimeGenerator
 
 class ActivityGenerator(ReportGenerator):
 	"""
@@ -1486,11 +1622,8 @@ class ActivityGenerator(ReportGenerator):
 		
 	def __init__(self):
 		ReportGenerator.__init__(self, "activity")
-		self.stats = {}
 		self.data = {}
 
-		self.stats = {}
-		self.data = {}
 
 	def initialize(self):
 		#
@@ -1515,19 +1648,24 @@ class ActivityGenerator(ReportGenerator):
 		if timestamp > self.xrangeMax:
 			self.xrangeMax = timestamp
 	
-	def processEventInContext(self, resource, context, event):
+	def processEventInContext(self, resource, context, event, allocData):
+		# update X axis range
+		self.updateRangeX(event.timestamp)
+		
+		# create data containers if necessary
 		if resource not in self.data:
-			resourceData = self.ResourceData()
-			stats = resourceData.stats
-			self.data[resource] = resourceData
+			self.data[resource] = self.ResourceData()
 			
 		if context.value not in self.data[resource].contexts:
 			fileRate = self.plotter.createFile("%s-%s-size-%x.dat" % (self.getId(), resource, context.value), \
 												"%s (rate:%s)" % (resource, context.name))
+			fileRate.write(self.xrangeMin, 0)
 			fileAllocs = self.plotter.createFile("%s-%s-allocs-%x.dat" % (self.getId(), resource, context.value),\
 												"%s (allocs:%s)" % (resource, context.name))
+			fileAllocs.write(self.xrangeMin, 0)
 			fileFrees = self.plotter.createFile("%s-%s-frees-%x.dat" % (self.getId(), resource, context.value),\
 											 	"%s (frees:%s)" % (resource, context.name))
+			fileFrees.write(self.xrangeMin, 0)
 			
 			self.data[resource].contexts[context.value] = self.ContextData(fileRate, fileAllocs, fileFrees)
 
@@ -1535,8 +1673,6 @@ class ActivityGenerator(ReportGenerator):
 		contextData = resourceData.contexts[context.value]
 		stats = resourceData.stats
 
-		# update X axis range
-		self.updateRangeX(event.timestamp)
 			
 		if self.sliceTimestamp is None:
 			self.sliceTimestamp = event.timestamp
@@ -1764,10 +1900,9 @@ class TotalsGenerator(ReportGenerator):
 	
 	def __init__(self):
 		ReportGenerator.__init__(self, "totals")
-		self.stats = {}
 		self.data = {}
 		
-	def processEventInContext(self, resource, context, event):
+	def processEventInContext(self, resource, context, event, allocData):
 		if resource not in self.data:
 			if resource in self.overheadData:
 				fileOverhead = self.plotter.createFile("%s-%s-overhead.dat" % (self.getId(), resource), "%s overhead" % resource)
@@ -1928,7 +2063,6 @@ class TotalsGenerator(ReportGenerator):
 		if bmargin < 15:
 			bmargin = 15
 		self.plotter.setBMargin(bmargin)
-		
 		# plot the data files
 		self.plotter.plot()
 
@@ -1947,10 +2081,12 @@ class Processor:
 		This class is used to index resources by their identifiers. It's 
 		used to minimize event lookups by resource identifier times.
 		"""
+		timestamp = 0
 		size = 0
 		refCount = 0
 		
-		def __init__(self, size):
+		def __init__(self, timestamp, size):
+			self.timestamp = timestamp
 			self.size = size
 			self.refCount = 1
 	# /class Index
@@ -1966,6 +2102,10 @@ class Processor:
 	
 	# event index used to track resource reference counting mechanism
 	eventIndex = None
+	
+	# last timestamp/index to check event order
+	lastIndex = 0
+	lastTimestamp = 0
 	
 	def __init__(self):
 		self.contexts = [Context(Context.MASK_ALL, "all allocations")]
@@ -1984,10 +2124,17 @@ class Processor:
 				return False
 		return True
 	
-	def processEvent(self, resource, event):
+	def processEvent(self, resource, event, allocData = None):
 		"Processes the event in report generators"
-		# TODO: check if the events are coming in sorted order (by timestamps)
-		
+		# check if events are properly ordered
+		if self.lastTimestamp > event.timestamp or (self.lastTimestamp == event.timestamp and self.lastIndex > event.index):
+			print >> sys.stderr, "ERROR: older event follows newer one in source file at index %d.\n" % event.index
+			print >> sys.stderr, "To force correct event ordering in source file run sp-rtrace-postproc -i <source file> | rtrace-timeline <options>"
+			sys.exit(2)
+
+		self.lastTimestamp = event.timestamp
+		self.lastIndex = event.index
+				
 		# check if the event matches the specified filters
 		if not self.isEventInRange(event):
 			return
@@ -1997,7 +2144,7 @@ class Processor:
 			if not event.matchContext(context):
 				continue
 			for generator in self.generators:
-				generator.processEventInContext(resource.type, context, event)
+				generator.processEventInContext(resource.type, context, event, allocData)
 	
 	def registerAlloc(self, index, context, timestamp, res_type, res_id, res_size):
 		"Registers resource allocation"
@@ -2021,7 +2168,7 @@ class Processor:
 		event = Event(Event.Types.ALLOC, index, context, timestamp, res_id, res_size)
 		
 		# register the allocation
-		self.eventIndex[res_id] = self.Index(res_size);
+		self.eventIndex[res_id] = self.Index(timestamp, res_size);
 		
 		self.processEvent(resource, event)
 
@@ -2056,7 +2203,7 @@ class Processor:
 		# undergister the allocation
 		del self.eventIndex[res_id]
 
-		self.processEvent(resource, event)
+		self.processEvent(resource, event, ievent)
 
 		
 	def registerContext(self, value, name):
