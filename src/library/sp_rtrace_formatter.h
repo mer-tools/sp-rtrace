@@ -35,16 +35,17 @@
 /**
  * Prints report header.
  *
- * @param[in] fp            the output stream.
- * @param[in] version       the text format version.
- * @param[in] arch          the source system architecture.
- * @param[in] timestamp     the report creation time (if NULL the current time is used).
- * @param[in] pid           the traced process identifier.
- * @param[in] process_name  the traced process name.
+ * @param[in] fp               the output stream.
+ * @param[in] version          the text format version.
+ * @param[in] arch             the source system architecture.
+ * @param[in] timestamp        the report creation time (if NULL the current time is used).
+ * @param[in] pid              the traced process identifier.
+ * @param[in] process_name     the traced process name.
+ * @param[in] backtrace_depth  the maximum depth of the stack trace.
  * @return                  0 - success, -errno - failure
  */
 int sp_rtrace_print_header(FILE* fp, const char* version, const char* arch,
-		const struct timeval *timestamp, int pid, const char* process_name);
+		const struct timeval *timestamp, int pid, const char* process_name, int backtrace_depth);
 
 /**
  * Prints memory map information.

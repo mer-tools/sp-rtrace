@@ -34,7 +34,7 @@
 #include "common/sp_rtrace_proto.h"
 
 int sp_rtrace_print_header(FILE* fp, const char* version, const char* arch,
-		const struct timeval *timestamp, int pid, const char* process_name)
+		const struct timeval *timestamp, int pid, const char* process_name, int backtrace_depth)
 {
 	struct timeval tv;
 	if (timestamp == NULL) {
@@ -42,13 +42,14 @@ int sp_rtrace_print_header(FILE* fp, const char* version, const char* arch,
 		timestamp = &tv;
 	}
 
-	char timestamp_s[32];
+	char timestamp_s[32], btdepth[16];
 	struct tm* tm = localtime(&timestamp->tv_sec);
 	sprintf(timestamp_s, "%02d.%02d.%04d %02d:%02d:%02d", tm->tm_mday, tm->tm_mon + 1, tm->tm_year + 1900,
 			tm->tm_hour, tm->tm_min, tm->tm_sec);
 
 	char pid_s[10];
 	sprintf(pid_s, "%d", pid);
+	sprintf(btdepth, "%d", backtrace_depth);
 
 	const header_t header=  {
 			.fields = { 
@@ -57,7 +58,8 @@ int sp_rtrace_print_header(FILE* fp, const char* version, const char* arch,
 					timestamp_s,          // HEADER_TIMESTAMP
 					(char*)process_name,  // HEADER_PROCESS
 					pid_s,                // HEADER_PID
-					NULL                  // HEADER_FILTER
+					NULL,                  // HEADER_FILTER
+					backtrace_depth == -1 ? NULL : btdepth, // HEADER_BACKTRACE_DEPTH
 			},
 	};
 	return formatter_write_header(&header, fp);
