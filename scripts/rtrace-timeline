@@ -123,7 +123,7 @@ class Event:
 		
 	timestamp = 0
 	res_size = 0
-	res_id = ""
+	res_id = 0
 	type = Types.UNDEFINED
 	context = 0
 	index = 0
@@ -132,7 +132,7 @@ class Event:
 		self.type = type
 		self.timestamp = timestamp
 		self.res_size = res_size
-		self.res_id= res_id
+		self.res_id = res_id
 		self.context = context
 		self.index = index
 		
@@ -665,7 +665,7 @@ class Plotter:
 		gnuplot = subprocess.Popen(["gnuplot", self.cfgFilename], 0, None, None, self.stream)
 		gnuplot.wait()
 
-		#self.cleanup()
+		self.cleanup()
 	
 	def setLineStyle(self, type, color):
 		"Creates new line style and returns its index."
@@ -716,618 +716,6 @@ class Plotter:
 	
 # /class Plotter	
 
-
-#class Processor:
-#	"""
-#	The base class for report generators.
-#	"""
-#	
-#	class Index:
-#		"""
-#		This class is used to index resources by their identifiers. It's 
-#		used to minimize event lookups by resource identifier times.
-#		"""
-#		event = None
-#		refCount = 0
-#		
-#		def __init__(self, event):
-#			self.event = event
-#			self.refCount = 1
-#	# /class Index
-#			
-#	parser = None		
-#
-#	# resource overhead index used for allocation overhead estimation
-#	overheadData = {"memory": 8}
-#
-#	def __init__(self, parser):
-#		self.parser = parser
-#		
-#	def getId(self):
-#		"Returns the report identifier. Used in output file templates when multiple "
-#		"reports are requested."
-#		raise NotImplementedError()
-#	
-#	def generateReport(self, stream):
-#		"Generates report."
-#		plotter = Plotter(stream, Options.terminal)
-#		self.writeReport(plotter)
-#		
-#	def writeReport(self, plotter):
-#		"Writes the end report. This function must be overloaded by report generators to "
-#		"provide report generation functionality."
-#		raise NotImplementedError()
-#		
-#	def isEventInRange(self, event):
-#		"Checks if the event matches the filters specified in Options."
-#		for filter in Options.filters:
-#			if not filter.matchesEvent(event):
-#				return False
-#		return True
-#				
-## /class Processor		
-		
-#class HistogramProcessor(Processor):
-#	"""
-#	The HistogramProcessor generates statistics about allocation count/total size per
-#	resource size.
-#	The generated report type (count or size) depends on the mode parameter passed
-#	in constructor.
-#	"""
-#	mode = None
-#	
-#	class Alloc:
-#		total = 0
-#		freed = 0
-#	# /class Alloc
-#	
-#	class Stats:
-#		"Stores allocation (freed/unfreed) statistics"
-#		count = 0
-#		total = 0
-#		allocs = None
-#	
-#		def __init__(self):
-#			self.allocs = []
-#			
-#		def getMedian(self):
-#			"Calculates median allocation size"
-#			nallocs = len(self.allocs)
-#			return nallocs and self.allocs[nallocs / 2] or 0
-#	# /class Stats
-#		
-#	def __init__(self, parser, mode):
-#		Processor.__init__(self, parser)
-#		self.mode = mode
-#		
-#	def getId(self):
-#		"Returns the stats report id"
-#		return "histogram-%s" % self.mode
-#
-#	def writeReport(self, plotter):
-#		"Writes the histogram report"
-#
-#		yrangeMax = 0
-#			
-#		# histogram data: size -> resource -> context
-#		data = {}
-#		
-#		# Histogram reports supports only single resource. 
-#		# Show a warning message and exit otherwise.
-#		if len(self.parser.events) > 1:
-#			resources = ""
-#			for resource in self.parser.events:
-#				if resources != "":
-#					resources += ", "
-#				resources += resource
-#			print >> sys.stderr, "WARNING: multiple resources (%s) detected, the results might be misleading.\n"\
-#			                     "Use --filter-resource options to filter a single resource." % resources
-#			sys.exit(-1)
-#			
-#		# iterate through registered resources
-#		for resource in self.parser.events:
-#			events = self.parser.events[resource]
-#			index = {}
-#			
-#			# iterate through events
-#			for event in events:
-#				# skip events not matching context/filters
-#				if not self.isEventInRange(event):
-#					continue
-#					
-#				if event.type == Event.Types.ALLOC:
-#					if event.res_id in index:
-#						# resource is already indexed, increase reference counter
-#						index[event.res_id].refCount += 1
-#						continue
-#					else:
-#						# index the event by resource id.
-#						index[event.res_id] = self.Index(event);
-#						
-#						# store histogram statistics
-#						if event.res_size not in data:
-#							data[event.res_size] = {}
-#						if resource not in data[event.res_size]:
-#							data[event.res_size][resource] = self.Alloc()
-#						data[event.res_size][resource].total += 1
-#						
-#				if event.type == Event.Types.FREE:
-#					if event.res_id not in index:
-#						# ignore resources allocation of which was not registered
-#						continue
-#					# decrement resource reference counter
-#					ievent = index[event.res_id]
-#					ievent.refCount -= 1
-#
-#					# check if the resource was really deleted						
-#					if ievent.refCount == 0:
-#						data[ievent.event.res_size][resource].freed += 1
-#						# remove deleted resource from index.
-#						del index[event.res_id]
-#
-#			# check if the data was gathered 
-#			if len(data) == 0:
-#				print >> sys.stderr, "ERROR: Either the input file does not contain any events "\
-#				                     "or no events are matching the specified filter."
-#				plotter.cleanup()
-#				sys.exit(0)
-#			
-#		# initialize statistics data
-#		statsFreed = self.Stats()
-#		statsUnfreed = self.Stats()
-#		statsSumm = self.Stats()
-#		
-#		# index by size
-#		keys = []				
-#		for size in data:
-#			keys.append(size)
-#		keys.sort()
-#
-#
-#		# calculate median values
-#		for size in keys:
-#			for resource in self.parser.events:
-#				alloc = data[size][resource]
-#				for index in range(0, alloc.freed):
-#					statsFreed.allocs.append(size)
-#					statsSumm.allocs.append(size)
-#				for index in range(0, alloc.total - alloc.freed):
-#					statsUnfreed.allocs.append(size)
-#					statsSumm.allocs.append(size)
-#	
-#		# create data file.
-#		fileData = plotter.createFile("timeline.dat")
-#		fileData.create()
-#		
-#		# create line styles for freed and unfreed bars
-#		ltUnfreed = plotter.setLineStyle(None, "#FF0000")
-#		ltFreed = plotter.setLineStyle(None, "#00FF00")
-#		
-#		# write data header 
-#
-#		# Histogram data starts with second column (the first column contains
-#		# allocation size).
-#		index = 2
-#		fileData.writeText("size")
-#		for resource in self.parser.events:
-#			plotter.addGraph(fileData, "%d" % index, "xtic(1)", "\"%s allocation %s (unfreed)\"" % (resource, self.mode), \
-#							 None, ltUnfreed, "newhistogram \"Resource size\", ")
-#			plotter.addGraph(fileData, "%d" % (index + 1), "xtic(1)", "\"%s allocation %s (freed)\"" % (resource, self.mode), None, ltFreed)
-#			index += 2
-#		fileData.writeText("\n")
-#		
-#		# write data		
-#		for size in keys:
-#			fileData.writeText("%d" % size)	
-#			for resource in self.parser.events:
-#				alloc = data[size][resource]
-#				if alloc is None:
-#					fileData.writeText("\t-\t-")
-#				else:
-#					unfreed = alloc.total - alloc.freed
-#					if self.mode == "count":
-#						fileData.writeText("\t%d\t%d" % (unfreed, alloc.freed))
-#						if yrangeMax < alloc.total:
-#							yrangeMax = alloc.total
-#					else:
-#						fileData.writeText("\t%d\t%d" % ((int(size) * unfreed), int(size) * alloc.freed))
-#						if yrangeMax < alloc.total * int(size):
-#							yrangeMax = alloc.total * int(size)
-#					
-#					# calculate statistics
-#					statsFreed.count += alloc.freed
-#					statsFreed.total += alloc.freed * int(size)
-#					
-#					statsUnfreed.count += unfreed
-#					statsUnfreed.total += unfreed * int(size)
-#							
-#			fileData.writeText("\n")
-#			
-#		fileData.close()
-#		
-#		# set the plot properties
-#		if self.mode == "size":
-#			ylabel = "Total allocation size"
-#			title = "Total allocation size per resource size"
-#		else:
-#			ylabel = "Allocation count"
-#			title = "Allocation count per resource size"
-#		plotter.setTitle(title)
-#		plotter.setAxisY(ylabel, 0, yrangeMax, "%.1s%c")
-#		plotter.setGrid("ytics")
-#		plotter.setAxisX("Resource size", None, None, None, "0")
-#		plotter.setStyle("data histogram")
-#		plotter.setStyle("histogram rowstacked")
-#		plotter.setStyle("fill solid 0.2")
-#		plotter.setSeparator("\\t")
-#
-#		# write statistics table
-#
-#		# define table headers
-#		table = plotter.createTable(1, 1)
-#		# name column
-#		table.addColumn(10)
-#		# median
-#		table.addColumn(12)
-#		# allocation count
-#		table.addColumn(10)
-#		# allocation size
-#		table.addColumn(12)
-#
-#		table.setText(0, 0, "Allocs", "center")
-#		table.setText(0, 1, "Median", "center")
-#		table.setText(0, 2, "Count", "center")
-#		table.setText(0, 3, "Total Size", "center")
-#		
-#		table.setText(2, 0, "freed", "right")
-#		table.setText(3, 0, "unfreed", "right")
-#		table.setText(4, 0, "both", "right")
-#
-#		table.setText(2, 1, "%d" % statsFreed.getMedian())
-#		table.setText(3, 1, "%d" % statsUnfreed.getMedian())
-#		table.setText(4, 1, "%d" % statsSumm.getMedian())
-#		
-#		table.setText(2, 2, "%d" % statsFreed.count)
-#		table.setText(3, 2, "%d" % statsUnfreed.count)
-#		table.setText(4, 2, "%d" % (statsFreed.count + statsUnfreed.count))
-#
-#		table.setText(2, 3, "%d" % statsFreed.total)
-#		table.setText(3, 3, "%d" % statsUnfreed.total)
-#		table.setText(4, 3, "%d" % (statsFreed.total + statsUnfreed.total))
-#		
-#		plotter.setBMargin(10)
-#		plotter.setKey("invert")
-#		
-#		plotter.plot()
-#	
-## /class HistogramProcessor
-
-
-#class LifetimeProcessor(Processor):
-#	"""
-#	The LifetimeProcessor class generates resource life time
-#	report. This report contains lines displaying resource
-#	allocation and release times.
-#	"""
-#
-#	class Writer():
-#		"""
-#		Base class for lifetime graph writers.
-#		The lifetime graphs has two resolution levels - event resolution
-#		and context resolution.
-#		Event resolution is used when log contains limited amount of resources
-#		and each resource can be displayed in a different style and color. 
-#		Context resolution is used when log contains a large amount of resources
-#		and marking each resource with different style would only make a mess. 
-#		In this case resources are colored by their allocation contexts.
-#		"""
-#		# the data file
-#		_file = None
-#		# a reference to the plotter
-#		_plotter = None
-#		
-#		def __init__(self, plotter):
-#			self._plotter = plotter
-#			
-#		def prepareContext(self, resource, context):
-#			"Prepares (creates and adds to plotter) context resolution data file."
-#			return self._file
-#	
-#		def prepareEvent(self, resource, event):
-#			"Prepares (creates and adds to plotter) event resolution data file."
-#			return self._file
-#		
-#		def flushContext(self):
-#			"Flushes context resolution data file (simply closes it)."
-#			pass
-#		
-#		def flushEvent(self):
-#			"Flushes event resolution data file (simply closes it)."
-#			pass
-#		
-#	# /class Writer
-#		
-#	class ContextWriter(Writer):
-#		"""
-#		Context resolution graph writer.
-#		"""
-#		def prepareContext(self, resource, context):
-#			self._file = self._plotter.createFile("%s-%x.dat" % (resource, context.value), "%s (%s)" % (resource, context.name))	
-#			self._plotter.addGraph(self._file, "1", "2", "column(2)")
-#			return self._file
-#		
-#		def flushContext(self):
-#			self._file.close()
-#	# /class ContextWriter
-#			
-#	class EventWriter(Writer):
-#		"""
-#		Event resolution graph writer.
-#		"""
-#		def prepareEvent(self, resource, event):
-#			self._file = self._plotter.createFile("%s-%d.dat" % (resource, event.index), "%s (%s)" % (resource, event.res_id))	
-#			self._plotter.addGraph(self._file, "1", "2", "column(2)")
-#			return self._file
-#		
-#		def flushEvent(self):
-#			self._file.close()
-#	# /class EventWriter
-#		
-#	class Stats:
-#		"""
-#		Resource lifetime statistics.
-#		"""
-#		class Data:
-#			"""
-#			Resource lifetime statistics data.
-#			"""
-#			# allocation sie
-#			size = 0
-#			# number of allocations of this size
-#			count = 0
-#			# time of the first allocation of this size
-#			timestamp = 0
-#			
-#			def __init__(self):
-#				pass
-#		# /class Data
-#		
-#		# the minimal allocation size statistics
-#		min = None
-#		# the maximal allocation size statistics
-#		max = None
-#		
-#		def __init__(self):
-#			self.min = self.Data()
-#			self.max = self.Data()
-#			self.min.size = sys.maxint
-#	# /class Stats
-#		
-#	# Amount of allocations that separates event view from resolution view.
-#	# If the log contains less than DETAILS_LIMIT allocations the event resolution is used.
-#	# Otherwise the context resolution is used.
-#	DETAILS_LIMIT = 20
-#
-#	def getId(self):
-#		"Returns the lifetime report id"
-#		return "lifetime"
-#
-#	def writeReport(self, plotter):
-#		"Writes the lifetime report"
-#		# reset X,Y axis range
-#		xrangeMin = None
-#		xrangeMax = 0
-#		yrangeMin = 0
-#		yrangeMax = 0
-#		
-#		# count the total number of allocations to choose resolution
-#		totalAllocs = 0
-#		for resource in self.parser.events.keys():
-#			for event in self.parser.events[resource]:
-#				if event.type == Event.Types.ALLOC and self.isEventInRange(event):
-#					totalAllocs += 1
-#
-#		if totalAllocs == 0:
-#			print >> sys.stderr, "ERROR: Either the input file does not contain any events "\
-#				                     "or no events are matching the specified filter."
-#			sys.exit(0)
-#		
-#		# initialize context filters
-#		contexts = [Context(Context.MASK_ALL, "all allocations")]
-#		
-#		if totalAllocs > self.DETAILS_LIMIT:
-#			# switch to context resolution mode and populate context filter array
-#			writer = self.ContextWriter(plotter)
-#			if len(self.parser.contexts) > 0:
-#				contexts.append(Context(Context.MASK_NONE, "no contexts"))
-#				contexts.extend(self.parser.contexts)
-#		else:
-#			# switch to event resolution mode
-#			writer = self.EventWriter(plotter)
-#			
-#		stats = {}
-#		
-#		# iterate through registered resources
-#		for resource in self.parser.events.keys():
-#			# initialize resource statistics data
-#			events = self.parser.events[resource]
-#			# resource indexing map 
-#			index = {}
-#			# initialize resource statistics
-#			stat = self.Stats()
-#			stats[resource] = stat
-#			
-#			# iterate through context filters
-#			for context in contexts:
-#				file = writer.prepareContext(resource, context)
-#				allocs = []
-#				total = 0
-#				
-#				# iterate through events
-#				for event in events:
-#					# skip events not matching context/filters
-#					if not event.matchContext(context):
-#						continue
-#					if not self.isEventInRange(event):
-#						continue
-#					# update X axis range values
-#					if xrangeMin is None:
-#						xrangeMin = event.timestamp
-#					if xrangeMax < event.timestamp:
-#						xrangeMax = event.timestamp
-#						
-#					if event.type == Event.Types.ALLOC:
-#						if event.res_id in index:
-#							# resource is already indexed, increase reference counter
-#							index[event.res_id].refCount += 1
-#							continue
-#						else:
-#							# index the event by resource id.
-#							index[event.res_id] = self.Index(event);
-#							allocs.append(event.res_size)
-#							total += event.res_size
-#
-#							# update Y axis range value
-#							size = event.res_size
-#							if size > yrangeMax:
-#								yrangeMax = size
-#							
-#							# gather statistics
-#							if event.res_size < stat.min.size:
-#								stat.min.size = event.res_size
-#								stat.min.count = 0
-#								stat.min.timestamp = event.timestamp
-#							if event.res_size == stat.min.size:
-#								stat.min.count += 1
-#							if event.res_size > stat.max.size:
-#								stat.max.size = event.res_size
-#								stat.max.count = 0
-#								stat.max.timestamp = event.timestamp
-#							if event.res_size == stat.max.size:
-#								stat.max.count += 1
-#								
-#							
-#					if event.type == Event.Types.FREE:
-#						if event.res_id not in index:
-#							# ignore resources allocation of which was not registered
-#							continue
-#						# decrement resource reference counter
-#						ievent = index[event.res_id]
-#						ievent.refCount -= 1
-#
-#						# check if the resource was really deleted						
-#						if ievent.refCount == 0:
-#							file = writer.prepareEvent(resource, ievent.event)
-#							# plot the resource lifetime
-#							file.write(ievent.event.timestamp, ievent.event.res_size)
-#							file.write(event.timestamp, ievent.event.res_size)
-#							file.writeSeparator()
-#							#
-#							writer.flushEvent()
-#							
-#							# remove deleted resource from index.
-#							del index[event.res_id]
-#	
-#				# Adjust X axis range to contain at least single point
-#				if xrangeMax == xrangeMin:
-#					xrangeMax += 1
-#					
-#				# plot all allocated, but not freed resources					
-#				for res_id, ievent in index.iteritems():
-#					file = writer.prepareEvent(resource, ievent.event)
-#					file.write(ievent.event.timestamp, ievent.event.res_size)
-#					file.write(xrangeMax, ievent.event.res_size)
-#					file.writeSeparator()
-#					writer.flushEvent()
-#
-#				# calculate statistics - average and median values
-#				allocs.sort()
-#				totals = len(allocs)
-#				statAverage = total / totals;
-#				statMedian = totals and allocs[totals / 2 - 1] or 0
-#				if totals % 2 == 0:
-#					statMedian = (statMedian + allocs[totals / 2]) / 2
-#					
-#				# plot the statistics lines
-#				file = plotter.createFile("%s-%x-average" % (resource, context.value), "%s (average:%d)" % (resource, statAverage))
-#				plotter.addGraph(file, "1", "2", "column(2)")
-#				file.write(xrangeMin, statAverage)
-#				file.write(xrangeMax, statAverage)
-#				file.close();
-#				file = plotter.createFile("%s-%x-median" % (resource, context.value), "%s (median:%d)" % (resource, statMedian))
-#				plotter.addGraph(file, "1", "2", "column(2)")
-#				file.write(xrangeMin, statMedian)
-#				file.write(xrangeMax, statMedian)
-#				file.close();
-#		
-#				writer.flushContext()
-#	
-#		# increase Y  range, so the top graph isn't hidden beyond the axis	
-#		yrangeMax = yrangeMax * 105 / 100	
-#
-#		plotter.setTitle("Resource life-time")
-#		plotter.setAxisX("time (secs)", xrangeMin, xrangeMax)
-#		plotter.setAxisY("size", yrangeMin, yrangeMax, "%.1s%c")
-#		
-#		if totalAllocs > self.DETAILS_LIMIT:
-#			plotter.setStyle("data lines")
-#		else:
-#			plotter.setStyle("data linespoints")
-#			
-#		# define table headers
-#		table = plotter.createTable(1, 1)
-#		# resource name column
-#		table.addColumn(10)
-#		# snapshot name
-#		table.addColumn(5)
-#		# allocation count
-#		table.addColumn(8)
-#		# allocation size
-#		table.addColumn(10)
-#		# timestamp
-#		table.addColumn(12)
-#
-#		table.setText(0, 0, "Resource", "center")
-#		table.setText(0, 1, "State", "center")
-#
-#		table.setText(0, 2, "Size", "center")
-#		table.setText(0, 3, "Count", "center")
-#		table.setText(0, 4, "Time", "center")
-#
-#		# write statistics data
-#		resourceIndex = 2
-#		for resource in self.parser.events.keys():
-#			stat = stats[resource]
-#			table.setText(resourceIndex, 0, resource, "left")
-#			table.setText(resourceIndex, 1, "min", "center")
-#			table.setText(resourceIndex, 2, "%d" % stat.min.size)
-#			table.setText(resourceIndex, 3, "%d" % stat.min.count)
-#			table.setText(resourceIndex, 4, "%s" % Timestamp.toString(stat.min.timestamp))
-#
-#			resourceIndex += 1
-#			table.setText(resourceIndex, 1, "max", "center")
-#			table.setText(resourceIndex, 2, "%d" % stat.max.size)
-#			table.setText(resourceIndex, 3, "%d" % stat.max.count)
-#			table.setText(resourceIndex, 4, "%s" % Timestamp.toString(stat.max.timestamp))
-#			
-#			resourceIndex += 2
-#		
-#		# Reserve space at the bottom for statistics data
-#		bmargin = len(contexts) + 9
-#		if bmargin < 9 + table.rows:
-#			bmargin = 9 + table.rows
-#		if bmargin < 15:
-#			bmargin = 15
-#			
-#		# if the legend contains too many graphs - write it at the left side instead of the bottom.
-#		if totalAllocs < self.DETAILS_LIMIT and bmargin < totalAllocs + 5:
-#			plotter.setKey("right outside")
-#			
-#		plotter.setBMargin(bmargin)
-#
-#		plotter.plot()
-## /class LifetimeProcessor	
-
 		
 class ReportGenerator:
 	"""
@@ -1352,14 +740,262 @@ class ReportGenerator:
 		"Initializes generator. As options aren't fully processed during __init__, the initialize() "
 		"method can be used to initialize options dependant resources."
 
-	def processEventInContext(self, resource, context, event, allocData):
+	def processEventInContext(self, resource, context, event, allocEvent):
 		""
 		raise NotImplementedError()
+	
+	def processUnfreedEvent(self, resource, event):
+		""
 	
 	def finish(self):
 		"Finishes report"
 		raise NotImplementedError()
 #/class ReportGenerator		
+
+
+class HistogramGenerator(ReportGenerator):
+	"""
+	The HistogramGenerator generates statistics about allocation count/total size per
+	resource size.
+	The generated report type (count or size) depends on the mode parameter passed
+	in constructor.
+	"""
+	
+	class Alloc:
+		total = 0
+		freed = 0
+	# /class Alloc
+
+	class Stats:
+		"Stores allocation (freed/unfreed) statistics"
+		count = 0
+		total = 0
+		allocs = None
+	
+		def __init__(self):
+			self.allocs = []
+			
+		def getMedian(self):
+			"Calculates median allocation size"
+			nallocs = len(self.allocs)
+			return nallocs and self.allocs[nallocs / 2] or 0
+	# /class Stats
+	
+	class ResourceData:
+		allocs = None
+		
+		def __init__(self):
+			self.allocs = {}
+	# /class ResourceData
+	
+	mode = None
+	resource = None
+	resourceData = None
+	
+	# Y axis range
+	yrangeMax = 0
+	
+	def __init__(self, mode):
+		ReportGenerator.__init__(self, "histogram-%s" % mode)
+		self.mode = mode
+		self.data = {}
+		self.resourceData = self.ResourceData()
+
+	def writeAlloc(self, fileData, alloc, size):
+		raise NotImplementedError()
+	
+	def getLabelY(self):
+		raise NotImplementedError()
+	
+	def getTitle(self):
+		raise NotImplementedError()
+
+		
+	def processEventInContext(self, resource, context, event, allocEvent):
+		# Histogram report does not use grouping by separate contexts
+		if not context.isMaskAll():
+			return
+		
+		# abort if the input data contains multiple resource types
+		if self.resource:
+			if self.resource != resource:
+				print >> sys.stderr, "ERROR: multiple resources (%s,%s) detected, the results might be misleading.\n"\
+				                     "Use --filter-resource options to filter a single resource." % (self.resource, resource)
+				sys.exit(2)
+		else:
+			self.resource = resource
+
+		# 
+		resourceData = self.resourceData
+		if event.type == Event.Types.ALLOC:
+			# store histogram statistics
+			if event.res_size not in resourceData.allocs:
+				resourceData.allocs[event.res_size] = self.Alloc()
+			resourceData.allocs[event.res_size].total += 1
+			
+		if event.type == Event.Types.FREE:
+			resourceData.allocs[event.res_size].freed += 1
+	
+	def finish(self):
+		# initialize statistics data
+		statsFreed = self.Stats()
+		statsUnfreed = self.Stats()
+		statsSumm = self.Stats()
+
+		resourceData = self.resourceData
+
+		if len(resourceData.allocs) == 0:
+			print >> sys.stderr, "ERROR: Either the input file does not contain any events "\
+			                     "or no events are matching the specified filter."
+			plotter.cleanup()
+			sys.exit(2)
+
+		# index by size
+		keys = []				
+		for size in resourceData.allocs:
+			keys.append(size)
+		keys.sort()
+
+		# calculate median values
+		for size in keys:
+			alloc = resourceData.allocs[size]
+			for index in range(0, alloc.freed):
+				statsFreed.allocs.append(size)
+				statsSumm.allocs.append(size)
+			for index in range(0, alloc.total - alloc.freed):
+				statsUnfreed.allocs.append(size)
+				statsSumm.allocs.append(size)
+
+		# create data file.
+		fileData = self.plotter.createFile("%s-%s.dat" % (self.getId(), self.mode))
+		fileData.create()
+
+		# create line styles for freed and unfreed bars
+		self.plotter.create()
+		ltUnfreed = self.plotter.setLineStyle(None, "#FF0000")
+		ltFreed = self.plotter.setLineStyle(None, "#00FF00")
+
+		# write data header 
+
+		# Histogram data starts with second column (the first column contains
+		# allocation size).
+		index = 2
+		fileData.writeText("size")
+		self.plotter.addGraph(fileData, "%d" % index, "xtic(1)", "\"%s allocation %s (unfreed)\"" % (self.resource, self.mode), \
+							 None, ltUnfreed, "newhistogram \"Resource size\", ")
+		self.plotter.addGraph(fileData, "%d" % (index + 1), "xtic(1)", "\"%s allocation %s (freed)\"" % (self.resource, self.mode), None, ltFreed)
+		fileData.writeText("\n")
+
+		# write data		
+		for size in keys:
+			fileData.writeText("%d" % size)	
+			alloc = resourceData.allocs[size]
+			if alloc is None:
+				fileData.writeText("\t-\t-")
+			else:
+				unfreed = alloc.total - alloc.freed
+				self.writeAlloc(fileData, alloc, size)
+				
+				# calculate statistics
+				statsFreed.count += alloc.freed
+				statsFreed.total += alloc.freed * int(size)
+				
+				statsUnfreed.count += unfreed
+				statsUnfreed.total += unfreed * int(size)
+						
+			fileData.writeText("\n")
+
+		# plot the graphs
+		self.plotter.setTitle(self.getTitle())
+		self.plotter.setAxisY(self.getLabelY(), 0, self.yrangeMax, "%.1s%c")
+		self.plotter.setGrid("ytics")
+		self.plotter.setAxisX("Resource size", None, None, None, "0")
+		self.plotter.setStyle("data histogram")
+		self.plotter.setStyle("histogram rowstacked")
+		self.plotter.setStyle("fill solid 0.2")
+		self.plotter.setSeparator("\\t")
+
+		# write statistics table
+
+		# define table headers
+		table = self.plotter.createTable(1, 1)
+		# name column
+		table.addColumn(10)
+		# median
+		table.addColumn(12)
+		# allocation count
+		table.addColumn(10)
+		# allocation size
+		table.addColumn(12)
+
+		table.setText(0, 0, "Allocs", "center")
+		table.setText(0, 1, "Median", "center")
+		table.setText(0, 2, "Count", "center")
+		table.setText(0, 3, "Total Size", "center")
+		
+		table.setText(2, 0, "freed", "right")
+		table.setText(3, 0, "unfreed", "right")
+		table.setText(4, 0, "both", "right")
+
+		table.setText(2, 1, "%d" % statsFreed.getMedian())
+		table.setText(3, 1, "%d" % statsUnfreed.getMedian())
+		table.setText(4, 1, "%d" % statsSumm.getMedian())
+		
+		table.setText(2, 2, "%d" % statsFreed.count)
+		table.setText(3, 2, "%d" % statsUnfreed.count)
+		table.setText(4, 2, "%d" % (statsFreed.count + statsUnfreed.count))
+
+		table.setText(2, 3, "%d" % statsFreed.total)
+		table.setText(3, 3, "%d" % statsUnfreed.total)
+		table.setText(4, 3, "%d" % (statsFreed.total + statsUnfreed.total))
+		
+		self.plotter.setBMargin(10)
+		self.plotter.setKey("invert")
+		
+		self.plotter.plot()
+
+	
+# /class HistogramGenerator
+
+class SizeHistogramGenerator(HistogramGenerator):
+
+	def __init__(self):
+		HistogramGenerator.__init__(self, "size")
+		
+	def writeAlloc(self, fileData, alloc, size):
+		unfreed = alloc.total - alloc.freed
+		fileData.writeText("\t%d\t%d" % ((int(size) * unfreed), int(size) * alloc.freed))
+		if self.yrangeMax < alloc.total * int(size):
+			self.yrangeMax = alloc.total * int(size)
+			
+	def getLabelY(self):
+		return "Total allocation size"
+	
+	def getTitle(self):
+		return "Total allocation size per resource size"
+
+# /class SizeHistogramGenerator
+
+
+class CountHistogramGenerator(HistogramGenerator):
+
+	def __init__(self):
+		HistogramGenerator.__init__(self, "count")
+		
+	def writeAlloc(self, fileData, alloc, size):
+		unfreed = alloc.total - alloc.freed
+		fileData.writeText("\t%d\t%d" % (unfreed, alloc.freed))
+		if self.yrangeMax < alloc.total:
+			self.yrangeMax = alloc.total
+			
+	def getLabelY(self):
+		return "Allocation count"
+	
+	def getTitle(self):
+		return "Allocation count per resource size"
+			
+
+# /class CountHistogramGenerator
 
 
 class LifetimeGenerator(ReportGenerator):
@@ -1413,11 +1049,17 @@ class LifetimeGenerator(ReportGenerator):
 	class ResourceData:
 		"Resource data container"
 		stats = None
-		contexts = None
-		
+		eventFiles = None
+		contextFiles = None
+		total = 0
+		allocs = None
+				
 		def __init__(self):
 			self.stats = LifetimeGenerator.Stats()
-			self.contexts = {}
+			self.eventFiles = []
+			self.contextFiles= {}
+			self.allocs = []
+			
 	#/class ResourceData
 
 	# axis range
@@ -1439,19 +1081,45 @@ class LifetimeGenerator(ReportGenerator):
 		self.data = {}
 
 
-	def processEventInContext(self, resource, context, event, allocData):
+	def registerAlloc(self, resource, event, endTimestamp):
+		resourceData = self.data[resource]
+		contextFile = resourceData.contextFiles[event.context]
+
+		contextFile.write(event.timestamp, event.res_size)
+		contextFile.write(endTimestamp, event.res_size)
+		contextFile.writeSeparator()
+		
+		if self.totalLifelines < self.DETAILS_LIMIT:
+			file = self.plotter.createFile("%s-%s-%d.dat" % (self.getId(), resource, event.index), "%s (%x)" % (resource, event.res_id))
+			file.write(event.timestamp, event.res_size)
+			file.write(endTimestamp, event.res_size)
+			file.writeSeparator()
+			resourceData.eventFiles.append(file)
+		
+		self.totalLifelines += 1
+		
+
+	def processEventInContext(self, resource, context, event, allocEvent):
+		# lifetime report does not use grouping by separate contexts
+		if not context.isMaskAll():
+			return
+		
 		# create data containers if necessary
 		if resource not in self.data:
 			self.data[resource] = self.ResourceData()
-			
-		if context.value not in self.data[resource].contexts:
-			file = self.plotter.createFile("%s-%s-context-%x.dat" % (self.getId(), resource, context.value), "%s (%s)" % (resource, context.name))
-			self.data[resource].contexts[context.value] = self.ContextData(file)
-			
 		resourceData = self.data[resource]
-		contextData = resourceData.contexts[context.value]
+			
+		if event.context not in resourceData.contextFiles:
+			contextName = ""
+			if event.context != 0:
+				contextName = " (@%x)" % event.context
+			resourceData.contextFiles[event.context] = self.plotter.createFile("%s-contextd-%s-%x.dat" % (self.getId(), resource, context.value), \
+																"%s%s" % (resource, contextName))
+			
+		contextFile = resourceData.contextFiles[event.context]
 		stats = resourceData.stats
 		
+		# update X axis range
 		if self.xrangeMin is None:
 			self.xrangeMin = event.timestamp
 		if self.xrangeMax < event.timestamp:
@@ -1459,8 +1127,8 @@ class LifetimeGenerator(ReportGenerator):
 			
 		if event.type == Event.Types.ALLOC:
 			# index the event by resource id.
-			contextData.allocs.append(event.res_size)
-			contextData.total += event.res_size
+			resourceData.allocs.append(event.res_size)
+			resourceData.total += event.res_size
 
 			# update Y axis range value
 			size = event.res_size
@@ -1482,21 +1150,125 @@ class LifetimeGenerator(ReportGenerator):
 				stats.max.count += 1
 					
 		if event.type == Event.Types.FREE:
-			contextData.fileLifetime.write(allocData.timestamp, allocData.size)
-			contextData.fileLifetime.write(event.timestamp, allocData.size)
-			contextData.fileLifetime.writeSeparator()
+			self.registerAlloc(resource, allocEvent, event.timestamp)
 			
-			if self.totalLifelines < self.DETAILS_LIMIT:
-				file = self.plotter.createFile("%s-%s-%d.dat" % (self.getId(), resource, event.index), "%s (%s)" % (resource, event.res_id))
-				file.write(allocData.timestamp, allocData.size)
-				file.write(event.timestamp, allocData.size)
-				file.writeSeparator()
+	def processUnfreedEvent(self, resource, event):
+		self.registerAlloc(resource, event, self.xrangeMax)
+
 			
-			self.totalLifelines += 1
-			
+	def finish(self):
+		# Check if the gathered data is not empty
+		if self.yrangeMax == 0:		
+			print >> sys.stderr, "ERROR: Either the input file does not contain any events "\
+			                     "or no events are matching the specified filter."
+			self.plotter.cleanup()
+			sys.exit(0)
 		
+		# Adjust X axis range to contain at least single point
+		if self.xrangeMax == self.xrangeMin:
+			self.xrangeMax += 1
+		
+		
+		ngraphs = 0
+			
+		for resource, resourceData in self.data.iteritems():
+			# add the graphs to the plot
+			if self.totalLifelines < self.DETAILS_LIMIT:
+				for file in resourceData.eventFiles:
+					self.plotter.addGraph(file, "1", "2", "column(2)")
+					ngraphs += 1
+			else:
+				for file in resourceData.contextFiles.itervalues():
+					self.plotter.addGraph(file, "1", "2", "column(2)")
+					ngraphs += 1
+				
+			# draw statistics markers
+			resourceData.allocs.sort()
+			alloc_count = len(resourceData.allocs)
+			statAverage = resourceData.total / alloc_count;
+			statMedian = resourceData.allocs[alloc_count / 2 - 1]
+			if alloc_count % 2 == 0:
+				statMedian = (statMedian + resourceData.allocs[alloc_count / 2]) / 2
+		
+			file = self.plotter.createFile("%s-%s-average" % (self.getId(), resource), "%s (average:%d)" % (resource, statAverage))
+			self.plotter.addGraph(file, "1", "2", "column(2)")
+			file.write(self.xrangeMin, statAverage)
+			file.write(self.xrangeMax, statAverage)
+
+			file = self.plotter.createFile("%s-%s-median" % (self.getId(), resource), "%s (median:%d)" % (resource, statMedian))
+			self.plotter.addGraph(file, "1", "2", "column(2)")
+			file.write(self.xrangeMin, statMedian)
+			file.write(self.xrangeMax, statMedian)
+
+		# increase Y  range, so the top graph isn't hidden beyond the axis	
+		self.yrangeMax = self.yrangeMax * 105 / 100	
+		
+		# plot the graphs
+		self.plotter.create()
+		self.plotter.setTitle("Resource life-time")
+		self.plotter.setAxisX("time (secs)", self.xrangeMin, self.xrangeMax)
+		self.plotter.setAxisY("size", self.yrangeMin, self.yrangeMax, "%.1s%c")
+		
+		if self.totalLifelines > self.DETAILS_LIMIT:
+			self.plotter.setStyle("data lines")
+		else:
+			self.plotter.setStyle("data linespoints")
+			
+		# define table headers
+		table = self.plotter.createTable(1, 1)
+		# resource name column
+		table.addColumn(10)
+		# snapshot name
+		table.addColumn(5)
+		# allocation count
+		table.addColumn(8)
+		# allocation size
+		table.addColumn(10)
+		# timestamp
+		table.addColumn(12)
+
+		table.setText(0, 0, "Resource", "center")
+		table.setText(0, 1, "State", "center")
+
+		table.setText(0, 2, "Size", "center")
+		table.setText(0, 3, "Count", "center")
+		table.setText(0, 4, "Time", "center")
+
+		# write statistics data
+		resourceIndex = 2
+		for resource in self.data:
+			stats = self.data[resource].stats
+			table.setText(resourceIndex, 0, resource, "left")
+			table.setText(resourceIndex, 1, "min", "center")
+			table.setText(resourceIndex, 2, "%d" % stats.min.size)
+			table.setText(resourceIndex, 3, "%d" % stats.min.count)
+			table.setText(resourceIndex, 4, "%s" % Timestamp.toString(stats.min.timestamp))
+
+			resourceIndex += 1
+			table.setText(resourceIndex, 1, "max", "center")
+			table.setText(resourceIndex, 2, "%d" % stats.max.size)
+			table.setText(resourceIndex, 3, "%d" % stats.max.count)
+			table.setText(resourceIndex, 4, "%s" % Timestamp.toString(stats.max.timestamp))
+			
+			resourceIndex += 2
+		
+		# Reserve space at the bottom for statistics data
+		bmargin = ngraphs + 9
+		if bmargin < 9 + table.rows:
+			bmargin = 9 + table.rows
+		if bmargin < 15:
+			bmargin = 15
+			
+		# if the legend contains too many graphs - write it at the left side instead of the bottom.
+		if self.totalLifelines < self.DETAILS_LIMIT and bmargin < self.totalLifelines + 5:
+			self.plotter.setKey("right outside")
+			
+		self.plotter.setBMargin(bmargin)
+
+		self.plotter.plot()
 	
 # /class LifetimeGenerator
+
 
 class ActivityGenerator(ReportGenerator):
 	"""
@@ -1627,7 +1399,7 @@ class ActivityGenerator(ReportGenerator):
 
 	def initialize(self):
 		#
-		self.slice = Tic(Options.slice or 20000, False)
+		self.slice = Tic(Options.slice or 200, False)
 		# calculate step value for statistics checkpoints
 		self.step = self.slice.value / 2
 		if self.step < 1:
@@ -1655,8 +1427,9 @@ class ActivityGenerator(ReportGenerator):
 		# create data containers if necessary
 		if resource not in self.data:
 			self.data[resource] = self.ResourceData()
+		resourceData = self.data[resource]
 			
-		if context.value not in self.data[resource].contexts:
+		if context.value not in resourceData.contexts:
 			fileRate = self.plotter.createFile("%s-%s-size-%x.dat" % (self.getId(), resource, context.value), \
 												"%s (rate:%s)" % (resource, context.name))
 			fileRate.write(self.xrangeMin, 0)
@@ -1667,9 +1440,8 @@ class ActivityGenerator(ReportGenerator):
 											 	"%s (frees:%s)" % (resource, context.name))
 			fileFrees.write(self.xrangeMin, 0)
 			
-			self.data[resource].contexts[context.value] = self.ContextData(fileRate, fileAllocs, fileFrees)
+			resourceData.contexts[context.value] = self.ContextData(fileRate, fileAllocs, fileFrees)
 
-		resourceData = self.data[resource]
 		contextData = resourceData.contexts[context.value]
 		stats = resourceData.stats
 
@@ -1909,13 +1681,13 @@ class TotalsGenerator(ReportGenerator):
 			else:
 				fileOverhead = None
 			self.data[resource] = self.ResourceData(fileOverhead)
+		resourceData = self.data[resource]
 			
-		if context.value not in self.data[resource].contexts:
+		if context.value not in resourceData.contexts:
 			 fileTotals = self.plotter.createFile("%s-%s-%x.dat" % (self.getId(), resource, context.value), \
 																		 "%s (%s)" % (resource, context.name))
-			 self.data[resource].contexts[context.value] = self.ContextData(fileTotals)
+			 resourceData.contexts[context.value] = self.ContextData(fileTotals)
 
-		resourceData = self.data[resource]
 		contextData = resourceData.contexts[context.value]
 		stats = resourceData.stats
 		
@@ -2081,13 +1853,13 @@ class Processor:
 		This class is used to index resources by their identifiers. It's 
 		used to minimize event lookups by resource identifier times.
 		"""
-		timestamp = 0
-		size = 0
+		event = None
 		refCount = 0
+		resource = None
 		
-		def __init__(self, timestamp, size):
-			self.timestamp = timestamp
-			self.size = size
+		def __init__(self, resource, event):
+			self.resource = resource
+			self.event = event
 			self.refCount = 1
 	# /class Index
 	
@@ -2124,7 +1896,13 @@ class Processor:
 				return False
 		return True
 	
-	def processEvent(self, resource, event, allocData = None):
+	def processUnfreedEvents(self):
+		for ievent in self.eventIndex.itervalues():
+			for generator in self.generators:
+				generator.processUnfreedEvent(ievent.resource.type, ievent.event)
+
+	
+	def processEvent(self, resource, event, allocEvent = None):
 		"Processes the event in report generators"
 		# check if events are properly ordered
 		if self.lastTimestamp > event.timestamp or (self.lastTimestamp == event.timestamp and self.lastIndex > event.index):
@@ -2135,16 +1913,12 @@ class Processor:
 		self.lastTimestamp = event.timestamp
 		self.lastIndex = event.index
 				
-		# check if the event matches the specified filters
-		if not self.isEventInRange(event):
-			return
-		
 		# call processXX calls for every context in all generators
 		for context in self.contexts:
 			if not event.matchContext(context):
 				continue
 			for generator in self.generators:
-				generator.processEventInContext(resource.type, context, event, allocData)
+				generator.processEventInContext(resource.type, context, event, allocEvent)
 	
 	def registerAlloc(self, index, context, timestamp, res_type, res_id, res_size):
 		"Registers resource allocation"
@@ -2166,9 +1940,13 @@ class Processor:
 				
 		# create a new event
 		event = Event(Event.Types.ALLOC, index, context, timestamp, res_id, res_size)
+
+		# check if the event matches the specified filters
+		if not self.isEventInRange(event):
+			return
 		
 		# register the allocation
-		self.eventIndex[res_id] = self.Index(timestamp, res_size);
+		self.eventIndex[res_id] = self.Index(resource, event);
 		
 		self.processEvent(resource, event)
 
@@ -2198,12 +1976,16 @@ class Processor:
 				return
 
 		# create a new event
-		event = Event(Event.Types.FREE, index, context, timestamp, res_id, ievent.size)
+		event = Event(Event.Types.FREE, index, context, timestamp, res_id, ievent.event.res_size)
+
+		# check if the event matches the specified filters
+		if not self.isEventInRange(event):
+			return
 
 		# undergister the allocation
 		del self.eventIndex[res_id]
 
-		self.processEvent(resource, event, ievent)
+		self.processEvent(resource, event, ievent.event)
 
 		
 	def registerContext(self, value, name):
@@ -2264,14 +2046,16 @@ class Parser:
 				context = match.group(2)
 				if context is None:
 					context = 0
-				self.processor.registerAlloc(int(match.group(1)), context, Timestamp.fromString(match.group(3)), match.group(4), match.group(6), int(match.group(5)))
+				self.processor.registerAlloc(int(match.group(1)), context, Timestamp.fromString(match.group(3)), match.group(4), \
+											int(match.group(6), 16), int(match.group(5)))
 				continue
 			match = self.reFree.match(line)
 			if match:
 				context = match.group(2)
 				if context is None:
 					context = 0
-				self.processor.registerFree(int(match.group(1)), context, Timestamp.fromString(match.group(3)), match.group(4), match.group(5))
+				self.processor.registerFree(int(match.group(1)), context, Timestamp.fromString(match.group(3)), match.group(4), \
+										int(match.group(5), 16) )
 				continue
 			match = self.reResource.match(line)
 			if match:
@@ -2281,6 +2065,8 @@ class Parser:
 			if match:
 				self.processor.registerContext(int(match.group(1), 16), match.group(2))
 				continue
+			
+		self.processor.processUnfreedEvents()
 			
 		# sort the events by timestamp/index
 #		for resource in self.events.keys():
@@ -2368,7 +2154,7 @@ class Options:
 				continue
 				
 			if opt == "-l" or opt == "--lifetime":
-				#processors.append(LifetimeProcessor(parser))
+				processor.addGenerator(LifetimeGenerator())
 				continue
 				
 			if opt == "-a" or opt == "--activity":
@@ -2376,11 +2162,11 @@ class Options:
 				continue
 
 			if opt == "-c" or opt == "--histogram-count":
-				#processors.append(HistogramProcessor(parser, "count"))
+				processor.addGenerator(CountHistogramGenerator())
 				continue
 
 			if opt == "-s" or opt == "--histogram-size":
-				#processors.append(HistogramProcessor(parser, "size"))
+				processor.addGenerator(SizeHistogramGenerator())
 				continue
 				
 			if opt == "-i" or opt == "--in":
