@@ -142,7 +142,7 @@ class Event:
 			if self.context != 0:
 				return False
 		elif not (context.isMaskAll() or (context.value & int(self.context, 16))):
-				return False
+			return False
 		return True
 # /class Event
 
@@ -475,7 +475,7 @@ class Plotter:
 		
 		def __init__(self, filename, title = None):
 			self._filename = filename
-			if title is not None:
+			if title:
 				self.create(title)
 			
 		def create(self, title = None):
@@ -483,7 +483,7 @@ class Plotter:
 			self.file = open(self._filename, "w")
 			if self.file is None:
 				raise RuntimeError("Failed to create data file: %s" % filename)
-			if title is not None:
+			if title:
 				self.file.write("Resource \"%s\"\n" % title)
 			
 		def write(self, x, y):
@@ -554,7 +554,7 @@ class Plotter:
 	def setTitle(self, title):
 		"Sets report title. The report title is printed at the top of the graph."
 		self.file.write("set title \"%s" % title)
-		if Options.filterString is not None:
+		if Options.filterString:
 			self.file.write("\\n(%s)" % Options.filterString)
 		self.file.write("\"\n")
 		
@@ -566,10 +566,10 @@ class Plotter:
 
 		# set ticks
 		self.file.write("set xtics rotate nomirror\n")
-		if scale is not None:
+		if scale:
 			self.file.write("set xtics scale %s\n" % scale)
 			
-		if min is not None:
+		if min:
 			if min == max:
 				max += 1
 			range = max - min
@@ -612,7 +612,7 @@ class Plotter:
 		
 		self.file.write("set y2range[%d:%d]\n" % (min, max))
 		
-		if format is not None:
+		if format:
 			self.file.write("set format y2 \"%s\"\n" % format)
 		self.file.write("set y2tics out\n")
 		self.file.write("set ytics nomirror\n")
@@ -630,12 +630,12 @@ class Plotter:
 			data = ","
 		else:
 			data = ""
-		if prefix is not None:
+		if prefix:
 			data += prefix
 		data += "\"%s\" using %s" % (file.getFilename(), colX)
-		if colY is not None:
+		if colY:
 			data += ":%s" % (colY)
-		if style is not None:
+		if style:
 			data += " ls %d" % style
 		data += " title %s" % title
 		if axis:
@@ -671,9 +671,9 @@ class Plotter:
 		"Creates new line style and returns its index."
 		self.lineStyleIndex += 1
 		self.file.write("set style line %d" % self.lineStyleIndex)
-		if type is not None:
+		if type:
 			self.file.write(" lt %s" % type)
-		if color is not None:
+		if color:
 			self.file.write(" linecolor rgb \"%s\"" % color)
 		self.file.write("\n")
 		return self.lineStyleIndex
@@ -882,7 +882,7 @@ class HistogramGenerator(ReportGenerator):
 		index = 2
 		fileData.writeText("size")
 		self.plotter.addGraph(fileData, "%d" % index, "xtic(1)", "\"%s allocation %s (unfreed)\"" % (self.resource, self.mode), \
-							 None, ltUnfreed, "newhistogram \"Resource size\", ")
+							None, ltUnfreed, "newhistogram \"Resource size\", ")
 		self.plotter.addGraph(fileData, "%d" % (index + 1), "xtic(1)", "\"%s allocation %s (freed)\"" % (self.resource, self.mode), None, ltFreed)
 		fileData.writeText("\n")
 
@@ -1113,8 +1113,8 @@ class LifetimeGenerator(ReportGenerator):
 			contextName = ""
 			if event.context != 0:
 				contextName = " (@%x)" % event.context
-			resourceData.contextFiles[event.context] = self.plotter.createFile("%s-contextd-%s-%x.dat" % (self.getId(), resource, context.value), \
-																"%s%s" % (resource, contextName))
+			resourceData.contextFiles[event.context] = self.plotter.createFile("%s-contextd-%s-%x.dat" % 
+					(self.getId(), resource, context.value), "%s%s" % (resource, contextName))
 			
 		contextFile = resourceData.contextFiles[event.context]
 		stats = resourceData.stats
@@ -1158,7 +1158,7 @@ class LifetimeGenerator(ReportGenerator):
 			
 	def finish(self):
 		# Check if the gathered data is not empty
-		if self.yrangeMax == 0:		
+		if self.yrangeMax == 0:
 			print >> sys.stderr, "ERROR: Either the input file does not contain any events "\
 			                     "or no events are matching the specified filter."
 			self.plotter.cleanup()
@@ -1300,7 +1300,7 @@ class ActivityGenerator(ReportGenerator):
 			self.peakAllocs = self.Data()
 			self.peakFrees = self.Data()
 
-		def update(self, contextData, timestamp):			
+		def update(self, contextData, timestamp):
 			if contextData.total > self.peakSize.size:
 				self.peakSize.size = contextData.total
 				self.peakSize.count = contextData.allocs
@@ -1337,7 +1337,7 @@ class ActivityGenerator(ReportGenerator):
 			
 			self.sliceEvents = []
 	
-		def processSlice(self, timestamp, slice, stats):		
+		def processSlice(self, timestamp, slice, stats):
 			# remove old events
 			while len(self.sliceEvents) > 0 and self.sliceEvents[0].timestamp < timestamp - slice:
 				oldEvent = self.sliceEvents.pop(0)
@@ -1684,9 +1684,9 @@ class TotalsGenerator(ReportGenerator):
 		resourceData = self.data[resource]
 			
 		if context.value not in resourceData.contexts:
-			 fileTotals = self.plotter.createFile("%s-%s-%x.dat" % (self.getId(), resource, context.value), \
-																		 "%s (%s)" % (resource, context.name))
-			 resourceData.contexts[context.value] = self.ContextData(fileTotals)
+			fileTotals = self.plotter.createFile("%s-%s-%x.dat" % (self.getId(), resource, context.value), \
+																		"%s (%s)" % (resource, context.name))
+			resourceData.contexts[context.value] = self.ContextData(fileTotals)
 
 		contextData = resourceData.contexts[context.value]
 		stats = resourceData.stats
@@ -1925,7 +1925,7 @@ class Processor:
 		if res_type is None:
 			res_type = self.resources.keys()[0]
 		else:
-			if Options.filterResource is not None and Options.filterResource != res_type:
+			if Options.filterResource and Options.filterResource != res_type:
 				return
 		if res_type not in self.resources:
 			print >> sys.stderr, "Unknown resource type: %s" % res_type
@@ -1956,7 +1956,7 @@ class Processor:
 		if res_type is None:
 			res_type = self.resources.keys()[0]
 		else:
-			if Options.filterResource is not None and Options.filterResource != res_type:
+			if Options.filterResource and Options.filterResource != res_type:
 				return
 		if res_type not in self.resources:
 			print >> sys.stderr, "Unknown resource type: %s" % res_type
@@ -2038,7 +2038,7 @@ class Parser:
 		"Reads and parses the input stream"
 		for line in stream:
 			# don't attempt to parse backtrace records
-			if line[0] == '\t':
+			if line[0] == '\t' or line[0] == '\n':
 				continue
 			#
 			match = self.reAlloc.match(line)
@@ -2212,9 +2212,9 @@ class Options:
 				Options.updateFilter("size", val)
 				min = Options.parseSize(match.group(1))
 				max = Options.parseSize(match.group(2))
-				if min is not None:
+				if min:
 					Options.filters.append(MinSizeFilter(min))
-				if max is not None:
+				if max:
 					Options.filters.append(MaxSizeFilter(max))
 				continue
 				
@@ -2227,9 +2227,9 @@ class Options:
 				Options.updateFilter("time", val)
 				start = Options.parseTime(match.group(1))
 				end = Options.parseTime(match.group(2))
-				if start is not None:
+				if start:
 					Options.filters.append(start > 0 and MinTimeFilter(start) or MinTimeOffsetFilter(-start))
-				if end is not None:
+				if end:
 					Options.filters.append(end > 0 and MaxTimeFilter(end) or MaxTimeOffsetFilter(-end))
 				continue
 				
@@ -2242,9 +2242,9 @@ class Options:
 				Options.updateFilter("index", val)
 				min = Options.parseSize(match.group(1))
 				max = Options.parseSize(match.group(2))
-				if min is not None:
+				if min:
 					Options.filters.append(MinIndexFilter(min))
-				if max is not None:
+				if max:
 					Options.filters.append(MaxIndexFilter(max))
 				continue
 			
@@ -2299,14 +2299,14 @@ class Options:
 			return None
 		timestamp = 0
 		print >> sys.stderr, "1:%s, 2:%s, 3:%s, 4:%s, 5:%s" % (match.group(1), match.group(2), match.group(3), match.group(4), match.group(5))
-		if match.group(2) is not None:
+		if match.group(2):
 			timestamp += int(match.group(2)) *  60 * 1000
-		if match.group(3) is not None:
+		if match.group(3):
 			timestamp *= 60
 			timestamp += int(match.group(3)) * 60 * 1000
-		if match.group(4) is not None:
+		if match.group(4):
 			timestamp += int(match.group(4)) * 1000
-		if match.group(5) is not None:
+		if match.group(5):
 			timestamp += int(match.group(5).ljust(3, '0'))
 		return match.group(1) and -timestamp or timestamp
 	

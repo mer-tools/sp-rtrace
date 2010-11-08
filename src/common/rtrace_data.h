@@ -74,7 +74,7 @@ void rd_hashake_free(rd_hshake_t* hs);
 typedef struct rd_pinfo_t {
 	unsigned int pid;
 	unsigned char flags;
-	unsigned int backtrace_depth;
+	int backtrace_depth;
 	char* name;
 	struct timeval timestamp;
 } rd_pinfo_t;

@@ -141,7 +141,11 @@ static rd_pinfo_t* read_packet_PI(const char* data)
 	data += read_dword(data, &usec);
 	info->timestamp.tv_sec = sec;
 	info->timestamp.tv_usec = usec;
-	data += read_dword(data, &info->backtrace_depth);
+
+	unsigned int btdepth;
+	data += read_dword(data, &btdepth);
+	info->backtrace_depth = btdepth;
+	
 	read_stringa(data, &info->name);
 
 	return info;

@@ -263,7 +263,7 @@ static void resource_filter_mask(rd_resource_t* resource, dlist_t* list)
  * @param fmt
  * @return
  */
-static int trim_backtrace(rd_ftrace_t* trace, int backtrace_depth)
+static int trim_backtrace(rd_ftrace_t* trace, unsigned int backtrace_depth)
 {
 	if (trace->nframes > backtrace_depth) {
 		trace->nframes = backtrace_depth;
