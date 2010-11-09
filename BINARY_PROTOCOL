@@ -187,4 +187,11 @@ the tracked resource type in function call records.
   [desc] - the resource desription (string)
   
   
+--------------
+Version log
+v1.2
+Added backtrace depth field to process info packet.
+
+v1.0 
+Initial protocol release.
   
