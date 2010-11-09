@@ -136,7 +136,7 @@ static void* parse_context_registry(char* line)
 static unsigned int parse_resource_flags(const char* text) {
 	unsigned int nflag = 0, flag, flags = 0;
 	
-	while ( (flag = 1 << nflag) <= RESOURCE_LAST_FLAG ) {
+	while ( (flag = 1 << nflag) <= SP_RTRACE_RESOURCE_LAST_FLAG ) {
 		if (strstr(text, resource_flags_text[nflag++])) flags |= flag; 
 	}
 	return flags;

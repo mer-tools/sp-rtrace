@@ -31,6 +31,7 @@
 
 #include "formatter.h"
 #include "sp_rtrace_proto.h"
+#include "library/sp_rtrace_formatter.h"
 
 /* text interpretatio of resource behavior flags */
 const char *resource_flags_text[] = {"refcount"};
@@ -132,7 +133,7 @@ int formatter_write_resource(const rd_resource_t* resource, FILE* fp)
 		*ptr++ = ' ';
 		*ptr++ = '[';
 		unsigned int nflag = 0, flag;
-		while ( (flag = 1 << nflag) <= RESOURCE_LAST_FLAG) {
+		while ( (flag = 1 << nflag) <= SP_RTRACE_RESOURCE_LAST_FLAG) {
 			if (nflag) *ptr++ = '|';
 			ptr += sprintf(ptr, "%s", resource_flags_text[nflag++]);
 		}

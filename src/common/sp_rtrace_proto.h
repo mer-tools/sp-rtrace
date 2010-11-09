@@ -36,7 +36,7 @@
 #include <stdio.h>
 
 #include "common/debug_log.h"
-
+#include "common/sp_rtrace_defs.h"
 
 #define SP_RTRACE_PROTO_PACKET_TYPE(b1, b2, b3, b4) (b1 | (b2 << 8) | (b3 << 16) | (b4 << 24))
 
@@ -321,24 +321,6 @@ typedef struct {
 /* Module information retrieval function template. This function
  * must be implemented by all tracing submodules */
 typedef sp_rtrace_module_info_t* (*sp_rtrace_get_module_info_t)();
-
-/**
-* Resource behavior flags
-*/
-enum resource_flags_t {
-	/* Resource alloc/free functions uses reference counting. This means that
-	 * the subsequent allocation functions for the resource with the same resource 
-	 * id increments the resource reference counter. Free functions decrements 
-	 * the reference counter and the resource is assumed to be freed after the
-	 * reference counter reaches zero. */
-	RESOURCE_REFCOUNT = 1 << 0,
-	
-	/* The last resource behavior flag */
-	RESOURCE_LAST_FLAG = RESOURCE_REFCOUNT, 
-			
-	/* Default resource behavior flags */
-	RESOURCE_DEFAULT = 0 
- };
 
 
 
