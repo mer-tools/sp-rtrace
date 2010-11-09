@@ -6,6 +6,7 @@ sp-rtrace (1.2) unstable; urgency=low
     - allocation life-time timeline chart
     - allocation count & size per alloc size histograms
     - possible to generate all charts at the same time
+    - huge memory usage reduction
     - options for filtering allocations & deallocations based on
       allocation record, timestamp or size range and scaling chart
     Fixes: NB#153186
@@ -14,12 +15,13 @@ sp-rtrace (1.2) unstable; urgency=low
     - handle both binary and ascii files
     - input files need now to be specified
     - generate also (all) timeline charts
+    - show the generated charts with xdg-open
   * rtrace-callgree updates:
     - ignore deallocation backtraces
     - option to filter allocations based on size range
     - updates to glib/qt function/method ignore shortcuts
   * Experimental support for using libunwind to collect backtraces
-  * Binary and ASCII trace file formats changed
+  * Binary and ASCII trace file format changes for above
   * Context API library changes needed by functracer
   * Post-processing speed and memory usage improvements
   * Force i486 architecture for x86 (Sbox). Fixes: NB#201366
