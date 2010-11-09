@@ -60,7 +60,7 @@
 
 /* protocol version */
 #define SP_RTRACE_PROTO_VERSION_MAJOR     1
-#define SP_RTRACE_PROTO_VERSION_MINOR     0
+#define SP_RTRACE_PROTO_VERSION_MINOR     2
 
 /* endianness flags (used in HS packet) */
 #define SP_RTRACE_PROTO_HS_LITTLE_ENDIAN  0

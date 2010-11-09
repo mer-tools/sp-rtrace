@@ -58,6 +58,9 @@ typedef struct rd_hshake_t {
 
 #define RD_HSHAKE(x)	((rd_hshake_t*)x)
 
+#define HS_CHECK_VERSION(hs, major, minor) (hs->vmajor > major || (hs->vmajor == major && hs->vminor >= minor))
+
+
 /**
  * Frees handshake data.
  *

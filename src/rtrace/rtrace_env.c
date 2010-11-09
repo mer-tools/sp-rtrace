@@ -164,7 +164,7 @@ char *rtrace_env_opt[] = {
 };
 
 /* sp_rtrace short option list */
-char* rtrace_short_opt = "i:o:mp:a:st:fb:TAP:S:Bhx:lLFu";
+char* rtrace_short_opt = "+i:o:mp:a:st:fb:TAP:S:Bhx:lLFu";
 
 void rtrace_args_add_opt(rtrace_args_t* args, char opt, const char* value)
 {

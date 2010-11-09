@@ -662,8 +662,14 @@ class Plotter:
 			file.close()
 		
 		# Convert with gnuplot
-		gnuplot = subprocess.Popen(["gnuplot", self.cfgFilename], 0, None, None, self.stream)
-		gnuplot.wait()
+		try:
+			gnuplot = subprocess.Popen(["gnuplot", self.cfgFilename], 0, None, None, self.stream)
+			gnuplot.wait()
+		except OSError, e:
+			print >> sys.stderr, "ERROR: failed to execute gnuplot (%s)" % e.strerror
+			print >> sys.stderr, "Check if the gnuplot is installed and try again."
+			self.cleanup()
+			sys.exit(2)
 
 		self.cleanup()
 	

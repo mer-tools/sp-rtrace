@@ -75,7 +75,7 @@ static rd_hshake_t* read_handshake_packet(const char* data)
  * @param[in] size   the data size.
  * @return           the context registry record.
  */
-static rd_context_t* read_packet_CR(const char* data)
+static rd_context_t* read_packet_CR(const rd_hshake_t* hs __attribute__((unused)), const char* data)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
 	rd_context_t* context = (rd_context_t*)dlist_create_node(sizeof(rd_context_t));
@@ -92,7 +92,7 @@ static rd_context_t* read_packet_CR(const char* data)
  * @param[in] size   the data size.
  * @return           the resource registry record.
  */
-static rd_resource_t* read_packet_RR(const char* data)
+static rd_resource_t* read_packet_RR(const rd_hshake_t* hs __attribute__((unused)), const char* data)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
 	rd_resource_t* res = (rd_resource_t*)dlist_create_node(sizeof(rd_resource_t));
@@ -111,7 +111,7 @@ static rd_resource_t* read_packet_RR(const char* data)
  * @param[in] size   the data size.
  * @return           the memory mapping record.
  */
-static rd_mmap_t* read_packet_MM(const char* data)
+static rd_mmap_t* read_packet_MM(const rd_hshake_t* hs __attribute__((unused)), const char* data)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
 
@@ -129,7 +129,7 @@ static rd_mmap_t* read_packet_MM(const char* data)
  * @param[in] size   the data size.
  * @return           the process info record.
  */
-static rd_pinfo_t* read_packet_PI(const char* data)
+static rd_pinfo_t* read_packet_PI(const rd_hshake_t* hs __attribute__((unused)), const char* data)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
 
@@ -142,10 +142,13 @@ static rd_pinfo_t* read_packet_PI(const char* data)
 	info->timestamp.tv_sec = sec;
 	info->timestamp.tv_usec = usec;
 
-	unsigned int btdepth;
-	data += read_dword(data, &btdepth);
-	info->backtrace_depth = btdepth;
-	
+	// TODO:
+	if (HS_CHECK_VERSION(hs, 1, 2)) {
+		unsigned int btdepth;
+		data += read_dword(data, &btdepth);
+		info->backtrace_depth = btdepth;
+	}
+	//
 	read_stringa(data, &info->name);
 
 	return info;
@@ -158,7 +161,7 @@ static rd_pinfo_t* read_packet_PI(const char* data)
  * @param[in] size   the data size.
  * @return           the module info record.
  */
-static rd_minfo_t* read_packet_MI(const char* data)
+static rd_minfo_t* read_packet_MI(const rd_hshake_t* hs __attribute__((unused)), const char* data)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
 
@@ -179,7 +182,7 @@ static rd_minfo_t* read_packet_MI(const char* data)
  * @param[in] size   the data size.
  * @return           the function call record.
  */
-static rd_fcall_t* read_packet_FC(const char* data)
+static rd_fcall_t* read_packet_FC(const rd_hshake_t* hs __attribute__((unused)), const char* data)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
     rd_fcall_t* call = (rd_fcall_t*)dlist_create_node(sizeof(rd_fcall_t));
@@ -210,7 +213,7 @@ static rd_fcall_t* read_packet_FC(const char* data)
  * @param[in] size   the data size.
  * @return           the function trace record.
  */
-static rd_ftrace_t* read_packet_BT(const char* data)
+static rd_ftrace_t* read_packet_BT(const rd_hshake_t* hs __attribute__((unused)), const char* data)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
 
@@ -233,7 +236,7 @@ static rd_ftrace_t* read_packet_BT(const char* data)
  * @param[in] size   the data size.
  * @return           the function trace record.
  */
-static rd_fargs_t* read_packet_FA(const char* data)
+static rd_fargs_t* read_packet_FA(const rd_hshake_t* hs __attribute__((unused)), const char* data)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
 
@@ -249,7 +252,7 @@ static rd_fargs_t* read_packet_FA(const char* data)
 }
 
 
-static rd_hinfo_t* read_packet_HI(const char* data)
+static rd_hinfo_t* read_packet_HI(const rd_hshake_t* hs __attribute__((unused)), const char* data)
 {
 	rd_hinfo_t* hinfo = (rd_hinfo_t*)calloc_a(1, sizeof(rd_hinfo_t));
 
@@ -298,30 +301,30 @@ static int read_generic_packet(rd_t* rd, const char* data, int size)
 	/* process packet depending on its type */
 	switch (type) {
 		case SP_RTRACE_PROTO_MEMORY_MAP: {
-			dlist_add(&rd->mmaps, read_packet_MM(data));
+			dlist_add(&rd->mmaps, read_packet_MM(rd->hshake, data));
 		    fcall_prev = NULL;
 			break;
 		}
 		case SP_RTRACE_PROTO_CONTEXT_REGISTRY: {
-			dlist_add(&rd->contexts, read_packet_CR(data));
+			dlist_add(&rd->contexts, read_packet_CR(rd->hshake, data));
 		    fcall_prev = NULL;
 			break;
 		}
 		case SP_RTRACE_PROTO_RESOURCE_REGISTRY: {
-			rd_resource_t* res = read_packet_RR(data);
+			rd_resource_t* res = read_packet_RR(rd->hshake, data);
 			dlist_add(&rd->resources, res);
 			res_index[res->id] = res;
 		    fcall_prev = NULL;
 			break;
 		}
 		case SP_RTRACE_PROTO_FUNCTION_CALL: {
-            fcall_prev = read_packet_FC(data);
+            fcall_prev = read_packet_FC(rd->hshake, data);
             dlist_add(&rd->calls, fcall_prev);
             fcall_prev->res_type = res_index[(long)fcall_prev->res_type];
             break;
         }
 		case SP_RTRACE_PROTO_BACKTRACE: {
-            rd_ftrace_t* trace = read_packet_BT(data);
+            rd_ftrace_t* trace = read_packet_BT(rd->hshake, data);
 			/* check if function call record for this backtrace has been processed.
 			 * It should have been a record processed right before this one.
 			 */
@@ -336,7 +339,7 @@ static int read_generic_packet(rd_t* rd, const char* data, int size)
 		}
 		case SP_RTRACE_PROTO_FUNCTION_ARGS: {
 			if (fcall_prev) {
-				fcall_prev->args = read_packet_FA(data);
+				fcall_prev->args = read_packet_FA(rd->hshake, data);
 			}
 			else {
 				fprintf(stderr, "WARNING: a function argument packet did not follow function call packet\n");
@@ -344,17 +347,17 @@ static int read_generic_packet(rd_t* rd, const char* data, int size)
 			break;
 		}
 		case SP_RTRACE_PROTO_PROCESS_INFO: {
-			rd->pinfo = read_packet_PI(data);
+			rd->pinfo = read_packet_PI(rd->hshake, data);
 		    fcall_prev = NULL;
 			break;
 		}
 		case SP_RTRACE_PROTO_MODULE_INFO: {
-			dlist_add(&rd->minfo, read_packet_MI(data));
+			dlist_add(&rd->minfo, read_packet_MI(rd->hshake, data));
 		    fcall_prev = NULL;
 			break;
 		}
 		case SP_RTRACE_PROTO_HEAP_INFO: {
-			rd->hinfo = read_packet_HI(data);
+			rd->hinfo = read_packet_HI(rd->hshake, data);
 		    fcall_prev = NULL;
 			break;
 		}
