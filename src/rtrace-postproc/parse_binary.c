@@ -142,7 +142,6 @@ static rd_pinfo_t* read_packet_PI(const rd_hshake_t* hs __attribute__((unused)),
 	info->timestamp.tv_sec = sec;
 	info->timestamp.tv_usec = usec;
 
-	// TODO:
 	if (HS_CHECK_VERSION(hs, 1, 2)) {
 		unsigned int btdepth;
 		data += read_dword(data, &btdepth);

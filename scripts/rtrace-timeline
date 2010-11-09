@@ -1718,7 +1718,7 @@ class TotalsGenerator(ReportGenerator):
 					stats.peakTotals.count = stats.endTotals.count
 					stats.peakTimestamp = event.timestamp
 				# update overhead data
-				if self.overheadData[resource]:
+				if resource in self.overheadData:
 					resourceData.overhead += event.res_size + self.overheadData[resource]
 							
 		if event.type == Event.Types.FREE:
@@ -1728,7 +1728,7 @@ class TotalsGenerator(ReportGenerator):
 				stats.endLeaks.size -= event.res_size
 				stats.endLeaks.count -= 1
 				# update overhead data
-				if self.overheadData[resource]:
+				if resource in self.overheadData:
 					resourceData.overhead -= (event.res_size + self.overheadData[resource])
 			
 		contextData.fileTotals.write(event.timestamp, contextData.total)
