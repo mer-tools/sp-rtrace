@@ -1913,7 +1913,7 @@ class Processor:
 		# check if events are properly ordered
 		if self.lastTimestamp > event.timestamp or (self.lastTimestamp == event.timestamp and self.lastIndex > event.index):
 			print >> sys.stderr, "ERROR: older event follows newer one in source file at index %d.\n" % event.index
-			print >> sys.stderr, "To force correct event ordering in source file run sp-rtrace-postproc -i <source file> | rtrace-timeline <options>"
+			print >> sys.stderr, "To force a correct event ordering in the source file, run:\n\tsp-rtrace-postproc -i <source file> | rtrace-timeline <options>"
 			sys.exit(2)
 
 		self.lastTimestamp = event.timestamp
