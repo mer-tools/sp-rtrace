@@ -32,6 +32,9 @@
 #include "formatter.h"
 #include "sp_rtrace_proto.h"
 
+/* text interpretatio of resource behavior flags */
+const char *resource_flags_text[] = {"refcount"};
+
 /*
  * rd_* data formatting function implementation
  */
@@ -123,7 +126,18 @@ int formatter_write_context(const rd_context_t* context, FILE* fp)
 
 int formatter_write_resource(const rd_resource_t* resource, FILE* fp)
 {
-	if (fprintf(fp, "<%x> : %s (%s)\n", 1 << ((int)resource->id - 1), resource->type, resource->desc) == 0) return -errno;
+	char buffer[PATH_MAX], *ptr = buffer;
+	ptr += sprintf(ptr, "<%x> : %s (%s)", 1 << ((int)resource->id - 1), resource->type, resource->desc);
+	if (resource->flags) {
+		unsigned int nflag = 0, flag;
+		while ( (flag = 1 << nflag) <= RESOURCE_LAST_FLAG) {
+			if (nflag) *ptr++ = '|';
+			ptr += sprintf(ptr, "%s", resource_flags_text[nflag++]);
+		}
+	}
+	*ptr++ = '\n';
+	*ptr = '\0';
+	if (fwrite(buffer, 1, ptr - buffer, fp) < (size_t)(ptr - buffer)) return -errno;
 	return 0;
 }
 

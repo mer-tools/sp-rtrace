@@ -534,7 +534,7 @@ static void write_initial_data()
 	/* write resource registry records */
 	for (i = 0; i < rtrace_resource_index; i++) {
 	    rtrace_resource_t* resource = &rtrace_resources[i];
-	    write_resource_registry(resource->id, resource->type, resource->desc, resrource->flags);
+	    write_resource_registry(resource->id, resource->type, resource->desc, resource->flags);
     }
 
 	write_new_library("*");

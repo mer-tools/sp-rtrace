@@ -332,8 +332,14 @@ enum resource_flags_t {
 	 * the reference counter and the resource is assumed to be freed after the
 	 * reference counter reaches zero. */
 	RESOURCE_REFCOUNT = 1 << 0,
-			 
+	
+	/* The last resource behavior flag */
+	RESOURCE_LAST_FLAG = RESOURCE_REFCOUNT, 
+			
 	/* Default resource behavior flags */
 	RESOURCE_DEFAULT = 0 
  };
+
+
+
 #endif
