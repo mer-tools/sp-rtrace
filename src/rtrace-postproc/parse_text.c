@@ -134,7 +134,12 @@ static void* parse_context_registry(char* line)
 }
 
 static unsigned int parse_resource_flags(const char* text) {
-
+	unsigned int nflag = 0, flag, flags = 0;
+	
+	while ( (flag = 1 << nflag) <= RESOURCE_LAST_FLAG ) {
+		if (strstr(text, resource_flags_text[nflag++])) flags |= flag; 
+	}
+	return flags;
 }
 
 /**
@@ -155,7 +160,10 @@ static void* parse_resource_registry(char* line)
 		resource->id = ffs(id);
 		resource->type = strdup_a(type);
 		resource->desc = strdup_a(desc);
-		resource->flags = parse_resource_flags(flags);
+		if (fields >= 4) {
+			fprintf(stderr, "flags parsed: %s\n", flags);
+			resource->flags = parse_resource_flags(flags);
+		}
 		resource->hide = false;
 	}
 	return resource;

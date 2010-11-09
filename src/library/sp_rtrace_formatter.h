@@ -115,9 +115,10 @@ int sp_rtrace_print_context(FILE* fp, unsigned int id, const char* name);
  * @param[in] id    the resource identifier.
  * @param[in] type  the resource type.
  * @param[in] desc  the resource description.
+ * @param[in] flags the resource behavior flags (see resource_flags_t enum in sp_rtrace_proto.h).
  * @return          0 - success, -errno - failure
  */
-int sp_rtrace_print_resource(FILE* fp, unsigned int id, const char* type, const char* desc);
+int sp_rtrace_print_resource(FILE* fp, unsigned int id, const char* type, const char* desc, unsigned int flags);
 
 /**
  * Prints comment.

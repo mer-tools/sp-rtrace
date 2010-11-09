@@ -123,9 +123,9 @@ int sp_rtrace_print_context(FILE* fp, unsigned int id, const char* name)
 }
 
 
-int sp_rtrace_print_resource(FILE* fp, unsigned int id, const char* type, const char* desc)
+int sp_rtrace_print_resource(FILE* fp, unsigned int id, const char* type, const char* desc, unsigned int flags)
 {
-	rd_resource_t resource = {.id = id, .type = (char*)type, .desc = (char*)desc};
+	rd_resource_t resource = {.id = id, .type = (char*)type, .desc = (char*)desc, .flags = flags};
 	return formatter_write_resource(&resource, fp);
 }
 

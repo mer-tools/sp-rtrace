@@ -129,11 +129,14 @@ int formatter_write_resource(const rd_resource_t* resource, FILE* fp)
 	char buffer[PATH_MAX], *ptr = buffer;
 	ptr += sprintf(ptr, "<%x> : %s (%s)", 1 << ((int)resource->id - 1), resource->type, resource->desc);
 	if (resource->flags) {
+		*ptr++ = ' ';
+		*ptr++ = '[';
 		unsigned int nflag = 0, flag;
 		while ( (flag = 1 << nflag) <= RESOURCE_LAST_FLAG) {
 			if (nflag) *ptr++ = '|';
 			ptr += sprintf(ptr, "%s", resource_flags_text[nflag++]);
 		}
+		*ptr++ = ']';
 	}
 	*ptr++ = '\n';
 	*ptr = '\0';

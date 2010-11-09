@@ -144,7 +144,7 @@ static long fcall_remove_freed(rd_fcall_t* call, void* data)
     fres_t* res = htable_find(&index->table, &find_res);
 
     if (call->type == SP_RTRACE_FTYPE_ALLOC) {
-    	if (res) {
+    	if (res && (call->res_type->flags & RESOURCE_REFCOUNT)) {
     		res->ref_count++;
 			rd_fcall_remove(index->rd, call);
     	}
@@ -154,7 +154,8 @@ static long fcall_remove_freed(rd_fcall_t* call, void* data)
 			new_res->call = call;
 			new_res->ref_count = 1;
 			/* store the created record into resource index table */
-			htable_store(&index->table, new_res);
+			fres_t* old_res = htable_store(&index->table, new_res);
+			if (old_res) free_fres_rec(old_res);
     	}
     }
     else if (call->type == SP_RTRACE_FTYPE_FREE) {
@@ -163,7 +164,7 @@ static long fcall_remove_freed(rd_fcall_t* call, void* data)
     	 * id value, setting the .call field is enough for lookups */
         if (res) {
         	res->ref_count--;
-        	if (res->ref_count == 0) {
+        	if (res->ref_count == 0 || !(call->res_type->flags & RESOURCE_REFCOUNT)) {
 				/* The resource allocation record found. Remove the record
 				 * from function call list and free it. Also remove and
 				 * free the resource index record */
