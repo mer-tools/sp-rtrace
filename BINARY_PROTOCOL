@@ -65,7 +65,7 @@ The process information packet is sent when the tracing is started.
   [timestamp] - trace starting timestamp [secs][usecs].
     [secs] - seconds since the Epoch (dword).
     [usecs] - microsecond since the Epoch (dword).
-  [depth] - the backtrace depth setting (dword)
+  [depth] - the backtrace depth setting [v1.2] (dword)
   [name] - the process name (string).
   
   
