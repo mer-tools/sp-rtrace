@@ -113,9 +113,10 @@ unsigned int sp_rtrace_register_module(const char* name, unsigned char vmajor, u
  * is unloaded.
  * @param[in] type     the resource type.
  * @param[in] desc     the resource description.
+ * @param[in] flags    the resource behavior flags (see resource_flags_t enum in sp_rtrace_proto.h).
  * @return             the resource type id or 0 if resource registry is full.
  */
-unsigned int sp_rtrace_register_resource(const char* type, const char* desc);
+unsigned int sp_rtrace_register_resource(const char* type, const char* desc, unsigned int flags);
 
 /**
  * Stores current heap information (mallinf()) so it can be sent to pre-processor

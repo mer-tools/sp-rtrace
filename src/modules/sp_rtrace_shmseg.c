@@ -194,8 +194,8 @@ static void trace_initialize()
 		case MODULE_LOADED: {
 			if (sp_rtrace_initialize()) {
 				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
-				res_segment = sp_rtrace_register_resource("shmseg", "shared memory segment");
-				res_address = sp_rtrace_register_resource("shmaddr", "shared memory attachments");
+				res_segment = sp_rtrace_register_resource("shmseg", "shared memory segment", RESOURCE_REFCOUNT);
+				res_address = sp_rtrace_register_resource("shmaddr", "shared memory attachments", RESOURCE_DEFAULT);
 				trace_init_rt = trace_rt;
 				init_mode = MODULE_READY;
 

@@ -182,6 +182,8 @@ typedef struct rd_resource_t {
 	char* type;
 	/* the resource description */
 	char* desc;
+	/* resource behaviour flags */
+	unsigned int flags;
 	/* flag to hide resource from call records */
 	bool hide;
 } rd_resource_t;

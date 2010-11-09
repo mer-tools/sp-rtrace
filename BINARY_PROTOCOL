@@ -183,6 +183,9 @@ the tracked resource type in function call records.
 
 [id][name]
   [id] - the resource type id (dword)
+  [flags] - flags describing resource behaviour (dword)
+            0x0001 - refcount flag. Set if the resource allocs/frees uses reference 
+	             counting.
   [type] - the resource type (string)
   [desc] - the resource desription (string)
   

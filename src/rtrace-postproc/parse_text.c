@@ -133,6 +133,10 @@ static void* parse_context_registry(char* line)
 	return context;
 }
 
+static unsigned int parse_resource_flags(const char* text) {
+
+}
+
 /**
  * Parses resource registry record.
  *
@@ -143,13 +147,15 @@ static void* parse_context_registry(char* line)
 static void* parse_resource_registry(char* line)
 {
 	rd_resource_t* resource = NULL;
-	char type[512], desc[512];
+	char type[512], desc[512], flags[1024];
 	unsigned int id;
-	if (sscanf(line, "<%x> : %[^ ] (%[^)])", &id, type, desc) == 3) {
+	int fields;
+	if ( (fields = sscanf(line, "<%x> : %[^ ] (%[^)]) [%[^]]]", &id, type, desc, flags)) >= 3) {
 		resource = dlist_create_node(sizeof(rd_resource_t));
 		resource->id = ffs(id);
 		resource->type = strdup_a(type);
 		resource->desc = strdup_a(desc);
+		resource->flags = parse_resource_flags(flags);
 		resource->hide = false;
 	}
 	return resource;

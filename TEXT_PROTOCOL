@@ -136,8 +136,11 @@ during post-processing and resolving.
     Contains information about tracked resource types. The resource types are
     used to identify resources when multiple modules or a mudule, tracking
     multiple resources is used.
-      \<<id>\> : <type> (<desc>) 
+      \<<id>\> : <type> (<desc>) [\[<flag1>[|<flag2>]...\]]
     Where:
       <id>    - the resource id.
 	  <type>  - the resource type name.
 	  <desc>  - the resource type description.
+	  <flag1>, <flag2> .. - the resource behaviour flags.
+	      refcount - speecifies that the resource allocs/frees uses reference 
+	                 counting.
