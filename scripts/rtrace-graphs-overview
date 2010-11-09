@@ -30,7 +30,8 @@
 # - check/complain about tool only if it's needed
 # - parse both alloc leaks and unreffed Gobject reports
 # 2010-08-02
-# - Updated to support rtrace format and moved to sp-rtrace pacakge.
+# - Updated this sp-libleaks utility to support rtrace format and moved
+#   it to sp-rtrace pacakge.
 # 2010-09-10
 # - Add help and update calltree options
 # - If destination file is older than source file, re-create it
@@ -46,10 +47,11 @@
 # 2010-11-03
 # - Adapt to rtrace-timeline option changes
 # - Save the resulting dot files & images to *-overview/ subdirectory
-#
-# Originally this file was a part of sp-libleaks package, but moved
-# to the sp-rtrace package during libleaks redesign.
-
+# 2010-11-09
+# - Adapt to further rtrace-timeline changes, remove -a argument
+#   as alloc/dealloc activity chart isn't so useful in an overview
+# - Handle more potential error corner-cases and check sp-rtrace version
+# - Show the resulting graphs with xdg-open tool and use SVG instead of EPS
 
 usage ()
 {
@@ -89,20 +91,32 @@ texts=""
 binaries=""
 echo "Identifying trace file types:"
 for src in $*; do
-	echo $src|tr A-Z a-z|grep -q -e '\.png$' -e '\.ps$' -e '\.eps'
+	if [ \! -f $src ]; then
+		usage "given '$src' trace file doesn't exist"
+	fi
+	echo $src|tr A-Z a-z|grep -q -e '\.png$' -e '\.ps$' -e '\.svg$' -e '\.eps'
 	if [ $? -eq 0 ]; then
 		echo " - $src, SKIPPING (PNG/EPS/PS files are results, not inputs)"
-	elif [ \! -f $src ]; then
-		usage "given '$src' trace file doesn't exist"
-	elif [ "$(dd if=$src bs=1 count=1 2> /dev/null)" = "$(printf '\xF0')" ]; then
+		continue
+	fi
+	if [ "$(dd if=$src bs=1 count=1 2> /dev/null)" = "$(printf '\xF0')" ]; then
 		echo "- $src: binary"
 		binaries="$binaries $src"
-	elif [ "$(dd if=$src bs=8 count=1 2> /dev/null)" = "version=" ]; then
-		echo "- $src: ASCII"
-		texts="$texts $src"
-	else
-		usage "file '$src' is neither binary nor text trace file"
+		continue
 	fi
+	version=$(head -1 $src|cut -d, -f1)
+	if [ "${version%=*}" != "version" ]; then
+		usage "file '$src' is neither sp-rtrace binary nor text trace file"
+	fi
+	version=${version#*=}
+	major=${version%.*}
+	minor=${version#*.}
+	if [ $major -lt 1 ] || [ $major -eq 1 ] && [ $minor -lt 2 ]; then
+		echo "ERROR: trace file '$src' is from too old sp-rtrace (version $version < 1.2)!"
+		exit 1
+	fi
+	echo "- $src: ASCII"
+	texts="$texts $src"
 done
 
 if [ -z "$binaries" ] && [ -z "$texts" ]; then
@@ -153,14 +167,15 @@ for src in $binaries; do
 		if [ $? -eq 0 ]; then
 			echo "  Already included into given arguments, ignoring."
 		else
-			echo "  Exists already, skipping re-conversion."
-			timelines="$timelines $dst"
+			# check as text file
+			echo "  Exists already, checking later."
+			texts="$texts $dst"
 		fi
 		continue
 	fi
-	# merge & remove backtrace information
-	echo "  sp-rtrace-postproc -c -b 0 < $src > $dst"
-	sp-rtrace-postproc -c -b 0 < $src > $dst
+	# convert to ASCII & remove backtrace information
+	echo "  sp-rtrace-postproc -b 0 < $src > $dst"
+	sp-rtrace-postproc -b 0 < $src > $dst
 	if [ $? -eq 0 ]; then
 		timelines="$timelines $dst"
 	else
@@ -182,9 +197,46 @@ for src in $texts; do
 		echo "  (useless as freed resources are removed)"
 		continue
 	fi
-	# can be used as such
-	echo "- $src -> OK"
-	timelines="$timelines $src"
+	head -1 $src | grep -q compress
+	if [ $? -ne 0 ]; then
+		# not compressed, can be used as such
+		echo "- $src -> OK"
+		timelines="$timelines $src"
+		continue
+	fi
+	# needs conversion
+	dst=${src%-timeline.txt}
+	dst=${dst%.txt}-timeline.txt
+	echo "- $src -> $dst..."
+	if [ $src = $dst ]; then
+		echo "  WARNING: target file exists, but cannot be used as it's compressed"
+		echo "  (events aren't in order), skipping it.  Remove the file if you want"
+		echo    "it to be regenerated!"
+		continue
+	fi
+	# newer target file?
+	if [ -f $dst ] && [ $dst -nt $src ]; then
+		echo $texts|grep -q $dst
+		if [ $? -eq 0 ]; then
+			echo "  Already included into given arguments, ignoring."
+		else
+			echo "  Exists already, skipping re-conversion."
+			timelines="$timelines $dst"
+		fi
+		continue
+	fi
+
+	echo "- $src -> $dst..."
+	# convert to suitable ASCII & remove backtrace information
+	echo "  sp-rtrace-postproc -b 0 < $src > $dst"
+	sp-rtrace-postproc -b 0 < $src > $dst
+	if [ $? -eq 0 ]; then
+		timelines="$timelines $dst"
+	else
+		echo "  ERROR: conversion failed!"
+		rm $dst
+		exit 1
+	fi
 done
 
 # if no timeline tool, skip graphs
@@ -192,13 +244,17 @@ if [ \! -z "$timelines" ]; then
 	if [ -z "$(which rtrace-timeline)" ]; then
 		echo "WARNING: rtrace-timeline missing, skipping timelines creation!"
 		timelines=""
+	elif [ -z "$(which gnuplot)" ]; then
+		# timeline notices this too, but better skip it early
+		echo "WARNING: gnuplot missing, skipping timelines creation!"
+		timelines=""
 	fi
 fi
 
 # create timelines
 if [ \! -z "$timelines" ]; then
 	echo
-	echo "Creating total, activity and lifetime timelines:"
+	echo "Creating resource size histogram, allocation lifetime and unfreed total timelines:"
 fi
 for src in $timelines; do
 	mkdir -p $dir
@@ -206,15 +262,20 @@ for src in $timelines; do
 	dst=$dir/${dst%.txt}
 	echo "- $src -> $dst-*.png..."
 	if [ \! -z "$(ls $dst-*.png 2> /dev/null)" ]; then
-		echo "  Skipping, PNG files already created"
+		echo "  Skipping, PNG files already created:"
+		ls $dst-*.png
 		continue
 	fi
-	echo "  rtrace-timeline -t -a -l -c -s -i $src -o $dst"
-	rtrace-timeline -t -a -l -c -s -i $src -o $dst
+	echo "  rtrace-timeline -t -l -c -s -i $src -o $dst"
+	rtrace-timeline -t -l -c -s -i $src -o $dst
 	if [ $? -ne 0 ]; then
 		echo "  ERROR: timelines creation failed!"
 		exit 1
 	fi
+	for png in $dst-*.png; do
+		echo "  xdg-open $png &"
+		xdg-open $png &
+	done
 	count=$(($count+1))
 done
 
@@ -235,8 +296,9 @@ for src in $binaries; do
 		if [ $? -eq 0 ]; then
 			echo "  Already included into given arguments, ignoring."
 		else
-			echo "  Exists already, skipping re-conversion."
-			callgraphs="$callgraphs $dst"
+			# check as text file
+			echo "  Exists already, checking later."
+			texts="$texts $dst"
 		fi
 		continue
 	fi
@@ -265,8 +327,15 @@ for src in $texts; do
 		callgraphs="$callgraphs $src"
 		continue
 	fi
-	dst=${src%.txt}-callgraph.txt
+	# needs conversion
+	dst=${src%-callgraph.txt}
+	dst=${dst%.txt}-callgraph.txt
 	echo "- $src -> $dst..."
+	if [ $src = $dst ]; then
+		echo "  WARNING: target file exists, but cannot be used as it's lacking"
+		echo "  required filtering.  Remove it if you want it regenerated!"
+		continue
+	fi
 	# newer target file?
 	if [ -f $dst ] && [ $dst -nt $src ]; then
 		echo $texts|grep -q $dst
@@ -363,7 +432,7 @@ for i in $callgraphs; do
 	i=${i##*/}
 	i=${i%.txt}
 	src=$dir/$i.dot
-	dst=$dir/$i.eps
+	dst=$dir/$i.svg
 	echo "- $src -> $dst"
 	# newer target file?
 	if [ -f $dst ] && [ $dst -nt $src ]; then
@@ -377,12 +446,15 @@ for i in $callgraphs; do
 		echo "  (configure GraphViz with '--without-x')"
 		exit 1
 	fi
-	dot -Tps $src > $dst
+	echo "  dot -Tsvg $src > $dst"
+	dot -Tsvg $src > $dst
 	if [ $? -ne 0 ]; then
 		rm $dst
 		echo "ERROR: conversion failed"
 		exit 1
 	fi
+	echo "  xdg-open $dst &"
+	xdg-open $dst &
 	count=$(($count+1))
 done
 
@@ -391,37 +463,46 @@ echo "---------------------------------------------------------"
 
 if [ $count -eq 0 ]; then
 	echo
-	echo "WARNING: None of the *-timeline-*.png nor *-callgraph.eps"
+	echo "WARNING: None of the *-timeline-*.png nor *-callgraph.svg"
 	echo "         files needed processing."
 	echo
-	echo "Remove these to get them re-processed/re-created:"
-	ls $dir/*-timeline-*.png $dir/*-callgraph.eps
+	echo "Remove these to get images re-created:"
+	ls $dir/*-timeline-*.png $dir/*-callgraph.svg
+	echo
+	echo "Remove these to get them and the data re-post-processed:"
 	ls *-timeline.txt *-callgraph.txt
 	exit 1
 fi
 
 echo
-echo "TIMELINE REPORTS:"
-reports=""
-for i in $timelines; do
-	name=${i##*/}
-	name=${name%.txt}
-	# '*' wildcard, so cannot use xargs like below
-	reports="$reports $dir/$name-*.png"
-done
-ls $reports|sed 's/^/- /'
+if [ -z "$timelines" ]; then
+	echo "No timeline reports could be generated."
+else
+	echo "TIMELINE REPORTS:"
+	reports=""
+	for i in $timelines; do
+		name=${i##*/}
+		name=${name%.txt}
+		# '*' wildcard, so need to use ls (not xargs) below
+		reports="$reports $dir/$name-*.png"
+	done
+	ls $reports|sed 's/^/- /'
+fi
 
 echo
-echo "CALLGRAPH REPORTS:"
-for i in $callgraphs; do
-	name=${i##*/}
-	name=${name%.txt}
-	echo "$dir/$name.eps"
-done|xargs ls|sed 's/^/- /'
+if [ -z "$callgraphs" ]; then
+	echo "No callgraph reports could be generated."
+else
+	echo "CALLGRAPH REPORTS:"
+	for i in $callgraphs; do
+		name=${i##*/}
+		echo $dir/${name%.txt}.svg
+	done|xargs ls|sed 's/^/- /'
+	echo
+	echo "Please use the 'rtrace-graphs-function' script to get more detailed"
+	echo "callgraphs about things done through specific functions for:"
+	ls $callgraphs|sed 's/^/- /'
+fi
 
 echo
 echo "DONE!"
-echo
-echo "Please use the 'rtrace-graphs-function' script to get more detailed"
-echo "callgraphs about things done through specific functions for:"
-ls $callgraphs|sed 's/^/- /'
