@@ -28,7 +28,8 @@
 # CHANGES
 #
 # 2010-08-02
-# - Updated to support rtrace format and moved to sp-rtrace pacakge.
+# - Updated this sp-libleaks utility to support rtrace format and
+#   moved it to sp-rtrace package
 # 2010-09-10
 # - Update help and calltree options
 # - If destination file is older than source file, re-create it
@@ -37,20 +38,22 @@
 # 2010-11-03
 # - Rewrite to handle both binary & text traces and whether they're
 #   already processed or not.
-#
-# Originally this file was a part of sp-libleaks package, but moved
-# to the sp-rtrace package during libleaks redesign.
+# 2010-11-10
+# - Use SVG instead of EPS, open generated file with xdg-open,
+#   better corner-case error checks
 
 usage ()
 {
 	name=${0##*/}
 	cat << EOF
 
-$name generates graphs of resource allocation backtraces
-going through the functions with given name prefix in all the given trace
-files.  The graphs are saved to a subdirectory with a same name.
+$name generates SVG callgraph(s) of resource allocation
+backtraces going through the methods/functions/libraries with given
+name prefix, in all the given trace files.  The graphs are saved
+to a subdirectory with a same name prefix.
 
-Good values for <limit> are 0.1 - 5, depending on the trace file contents.
+Good values for the <limit> percentage are 0.1 - 5, depending on
+the trace file contents.
 
 To re-generate the graphs (with new limit), just remove the directory.
 
@@ -100,7 +103,7 @@ check_dot ()
 {
 	if [ -z $(which dot) ]; then
 		echo "ERROR: 'dot' utility is missing from PATH"
-		echo "- 'dot' it used for converting the graphs into PostScript"
+		echo "- 'dot' it used for converting the graphs into SVG"
 		echo "- you can get it from http://www.graphviz.org/"
 		echo "  (configure GraphViz with '--without-x')"
 		exit 1
@@ -118,6 +121,7 @@ convert_binary ()
 		rm $dst
 		exit 1
 	fi
+	return 0
 }
 # ASCII trace allows skipping unnecessary steps
 convert_ascii ()
@@ -127,13 +131,13 @@ convert_ascii ()
 		# can be used as such
 		echo "- Can be used without post-processing."
 		dst=$src
-		return
+		return 0
 	fi
 	# check that there's something to callgraph...
 	depth=$(head -1 $src|sed 's/^.*depth=\([0-9]\+\),.*$/\1/')
 	if [ -z "$depth" ] || [ $depth -lt 2 ]; then
-		echo "  SKIPPING, backtrace depth $depth < 2"
-		continue
+		echo "  SKIPPING: backtrace depth $depth < 2"
+		return 1
 	fi
 	# filter & resolve
 	head -1 $src|grep -q resolve
@@ -153,6 +157,7 @@ convert_ascii ()
 		rm $dst
 		exit 1
 	fi
+	return 0
 }
 
 mkdir -p $fun
@@ -171,6 +176,16 @@ do
 	echo "'$src' -> '$dst'"
 
 	if [ "$src" = "$dst" ]; then
+		if [ -z "$(head -1 $src|grep leaks|grep compress|grep resolve)" ]; then
+			echo "  SKIPPING: target file already exists, but it lacks required filtering."
+			echo "  Remove it if you want it to be regenerated correctly!"
+			continue
+		fi
+		depth=$(head -1 $src|sed 's/^.*depth=\([0-9]\+\),.*$/\1/')
+		if [ -z "$depth" ] || [ $depth -lt 2 ]; then
+			echo "  SKIPPING: backtrace depth $depth < 2"
+			continue
+		fi
 		echo "- File is already post-processed."
 	elif [ -f $dst ] && [ $dst -nt $src ]; then
 		echo "- Post-processed '$dst' trace exists already."
@@ -180,6 +195,10 @@ do
 		convert_ascii
 	else
 		usage "'$src' is neither binary nor text trace file"
+	fi
+	if [ $? -ne 0 ]; then
+		# conversion failed, skip
+		continue
 	fi
 
 	# remove path & extention
@@ -200,33 +219,35 @@ do
 			exit 1
 		fi
 	fi
-	eps=${dot%.dot}.eps
-	if [ \! -f $eps ] || [ $eps -ot $dot ]; then
+	svg=${dot%.dot}.svg
+	if [ \! -f $svg ] || [ $svg -ot $dot ]; then
 		check_dot
 		echo "Plotting function call graph..."
-		echo "'$dot' -> '$eps'"
-		dot -Tps $dot > $eps
+		echo "'$dot' -> '$svg'"
+		dot -Tps $dot > $svg
 		if [ $? != 0 ]; then
-			rm $eps
+			rm $svg
 			echo "ERROR: 'dot' (GraphViz) call failed"
 			exit 1
 		fi
+		xdg-open $svg &
 		count=$((count+1))
 	fi
 done
 
 if [ $count -eq 0 ]; then
+	echo
 	echo "NOTE: All .rtrace.txt, .resolved or .dot files already processed."
 	echo
 fi
 
 echo "-------------------------------------------------------------------"
 echo
-echo "Generated graphs of allocations going through function '$fun'"
-echo "and showing nodes for functions through which went at least $limit%"
-echo "of those allocations."
+echo "Generated graphs of allocations going through methods/functions/libs"
+echo "which names start with '$fun' which includes nodes through which"
+echo "went at least $limit% of those allocations."
 echo
 echo $fun/
-ls $fun/*.eps $fun/*.dot|sed 's/^/- /'
+ls $fun/*.svg $fun/*.dot|sed 's/^/- /'
 echo
 echo "DONE!"
