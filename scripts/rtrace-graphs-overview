@@ -30,8 +30,8 @@
 # - check/complain about tool only if it's needed
 # - parse both alloc leaks and unreffed Gobject reports
 # 2010-08-02
-# - Updated this sp-libleaks utility to support rtrace format and moved
-#   it to sp-rtrace pacakge.
+# - Updated this sp-libleaks utility to support rtrace format and
+#   moved it to sp-rtrace package
 # 2010-09-10
 # - Add help and update calltree options
 # - If destination file is older than source file, re-create it
@@ -47,7 +47,7 @@
 # 2010-11-03
 # - Adapt to rtrace-timeline option changes
 # - Save the resulting dot files & images to *-overview/ subdirectory
-# 2010-11-09
+# 2010-11-10
 # - Adapt to further rtrace-timeline changes, remove -a argument
 #   as alloc/dealloc activity chart isn't so useful in an overview
 # - Handle more potential error corner-cases and check sp-rtrace version
@@ -60,7 +60,7 @@ usage ()
 
 $name is a helper script to generate several overview
 graphs of the given resource traces. Graphs include both timelines
-in PNG format and a callgraph as PostScript file.
+in PNG format and a callgraph as SVG file.
 
 By default input is expected to be an unprocessed binary trace file,
 but in case you want to do the address resolving on another device
@@ -332,8 +332,8 @@ for src in $texts; do
 	dst=${dst%.txt}-callgraph.txt
 	echo "- $src -> $dst..."
 	if [ $src = $dst ]; then
-		echo "  WARNING: target file exists, but cannot be used as it's lacking"
-		echo "  required filtering.  Remove it if you want it regenerated!"
+		echo "  SKIPPING: target file already exists, but it lacks required filtering."
+		echo "  Remove it if you want it to be regenerated correctly!"
 		continue
 	fi
 	# newer target file?
@@ -350,7 +350,7 @@ for src in $texts; do
 	# check that there's something to callgraph...
 	depth=$(head -1 $src|sed 's/^.*depth=\([0-9]\+\),.*$/\1/')
 	if [ -z "$depth" ] || [ $depth -lt 2 ]; then
-		echo "  SKIPPING, backtrace depth $depth < 2"
+		echo "  SKIPPING: backtrace depth $depth < 2"
 		continue
 	fi
 	# filter & resolve
@@ -425,7 +425,7 @@ done
 # generate postscript files from .dot files
 if [ \! -z "$callgraphs" ]; then
 	echo
-	echo "Converting callgraphs to PostScript:"
+	echo "Converting callgraphs to SVG:"
 fi
 for i in $callgraphs; do
 	mkdir -p $dir
@@ -436,12 +436,12 @@ for i in $callgraphs; do
 	echo "- $src -> $dst"
 	# newer target file?
 	if [ -f $dst ] && [ $dst -nt $src ]; then
-		echo "  Skipping, PostScript file already created"
+		echo "  Skipping, SVG file already created"
 		continue
 	fi
 	if [ -z $(which dot) ]; then
 		echo "ERROR: 'dot' utility is missing from PATH"
-		echo "- 'dot' it used for converting the graphs into PostScript"
+		echo "- 'dot' it used for converting the graphs into SVG"
 		echo "- you can get it from http://www.graphviz.org/"
 		echo "  (configure GraphViz with '--without-x')"
 		exit 1
