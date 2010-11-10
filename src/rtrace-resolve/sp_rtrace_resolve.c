@@ -364,7 +364,7 @@ static void read_header(FILE* fpin, FILE* fpout)
 	header_read(&header, line);
 	
 	/* check source stream architecture */
-	if (strcmp(header.fields[HEADER_ARCH], BUILD_ARCH)) {
+	if (header.fields[HEADER_ARCH] && strcmp(header.fields[HEADER_ARCH], BUILD_ARCH)) {
 		fprintf(stderr, "ERROR: unsupported architecture: %s (expected %s)\n",
 				header.fields[HEADER_ARCH], BUILD_ARCH);
 	    exit (-1);
