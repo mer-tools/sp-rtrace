@@ -42,15 +42,19 @@
 # - Use SVG instead of EPS, open generated file with xdg-open,
 #   better corner-case error checks
 
+# script name
+name=${0##*/}
+
 usage ()
 {
-	name=${0##*/}
 	cat << EOF
 
 $name generates SVG callgraph(s) of resource allocation
 backtraces going through the methods/functions/libraries with given
 name prefix, in all the given trace files.  The graphs are saved
 to a subdirectory with a same name prefix.
+
+(Giving "" as name will list everything.)
 
 Good values for the <limit> percentage are 0.1 - 5, depending on
 the trace file contents.
@@ -70,6 +74,11 @@ if [ $# -lt 3 ]; then
 fi
 
 fun=$1
+if [ -z "$fun" ]; then
+	fundir=$name
+else
+	fundir=$fun
+fi
 limit=$2
 shift
 shift
@@ -160,7 +169,7 @@ convert_ascii ()
 	return 0
 }
 
-mkdir -p $fun
+mkdir -p $fundir
 
 # process all given trace files
 echo "-------------------------------------------------------------------"
@@ -205,7 +214,7 @@ do
 	dot=${dst##*/}
 	dot=${dot%.txt}
 	# add own extention
-	dot=$fun/$dot.dot
+	dot=$fundir/$dot.dot
 	if [ \! -f $dot ] || [ $dot -ot $dst ]; then
 		check_calltree
 		echo "Generating call tree..."
@@ -247,7 +256,7 @@ echo "Generated graphs of allocations going through methods/functions/libs"
 echo "which names start with '$fun' which includes nodes through which"
 echo "went at least $limit% of those allocations."
 echo
-echo $fun/
-ls $fun/*.svg $fun/*.dot|sed 's/^/- /'
+echo $fundir/
+ls $fundir/*.svg $fundir/*.dot|sed 's/^/- /'
 echo
 echo "DONE!"
