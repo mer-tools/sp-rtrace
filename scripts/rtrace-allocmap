@@ -45,12 +45,12 @@ fi
 map=sp-rtrace-allocmap
 postproc=sp-rtrace-postproc
 
-if [ -z $(which $map) ]; then
+if [ -z "$(which $map)" ]; then
 	echo "$map binary needed for producing the ASCII address map is missing."
 	exit
 fi
 
-if [ -z $(which $postproc) ]; then
+if [ -z "$(which $postproc)" ]; then
 	echo "$postproc binary needed for removing freed allocations is missing."
 	exit
 fi
@@ -74,9 +74,9 @@ for leaks in $*; do
   base=$(grep 'heap bottom' $tmp_leaks|sed 's/^.*\(0x[0-9a-z]\+\)/\1/')
   filter='s/^[0-9]\+\. [^(]\+(\([0-9]\+\)) = \(0x[0-9a-f]\+\).*$/\2 \1/'
 
-  if [ -z $top -o -z $trim -o -z $high -o -z $low -o -z $base ]; then
-	echo "Warning: heap bottom/low/high/trim/top value missing from the leak report."
-	echo "- Is the rtrace an old version?"
+  if [ -z "$top" -o -z "$trim" -o -z "$high" -o -z "$low" -o -z "$base" ]; then
+	echo "Warning: heap bottom/low/high/trim/top value missing from the leak report!"
+	echo "Is the trace file from other than rtrace memory module or just broken?"
 	exit
   fi
   echo "# base=$base" >> $tmp
