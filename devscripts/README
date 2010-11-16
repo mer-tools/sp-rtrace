@@ -1,0 +1,223 @@
+sp-rtrace module source code generator
+======================================
+
+rtrace-module-gen takes generic module template plus specific module
+configuration file and generates module source code.
+
+In basic situations the generated code compiles into proper sp-rtrace
+module. However in specific cases (like open function) the code will
+provide only the basic framework and must be updated before use.
+
+Usage:
+rtrace-module-gen -c <config file> -i <input template> -o <output code>
+
+Configuration file description (generic)
+========================================
+Configuration file consists of sections. A section can be accessed from
+template code simply by its name <$section_name>. If sections shares the
+same name, then the can be iterated with function sections("section_name").
+
+A section consists of one or more items in format <name> = <value>. To 
+declare arrays use multiple items with the same name postfixed with [] -
+<name>[] = <value>
+
+A comment line starts with # and is ignored.
+
+Example:
+
+[function]
+name = fopen
+args[] = filename
+args[] = mode
+
+[function]
+name = fclose
+args[] = fp
+
+Variables of the first function section can be accessed directly - 
+function.name, function.args etc.
+Function sections can be iterated with sections("function").
+
+<for function in sections("function")>
+Function: <$function.name>
+  <for arg in funciton.args>
+  arg: <$arg>
+  </for>
+</for>
+
+(see below the template metalanguage description).
+
+
+sp-rtrace module configuration file description
+===============================================
+
+The sp-rtrace module template requires the following sections:
+1 impl
+Contains any additional include declarations. 
+  include[] = <include file name>
+    Defines additional include file.
+
+2. module
+Contains module properties.
+  version = <major>.<minor>
+   The module version.
+  name = <name>
+   The module name. The name must contain only alphanumeric characters.
+  description = <description>
+   The long module description.
+
+3. resource
+Contains declaration of a tracked resource. The configuration file can
+contain multiple resource sections.
+  name = <name>
+    The resource name. The name must contain only alphanumeric characters.
+  description = <description>
+    The long resource description.
+  flags = <flags>
+    The resource flags (resource flag support soon will be merged into
+    main branch.
+    
+4. function
+Contains declaration of a tracked function. The configuration file can
+contain multiple function sections.
+  proto = <function prototype>
+    The function prototype.
+  resource = <resource>
+    The processed resource. The resource name must match one of the 
+    resource section name item values.
+  res_id = <variable>
+    The resource id variable. The variable can be either rc (the function
+    return value) or any of the parameter names, specified in function
+    prototype.
+  res_size = <expresson>
+    The resource size expression. The expression can be either rc (the
+    function return value) or any of the parameter names, specified in
+    function prototype or an expression involving more than one parameter
+    (as example calloc size definition is multiplication of block size
+    and number of blocks).
+  args[] = <format>
+    The argument format expression (optional). Must contain printf format
+    field plus value, where value must be one of the parameters specifie in
+    prototype. For example void* malloc(size_t size) argument could be
+    described as "%d", size
+  symbol_name = <name>
+    The real symbolic name of the function to track (optional). By default the
+    name is parsed from the function prototype. But it's possible to override
+    it by directly specifying symbolic name. It can be usefull make C++ 
+    mangle function tracking modules more readable.
+  report_name = <name>
+    The funciton name reported to the main module (optional). By default the
+    name is parsed from the function prototype. But it's possible to override
+    it by directly specifying report name. 
+  sync = True
+    Forces backtrace synchronization. Must be specified for functions that
+    are called from libc backtrace() function to avoid infinite recursion.    
+
+
+sp-rtrace module generator template metalanguage
+=================================================
+
+The code template consists of C/C++ code lines and metalanguage tags. Those
+tags allow variable substitution, conditional branching and code block loops.
+The data parsed from configuration file can be accessed from those tags.
+
+The metalanguage tags are idetified by <> symbols surrounding the metalanguage
+commands:
+
+<$expression>
+  Variable substitution tag, replaced with the evaluated expression. The
+  expression must contain valid python code.
+
+<$lt>
+  Predefined variable, evaluates to <
+  
+<$gt>
+  Predefined variable, evaluates to >
+
+<!--comment> 
+  Comment tag, ignored. The comment can contain any text.
+
+<set variable = expression>
+  Assignment tag. Evaluates expression and assigns to the variable. This
+  variable can be later accessed from other expressions.
+  
+<if expression>
+  main body
+[<else>]
+  alternative body
+</if>
+  Conditional branching tag. Evaluates expression and executes the main body
+  if its true. If the expression was false and <else> tag exists, the 
+  alternative body is executed. This tag must be always finished with </if>
+  tag.
+
+<for variable in expression>
+  body
+  [<break>]
+  [<continue>]
+</for>
+  Looping tag. Evaluates expression and iterates through it by assigning its
+  items to the variable and executing the body. The loop can be aborted by 
+  <break> tag or the execution skipped to the next item by <continue> tag.
+  The iterator variable is also accessible after the loop has been finished.
+  This tag must be always finished with </for> tag.
+  
+
+Template sample:
+
+<for index in range(0, 10)>
+  <if index == 2>
+    <set continue_index = index>
+    <continue>
+  </if>
+Iteraete index: <$lt><$index><$gt>
+  <if index == 5>
+    <break>
+  </if>
+</for>
+Continue index: <$continue_index>
+Break index: <$index>
+
+
+Generates code:
+
+Iteraete index: <0>
+Iteraete index: <1>
+Iteraete index: <3>
+Iteraete index: <4>
+Iteraete index: <5>
+Continue index: 2
+Break index: 5
+ 
+ 
+Additional features
+===================
+
+The metalanguage processor has few additional features to allow easier
+configuration processing.
+
+1. sections(<name>)
+Iterates through sections with the specified name:
+
+<for section in sections("section_name")>
+  <!-- iterates through all sections with name "section_name" -->
+  <!-- and exposes them via section variable -->
+</for>
+
+2. Function(prototype)
+Creates function object based on the specified prototype. This class
+is used as a helper object to access function prototype components.
+
+<for function in sections("function")>
+  <set fc = Function(function.proto)>
+  Function: <$fc.name>
+</for>
+
+The function object has the following properties:
+  type - the function return type
+  name - the function name
+  args - the function argument string with variable types.
+  arg_names - the function argument string without variable types
+    (containing only the variable names)
+
+

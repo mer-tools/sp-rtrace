@@ -1,0 +1,285 @@
+/*
+ * This file is part of sp-rtrace package.
+ *
+ * Copyright (C) 2010 by Nokia Corporation
+ *
+ * Contact: Eero Tamminen <eero.tamminen@nokia.com>
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA
+ */
+#include "config.h"
+
+/**
+ * @file sp_rtrace_file.c
+ *
+ * File operation tracking module implementation.
+ */
+#include <stdio.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/socket.h>
+#include <dlfcn.h>
+#include <stdarg.h>
+#include <unistd.h>
+#include <pthread.h>
+<for include in impl.include>
+#include <$lt><$include><$gt>
+</for>
+
+#include "sp_rtrace_main.h"
+#include "sp_rtrace_module.h"
+
+#include "common/sp_rtrace_proto.h"
+
+/* Module information */
+static sp_rtrace_module_info_t module_info = {
+		.type = MODULE_TYPE_PRELOAD,
+		.version_major = <$module.version.split('.')[0]>,
+		.version_minor = <$module.version.split('.')[1]>,
+		.name = "<$module.name>",
+		.description = "<$module.description>",
+};
+
+/* resource identifiers */
+<for resource in sections("resource")>
+static int res_<$resource.name> = 0;
+</for>
+
+ /*
+  * file module function set
+  */
+  
+<for function in sections("function")>
+  <set fc = Function(function.proto)>
+typedef <$fc.type> (*<$fc.name>_t)(<$fc.args>);
+</for>
+
+typedef struct {
+<for function in sections("function")>
+  <set fc = Function(function.proto)>
+	<$fc.name>_t <$fc.name>;
+</for>
+} trace_t;
+
+/* original function references */
+static trace_t trace_off;
+/* tracing function references */
+static trace_t trace_on;
+/* tracing function initializers */
+static trace_t trace_init;
+
+/* Runtime function references */
+static trace_t* trace_rt = &trace_init;
+
+/* Initialization runtime function references */
+static trace_t* trace_init_rt = &trace_off;
+
+/**
+ * Enables/disables tracing.
+ *
+ * @param[in] value   enable tracing if true, otherwise disable it.
+ * @return
+ */
+static void enable_tracing(bool value)
+{
+	trace_rt = value ? &trace_on : &trace_off;
+}
+
+/**
+ * Initializes original function references.
+ *
+ * @return
+ */
+static void trace_initialize()
+{
+	static int init_mode = MODULE_UNINITIALIZED;
+	switch (init_mode) {
+		case MODULE_UNINITIALIZED: {
+			<for function in sections("function")>
+			  <set fc = Function(function.proto)>
+			  <if hasattr(function, "symbol_name")>
+			    <set name = function.symbol_name>
+			  <else>
+			    <set name = fc.name>
+			  </if>
+			trace_off.<$fc.name> = (<$fc.name>_t)dlsym(RTLD_NEXT, "<$name>");
+			</for>
+			init_mode = MODULE_LOADED;
+
+			LOG("module loaded: %s (%d.%d)", module_info.name, module_info.version_major, module_info.version_minor);
+		}
+
+		case MODULE_LOADED: {
+			if (sp_rtrace_initialize()) {
+				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
+				<for resource in sections("resource")>
+				<set flags = "SP_RTRACE_RESOURCE_DEFAULT">
+				<if resource.flags.find("refcount")>
+				  <set flags = "%s | SP_RTRACE_RESOURCE_REFCOUNT" % flags>
+				</if>
+				res_<$resource.name> = sp_rtrace_register_resource("<$resource.name>", "<$resource.description>", <$flags>);
+				</for>
+				trace_init_rt = trace_rt;
+				init_mode = MODULE_READY;
+
+				LOG("module ready: %s (%d.%d)", module_info.name, module_info.version_major, module_info.version_minor);
+			}
+		}
+	}
+}
+
+/*
+ * tracing functions
+ */
+<for function in sections("function")>
+  <set fc = Function(function.proto)>
+static <$fc.type> trace_<$fc.name>(<$fc.args>)
+{
+	<set rc_expr = "">
+	<set rc_decl = "">
+	<if fc.type != "void">
+	  <set rc_expr = "return rc;">
+	  <set rc_decl = "%s rc = " % fc.type>
+	</if>
+	<$rc_decl>trace_off.<$fc.name>(<$fc.arg_names>);
+	<if hasattr(function, "sync")>
+	backtrace_lock = 0;
+	</if>
+	pointer_t res_id = (pointer_t)<$function.res_id>;
+	size_t res_size = (size_t)<$function.res_size>;
+	<if hasattr(function, "report_name")>
+	  <set name = "\"%s\"" % function.report_name>
+	<else>
+	  <set name = "\"%s\"" % fc.name>
+	</if>
+	<if function.res_size == "0">
+	  <set type = "SP_RTRACE_FTYPE_FREE">
+	<else>
+	  <set type = "SP_RTRACE_FTYPE_ALLOC">
+	</if>
+	<if hasattr(function, "args")>
+	<set index = 1>
+	<set args = "">
+	<for arg in function.args>
+	char arg<$index>[512];
+	snprintf(arg<$index>, sizeof(arg<$index>), <$arg>);
+	<set args = "%sarg%d, " % (args, index)>
+	<set index = index + 1>
+	</for>
+	const char* args[] = {<$args>NULL};
+	<else>
+	const char** args = NULL;
+	</if>
+	sp_rtrace_write_function_call(<$type>, res_<$function.resource>, <$name>, res_size, res_id, args);
+	<$rc_expr>
+}
+
+
+</for>
+
+static trace_t trace_on = {
+<for function in sections("function")>
+  <set fc = Function(function.proto)>
+	.<$fc.name> = trace_<$fc.name>,
+</for>
+};
+
+
+/* target functions */
+<for function in sections("function")>
+  <set fc = Function(function.proto)>
+<$function.proto>
+{
+	<set rc_expr = "">
+	<set rc_decl = "">
+	<set rc_set = "">
+	<if fc.type != "void">
+	  <set rc_expr = "return rc;">
+	  <set rc_decl = "%s rc;" % fc.type>
+	  <set rc_set = "rc = ">
+	</if>
+	<$rc_decl>
+	<if hasattr(function, "sync")>
+	BT_EXECUTE_LOCKED(<$rc_set>trace_rt-><$fc.name>(<$fc.arg_names>), trace_off.<$fc.name>(<$fc.arg_names>));
+	<else>
+	<$rc_set>trace_rt-<$gt><$fc.name>(<$fc.arg_names>);
+	</if>
+	<$rc_expr>
+}
+
+
+</for>
+
+
+/*
+ * Initialization functions.
+ */
+<for function in sections("function")>
+  <set fc = Function(function.proto)>
+static <$fc.type> init_<$fc.name>(<$fc.args>)
+{
+	<set rc_expr = "">
+	<set rc_decl = "">
+	<if fc.type != "void">
+	  <set rc_expr = "return rc;">
+	  <set rc_decl = "%s rc = " % fc.type>
+	</if>
+	trace_initialize();
+	<$rc_decl>trace_init_rt-><$fc.name>(<$fc.arg_names>);
+	<$rc_expr>
+}
+</for>
+
+static trace_t trace_init = {
+<for function in sections("function")>
+  <set fc = Function(function.proto)>
+	.<$fc.name> = init_<$fc.name>,
+</for>
+};
+
+/* */
+
+/*
+ * Library initialization/deinitialization
+ */
+
+static void trace_init_lib(void) __attribute__((constructor));
+static void trace_fini_lib(void) __attribute__((destructor));
+
+static void trace_init_lib(void)
+{
+	trace_initialize();
+}
+
+
+static void trace_fini_lib(void)
+{
+	enable_tracing(false);
+	LOG("fini");
+}
+
+/**
+ * Gets module information data.
+ *
+ * @return  the module information data.
+ */
+const sp_rtrace_module_info_t* sp_rtrace_get_module_info()
+{
+	return &module_info;
+}
+
+

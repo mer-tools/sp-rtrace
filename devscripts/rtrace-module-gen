@@ -1,0 +1,544 @@
+#!/usr/bin/python
+
+# Copyright (C) 2010 by Nokia Corporation
+#
+# Contact: Eero Tamminen <eero.tamminen@nokia.com>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License 
+# version 2 as published by the Free Software Foundation. 
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+# 02110-1301 USA
+
+import sys, string, re, os, getopt
+
+def sections(value):
+	return globals[ConfigParser.mangleSectionName(value)]
+
+class Function:
+	"""
+	The function class is used to parse function prototype
+    string into its components - type, name, arguments.
+	"""
+	reFunction = re.compile("(.*) ([^ (]+)\(([^)]*)\)")
+	reArgs = re.compile("[^,]*[ *]([a-zA-Z0-9_]+)(, *|)(.*)")
+	
+	def __init__(self, proto):
+		match = self.reFunction.match(proto)
+		if not match:
+			raise RuntimeError("Invalid function prototype: %s" % proto)
+		self.type = match.group(1)
+		self.name = match.group(2)
+		self.args = match.group(3)
+		self.arg_names = self.stripArgs(self.args)
+		
+	def stripArgs(self, args):
+		match = self.reArgs.match(args)
+		if match:
+			if match.group(3) != "":
+				return "%s%s%s" % (match.group(1), match.group(2), self.stripArgs(match.group(3)))
+		 	return match.group(1)
+		return args
+
+# /class Function		
+		
+class OpFor:
+	"""
+	This class contains 'for' loop implementation. 
+	
+	The 'for' command syntax is:
+	<for iterator in expression>
+	   body
+	</for>
+	Where iterator is the iterator variable name, expression is a python expression that
+	evaluates to an array and body is the command body that is executed for each item
+	in expression.
+	"""
+	
+	# the iterator variable name
+	iterator = None
+	# the loop start line number
+	linenum = None
+	# the items to iterate
+	items = None
+	
+	def __init__(self, linenum = None, iterator = None, items = None):
+		self.iterator = iterator
+		self.items = items
+		self.linenum = linenum
+		
+	def first(self):
+		"Assigns the first value to the iterator variable"
+		self.index = 0
+		return self.next()
+		
+	def next(self):
+		"Assigns the next item to the iterator variable"
+		if self.index >= len(self.items):
+			return False
+		# assign item to the iterator variable
+		globals[self.iterator] = self.items[self.index]
+		self.index += 1
+		return True
+		
+	def getId(self):
+		"Returns the meta command identifier"
+		return "for"
+# /class OpFor
+
+
+class OpIf:
+	"""
+	This class contains 'if' conditional branching implementation. 
+	
+	The 'if' command syntax is:
+	<if expression>
+	   main body
+	[<else>]
+	   alternative body
+	</if>
+	Where expression is python expression that evaluates to boolean value,
+	main body is command body that is executed if the expression is true and
+	alternative body is the command body that is executed if the expression is false.
+	"""
+	
+	# the expression value, toggled by else
+	value = None
+	
+	def __init__(self, expression = None):
+		if expression:
+			self.value = eval(expression, globals)
+		
+	def getId(self):
+		"Returns the meta command identifier"
+		return "if"
+# /class OpIf	
+	
+	
+class IfValidator:
+	"""
+	This class checks if the command finishes the target 'if'
+	meta command.
+	"""
+	# the target meta command
+	op = None
+	
+	def __init__(self, op):
+		self.op = op
+		
+	def validate(self, command, lastOp):
+		"""
+		Checks if the command finishes the target meta command.
+		Returns 0 if successful or -1 otherwise."
+		"""
+		if lastOp == self.op:
+			# to be finished the target meta command must be the last command
+			# on stack
+			if command == "/if":
+				return 0
+			if command == "else":
+				# while strictly speaking 'else' doesn't finish 'if' command,
+				# it still finishes the main meta command body. 
+				# With this the IfValidator can be used to skip the main body
+				# if the 'if' expression evaluates to false.
+				self.op.value = not self.op.value
+				return 0
+		return -1
+# /class IfValidator
+
+class ForValidator:
+	"""
+	This class checks if the command finishes the target 'for'
+	meta command.
+	"""
+	# the target meta command
+	op = None
+
+	def __init__(self, op):
+		self.op = op
+		
+	def validate(self, command, lastOp):
+		"""
+		Checks if the command finishes the target meta command.
+		Returns 0 if successful or -1 otherwise."
+		"""
+		if lastOp == self.op:
+			# to be finished the target meta command must be the last command
+			# on stack
+			if command == "/for":
+				return 0
+		return -1
+# /class BreakValidator:			
+
+		
+class TemplateProcessor:
+	"""
+	Processes the input template and generates the output code.
+	"""
+	
+	# generic command tag '<command arguments>' parser
+	reTag = re.compile("[\s]*<([a-zA-Z/!-]+) *(.*)>")
+	# value substitution '<$expression>' parser
+	reTagValue = re.compile("([^<]*)<\$([^>]+)>(.*)")
+	# 'for' loop argument 'variable in expression' parser 
+	reTagFor = re.compile("([a-zA-Z0-9_]+) +in +(.*)")
+	# 'set' assignment meta command 'variable = expression' parsing
+	reTagSet = re.compile("([a-zA-Z0-9_]+) *= *(.*)")
+
+	# the template file split by lines
+	lines = None
+	# The template line execution cursor. It points at the
+	# next template line to process.
+	index = None
+	# the processing stack. Used to track execution flow
+	# changing commands (for, if)
+	stack = None
+	
+	def __init__(self):
+		self.stack = []
+					
+	def rfindOp(self, command):
+		"""
+		Finds the last command of the specified type in stack.
+		
+		Returns the located command or None if no command was found.
+		"""
+		index = len(self.stack) - 1
+		while index >= 0:
+			if self.stack[index].getId() == command:
+				return self.stack[index]
+			index -= 1
+		return None
+					
+
+	def skipCommand(self, command, validator):
+		"""
+		Handles command skipping and validation.
+		
+		This method pushes empty for,if commands onto stack just to
+		track the execution flow.
+		
+		It returns 0 if the the command finishes the target command 
+		or -1 otherwise. The target command xxx is finished when it has 
+		been removed from stack after executing </xxx> command.
+		"""
+		# print >> sys.stderr, "\t>> %s" % command
+		if command == "for":
+			# push empty for meta command onto stack
+			self.stack.append(OpFor())
+
+		elif command == "if":
+			# push empty if meta command onto stack
+			self.stack.append(OpIf())
+
+		elif command == "else":
+			# while 'else' doesn't finish any command, it still finishes 
+			# execution block. Therefore it can be used as target for 
+			# line skipping method
+			if self.stack[-1].getId() != "if":
+				raise RuntimeError("Command '%s' was not terminated properly" % self.stack[-1].getId())
+			return validator.validate(command, self.stack[-1])
+
+		elif command[0] == "/":
+			# handle finishing command (/for, /if)
+			if self.stack[-1].getId() != command[1:]:
+				raise RuntimeError("Command '%s' was not terminated properly" % self.stack[-1].getId())
+			rc =  validator.validate(command, self.stack[-1])
+			self.stack.pop()
+			return rc
+		
+		
+	def skipLines(self, validator):
+		"""
+		Skip the template lines until the target command is found by the validator.
+		"""
+		self.index += 1
+		while self.index < len(self.lines):
+			match = self.reTag.match(self.lines[self.index])
+			if match:
+				rc = self.skipCommand(match.group(1), validator)
+				if rc >= 0:
+					# the target command has been found
+					return
+			self.index += 1
+		# no target command found. Either the parser is bugged or the source
+		# template in invalid.
+		raise RuntimeError("Unexpected end of file")
+
+
+
+	def parseLine(self, line, lf = "\n"):
+		"""
+		Parses non command template line.
+		
+		The <$expression> variable substitutions are evaluated and replaced
+		with the resulting values.  
+		"""
+		match = self.reTagValue.match(line)
+		if match:
+			line = "%s%s%s%s" % (match.group(1), eval(match.group(2), globals), self.parseLine(match.group(3), ""), lf)
+		return line
+	
+	
+	def parseCommand(self, command, args):
+		"""
+		Parses meta command.
+		"""
+		#print >> sys.stderr, ">> %s (%s)" % (command, args)
+		if command == "!--":
+			# a comment, ignore
+			return
+
+		if command == "for":
+			# 'for' loop
+			match = self.reTagFor.match(args)
+			if not match:
+				raise RuntimeError("Invalid 'for' loop arguments: %s" % args)
+			# push the for meta command onto stack
+			self.stack.append(OpFor(self.index, match.group(1), eval(match.group(2), globals)))
+			# skip the command body if the iterator contains no items
+			if not self.stack[-1].first():
+				self.skipLines(ForValidator(self.stack[-1]))
+
+		elif command == "/for":
+			# finishes loop command
+			if self.stack[-1].getId() != "for":
+				raise RuntimeError("Command '%s' was not terminated properly" % self.stack[-1].getId())
+			# move the iterator to the next value
+			if self.stack[-1].next():
+				# return to the start of the meta command body 
+				self.index = self.stack[-1].linenum
+			else:
+				# no more items left, finish the command by popping it from stack
+				self.stack.pop()
+
+		elif command == "if":
+			# 'if' conditional branch
+			# push the for meta command onto stack
+			self.stack.append(OpIf(args))
+			# skip the command body if the 'if' expression evaluates to false
+			# The body will be skipped until associated /if or else command
+			if not self.stack[-1].value:
+				self.skipLines(IfValidator(self.stack[-1]))
+				
+		elif command == "else":
+			# alternative body of the 'if' meta command, executed if the 'if' expression
+			# evaluates to false
+			if self.stack[-1].getId() != "if":
+				raise RuntimeError("Command '%s' was not terminated properly" % self.stack[-1].getId())
+			# toggle the meta command value
+			self.stack[-1].value = not self.stack[-1].value
+			# skip the alternative body if the 'if' meta command evaluated to true and its
+			# main body was executed.
+			if not self.stack[-1].value:
+				self.skipLines(IfValidator(self.stack[-1]))
+			
+		elif command == "/if":
+			# finishes if command
+			if self.stack[-1].getId() != "if":
+				raise RuntimeError("Command '%s' was not terminated properly" % self.stack[-1].getId())
+			# no additional conditions, just remove it from the stack
+			self.stack.pop()
+			
+		elif command == "break":
+			# 'break' command of the 'for' loop
+			# find the last 'for' meta command on stack.
+			op = self.rfindOp("for")
+			if not op:
+				raise RuntimeError("'break' command used outside 'for' statement")
+			# skip the rest of 'for' meta command body
+			self.skipLines(ForValidator(op))
+	
+		elif command == "continue":
+			# 'continue' command of the 'for' loop
+			# find the last 'for' meta command on stack.
+			op = self.rfindOp("for")
+			if not op:
+				raise RuntimeError("'continue' command used outside 'for' statement")
+			# skip the rest of 'for' meta command body
+			self.skipLines(ForValidator(op))
+			# the 'for' meta command has been removed from stack by the line skipping method.
+			# But loop should not be not aborted, just the current iterator must be skipped.
+			# So push the 'for' meta command back onto stack. 
+			self.stack.append(op)
+			# and move the template cursor one line back - so it would execute the '/for'
+			# command next.
+			self.index -= 1
+			
+		elif command == "set":
+			# assigns expression to a variable
+			match = self.reTagSet.match(args)
+			if not match:
+				raise RuntimeError("Invalid 'set' arguments: %s" % args)
+			# evaluate expression and assign it to the specified variable.
+			globals[match.group(1)] = eval(match.group(2), globals)
+	
+	def parse(self, inStream, outStream):
+		"""
+		Parses the input stream and writes generated code into output stream.
+		"""
+		self.lines = inStream.readlines()
+		self.index = 0
+		self.process(outStream)
+		
+		
+	def process(self, stream):
+		"""
+		Processes the template.
+		"""
+		while self.index < len(self.lines):
+			match = self.reTag.match(self.lines[self.index])
+			if match:
+				# generic command tag match, interpret the line as a meta command
+				self.parseCommand(match.group(1), match.group(2))
+			else:
+				# interpret the line as a text string mixed with variable tags
+				stream.write(self.parseLine(self.lines[self.index]))
+			# move cursor to the next template line
+			self.index += 1
+
+# /class TemplateProcessor
+
+class Section:
+	"""
+	"""
+# /class Section	
+
+class ConfigParser:
+	"""
+	Parses configuration file.
+	"""
+
+	def read(filename):
+		reSection = re.compile("\[([^]]+)\]")
+		reItem = re.compile("([^ =]+) *= *(.*)")
+		reArray = re.compile("([^[]+)\[\] *")
+							
+		file = open(filename, "r")
+		if not file:
+			raise RuntimeError("Failed to open configuration file: %s" % filename)
+		
+		for line in file:
+			if line[0] == '#':
+				continue;				
+			match = reSection.match(line)
+			if match:
+				section = Section()
+				var = ConfigParser.mangleSectionName(match.group(1))
+				if not var in globals:
+					globals[match.group(1)] = section
+					globals[var] = []
+				globals[var].append(section)
+				continue
+			match = reItem.match(line)
+			if match:
+				arraymatch = reArray.match(match.group(1))
+				if arraymatch:
+					if not hasattr(section, arraymatch.group(1)):
+						setattr(section, arraymatch.group(1), [])
+					getattr(section, arraymatch.group(1)).append(match.group(2))
+				else:
+					setattr(section, match.group(1), match.group(2))
+		file.close()
+		
+	def mangleSectionName(name):
+		return "__%s_section" % name
+		
+	read = staticmethod(read)
+	mangleSectionName = staticmethod(mangleSectionName)
+# /class ConfigParser
+	
+	
+class Options:
+	"""
+	This class contains options parser implementation.
+	"""
+
+    # input stream (template data)
+	inStream = None
+	# output stream
+	outStream = None
+	# configuration file name
+	cfgFilename = None
+	
+	def parse(argv):
+		"Parses the command line arguments and initializes options."
+		
+		inFilename = None
+		outFilename= None
+		try:
+			opts, args = getopt.gnu_getopt(argv, "c:i:o:h", 
+										["config=", 
+										 "in=",
+										 "out=",
+										 "help"])
+		except getopt.GetoptError, err:
+			print >> sys.stderr, str(err) 
+			Options.displayUsage()
+			sys.exit(2)
+
+		for opt, val in opts:
+			if opt == "-i" or opt == "--in":
+				inFilename = val
+				continue
+				
+			if opt == "-o" or opt == "--out":
+				outFilename = val
+				continue
+
+			if opt == "-c" or opt == "--config":
+				Options.cfgFilename = val
+				continue
+			
+			if opt == "-h" or opt == "--help":
+				Options.displayUsage()
+				sys.exit(0)
+				
+		if not Options.cfgFilename:
+			raise RuntimeError("Configuration filename is not specified")
+
+		Options.inStream = inFilename and open(inFilename) or sys.stdin
+		Options.outStream = outFilename and open(outFilename) or sys.stdout
+		
+
+	def displayUsage():
+		print \
+"""
+rtrace-module-gen generates sp-rtrace tracing module code from
+a template and configuration file.
+Usage:
+  rtrace-module-gen <options>
+  Where <options> are:
+	-i <filename>  input template file name.
+	-o <filename>  output file name.
+	-c <filename>  configuration file name.
+	-h             this help text.
+		
+"""		
+
+	# static method definitions
+	parse = staticmethod(parse)
+	displayUsage = staticmethod(displayUsage)
+
+# /class Options
+
+
+# The global variable dictionary used by evaluation functions.
+globals = {"gt" : ">", "lt" : "<", "sections" : sections, "Function" : Function}
+
+#
+Options.parse(sys.argv[1:])
+
+ConfigParser.read(Options.cfgFilename)
+
+parser = TemplateProcessor()
+parser.parse(Options.inStream, Options.outStream)
+
