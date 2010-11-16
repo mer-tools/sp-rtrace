@@ -41,6 +41,9 @@
 #include "rtrace_data.h"
 #include "header.h"
 
+extern const char *resource_flags_text[];
+
+
 /**
  * Writes the log header consisting of key=value pairs.
  *

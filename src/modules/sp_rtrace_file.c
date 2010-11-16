@@ -169,8 +169,8 @@ static void trace_initialize()
 		case MODULE_LOADED: {
 			if (sp_rtrace_initialize()) {
 				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
-				res_fd = sp_rtrace_register_resource("fd", "file descriptor");
-				res_fp = sp_rtrace_register_resource("fp", "file pointer");
+				res_fd = sp_rtrace_register_resource("fd", "file descriptor", SP_RTRACE_RESOURCE_DEFAULT);
+				res_fp = sp_rtrace_register_resource("fp", "file pointer", SP_RTRACE_RESOURCE_DEFAULT);
 				trace_init_rt = trace_rt;
 				init_mode = MODULE_READY;
 

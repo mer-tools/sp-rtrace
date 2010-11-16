@@ -36,7 +36,7 @@
 #include <stdio.h>
 
 #include "common/debug_log.h"
-
+#include "common/sp_rtrace_defs.h"
 
 #define SP_RTRACE_PROTO_PACKET_TYPE(b1, b2, b3, b4) (b1 | (b2 << 8) | (b3 << 16) | (b4 << 24))
 
@@ -60,7 +60,7 @@
 
 /* protocol version */
 #define SP_RTRACE_PROTO_VERSION_MAJOR     1
-#define SP_RTRACE_PROTO_VERSION_MINOR     2
+#define SP_RTRACE_PROTO_VERSION_MINOR     3
 
 /* endianness flags (used in HS packet) */
 #define SP_RTRACE_PROTO_HS_LITTLE_ENDIAN  0
@@ -320,6 +320,8 @@ typedef struct {
 
 /* Module information retrieval function template. This function
  * must be implemented by all tracing submodules */
- typedef sp_rtrace_module_info_t* (*sp_rtrace_get_module_info_t)();
+typedef sp_rtrace_module_info_t* (*sp_rtrace_get_module_info_t)();
+
+
 
 #endif

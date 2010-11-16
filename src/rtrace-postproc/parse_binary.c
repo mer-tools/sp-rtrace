@@ -97,6 +97,9 @@ static rd_resource_t* read_packet_RR(const rd_hshake_t* hs __attribute__((unused
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
 	rd_resource_t* res = (rd_resource_t*)dlist_create_node(sizeof(rd_resource_t));
 	data += read_dword(data, &res->id);
+	if (HS_CHECK_VERSION(hs, 1, 3)) {
+		data += read_dword(data, &res->flags);
+	}
 	data += read_stringa(data, &res->type);
 	read_stringa(data, &res->desc);
 	res->hide = false;

@@ -135,6 +135,7 @@ typedef struct {
 	const char* type;
 	const char* desc;
 	int id;
+	unsigned int flags;
 } rtrace_resource_t;
 
 
@@ -362,12 +363,13 @@ static int write_module_info(int id, const char* name, unsigned char major, unsi
 }
 
 
-static int write_resource_registry(int id, const char* type, const char* desc)
+static int write_resource_registry(int id, const char* type, const char* desc, unsigned int flags)
 {
 	if (!sp_rtrace_options->enable) return 0;
 	char* buffer = pipe_buffer_lock(), *ptr = buffer + SP_RTRACE_PROTO_TYPE_SIZE;
 	ptr += write_dword(ptr, SP_RTRACE_PROTO_RESOURCE_REGISTRY);
 	ptr += write_dword(ptr, id);
+	ptr += write_dword(ptr, flags);
 	ptr += write_string(ptr, type);
 	ptr += write_string(ptr, desc);
 	int size = ptr - buffer;
@@ -532,7 +534,7 @@ static void write_initial_data()
 	/* write resource registry records */
 	for (i = 0; i < rtrace_resource_index; i++) {
 	    rtrace_resource_t* resource = &rtrace_resources[i];
-	    write_resource_registry(resource->id, resource->type, resource->desc);
+	    write_resource_registry(resource->id, resource->type, resource->desc, resource->flags);
     }
 
 	write_new_library("*");
@@ -775,7 +777,7 @@ unsigned int sp_rtrace_register_module(const char* name, unsigned char vmajor, u
 	return module->id;
 }
 
-unsigned int sp_rtrace_register_resource(const char* type, const char* desc)
+unsigned int sp_rtrace_register_resource(const char* type, const char* desc, unsigned int flags)
 {
 	if (rtrace_resource_index >= sizeof(rtrace_resources) / sizeof(rtrace_resources[0])) {
 		return -1;
@@ -783,9 +785,10 @@ unsigned int sp_rtrace_register_resource(const char* type, const char* desc)
 	rtrace_resource_t* resource = &rtrace_resources[rtrace_resource_index];
     resource->type = type;
     resource->desc = desc;
+    resource->flags = flags;
     resource->id = ++rtrace_resource_index;
 	if (sp_rtrace_options->enable) {
-		write_resource_registry(resource->id, type, desc);
+		write_resource_registry(resource->id, type, desc, flags);
 	}
 	return resource->id;
 }

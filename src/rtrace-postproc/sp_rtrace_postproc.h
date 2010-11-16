@@ -56,5 +56,4 @@ extern postproc_options_t postproc_options;
 
 extern volatile sig_atomic_t postproc_abort;
 
-
 #endif
