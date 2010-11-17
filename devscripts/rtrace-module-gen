@@ -505,8 +505,8 @@ class Options:
 		if not Options.cfgFilename:
 			raise RuntimeError("Configuration filename is not specified")
 
-		Options.inStream = inFilename and open(inFilename) or sys.stdin
-		Options.outStream = outFilename and open(outFilename) or sys.stdout
+		Options.inStream = inFilename and open(inFilename, "r") or sys.stdin
+		Options.outStream = outFilename and open(outFilename, "w") or sys.stdout
 		
 
 	def displayUsage():
