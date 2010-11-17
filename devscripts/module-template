@@ -23,9 +23,9 @@
 #include "config.h"
 
 /**
- * @file sp_rtrace_file.c
+ * @file sp_rtrace_<$module.name>.c
  *
- * File operation tracking module implementation.
+ * <$module.description>
  */
 #include <stdio.h>
 #include <string.h>
@@ -127,10 +127,10 @@ static void trace_initialize()
 			if (sp_rtrace_initialize()) {
 				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
 				<for resource in sections("resource")>
-				<set flags = "SP_RTRACE_RESOURCE_DEFAULT">
-				<if resource.flags.find("refcount")>
-				  <set flags = "%s | SP_RTRACE_RESOURCE_REFCOUNT" % flags>
-				</if>
+				  <set flags = "SP_RTRACE_RESOURCE_DEFAULT">
+				  <if resource.flags.find("refcount") != -1>
+				    <set flags = "%s | SP_RTRACE_RESOURCE_REFCOUNT" % flags>
+				  </if>
 				res_<$resource.name> = sp_rtrace_register_resource("<$resource.name>", "<$resource.description>", <$flags>);
 				</for>
 				trace_init_rt = trace_rt;

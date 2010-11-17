@@ -42,6 +42,8 @@ AC_CHECK_LIB([rt], [clock_gettime],
   [AC_MSG_ERROR([rt library is required])],
 )
 
+PKG_CHECK_MODULES([GLIB], [glib-2.0])
+
 case $build in
   i486-*|i586-*|i686-*)
     CFLAGS="$CFLAGS -march=i486"
