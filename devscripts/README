@@ -9,7 +9,7 @@ module. However in specific cases (like open function) the code will
 provide only the basic framework and must be updated before use.
 
 Usage:
-rtrace-module-gen -c <config file> -i <input template> -o <output code>
+rtrace-module-gen -c <config file> -t <template file> -o <output code>
 
 Configuration file description (generic)
 ========================================
@@ -112,6 +112,10 @@ contain multiple function sections.
   sync = True
     Forces backtrace synchronization. Must be specified for functions that
     are called from libc backtrace() function to avoid infinite recursion.    
+  fail = <expression>
+    The original function failure expression (optional). If specified the
+	module will not report the function if after the original function call
+	the fail expression evaluates to true.
 
 
 sp-rtrace module generator template metalanguage

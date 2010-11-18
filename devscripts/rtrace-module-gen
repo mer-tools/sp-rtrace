@@ -475,9 +475,9 @@ class Options:
 		inFilename = None
 		outFilename= None
 		try:
-			opts, args = getopt.gnu_getopt(argv, "c:i:o:h", 
+			opts, args = getopt.gnu_getopt(argv, "c:t:o:h", 
 										["config=", 
-										 "in=",
+										 "template=",
 										 "out=",
 										 "help"])
 		except getopt.GetoptError, err:
@@ -486,7 +486,7 @@ class Options:
 			sys.exit(2)
 
 		for opt, val in opts:
-			if opt == "-i" or opt == "--in":
+			if opt == "-t" or opt == "--template":
 				inFilename = val
 				continue
 				
@@ -517,7 +517,7 @@ a template and configuration file.
 Usage:
   rtrace-module-gen <options>
   Where <options> are:
-	-i <filename>  input template file name.
+	-t <filename>  template file name.
 	-o <filename>  output file name.
 	-c <filename>  configuration file name.
 	-h             this help text.

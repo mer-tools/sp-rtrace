@@ -159,6 +159,9 @@ static <$fc.type> trace_<$fc.name>(<$fc.args>)
 	<if hasattr(function, "sync")>
 	backtrace_lock = 0;
 	</if>
+	<if hasattr(function, "fail")>
+	if (<$function.fail>) return rc;
+	</if>
 	pointer_t res_id = (pointer_t)<$function.res_id>;
 	size_t res_size = (size_t)<$function.res_size>;
 	<if hasattr(function, "report_name")>
