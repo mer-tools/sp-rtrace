@@ -54,7 +54,6 @@ static sp_rtrace_module_info_t module_info = {
 
 /* resource identifiers */
 static int res_gobject = 0;
-static int res_gobject_ref = 0;
 
  /*
   * file module function set
@@ -118,8 +117,7 @@ static void trace_initialize()
 		case MODULE_LOADED: {
 			if (sp_rtrace_initialize()) {
 				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
-				res_gobject = sp_rtrace_register_resource("gobject", "GObject instance", SP_RTRACE_RESOURCE_DEFAULT);
-				res_gobject_ref = sp_rtrace_register_resource("gobject_ref", "GObject reference", SP_RTRACE_RESOURCE_DEFAULT | SP_RTRACE_RESOURCE_REFCOUNT);
+				res_gobject = sp_rtrace_register_resource("gobject", "GObject instance", SP_RTRACE_RESOURCE_REFCOUNT);
 				trace_init_rt = trace_rt;
 				init_mode = MODULE_READY;
 
@@ -175,7 +173,7 @@ static gpointer trace_g_object_ref(gpointer object)
 		args[0] = type_info.type_name;
 		res_size = type_info.instance_size;
 	}
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_gobject_ref, "g_object_ref", res_size, res_id, args);
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_gobject, "g_object_ref", res_size, res_id, args);
 
 	return rc;
 }
@@ -187,7 +185,7 @@ static void trace_g_object_unref(gpointer object)
 	pointer_t res_id = (pointer_t)object;
 	size_t res_size = (size_t)0;
 	const char** args = NULL;
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_gobject_ref, "g_object_unref", res_size, res_id, args);
+	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_gobject, "g_object_unref", res_size, res_id, args);
 	
 }
 
