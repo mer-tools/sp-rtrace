@@ -1,15 +1,9 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
-#include <string>
-#include <iostream>
-#include <fstream>
+#include "timeline.h"
 
 #include "parser.h"
 #include "formatter.h"
 #include "processor.h"
-#include "timeline.h"
 
 bool Parser::parseCallRecord(const char* buffer)
 {
@@ -61,7 +55,7 @@ bool Parser::parseCallRecord(const char* buffer)
 	else {
 		res_type = NULL;
 	}
-	if (sscanf(ptr, "(%lu) = 0x%lx", &res_size, &res_id) == 2) {
+	if (sscanf(ptr, "(%u) = 0x%lx", &res_size, &res_id) == 2) {
 		processor->registerAlloc(index, context, timestamp, res_type, res_id, res_size);
 		return true;
 	}
@@ -90,7 +84,6 @@ bool Parser::parseResourceRecord(const char* buffer)
 	processor->registerResource(ffs(id), type, false);
 	return true;
 }
-
 
 void Parser::parseFile(const std::string& filename, Processor* processor)
 {

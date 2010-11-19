@@ -1,7 +1,7 @@
 #ifndef _FORMATTER_H_
 #define _FORMATTER_H_
 
-#include <sstream>
+#include "timeline.h"
 
 /**
  * Helper class for easier string formatting.

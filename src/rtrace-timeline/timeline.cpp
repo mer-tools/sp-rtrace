@@ -1,9 +1,5 @@
 
-#include <exception>
-#include <iostream>
-#include <tr1/memory>
-#include <fstream>
-#include <stdexcept>
+#include "timeline.h"
 
 #include "options.h"
 
@@ -27,7 +23,7 @@ int main(int argc, char* const argv[])
 
 		Parser parser;
 		parser.parseFile(Options::getInstance()->getInFilename(), &processor);
-		processor.flushResourceRegistries();
+		processor.flushEventCache();
 		processor.finalize();
 	}
 	catch (std::ifstream::failure e) {

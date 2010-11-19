@@ -1,9 +1,7 @@
 #include "activity_generator.h"
 
-#include <iostream>
-#include <stdexcept>
-
 #include "plotter.h"
+#include "timestamp.h"
 
 ActivityGenerator::ContextData::ContextData()
 	: file_rate(NULL), file_allocs(NULL), file_frees(NULL),	total_size(0), total_allocs(0), total_frees(0)

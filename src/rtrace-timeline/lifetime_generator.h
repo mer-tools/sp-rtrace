@@ -1,24 +1,38 @@
 #ifndef _LIFETIME_GENERATOR_
 #define _LIFETIME_GENERATOR_
 
-#include <iostream>
-#include <stdexcept>
-#include <limits.h>
-#include <algorithm>
+#include "timeline.h"
 
 #include "report_generator.h"
 #include "report_data.h"
 #include "event.h"
-#include "plotter.h"
-#include "timeline.h"
 
+/**
+ * The LifetimeGenerator class generates resource life time
+ * report. 
+ * 
+ * This report contains lines displaying resource allocation 
+ * and deallocation(free) times.
+ * 
+ * If less than DETAILS_LIMIT resources are found in the log, then
+ * every resource lifeline is marked with a different color. 
+ * Otherwise lifelines are marked by allocation contexts.
+ */
 class LifetimeGenerator: public ReportGenerator {
 private:
 
+	// the maximum number of resources to use resource resolution
 	enum {DETAILS_LIMIT = 20};
 
+	/**
+	 * The allocation statistics for minimal and maximal
+	 * resoure sizes.
+	 */
 	class Stats {
 	public:
+		/**
+		 * The single statistics data.
+		 */
 		class Data {
 		public:
 			// allocation size
@@ -28,218 +42,125 @@ private:
 			// time of the first allocation of this size
 			timestamp_t timestamp;
 
+			/**
+			 * Creates a new class instance.
+			 */
 			Data(unsigned int size = 0)
 				: size(size), count(0), timestamp(0) {
 			}
 		};
 
+		// the minimal size statistics 
 		Data min;
+		// the maximal size statistics
 		Data max;
 
+		/**
+		 * Creates a new class instance.
+		 */
 		Stats()
 			: min(INT_MAX) {
 		}
 	};
 
+	/**
+	 * The resource related data storage.
+	 */
 	class ResourceData: public ResourceDataBase<int> {
 	public:
+		// event resolution data files
 		typedef std::list<Plotter::DataFile*> events_t;
-		typedef std::map<context_t, Plotter::DataFile*> contexts_t;
-		typedef std::vector<int> allocs_t;
-
-		Stats stats;
 		events_t event_files;
+
+		// context resolution data files
+		typedef std::map<context_t, Plotter::DataFile*> contexts_t;
 		contexts_t context_files;
-		unsigned int total;
+
+		// allocation sizes for median value calculation
+		typedef std::vector<int> allocs_t;
 		allocs_t allocs;
 
-		unsigned int overhead;
-		Plotter::DataFile* file_overhead;
+		// statistics data
+		Stats stats;
+		
+		// the total allocation size
+		unsigned int total;
 
-		ResourceData() : overhead(0), file_overhead(NULL) {
+		/**
+		 * Creates a new class instance.
+		 */
+		ResourceData() : total(0) {
 		}
 	};
 
-	void registerAlloc(ResourceData* rd, event_ptr_t& event, timestamp_t end_timestamp) {
-		ResourceData::contexts_t::iterator context_iter = rd->context_files.find(event->context);
-		if (context_iter == rd->context_files.end()) {
-			std::pair<ResourceData::contexts_t::iterator, bool> pair = rd->context_files.insert(
-						ResourceData::contexts_t::value_type(event->context, plotter.createFile(
-								Formatter() << rd->key->name << " ({@}" << std::hex << event->context << ")")));
-			context_iter = pair.first;
-		}
-		context_iter->second->write(event->timestamp, event->res_size);
-		context_iter->second->write(end_timestamp, event->res_size);
-		context_iter->second->writeSeparator();
+	/**
+	 * Registers resource life line. 
+	 * 
+	 * @param[in] rd             the resource type.
+	 * @param[in] event          the resource allocation event.
+	 * @param[in] end_timestamp  the resource deallocation timestamp (can be also maximum X
+	 *                           axis value, if the resource was not freed).
+	 */
+	void registerLifeline(ResourceData* rd, event_ptr_t& event, timestamp_t end_timestamp);
 
-		if (total_lifelines++ < DETAILS_LIMIT) {
-			Plotter::DataFile* file = plotter.createFile(Formatter() << rd->key->name << " (0x" << std::hex << event->res_id << ")");
-			file->write(event->timestamp, event->res_size);
-			file->write(end_timestamp, event->res_size);
-			file->writeSeparator();
-			rd->event_files.push_back(file);
-		}
-	}
-
+	// the used resource types
 	ReportData<ResourceData> resources;
 
 public:
+	// X Axis range
 	int xrange_min;
 	int xrange_max;
+	// Y axis range
 	int yrange_min;
 	int yrange_max;
 
+	// the number of registered lifelines
 	unsigned int total_lifelines;
 
+	/**
+	 * Creates a new class instance.
+	 */
 	LifetimeGenerator()
 		: ReportGenerator("lifetime"), xrange_min(-1), xrange_max(0), yrange_min(0), yrange_max(0), total_lifelines(0) {
 	}
 
-	void reportAlloc(const Resource* resource, event_ptr_t& event) {
-		ResourceData* rd = resources.getData(resource);
-
-		if (xrange_min == -1) xrange_min = event->timestamp;
-		if (xrange_max < event->timestamp) xrange_max = event->timestamp;
-		rd->allocs.push_back(event->res_size);
-		rd->total += event->res_size;
-
-		if (yrange_max < event->res_size) yrange_max = event->res_size;
-
-		Stats& stats = rd->stats;
-		if (event->res_size < stats.min.size) {
-			stats.min.size = event->res_size;
-			stats.min.count = 0;
-			stats.min.timestamp = event->timestamp;
-		}
-		if (event->res_size == stats.min.size) stats.min.count++;
-		if (event->res_size > stats.max.size) {
-			stats.max.size = event->res_size;
-			stats.max.count = 0;
-			stats.max.timestamp = event->timestamp;
-		}
-		if (event->res_size == stats.max.size) stats.max.count++;
-	}
-
+	/**
+	 * @copydoc ReportGenerator::reportAlloc 
+	 */
+	void reportAlloc(const Resource* resource, event_ptr_t& event);
+	
+	
+	/**
+	 * @copydoc ReportGenerator::reportAllocInContext 
+	 */
 	void reportAllocInContext(const Resource* resource, const Context* context, event_ptr_t& event) {
 	}
 
+	/**
+	 * @copydoc ReportGenerator::reportFree 
+	 */
 	void reportFree(const Resource* resource, event_ptr_t& event, event_ptr_t& alloc_event) {
-		ResourceData* rd = resources.getData(resource);
-		registerAlloc(rd, alloc_event, event->timestamp);
+		registerLifeline(resources.getData(resource), alloc_event, event->timestamp);
 	}
 
+	/**
+	 * @copydoc ReportGenerator::reportFreeInContext 
+	 */
 	void reportFreeInContext(const Resource* resource, const Context* context, event_ptr_t& event, event_ptr_t& alloc_event) {
 	}
 
+	/**
+	 * @copydoc ReportGenerator::reportUnfreedAlloc 
+	 */
 	void reportUnfreedAlloc(const Resource* resource, event_ptr_t& event) {
-		ResourceData* rd = resources.getData(resource);
-		registerAlloc(rd, event, xrange_max);
+		registerLifeline(resources.getData(resource), event, xrange_max);
 	}
 
-	void finalize() {
-		if (!yrange_max) {
-			throw std::runtime_error("Either the input file does not contain any events "
-			                     	 "or no events are matching the specified filter.");
-		}
-		// increase Y range, so top graph isn't hidden beyond the axis
-		yrange_max = yrange_max * 105 / 100;
-
-		// Adjust X axis range to contain at least single point
-		if (xrange_max == xrange_min) xrange_max++;
-		// number of graphs
-		int ngraphs = 0;
-
-		for (ResourceData* rd = resources.first(); rd; rd = resources.next()) {
-			// add graphs to the plot
-			if (total_lifelines <= DETAILS_LIMIT) {
-				for (ResourceData::events_t::iterator iter = rd->event_files.begin(); iter != rd->event_files.end(); iter++) {
-					plotter.addGraph(*iter, "1", "2", "column(2)");
-					ngraphs++;
-				}
-			}
-			else {
-				for (ResourceData::contexts_t::iterator iter = rd->context_files.begin(); iter != rd->context_files.end(); iter++) {
-					plotter.addGraph(iter->second, "1", "2", "column(2)");
-					ngraphs++;
-				}
-			}
-			// draw statistics markers
-			std::sort(rd->allocs.begin(), rd->allocs.end());
-			unsigned int alloc_count = rd->allocs.size();
-			if (alloc_count) {
-				unsigned int stat_average = rd->total / alloc_count;
-				Plotter::DataFile* file = plotter.createFile(Formatter() << rd->key->name << "(average:" << stat_average << ")");
-				file->write(xrange_min, stat_average);
-				file->write(xrange_max, stat_average);
-				plotter.addGraph(file,  "1", "2", "column(2)");
-
-				unsigned int stat_median = rd->allocs[alloc_count / 2];
-				if (! (alloc_count & 1) ) stat_median = (stat_median + rd->allocs[alloc_count / 2 + 1]) / 2;
-				file = plotter.createFile(Formatter() << rd->key->name << "(median:" << stat_median << ")");
-				file->write(xrange_min, stat_median);
-				file->write(xrange_max, stat_median);
-				plotter.addGraph(file,  "1", "2", "column(2)");
-			}
-		}
-		// setup the gnuplot
-		plotter.setTitle("Resource life-time");
-		plotter.setAxisX("time (secs)", xrange_min, xrange_max);
-		plotter.setAxisY("size", yrange_min, yrange_max, "%.1s%c");
-
-		if (total_lifelines > DETAILS_LIMIT) plotter.setStyle("data lines");
-		else plotter.setStyle("data linespoints");
-
-		// define table headers
-		Plotter::Table* table = plotter.createTable(1, 1);
-		// resource name column
-		table->addColumn(10);
-		// snapshot name
-		table->addColumn(5);
-		// allocation count
-		table->addColumn(8);
-		// allocation size
-		table->addColumn(10);
-		// timestamp
-		table->addColumn(12);
-
-		table->setText(0, 0, "Resource", Plotter::Label::ALIGN_CENTER);
-		table->setText(0, 1, "State", Plotter::Label::ALIGN_CENTER);
-
-		table->setText(0, 2, "Size", Plotter::Label::ALIGN_CENTER);
-		table->setText(0, 3, "Count", Plotter::Label::ALIGN_CENTER);
-		table->setText(0, 4, "Time", Plotter::Label::ALIGN_CENTER);
-
-		// write statistics data
-		int resource_index = 2;
-		for (ResourceData* rd = resources.first(); rd; rd = resources.next()) {
-			Stats& stats = rd->stats;
-			table->setText(resource_index, 0, rd->key->name, Plotter::Label::ALIGN_LEFT);
-			table->setText(resource_index, 1, "min", Plotter::Label::ALIGN_CENTER);
-			table->setText(resource_index, 2, Formatter() << stats.min.size);
-			table->setText(resource_index, 3, Formatter() << stats.min.count);
-			table->setText(resource_index, 4, Timestamp::toString(stats.min.timestamp));
-			resource_index += 1;
-
-			table->setText(resource_index, 1, "max", Plotter::Label::ALIGN_CENTER);
-			table->setText(resource_index, 2, Formatter() << stats.max.size);
-			table->setText(resource_index, 3, Formatter() << stats.max.count);
-			table->setText(resource_index, 4, Timestamp::toString(stats.max.timestamp));
-			resource_index += 2;
-		}
-		// Reserve space at the bottom for statistics data
-		int bmargin = ngraphs + 9;
-		if (bmargin < 9 + ngraphs) bmargin = 9 + ngraphs;
-		if (bmargin < 15) bmargin = 15;
-
-		// if the legend contains too many graphs - write it at the left side instead of the bottom.
-		if (total_lifelines < DETAILS_LIMIT and bmargin < total_lifelines + 5) {
-			plotter.setKey("right outside");
-		}
-		else {
-			plotter.setKey("bmargin");
-		}
-		plotter.setBMargin(bmargin);
-	}
+	/**
+	 * @copydoc ReportGenerator::finalize
+	 */
+	void finalize();
+	
 };
 
 

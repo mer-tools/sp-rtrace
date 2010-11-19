@@ -1,15 +1,7 @@
 #ifndef _TIMESTAMP_H_
 #define _TIMESTAMP_H_
 
-#include <string>
-#include <iomanip>
-
-#include <stdlib.h>
-#include <ctype.h>
-
-#include "formatter.h"
 #include "timeline.h"
-
 
 class Timestamp {
 public:

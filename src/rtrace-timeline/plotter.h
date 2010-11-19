@@ -1,62 +1,85 @@
 #ifndef _PLOTTER_H_
 #define _PLOTTER_H_
 
-#include <stdlib.h>
-#include <errno.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
+#include "timeline.h"
 
-#include <tr1/memory>
-#include <string>
-#include <fstream>
-#include <vector>
-#include <list>
-#include <stdexcept>
-
-#include "formatter.h"
-#include "terminal.h"
-#include "options.h"
-#include "timestamp.h"
-
+/**
+ * Helper class for gnuplot configuration file setup.
+ * 
+ * As the methods simply are wrappers around gnuplot commands, 
+ * see the gnuplot documentation for argument detalized explanation.
+ */
 class Plotter {
 public:
 
+	/**
+	 * The gnuplot data file implementation.
+	 * 
+	 * The gnuplot data files are used to store the plot data.
+	 * The files are created and managed by the Plotter.
+	 */
 	class DataFile {
 	private:
+		// the data file
 		std::ofstream file;
+		// the data file name 
 		std::string name;
-
+		
+		// the internal data file index used for name generation 
 		static unsigned int index;
 	public:
-		DataFile(const std::string& title) {
-			name = Formatter() << "timeline_" << index++ << ".dat";
-			file.open(name.c_str());
-			if (file.fail()) throw std::ios_base::failure(Formatter() << "Failed to create plotter data file file: " << name);
-			if (!title.empty()) file << "Resource \""<< title << "\"\n";
-		}
-
+		/**
+		 * Creates a new class instance.
+		 * 
+		 * @param[in] title    the title describing the data.
+		 */
+		DataFile(const std::string& title);
+		
+		/**
+		 * Retrieves the file name.
+		 * 
+		 * @return  the file name.
+		 */
 		const std::string& getName() const {
 			return name;
 		}
-
+		
+		/**
+		 * Writes plot data into file.
+		 * 
+		 * @param[in] x   the x coordinate.
+		 * @param[in] y   the y coordinate.
+		 */
 		void write(int x, int y) {
 			file << x << " " << y << "\n";
 		}
 
+		/**
+		 * Writes separator to separate data blocks.
+		 */
 		void writeSeparator() {
 			file << "\n";
 		}
 
+		/**
+		 * Writes plain text into data file.
+		 * 
+		 * @param[in] text   the text to write.
+		 */
 		void writeText(const std::string& text) {
 			file << text;
 		}
 
+		/**
+		 * Closes the data file.
+		 */
 		void close() {
 			file.close();
 		}
 
+		/**
+		 * Deletes the data file.
+		 */
 		void remove() {
 			::remove(name.c_str());
 		}
@@ -64,118 +87,181 @@ public:
 	typedef std::tr1::shared_ptr<DataFile> datafile_ptr_t;
 
 
+	/**
+	 * Gnuplot label implementation.
+	 */
 	class Label {
 	public:
+		// the text alignment enum
 		enum {ALIGN_LEFT, ALIGN_CENTER, ALIGN_RIGHT};
 
+		// the label text
 		const std::string text;
+		// the label alignment
 		int align;
 
+		/**
+		 * Creates a new class instance.
+		 * 
+		 * @param[in] text    the label text.
+		 * @param[in] align   the label alignment.
+		 */
 		Label(const std::string& text, int align = ALIGN_RIGHT)
 			: text(text), align(align) {
 		}
 
-		void write(std::ostream& file, int row, int col, int width) {
-			static const char* align_values[3] = {"left", "center", "right"};
-			switch (align) {
-				case ALIGN_RIGHT:
-					col += width - 1;
-					break;
-
-				case ALIGN_CENTER:
-					col += width / 2;
-					break;
-			}
-			file << "set label \"" << text << "\" at character " << col << "," << row << " " << align_values[align] << "\n";
-		}
+		/**
+		 * Writes the label data into gnuplot configuration file.
+		 * 
+		 * @param[in] file   the gnuplot configuration file.
+		 * @param[in] row    the label row.
+		 * @param[in] col    the label column.
+		 * @param[in] width  the label width.
+		 */
+		void write(std::ostream& file, int row, int col, int width);
 	};
 	typedef std::tr1::shared_ptr<Label> label_ptr_t;
 
+	/**
+	 * Gnuplot table implementation.
+	 * 
+	 * This class provides table functionality by using gnuplot labels. 
+	 */
 	class Table {
 	public:
+		/**
+		 * The table column
+		 */
 		class Column {
 		private:
+			// column width
 			int width;
+			// column cells
 			typedef std::vector<label_ptr_t> cells_t;
 			cells_t cells;
 		public:
+			/*
+			 * Creates a new class instance.
+			 * 
+			 * @param[in] width   - the column width.
+			 */
 			Column(int width)
 				: width(width) {
 			}
+			
+			/**
+			 * Sets column cell.
+			 * 
+			 * @param[in] row      the cell row.
+			 * @param[in] text     the cell text.
+			 * @param[in] align    the cell alignment.
+			 */
+			void setCell(int row, const std::string& text, int align);
 
-			void setCell(int row, const std::string& text, int align) {
-				if (cells.size() <= row) cells.resize(row + 1);
-				cells[row] = label_ptr_t(new Label(text, align));
-			}
-
-			int write(std::ostream& file, int rows, int offset) {
-				int row = 0;
-				for (cells_t::iterator iter = cells.begin(); iter < cells.end(); iter++) {
-					if (iter->get()) {
-						iter->get()->write(file, rows - row, offset, width);
-					}
-					row++;
-				}
-				return width;
-			}
+			/**
+			 * Writes the column data into gnuplot configuration file.
+			 * 
+			 * @param[in] file       the gnuplot configuration file.
+			 * @param[in] rows       the number of rows in table.
+			 * @param[in] offset     the offset column.
+			 */
+			int write(std::ostream& file, int rows, int offset);
 		};
 		typedef std::tr1::shared_ptr<Column> column_ptr_t;
 
+		// the number of rows in table
 		int rows;
+		// the row position of the top left table corner
 		int row;
+		// the column position of the top left table corner
 		int col;
+		// the table columns
 		typedef std::vector<column_ptr_t> columns_t;
 		columns_t columns;
 
+		/**
+		 * Creates a new class instance.
+		 * 
+		 * @param[in] row    the row position of the top left table corner.
+		 * @param[in] col    the column position of the top left table corner.
+		 */
 		Table(int row, int col)
 			: row(row), col(col), rows(0) {
 		}
 
+		/**
+		 * Adds a new column to the table.
+		 * 
+		 * @param[in] wdith   the column width.
+		 */
 		void addColumn(int width) {
 			columns.push_back(column_ptr_t(new Column(width)));
 		}
 
-		void setText(int row, int col, const std::string& text, int align = Label::ALIGN_RIGHT) {
-			if (col >= columns.size()) throw std::runtime_error(Formatter() << "Table column number " << col <<
-					" out of range (" << columns.size() << ")");
-
-			columns[col]->setCell(row, text, align);
-			if (row > rows) rows = row;
-		}
-
-		void write(std::ostream& file) {
-			int offset = col;
-			for (columns_t::iterator iter = columns.begin(); iter != columns.end(); iter++) {
-				offset += iter->get()->write(file, rows + row, offset);
-			}
-		}
+		/**
+		 * Sets the table cell.
+		 *  
+		 * @param[in] row    the cell row.
+		 * @param[in] col    the cell column.
+		 * @param[in] text   the cell alignment.
+		 * @param[in] align  the cell text.
+		 */
+		void setText(int row, int col, const std::string& text, int align = Label::ALIGN_RIGHT);
+		
+		/**
+		 * Writes the table data into gnuplot configuration file.
+		 *  
+		 * @param[in] file   the gnuplot configuration file.
+		 */
+		void write(std::ostream& file);
 	};
 	typedef std::tr1::shared_ptr<Table> table_ptr_t;
 
 private:
 
+	// the used tables
 	typedef std::list<table_ptr_t> tables_t;
 	tables_t tables;
 
+	// the used data files
 	typedef std::list<datafile_ptr_t> datafiles_t;
 	datafiles_t files;
 
+	// the graphs to draw
 	typedef std::list<std::string> graphs_t;
 	graphs_t graphs;
 
+	// the plot id
 	std::string id;
+	
+	// the configuration file
 	std::ofstream config;
 
+	// the configuration file name
 	std::string config_filename;
 
+	// the internal line style index 
 	int line_style_index;
 public:
 
+	/**
+	 * The tic mark
+	 * 
+	 * This class calculates rounded values for tic marks.
+	 */
 	class Tic {
 	public:
+		// the tic value
 		int value;
+		// the number of digits after decimal point
 		int decimal;
 
+		/**
+		 * Creates a new class instance.
+		 * 
+		 * @param[in] slice    the requested tic value
+		 * @param[in] rounded  true, if the tic value must be rounded.
+		 */
 		Tic(int slice, bool rounded = true)
 			: value(1), decimal(3) {
 			if (rounded) {
@@ -201,178 +287,152 @@ public:
 
 public:
 
+	/**
+	 * Creates a new class instance.
+	 */
 	Plotter()
 		: line_style_index(0) {
 	}
 
-	void initialize(const std::string& id) {
-		this->id = id;
+	/**
+	 * Initializes plotter.
+	 * 
+	 * This class creates gnuplot configuration file and writes terminal header.
+	 * @param[in] id   the plotter identifier.
+	 */
+	void initialize(const std::string& id);
+	
+	/**
+	 * Performs cleanup.
+	 * 
+	 * Currently it simply removes the configuration and data files.
+	 */
+	void cleanup();
 
-		config_filename = Formatter() << "timeline-" << id << ".cfg";
-		config.open(config_filename.c_str());
-		if (config.fail()) {
-			throw std::ios_base::failure(Formatter() << "Failed to create plotter configuration file: " << config_filename);
-		}
+	/**
+	 * Draws the created tables and graphs.
+	 */
+	void plot(int fd_out);
+	
+	/**
+	 * Sets the report title.
+	 * 
+	 * @param[in] title   the report title.
+	 */
+	void setTitle(const std::string& title);
+	
+	/**
+	 * Sets style option.
+	 * 
+	 * @param[in] style  the style option to set.
+	 */
+	void setStyle(const std::string& style);
 
-		config << Options::getInstance()->getTerminal()->getHeader();
-	}
+	/**
+	 * Sets X axis.
+	 * 
+	 * @param[in] label   the label written along the axis.
+	 * @param[in] min     the minimal range.
+	 * @param[in] max     the maximal range.
+	 * @param[in] scale   the tic mark scale.
+	 */
+	void setAxisX(const std::string& label, int min = -1, int max = -1, int scale = -1);
+	
+	/**
+	 * Sets Y axis
+	 * 
+	 * @param[in] label   the label written along the axis.
+	 * @param[in] min     the minimal range.
+	 * @param[in] max     the maximal range.
+	 * @param[in] format  the format of tic mark labels.
+	 */
+	void setAxisY(const std::string& label, int min, int max, const std::string& format = "");
+	
 
-	void cleanup() {
-		// TODO: uncomment when done debugging.
+	/**
+	 * Sets second Y axis.
+	 * @param[in] label   the label written along the axis.
+	 * @param[in] min     the minimal range.
+	 * @param[in] max     the maximal range.
+	 * @param[in] format  the format of tic mark labels.
+	 */
+	void setAxisY2(const std::string& label, int min, int max, const std::string& format = "");
 
-		for (datafiles_t::iterator file_iter = files.begin(); file_iter != files.end(); file_iter++) {
-//			file_iter->get()->remove();
-		}
+	/**
+	 * Sets the bottom margin.
+	 * 
+	 * @param[in] value  the bottom margin value.
+	 */
+	void setBMargin(int value);
 
-		//	remove(config_filename.c_str());
-	}
+	/**
+	 * Creates a new line style.
+	 * 
+	 * @param[in] type    the line type, can be empty.
+	 * @param[in] color   the line color, can be empty.
+	 * @return            the index of the created style.
+	 */
+	int setLineStyle(const std::string& type, const std::string& color);
 
-	void plot(int fd_out) {
-		for (tables_t::iterator table_iter = tables.begin(); table_iter != tables.end(); table_iter++) {
-			table_iter->get()->write(config);
-		}
+	/**
+	 * Sets the placement for the graphs legend.
+	 * 
+	 * @param[in] key   the placemenet documentation.
+	 */
+	void setKey(const std::string& key);
 
-		for (datafiles_t::iterator file_iter = files.begin(); file_iter != files.end(); file_iter++) {
-			file_iter->get()->close();
-		}
+	/**
+	 * Sets separator symbol for data files.
+	 * 
+	 * By default space is used as data separator. However if the data may contain
+	 * spaces - another separator symbol can be set (for example tab).
+	 * @param[in] value  the separator symbol.
+	 */
+	void setSeparator(const std::string& value);
 
-		config << "plot \\\n";
-		for (graphs_t::iterator graph_iter = graphs.begin(); graph_iter != graphs.end(); graph_iter++) {
-			config << *graph_iter;
-		}
-		config << "\n";
+	/**
+	 * Sets grid option.
+	 *
+	 * By default the grid is disabled. 
+	 * @param[in] value  the grid to set. For example to set a grid based on y tics
+	 *                   use "ytics" as value.
+	 */
+	void setGrid(const std::string& value);
 
-		config << Options::getInstance()->getTerminal()->getFooter();
+	/**
+	 * Creates gnuplot table.
+	 * 
+	 * The created tables are managed by Plotter - written with plot() method
+	 * and destroyed together with Plotter.
+	 * @param[in] row  the table row.
+	 * @param[in] col  the table column.
+	 * @return         a reference to the created table.
+	 */
+	Table* createTable(int row, int col);
 
-		config.close();
+	/**
+	 * Creates gnuplot data file.
+	 * 
+	 * The data files are managed by Plotter and destroyed/deleted together
+	 * with the Plotter.
+	 * @param[in] title  the title describing data stored in file.
+	 * @return           a reference to the created data file.
+	 */
+	DataFile* createFile(const std::string& title = "");
 
-		int status, pid = fork();
-		if (pid == 0) {
-			dup2(fd_out, STDOUT_FILENO);
-			execlp("gnuplot", "gnuplot", config_filename.c_str(), NULL);
-			exit(errno);
-		}
-		waitpid(pid, &status, 0);
-		if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
-			throw std::runtime_error(Formatter() << "Failed to generate report with gnuplot (" <<
-					strerror(WEXITSTATUS(status)) << "). Check if the gnuplot is installed.");
-		}
-	}
-
-	void setTitle(const std::string& title) {
-
-		config << "set title \"" << title;
-		const std::string& filter = Options::getInstance()->getFilterDescription();
-		if (filter != "") {
-			config << "\\n(" << filter << ")";
-		}
-		config << "\"\n";
-	}
-
-	void setStyle(const std::string& style) {
-		config << "set style " << style << "\n";
-	}
-
-	void setAxisX(const std::string& label, int min = -1, int max = -1, const std::string& format = "", int scale = -1) {
-		config << "set xtics rotate nomirror\n";
-
-		if (scale != -1) {
-			config << "set xtics scale " << scale << "\n";
-		}
-
-		if (min != -1) {
-			if (min == max) max++;
-			int range = max - min;
-			Tic step((double)range / 10 + 0.5);
-			int tic = min - min % step.value;
-			//if (min % step.value > 0) tic -= step.value;
-			min = tic;
-
-			// set label
-			config << "set xlabel \"" << label << "\" offset 0,0\n";
-			// set range
-			config << "set xrange[" << min << ":" << max << "]\n";
-			// place autotics outside range to avoid interference with manual tics
-			config << "set xtics " << max * 2 << "," << max * 2 << "\n";
-			// place tics
-			while (tic <= max - step.value) {
-				config << "set xtics add (\"" << Timestamp::toString(tic, step.decimal) << "\\n+" <<
-						Timestamp::offsetToString(tic - min) << "\" " << tic << ")\n";
-				tic += step.value;
-			}
-			config << "set xtics add (\"" << Timestamp::toString(max) << "\\n+" <<
-					Timestamp::offsetToString(range) << "\" " << max << ")\n";
-		}
-
-	}
-
-	void setAxisY(const std::string& label, int min, int max, const std::string& format = "") {
-		if (min == max) max++;
-		config << "set yrange[" << min << ":" << max << "]\n";
-		if (!format.empty()) config << "set format y \"" << format << "\"\n";
-		config << "set ytics out\n";
-		config << "set ylabel \"" << label << "\"\n";
-	}
-
-	void setAxisY2(const std::string& label, int min, int max, const std::string& format = "") {
-		if (min == max) max++;
-		config << "set y2range[" << min << ":" << max << "]\n";
-		if (!format.empty()) config << "set format y2 \"" << format << "\"\n";
-		config << "set y2tics out\n";
-		config << "set ytics nomirror\n";
-		config << "set y2label \"" << label << "\"\n";
-	}
-
-	void setBMargin(int value) {
-		config << "set bmargin " << value << "\n";
-	}
-
-	int setLineStyle(const std::string& type, const std::string& color) {
-		++line_style_index;
-		config << "set style line " << ++line_style_index;
-		if (!type.empty()) config << " lt " << type;
-		if (!color.empty()) config << " linecolor rgb \"" << color << "\"";
-		config << "\n";
-		return line_style_index;
-	}
-
-	void setKey(const std::string& key) {
-		config << "set key " << key << "\n";
-	}
-
-	void setSeparator(const std::string& value) {
-		config << "set datafile separator \"" << value << "\"\n";
-	}
-
-	void setGrid(const std::string& value) {
-		config << "set grid " << value << "\n";
-	}
-
-	Table* createTable(int row, int col) {
-		Table* table = new Table(row, col);
-		tables.push_back(table_ptr_t(table));
-		return table;
-	}
-
-	DataFile* createFile(const std::string& title = "") {
-		DataFile* file = new DataFile(title);
-		files.push_back(datafile_ptr_t(file));
-		return file;
-	}
-
+	/**
+	 * Adds a new graph based on the specified data file.
+	 * 
+	 * @param[in] file     the gnuplot data file.
+	 * @param[in] col_x    the data column in file containing X axis value.
+	 * @param[in] col_y    the data column in file containing Y axis value.
+	 * @param[in] title    the graph title (can be empty, defaulting to the title in data file). 
+	 * @param[in] axis     the graph Y axis (can be empty, defaulting to Y axis).
+	 * @param[in] style    the graph style (can be empty, assigned automatically).
+	 * @param[in] prefix   the graph prefix (used only for histogram reports).
+	 */
 	void addGraph(const DataFile* file, const std::string& col_x, const std::string& col_y, const std::string& title = "",
-			const std::string& axis = "", int style = -1, const std::string& prefix = "") {
-		std::ostringstream data;
-		if (graphs.size()) data << ",";
-		if (!prefix.empty()) data << prefix << " ";
-		data << "\"" << file->getName() << "\" using "<< col_x;
-		if (!col_y.empty()) data << ":" << col_y;
-		if (style != -1) data << " ls " << style;
-		data << " title " << title;
-		if (!axis.empty()) data << "axes " << axis;
-		data << "\\\n";
-		graphs.push_back(data.str());
-	}
+			const std::string& axis = "", int style = -1, const std::string& prefix = "");
 };
 
 #endif

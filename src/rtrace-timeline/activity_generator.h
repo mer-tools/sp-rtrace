@@ -1,10 +1,11 @@
 #ifndef _ACTIVITY_GENERATOR_H_
 #define _ACTIVITY_GENERATOR_H_
 
+#include "timeline.h"
+
 #include "report_generator.h"
 #include "report_data.h"
 #include "event.h"
-#include "timeline.h"
 
 /**
  * Activity report generator.

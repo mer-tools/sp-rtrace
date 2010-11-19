@@ -1,21 +1,25 @@
 #ifndef _RESOURCE_H_
 #define _RESOURCE_H_
 
-#include <tr1/memory>
-#include <string>
-#include <map>
-
 #include "timeline.h"
 #include "event.h"
 
+/**
+ * The event allocation cache.
+ * 
+ * All events are registered into allocation cache to
+ * enable allocation event lookups for deallocation events.
+ */
 class ResourceRegistry {
 public:
 
 	typedef std::map<resource_id_t, event_ptr_t> event_map_t;
 
+	// resource allocation overhead data.
 	typedef std::map<std::string, unsigned int> overhead_map_t;
 	static overhead_map_t overhead_map;
 
+	
 	static unsigned int getResourceOverhead(const std::string& res_type) {
 		overhead_map_t::iterator iter = overhead_map.find(res_type);
 		if (iter == overhead_map.end()) return 0;

@@ -1,10 +1,7 @@
 #ifndef _TERMINAL_H_
 #define _TERMINAL_H_
 
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <tr1/memory>
+#include "timeline.h"
 
 class TerminalWriter {
 public:

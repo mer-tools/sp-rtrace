@@ -1,6 +1,8 @@
 #ifndef _FILTER_H_
 #define _FILTER_H_
 
+#include "timeline.h"
+
 #include "event.h"
 #include "timestamp.h"
 

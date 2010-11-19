@@ -1,8 +1,5 @@
 #include "filter.h"
 
-#include <ctype.h>
-#include <sstream>
-
 SizeFilter::SizeFilter(const std::string& text) {
 	size = atoi(text.c_str());
 	if (size) {

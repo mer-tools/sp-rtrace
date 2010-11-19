@@ -1,9 +1,6 @@
 #ifndef _EVENT_H_
 #define _EVENT_H_
 
-#include <tr1/memory>
-#include <string>
-
 #include "timeline.h"
 
 /**

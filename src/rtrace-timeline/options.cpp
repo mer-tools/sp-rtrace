@@ -1,10 +1,4 @@
-#include <unistd.h>
-#include <stdlib.h>
-#include <getopt.h>
-
-#include <iostream>
-#include <stdexcept>
-#include <sstream>
+#include "timeline.h"
 
 #include "options.h"
 #include "formatter.h"
@@ -180,7 +174,7 @@ void Options::parseCommandLine(int argc, char* const argv[], Processor* processo
 			}
 
 			case 'o': {
-				out_filename = optarg;
+				out_template = optarg;
 				break;
 			}
 
@@ -281,7 +275,7 @@ void Options::parseCommandLine(int argc, char* const argv[], Processor* processo
 	if (in_filename.empty()) {
 		throw std::runtime_error(Formatter() << "No input file specified");
 	}
-	if (out_filename.empty()) {
+	if (out_template.empty()) {
 		throw std::runtime_error(Formatter() << "No output file specified");
 	}
 	if (!is_terminal_set) {

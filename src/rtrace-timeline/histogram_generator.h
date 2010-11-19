@@ -1,11 +1,11 @@
 #ifndef _HISTOGRAM_GENERATOR_H_
 #define _HISTOGRAM_GENERATOR_H_
 
+#include "timeline.h"
 
 #include "report_generator.h"
 #include "report_data.h"
 #include "event.h"
-#include "timeline.h"
 
 /**
  * The base class for histogram generators.

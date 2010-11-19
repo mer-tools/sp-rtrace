@@ -1,9 +1,6 @@
 #ifndef _GENERATOR_DATA_H_
 #define _GENERATOR_DATA_H_
 
-#include <map>
-#include <tr1/memory>
-
 #include "timeline.h"
 #include "event.h"
 

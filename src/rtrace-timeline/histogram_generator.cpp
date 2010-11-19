@@ -1,9 +1,5 @@
 #include "histogram_generator.h"
 
-#include <iostream>
-#include <stdexcept>
-#include <algorithm>
-
 #include "plotter.h"
 
 unsigned int HistogramGenerator::Stats::getMedian() {
@@ -118,7 +114,7 @@ void HistogramGenerator::finalize() {
 	plotter.setTitle(title);
 	plotter.setAxisY(ylabel, 0, yrange_max, "%.1s%c");
 	plotter.setGrid("ytics");
-	plotter.setAxisX("Resource size", -1, -1, "", 0);
+	plotter.setAxisX("Resource size", -1, -1, 0);
 	plotter.setStyle("data histogram");
 	plotter.setStyle("histogram rowstacked");
 	plotter.setStyle("fill solid 0.2");

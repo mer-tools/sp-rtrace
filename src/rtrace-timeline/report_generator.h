@@ -1,17 +1,12 @@
 #ifndef _REPORT_GENERATOR_H_
 #define _REPORT_GENERATOR_H_
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-
-#include <tr1/memory>
-#include <string>
-#include <stdexcept>
+#include "timeline.h"
 
 #include "event.h"
 #include "plotter.h"
 #include "options.h"
+#include "formatter.h"
 
 /**
  * Base class for report generators.
@@ -156,7 +151,7 @@ public:
 	void finish() {
 		finalize();
 
-		std::string out_filename = Formatter() << Options::getInstance()->getOutFilename() << "-" <<
+		std::string out_filename = Formatter() << Options::getInstance()->getOutTemplate() << "-" <<
 				id << Options::getInstance()->getOutExtension();
 		int fd = creat(out_filename.c_str(), 0666);
 		if (fd == -1) {

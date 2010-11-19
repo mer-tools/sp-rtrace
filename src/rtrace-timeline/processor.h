@@ -1,170 +1,159 @@
 #ifndef _PROCESSOR_H_
 #define _PROCESSOR_H_
 
-#include <stdlib.h>
-
-#include <stdexcept>
-#include <string>
-#include <list>
-#include <map>
-
 #include "timeline.h"
-#include "resource_registry.h"
 #include "report_generator.h"
-#include "event.h"
-#include "formatter.h"
-#include "filter_manager.h"
+#include "resource_registry.h"
 
+/**
+ * The event processor.
+ * 
+ * This class manages context/resource/function events received from parser.
+ * The resource and context data are stored in the processor while function
+ * call events are reported further to the report generators.
+ * The function call reporting is done in the following order:
+ * 1) find the associated resource type, throw exception if none has been registered.
+ * 2) check if the resource passes resource filter (if one specified)
+ * 3) create event object based on the reported data
+ * 4) validate the created event against event filters.
+ * 5.allocs) register events in local cache
+ * 5.frees) find the allocation event in local cache. Ignore event if no allocation
+ *   records exists in cache.
+ * 6. for every report generator:
+ *    a) report generic event (without contexts)
+ *    b) if context registry is not empty report event for every matching context.
+ *       (if event has no contexts, it will be reported for zero context context_none).
+ */
 class Processor {
 private:
+	// the report generators
 	typedef std::list<report_generator_t> generator_list_t;
 	generator_list_t generators;
 
+	// the resource registry for resource type storage
 	typedef std::map<std::string, resource_registry_ptr_t> resource_map_t;
 	resource_map_t resource_registry;
 
+	// the context registry for context storage.
 	typedef std::map<context_t, context_ptr_t> context_map_t;
 	context_map_t context_registry;
 
+	// the zero context, used to report allocations without contexts.
 	Context context_none;
 
-	void cleanup() {
-		for (generator_list_t::iterator gen_iter = generators.begin(); gen_iter != generators.end(); gen_iter++) {
-			gen_iter->get()->cleanup();
-		}
-	}
+	/**
+	 * Performs resource cleanup at exit.
+	 */
+	void cleanup();
 
 public:
 
+	/**
+	 * Creates a new class instance.
+	 */
 	Processor()
 	 : context_none(0, "no contexts") {
 	}
 
+	/**
+	 * Destroyes the object.
+	 */
 	~Processor() {
 		cleanup();
 	}
 
+	/**
+	 * Adds a new report generator.
+	 * 
+	 * The report generator is managed by the processor and desroyed
+	 * together with it.
+	 * @param[in] generator  the report generator to add.
+	 */
 	void addGenerator(ReportGenerator* generator) {
 		generators.push_back(report_generator_t(generator));
 	}
 
-	void registerResource(int type_id, const std::string& name, bool ref_counted) {
-		resource_map_t::iterator iter = resource_registry.find(name);
-		if (iter == resource_registry.end()) {
-			std::pair<resource_map_t::iterator, bool> pair =
-					resource_registry.insert(resource_map_t::value_type(name, resource_registry_ptr_t(new ResourceRegistry(type_id, name, ref_counted))));
-		}
-		else {
-			// TODO: duplicate resources found, throw an error ?
-		}
-	}
+	/**
+	 * Registers a new resource type.
+	 * 
+	 * This method is called from parser when a resource registry record
+	 * is successfully parsed.
+	 * @param[in] type_id      the resource type identifier.
+	 * @param[in] name         the resource type name.
+	 * @param[in] ref_counted  true if the resource is reference counted.
+	 */
+	void registerResource(int type_id, const std::string& name, bool ref_counted);
 
-	void registerContext(context_t value, const std::string& name) {
-		context_map_t::iterator iter = context_registry.find(value);
-		if (iter == context_registry.end()) {
-			std::pair<context_map_t::iterator, bool> pair =
-					context_registry.insert(context_map_t::value_type(value, context_ptr_t(new Context(value, name))));
-		}
-		else {
-			// TODO: duplicate contexts found, throw an error ?
-		}
-	}
+	
+	/**
+	 * Registers a new allocation context.
+	 * 
+	 * This method is called from parser when a context registry record
+	 * is successfully parsed.
+	 * @param[in] value   the context value(mask).
+	 * @param[in] name    the context name.
+	 */
+	void registerContext(context_t value, const std::string& name);
 
+	/**
+	 * Registers a new allocation event.
+	 * 
+	 * This method is called from parser when a function call record is
+	 * successfully parsed and identified as allocation call.
+	 * @param[in] index      the call index.
+	 * @param[in] context    the call context.
+	 * @param[in] timestamp  the call timestamp.
+	 * @param[in] res_type   the allocated resource type.
+	 * @param[in] res_id     the allocated resource identifier.
+	 * @param[in] res_size   the allocated resource size.
+	 */
 	void registerAlloc(int index, context_t context, timestamp_t timestamp,
-						const char* res_type, resource_id_t res_id, size_t res_size) {
-		resource_map_t::iterator iter = res_type ? resource_registry.find(res_type) : resource_registry.begin();
-		if (iter == resource_registry.end()) {
-			throw std::runtime_error(Formatter() << "Unknown resource type: " << res_type);
-		}
-		ResourceRegistry* registry = iter->second.get();
-		// apply resource filter
-		const std::string& resource_filter = Options::getInstance()->getResourceFilter();
-		if (!resource_filter.empty() && resource_filter != registry->resource.name) return;
-
-		event_ptr_t event(new EventAlloc(index, context, timestamp, res_id, res_size));
-		// validate event upon specified filters
-		if (!FilterManager::getInstance()->validate(event.get())) return;
-
-		event_ptr_t old_event;
-		int rc = registry->registerAlloc(event, old_event);
-		// TODO: FIRE_EXISTS is returned if an event with the same id was already registered
-		// probably would be good to show some warning message or something.
-		if (rc > 0) {
-			for (generator_list_t::iterator iter = generators.begin(); iter != generators.end(); iter++) {
-				ReportGenerator* generator = iter->get();
-				generator->reportAlloc(&registry->resource, event);
-				if (!context_registry.empty()) {
-					for (context_map_t::iterator ctx_iter = context_registry.begin(); ctx_iter != context_registry.end(); ctx_iter++) {
-						if (ctx_iter->second.get()->id & context) {
-							generator->reportAllocInContext(&registry->resource, ctx_iter->second.get(), event);
-						}
-					}
-					if (!context) generator->reportAllocInContext(&registry->resource, &context_none, event);
-				}
-			}
-		}
-	}
-
+						const char* res_type, resource_id_t res_id, size_t res_size);
+	
+	/**
+	 * Registers a new deallocation(free) event.
+	 * 
+	 * This method is called from parser when a function call record is
+	 * successfully parsed and identified as deallocation(free) call.
+	 * @param[in] index      the call index.
+	 * @param[in] context    the call context.
+	 * @param[in] timestamp  the call timestamp.
+	 * @param[in] res_type   the allocated resource type.
+	 * @param[in] res_id     the allocated resource identifier.
+	 * @param res_id
+	 */
 	void registerFree(int index, context_t context, timestamp_t timestamp,
-						const char* res_type, resource_id_t res_id) {
-		resource_map_t::iterator iter = res_type ? resource_registry.find(res_type) : resource_registry.begin();
-		if (iter == resource_registry.end()) {
-			throw std::runtime_error(Formatter() << "Unknown resource type: " << res_type);
-		}
-		ResourceRegistry* registry = iter->second.get();
-		// apply resource filter
-		const std::string& resource_filter = Options::getInstance()->getResourceFilter();
-		if (!resource_filter.empty() && resource_filter != registry->resource.name) return;
+						const char* res_type, resource_id_t res_id);
+	
+	/**
+	 * Reports all allocation events stored in event cache.
+	 * 
+	 * After the input file has been processed the event cache contains
+	 * 'unfreed' allocation events. This method notifies report generators
+	 * about unfreed allocation events left in cache.
+	 */
+	void flushEventCache();
 
-		event_ptr_t event(new EventFree(index, context, timestamp, res_id, 0));
-		// validate event upon specified filters
-		if (!FilterManager::getInstance()->validate(event.get())) return;
+	/**
+	 * Initializes processor.
+	 * 
+	 * The processor initializes the registered report generators.
+	 */
+	void initialize();
 
-		event_ptr_t alloc_event;
-		int rc = registry->registerFree(event, alloc_event);
-		if (rc != ResourceRegistry::BLOCK_SCOPE) {
-			event->res_size = alloc_event->res_size;
-		}
-		if (rc > 0) {
-			for (generator_list_t::iterator iter = generators.begin(); iter != generators.end(); iter++) {
-				ReportGenerator* generator = iter->get();
-				generator->reportFree(&registry->resource, event, alloc_event);
-				if (!context_registry.empty()) {
-					for (context_map_t::iterator ctx_iter = context_registry.begin(); ctx_iter != context_registry.end(); ctx_iter++) {
-						if (ctx_iter->second.get()->id & context) {
-							generator->reportFreeInContext(&registry->resource, ctx_iter->second.get(), event, alloc_event);
-						}
-					}
-					if (!context) generator->reportFreeInContext(&registry->resource, &context_none, event, alloc_event);
-				}
-			}
-		}
-	}
+	/**
+	 * Finalizes processor.
+	 * 
+	 * The processor asks the registered report generators to finish
+	 * processing and generate report.
+	 */
+	void finalize();
 
-	void flushResourceRegistries() {
-		for (resource_map_t::iterator iter = resource_registry.begin(); iter != resource_registry.end(); iter++) {
-			ResourceRegistry* registry = iter->second.get();
-			for (ResourceRegistry::event_map_t::iterator event_iter = registry->events.begin();
-					event_iter != registry->events.end(); event_iter++) {
-				for (generator_list_t::iterator gen_iter = generators.begin(); gen_iter != generators.end(); gen_iter++) {
-					gen_iter->get()->reportUnfreedAlloc(&registry->resource, event_iter->second);
-				}
-			}
-		}
-	}
-
-	void initialize() {
-		for (generator_list_t::iterator gen_iter = generators.begin(); gen_iter != generators.end(); gen_iter++) {
-			gen_iter->get()->init();
-		}
-	}
-
-	void finalize() {
-		for (generator_list_t::iterator gen_iter = generators.begin(); gen_iter != generators.end(); gen_iter++) {
-			gen_iter->get()->finish();
-		}
-	}
-
+	/**
+	 * Retrieves the number of registered generators.
+	 * 
+	 * @return   the number of registered generators.
+	 */
 	int getGeneratorCount() {
 		return generators.size();
 	}

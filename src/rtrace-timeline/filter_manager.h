@@ -1,8 +1,7 @@
 #ifndef _FILTER_MANAGER_H_
 #define _FILTER_MANAGER_H_
 
-#include <list>
-
+#include "timeline.h"
 #include "filter.h"
 
 /**

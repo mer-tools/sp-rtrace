@@ -1,30 +1,40 @@
 #ifndef _OPTIONS_H_
 #define _OPTIONS_H_
 
-#include <string>
-#include <tr1/memory>
-
 #include "terminal.h"
 
 class Processor;
 
 class Options {
 private:
-	std::string out_filename;
+	// the output file template
+	std::string out_template;
+	// the input file name
 	std::string in_filename;
-
+	// the output file extension
 	std::string out_extension;
 
+	// the output image scaling factor
 	unsigned int scale_x;
 	unsigned int scale_y;
+	// the time slice for activity report (milliseconds)
 	unsigned int slice;
 
+	// the output terminal
 	Terminal terminal;
+	
+	// the resource filter value
+	std::string resource_filter;
+	
+	// description of the specified filters
+	std::string filter_desc;
 
+	
+	/**
+	 * Displays application usage instructions.
+	 */
 	void displayUsage();
 
-	std::string resource_filter;
-	std::string filter_desc;
 
 	/**
 	 * Splits filter option range value into min/max components.
@@ -38,6 +48,8 @@ private:
 	/**
 	 * Updates filter description.
 	 *
+	 * This method updates filter description string which is displayed
+	 * in the second line of the report titles.
 	 * @param[in] name   the filter name.
 	 * @param[in] value  the filter value.
 	 */
@@ -45,11 +57,15 @@ private:
 
 public:
 
+	/**
+	 * Creates a new class instance.
+	 */
 	Options();
 
 	/**
 	 * Returns the options object instance.
-	 * @return
+	 * 
+	 * @return   the Options instance.
 	 */
 	static Options* getInstance() {
 		static Options instance;
@@ -62,7 +78,7 @@ public:
 	 *
 	 * @param argc
 	 * @param argv
-	 * @param processor
+	 * @param[in] processor   the log processor. 
 	 */
 	void parseCommandLine(int argc, char* const argv[], Processor* processor);
 
@@ -74,8 +90,8 @@ public:
 	 * <output filename template>-<genrator id>.<file type extension>
 	 * @return   the output file name template.
 	 */
-	const std::string& getOutFilename() const {
-		return out_filename;
+	const std::string& getOutTemplate() const {
+		return out_template;
 	}
 
 
@@ -98,7 +114,7 @@ public:
 	}
 
 	/**
-	 * Get horizontal scaling factor.
+	 * Retrieves horizontal scaling factor.
 	 *
 	 * The horizontal scaling factor affects output report width.
 	 * @return    the horizontal scaling factor in percents.
@@ -108,7 +124,7 @@ public:
 	}
 
 	/**
-	 * Get vertical scaling factor.
+	 * Retrieves vertical scaling factor.
 	 *
 	 * The vertical scaling factor affects output report height.
 	 * @return    the vertical scaling factor in percents.
@@ -137,11 +153,18 @@ public:
 
 	/**
 	 * Retrieves the activity report time slice setting.
+	 * 
+	 * @return   the time slice for activity report.
 	 */
 	unsigned int getSlice() const {
 		return slice;
 	}
 
+	/**
+	 * Retrieves resource filter value.
+	 * 
+	 * @return   the resource filter.
+	 */
 	const std::string& getResourceFilter() const {
 		return resource_filter;
 	}
