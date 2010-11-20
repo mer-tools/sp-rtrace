@@ -39,7 +39,7 @@ libsp_rtrace_gobject_la_CFLAGS = -rdynamic $(GLIB_CFLAGS) $(AM_CFLAGS)
 libsp_rtrace_gobject_la_LDFLAGS = $(VERSION_INFO) $(GLIB_LIBS) -module
 libsp_rtrace_gobject_la_LIBADD = -ldl -lpthread 
 
-bin_PROGRAMS = sp-rtrace sp-rtrace-postproc sp-rtrace-resolve sp-rtrace-allocmap
+bin_PROGRAMS = sp-rtrace sp-rtrace-postproc sp-rtrace-resolve sp-rtrace-allocmap sp-rtrace-timeline
 
 sp_rtrace_SOURCES = rtrace/sp_rtrace.c rtrace/listener.c rtrace/rtrace_env.c common/utils.c \
 	common/dlist.c common/rtrace_data.c common/htable.c 
@@ -64,4 +64,18 @@ sp_rtrace_allocmap_SOURCES = rtrace-allocmap/sp_rtrace_allocmap.c
 sp_rtrace_allocmap_CFLAGS = $(AM_CFLAGS)
 sp_rtrace_allocmap_LDFLAGS = -Wl,-z,defs
 
-DISTCLEANFILES = Makefile.in *la
+BUILT_SOURCES = rtrace-timeline/timeline.h.gch
+
+%.h.gch: %.h
+	$(CXX) -c $< $(CXXFLAGS)
+
+sp_rtrace_timeline_SOURCES = rtrace-timeline/timeline.h rtrace-timeline/timeline.cpp rtrace-timeline/activity_generator.cpp \
+	rtrace-timeline/histogram_generator.cpp rtrace-timeline/parser.cpp rtrace-timeline/resource_registry.cpp \
+	rtrace-timeline/totals_generator.cpp rtrace-timeline/filter.cpp rtrace-timeline/lifetime_generator.cpp \
+	rtrace-timeline/plotter.cpp rtrace-timeline/terminal.cpp rtrace-timeline/filter_manager.cpp \
+	rtrace-timeline/options.cpp rtrace-timeline/processor.cpp
+sp_rtrace_timeline_CXXFLAGS = $(AM_CXXFLAGS)
+sp_rtrace_timeline_LDFLAGS = -Wl,-z,defs
+
+DISTCLEANFILES = Makefile.in *la 
+CLEANFILES = rtrace-timeline/*.h.gch

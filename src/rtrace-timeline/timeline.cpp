@@ -23,7 +23,9 @@ int main(int argc, char* const argv[])
 
 		Parser parser;
 		parser.parseFile(Options::getInstance()->getInFilename(), &processor);
+		// flush the unfreed allocation events stored in processor resource registry caches.
 		processor.flushEventCache();
+		// generate the reports
 		processor.finalize();
 	}
 	catch (std::ifstream::failure e) {

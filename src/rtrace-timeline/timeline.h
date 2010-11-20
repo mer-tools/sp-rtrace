@@ -1,9 +1,13 @@
 #ifndef _TIMELINE_H_
 #define _TIMELINE_H_
 
+// resource type identifier type
 typedef unsigned int resource_type_t;
+// resource identifier type
 typedef unsigned long resource_id_t;
+// context identifier (mask) type
 typedef unsigned int context_t;
+// timestamp type
 typedef unsigned int timestamp_t;
 
 #include <stdexcept>
