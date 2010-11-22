@@ -1,4 +1,7 @@
-debian/tmp/usr/bin/sp-rtrace*
+debian/tmp/usr/bin/sp-rtrace-postproc
+debian/tmp/usr/bin/sp-rtrace
+debian/tmp/usr/bin/sp-rtrace-resolve
+debian/tmp/usr/bin/sp-rtrace-allocmap
 debian/tmp/usr/lib/libsp-rtrace-main.so* /usr/lib/sp-rtrace/
 debian/tmp/usr/lib/libsp-rtrace-memory.so* /usr/lib/sp-rtrace/
 debian/tmp/usr/lib/libsp-rtrace-memtransfer.so* /usr/lib/sp-rtrace/
