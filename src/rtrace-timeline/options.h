@@ -13,6 +13,8 @@ private:
 	std::string in_filename;
 	// the output file extension
 	std::string out_extension;
+	// working directory
+	std::string working_dir;
 
 	// the output image scaling factor
 	unsigned int scale_x;
@@ -169,6 +171,16 @@ public:
 		return resource_filter;
 	}
 
+
+	/**
+	 * Retrieves working directory.
+	 *
+	 * By default the output directory is used as working directory.
+	 * @return   the working directory.
+	 */
+	const std::string& getWorkingDir() const {
+		return working_dir;
+	}
 };
 
 

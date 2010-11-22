@@ -8,7 +8,7 @@
 unsigned int Plotter::DataFile::index = 0;
 
 Plotter::DataFile::DataFile(const std::string& title) {
-	name = Formatter() << "timeline_" << index++ << ".dat";
+	name = Formatter() << Options::getInstance()->getWorkingDir() << "/timeline_" << index++ << ".dat";
 	file.open(name.c_str());
 	if (file.fail()) throw std::ios_base::failure(Formatter() << "Failed to create plotter data file file: " << name);
 	if (!title.empty()) file << "Resource \""<< title << "\"\n";
@@ -62,7 +62,7 @@ void Plotter::Table::write(std::ostream& file) {
 void Plotter::initialize(const std::string& id) {
 	this->id = id;
 
-	config_filename = Formatter() << "timeline-" << id << ".cfg";
+	config_filename = Formatter() << Options::getInstance()->getWorkingDir() << "/timeline-" << id << ".cfg";
 	config.open(config_filename.c_str());
 	if (config.fail()) {
 		throw std::ios_base::failure(Formatter() << "Failed to create plotter configuration file: " << config_filename);
