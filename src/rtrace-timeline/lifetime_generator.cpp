@@ -15,7 +15,7 @@ void LifetimeGenerator::registerLifeline(ResourceData* rd, event_ptr_t& event, t
 		// new allocation context, create data container for it
 		std::pair<ResourceData::contexts_t::iterator, bool> pair = rd->context_files.insert(
 					ResourceData::contexts_t::value_type(event->context, plotter.createFile(
-							Formatter() << rd->key->name << " ({@}" << std::hex << event->context << ")")));
+							Formatter() << rd->key->name << " (\\\\@" << std::hex << event->context << ")")));
 		context_iter = pair.first;
 	}
 	// write lifetime data for context resolution

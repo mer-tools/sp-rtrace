@@ -66,7 +66,7 @@ sp_rtrace_allocmap_LDFLAGS = -Wl,-z,defs
 
 BUILT_SOURCES = rtrace-timeline/timeline.h.gch
 
-%.h.gch: %.h
+rtrace-timeline/timeline.h.gch: rtrace-timeline/timeline.h
 	$(CXX) -c $< $(CXXFLAGS)
 
 sp_rtrace_timeline_SOURCES = rtrace-timeline/timeline.h rtrace-timeline/timeline.cpp rtrace-timeline/activity_generator.cpp \
