@@ -531,14 +531,17 @@ Usage:
 # /class Options
 
 
-# The global variable dictionary used by evaluation functions.
-globals = {"gt" : ">", "lt" : "<", "sections" : sections, "Function" : Function}
+try:
+	# The global variable dictionary used by evaluation functions.
+	globals = {"gt" : ">", "lt" : "<", "sections" : sections, "Function" : Function, "re" : re}
 
-#
-Options.parse(sys.argv[1:])
+	#
+	Options.parse(sys.argv[1:])
 
-ConfigParser.read(Options.cfgFilename)
+	ConfigParser.read(Options.cfgFilename)
 
-parser = TemplateProcessor()
-parser.parse(Options.inStream, Options.outStream)
+	parser = TemplateProcessor()
+	parser.parse(Options.inStream, Options.outStream)
 
+except RuntimeError, err:
+	print >> sys.stderr, "ERROR: %s" % str(err)
