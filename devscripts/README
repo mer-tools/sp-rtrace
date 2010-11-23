@@ -224,4 +224,8 @@ The function object has the following properties:
   arg_names - the function argument string without variable types
     (containing only the variable names)
 
-
+3. Access to python regexp module 
+  It's possible to use regular expressions:
+   <set rxp = re.compile("([^=]+) *= *(.*)")>
+   <set match = rxp.match(function.args)>
+   ...

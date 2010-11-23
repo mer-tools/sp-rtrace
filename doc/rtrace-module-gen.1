@@ -1,0 +1,293 @@
+.TH RTRACE-MODULE-GEN 1 "2010-11-23" "sp-rtrace"
+.SH NAME
+rtrace-module-gen - generate sp-rtrace/functracer module code from a module
+specific configuration file nad tool (sp-rtrace/functracer) specific template.
+.SH SYNOPSIS
+rtrace-timeline -t <template file> -c <config file> -o <output file>
+.SH DESCRIPTION
+rtrace-module gen is used to generate C code from a configuration file and code
+template. While it was created and tailored for sp-rtrace/functracer module
+generation, it can be used to generate code when similar code requirements 
+are set.
+
+The generator script reads objects from configuration file (tracked resources/
+functions in sp-rtrace/functracer case) and generates output code based on
+a template file. This template file contains C code and meta-tags to access/
+iterate the objects defined in configuration file.
+.SH OPTIONS
+.IP \fI-t\fP <template file>
+The template file.
+.IP \fI-c\fP <config file>
+The configuration file.
+.IP \fI-o\fP <output file>
+The output file.
+.IP \fI-h\fP
+Diplays inline help information.
+.SH DOCUMENTATION
+.TP
+\fBConfiguration file structure\fP 
+A configuration file consists of one or more sections: \fI[<section>]\fP. 
+A section consists of one or more items: \fI<name> = <value>\fP. To 
+declare array items use multiple items with the same name postfixed with []:
+\fI<name>[] = <value>\fP.
+
+Empty lines and lines starting with # are treated as comments and ignored.
+
+Example:
+.nf
+# defines first function section
+[function]
+name = fopen
+args[] = filename
+args[] = mode
+
+# defines second function section
+[function]
+name = fclose
+args[] = fp
+.fi
+
+
+.TP
+\fBTemplate file structure\fP
+The code template consists of C/C++ code lines and meta tags. Those
+tags allow variable substitution, conditional branching and code block loops. 
+
+The configuration file section items can be accessed from the meta tags. The first
+section can be accessed directly by using <section>.<item>. Multiple sections
+can be iterated with built-in sections("<section>") function (see <for> meta-tag).
+
+.RS
+The meta-tags are identified by surrounding <> (note that multiline tags aren't supported):
+
+.TP 
+<$expression>
+Variable substitution tag, replaced with the evaluated \fIexpression\fP. The
+\fIexpression\fP must contain valid python code that evaluates to some value.
+
+For example <$module.name> would be replaced with the module section item -'name'.
+
+.TP
+<$lt>
+Predefined variable, replaced with < symbol.
+  
+.TP
+<$gt>
+Predefined variable, replaced with > symbol.
+
+.TP
+<!--comment> 
+Comment tag, ignored. The \fIcomment\fP can contain any text.
+
+.TP
+<set variable = expression>
+Assignment tag. Evaluates \fIexpression\fP and assigns to the \fIvariable\fP. This
+\fIvariable\fP can be later accessed from other expressions:
+.nf
+<set index = 1>
+index=<$index>
+.fi
+Would generate line: index=1
+  
+.TP
+.nf
+<if expression>
+  main body
+[<else>]
+  alternative body
+</if>
+.fi
+
+Conditional branching tag. Evaluates \fIexpression\fP and executes the \fImain body\fP
+if true. If the \fIexpression\fP was false and <else> tag exists, the 
+\fIalternative body\fP is executed. This tag must be always finished with </if> tag.
+.TP
+.nf
+<for variable in expression>
+  body
+  [<break>]
+  [<continue>]
+</for>
+.fi
+
+Loop tag. Evaluates \fIexpression\fP and iterates through it by assigning its
+items to the \fIvariable\fP and executing the \fIbody\fP. The \fIexpression\fP
+must contain valid python code evaluating to an array. The loop can be aborted by 
+<break> tag or the execution skipped to the next item by <continue> tag.
+
+The iterator \fIvariable\fP is also accessible after the loop has been finished. This
+tag must be always finished with </for> tag.
+   
+.TP
+Template example:
+.nf
+\fIThe follwing template:\fP
+
+<for index in range(0, 10)>
+  <if index == 2>
+    <set continue_index = index>
+    <continue>
+  </if>
+Iteraete index: <$lt><$index><$gt>
+  <if index == 5>
+    <break>
+  </if>
+</for>
+Continue index: <$continue_index>
+Break index: <$index>
+
+
+\fIGenerates code:\fP
+
+Iteraete index: <0>
+Iteraete index: <1>
+Iteraete index: <3>
+Iteraete index: <4>
+Iteraete index: <5>
+Continue index: 2
+Break index: 5
+.fi 
+.RE
+
+.TP
+\fBAdditional features\fP
+The following additional utility functionality is provided by generator script:
+.RS
+.TP
+\fIsections(<name>)\fP
+Iterates through sections with the specified name. This built-in function
+is used to iterate through sections in for loop:
+.nf
+<for section_iterator in sections("section_name")>
+  <!-- iterates through all sections with name "section_name" -->
+  <!-- and exposes their items through section_iterator variable -->
+</for>
+.fi
+.TP 
+\fIFunction(prototype)\fP
+Creates function object based on the specified fucntion prototype. The prototype
+must be valid C function prototype including argument names. This class
+is used as a helper object to access function prototype components:
+.nf
+<for function in sections("function")>
+  <set fc = Function(function.proto)>
+  Function: <$fc.name>
+</for>
+
+The function object has the following properties:
+  type - the function return type
+  name - the function name
+  args - the function argument string with variable types.
+  arg_names - the function argument string without variable types
+    (containing only the variable names)
+.fi
+.TP
+\fIre variable\fP
+The generator script maps funciton regexp module to the re variable:
+.nf
+<set rxp = re.compile("([^=]+) *= *(.*)")>
+<set match = rxp.match(function.args)>
+.fi
+
+.RE
+.TP
+\fBGeneric sp-rtrace module configuration\fP
+The sp-rtrace module template uses the following configuration file
+sections:
+.RS
+.TP
+\fIimpl\fP
+Contains any additional include declarations: 
+.RS
+.TP
+include[] = <include file name>
+Defines additional include file.
+.RE
+.TP
+\fImodule\fP
+Contains module properties:
+.RS
+.TP
+version = <major>.<minor>
+The module version.
+.TP
+name = <name>
+The module name. The name must contain only alphanumeric characters.
+.TP
+description = <description>
+The long module description.
+.RE
+.TP
+\fIresource\fP
+Contains declaration of a tracked resource. The configuration file can
+contain multiple resource sections:
+.RS
+.TP 
+name = <name>
+The resource name. The name must contain only alphanumeric characters.
+.TP 
+description = <description>
+The long resource description.
+.TP 
+flags = <flags>
+The resource flags (currently only refcount flag is supported).
+.RE
+.TP
+\fIfunction\fP
+Contains declaration of a tracked function. The configuration file can
+contain multiple function sections.
+.RS
+.TP
+proto = <function prototype>
+The function prototype.
+.TP
+resource = <resource>
+The processed resource. The resource name must match one of the 
+resource section name item values.
+.TP
+res_id = <variable>
+The resource id variable. The variable can be either rc (the function
+return value) or any of the parameter names, specified in function
+prototype.
+.TP
+res_size = <expresson>
+The resource size expression. The expression can be either rc (the
+function return value) or any of the parameter names, specified in
+function prototype or an expression involving more than one parameter
+(as example calloc size definition is multiplication of block size
+and number of blocks).
+.TP
+args[] = <format>
+The argument format expression (optional). Must contain printf format
+field plus value, where value must be one of the parameters specifie in
+prototype. For example void* malloc(size_t size) argument could be
+described as "%d", size
+.TP
+symbol_name = <name>
+The real symbolic name of the function to track (optional). By default the
+name is parsed from the function prototype. But it's possible to override
+it by directly specifying symbolic name. It can be usefull make C++ 
+mangle function tracking modules more readable.
+.TP
+report_name = <name>
+The funciton name reported to the main module (optional). By default the
+name is parsed from the function prototype. But it's possible to override
+it by directly specifying report name. 
+sync = True
+Forces backtrace synchronization. Must be specified for functions that
+are called from libc backtrace() function to avoid infinite recursion.    
+.TP
+fail = <expression>
+The original function failure expression (optional). If specified the
+module will not report the function if after the original function call
+the fail expression evaluates to true.
+.RE
+.RE
+.SH SEE ALSO
+.IR 
+.SH COPYRIGHT
+Copyright (C) 2010 Nokia Corporation.
+.PP
+This is free software.  You may redistribute copies of it under the
+terms of the GNU General Public License v2 included with the software.
+There is NO WARRANTY, to the extent permitted by law.

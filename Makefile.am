@@ -1,6 +1,6 @@
 include_HEADERS = src/library/sp_rtrace_context.h src/library/sp_rtrace_formatter.h src/common/sp_rtrace_defs.h
 
-dist_bin_SCRIPTS = scripts/*
+dist_bin_SCRIPTS = scripts/* devscripts/rtrace-module-gen
 
 SUBDIRS = src doc tests
 

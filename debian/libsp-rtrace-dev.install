@@ -4,4 +4,6 @@ debian/tmp/usr/include/sp_rtrace_defs.h
 debian/tmp/usr/share/man/man3/sp_rtrace_context*.3
 debian/tmp/usr/share/man/man3/sp_rtrace_formatter*.3
 debian/tmp/usr/share/man/man3/sp_rtrace_print*.3
+debian/tmp/usr/share/man/man1/rtrace-module-gen.1
 debian/tmp/usr/lib/libsp-rtrace1.so
+debian/tmp/usr/bin/rtrace-module-gen
