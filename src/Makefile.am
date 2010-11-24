@@ -1,7 +1,7 @@
 
 lib_LTLIBRARIES = libsp-rtrace1.la libsp-rtrace-main.la \
 	libsp-rtrace-memory.la libsp-rtrace-memtransfer.la \
-	libsp-rtrace-shmseg.la libsp-rtrace-file.la libsp-rtrace-gobject.la
+	libsp-rtrace-shmseg.la libsp-rtrace-file.la libsp-rtrace-gobject.la libsp-rtrace-qobject.la
 
 libsp_rtrace1_la_SOURCES = library/sp_rtrace_context.c library/sp_rtrace_formatter.c \
 	common/formatter.c common/dlist.c common/htable.c common/utils.c common/rtrace_data.c common/header.c
@@ -37,7 +37,12 @@ libsp_rtrace_file_la_LIBADD = -ldl -lpthread
 libsp_rtrace_gobject_la_SOURCES = modules/sp_rtrace_gobject.c 
 libsp_rtrace_gobject_la_CFLAGS = -rdynamic $(GLIB_CFLAGS) $(AM_CFLAGS)
 libsp_rtrace_gobject_la_LDFLAGS = $(VERSION_INFO) $(GLIB_LIBS) -module
-libsp_rtrace_gobject_la_LIBADD = -ldl -lpthread 
+libsp_rtrace_gobject_la_LIBADD = -ldl 
+
+libsp_rtrace_qobject_la_SOURCES = modules/sp_rtrace_qobject.c 
+libsp_rtrace_qobject_la_CFLAGS = -rdynamic $(GLIB_CFLAGS) $(AM_CFLAGS)
+libsp_rtrace_qobject_la_LDFLAGS = $(VERSION_INFO) $(GLIB_LIBS) -module
+libsp_rtrace_qobject_la_LIBADD = -ldl 
 
 bin_PROGRAMS = sp-rtrace sp-rtrace-postproc sp-rtrace-resolve sp-rtrace-allocmap sp-rtrace-timeline
 

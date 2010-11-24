@@ -81,7 +81,7 @@ static sp_rtrace_module_info_t module_info = {
 		.version_major = 1,
 		.version_minor = 0,
 		.name = "memtransfer",
-		.description = "memtransfer transfer tracing module. "
+		.description = "Memory transfer operation tracking module. "
 				       "Tracks calls of the functions that results in changing memtransfer "
 				       "blocks (strcpy, memmove, memset etc).",
 };

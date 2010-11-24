@@ -49,7 +49,7 @@ static sp_rtrace_module_info_t module_info = {
 		.version_major = 1,
 		.version_minor = 0,
 		.name = "gobject",
-		.description = "This module tracks GObject references.",
+		.description = "GObject tracking module. Tracks GObject references.",
 };
 
 /* resource identifiers */

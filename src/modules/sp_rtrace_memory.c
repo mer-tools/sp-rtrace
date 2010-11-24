@@ -51,7 +51,7 @@ static sp_rtrace_module_info_t module_info = {
 		.version_major = 1,
 		.version_minor = 0,
 		.name = "memory",
-		.description = "Memory allocation/deallocation tracing module. "
+		.description = "Memory allocation/deallocation tracking module. "
 				       "Tracks calls of malloc, calloc, realloc, posix_memalign "
 				       "and free functions.",
 };
