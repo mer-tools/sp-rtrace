@@ -18,7 +18,7 @@ iterate the objects defined in configuration file.
 .IP \fI-t\fP <template file>
 The template file.
 .IP \fI-c\fP <config file>
-The configuration file.
+The configuration file, optional.
 .IP \fI-o\fP <output file>
 The output file.
 .IP \fI-h\fP
@@ -117,7 +117,37 @@ must contain valid python code evaluating to an array. The loop can be aborted b
 
 The iterator \fIvariable\fP is also accessible after the loop has been finished. This
 tag must be always finished with </for> tag.
-   
+
+.TP
+.nf
+<script>
+  script body
+</script>
+.fi
+
+Script tag. Executes the \fIscript body\fP script, that is a valid
+python code. It can define functions/classes/variables, that can be
+later accessed from other tags.
+
+For example template:
+
+.nf
+<script>
+def output(arg):
+    return "[%s]" % arg
+
+class Obj:
+    def __init__(self, name):
+	self.name = name
+</script>
+
+<set obj = Obj("object")>
+Object Name: <$output(obj.name)>
+.fi
+
+Would generate the following output:
+Object Name: [object]
+
 .TP
 Template example:
 .nf
@@ -147,6 +177,8 @@ Iteraete index: <5>
 Continue index: 2
 Break index: 5
 .fi 
+
+
 .RE
 
 .TP

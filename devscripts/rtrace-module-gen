@@ -202,6 +202,9 @@ class TemplateProcessor:
 	# changing commands (for, if)
 	stack = None
 	
+	# the body of the function being declared	
+	script_body = None
+	
 	def __init__(self):
 		self.stack = []
 					
@@ -295,7 +298,15 @@ class TemplateProcessor:
 		#print >> sys.stderr, ">> %s (%s)" % (command, args)
 		if command == "!--":
 			# a comment, ignore
-			return
+			return True
+		
+		if self.script_body is not None:
+			if command != "/script":
+				return False
+			# TODO: create function
+			exec(compile(self.script_body, "<string>", "exec"), globals)
+			self.script_body = None
+			return True
 
 		if command == "for":
 			# 'for' loop
@@ -307,8 +318,9 @@ class TemplateProcessor:
 			# skip the command body if the iterator contains no items
 			if not self.stack[-1].first():
 				self.skipLines(ForValidator(self.stack[-1]))
+			return True
 
-		elif command == "/for":
+		if command == "/for":
 			# finishes loop command
 			if self.stack[-1].getId() != "for":
 				raise RuntimeError("Command '%s' was not terminated properly" % self.stack[-1].getId())
@@ -319,8 +331,9 @@ class TemplateProcessor:
 			else:
 				# no more items left, finish the command by popping it from stack
 				self.stack.pop()
+			return True
 
-		elif command == "if":
+		if command == "if":
 			# 'if' conditional branch
 			# push the for meta command onto stack
 			self.stack.append(OpIf(args))
@@ -328,8 +341,9 @@ class TemplateProcessor:
 			# The body will be skipped until associated /if or else command
 			if not self.stack[-1].value:
 				self.skipLines(IfValidator(self.stack[-1]))
+			return True
 				
-		elif command == "else":
+		if command == "else":
 			# alternative body of the 'if' meta command, executed if the 'if' expression
 			# evaluates to false
 			if self.stack[-1].getId() != "if":
@@ -340,15 +354,17 @@ class TemplateProcessor:
 			# main body was executed.
 			if not self.stack[-1].value:
 				self.skipLines(IfValidator(self.stack[-1]))
+			return True
 			
-		elif command == "/if":
+		if command == "/if":
 			# finishes if command
 			if self.stack[-1].getId() != "if":
 				raise RuntimeError("Command '%s' was not terminated properly" % self.stack[-1].getId())
 			# no additional conditions, just remove it from the stack
 			self.stack.pop()
+			return True
 			
-		elif command == "break":
+		if command == "break":
 			# 'break' command of the 'for' loop
 			# find the last 'for' meta command on stack.
 			op = self.rfindOp("for")
@@ -356,8 +372,9 @@ class TemplateProcessor:
 				raise RuntimeError("'break' command used outside 'for' statement")
 			# skip the rest of 'for' meta command body
 			self.skipLines(ForValidator(op))
+			return True
 	
-		elif command == "continue":
+		if command == "continue":
 			# 'continue' command of the 'for' loop
 			# find the last 'for' meta command on stack.
 			op = self.rfindOp("for")
@@ -373,13 +390,19 @@ class TemplateProcessor:
 			# command next.
 			self.index -= 1
 			
-		elif command == "set":
+		if command == "set":
 			# assigns expression to a variable
 			match = self.reTagSet.match(args)
 			if not match:
 				raise RuntimeError("Invalid 'set' arguments: %s" % args)
 			# evaluate expression and assign it to the specified variable.
 			globals[match.group(1)] = eval(match.group(2), globals)
+			return True
+			
+		if command == "script":
+			self.script_body = ""
+			return True
+			
 	
 	def parse(self, inStream, outStream):
 		"""
@@ -398,10 +421,15 @@ class TemplateProcessor:
 			match = self.reTag.match(self.lines[self.index])
 			if match:
 				# generic command tag match, interpret the line as a meta command
-				self.parseCommand(match.group(1), match.group(2))
+				if not self.parseCommand(match.group(1), match.group(2)) and self.script_body is not None:
+					self.script_body += self.lines[self.index]
 			else:
-				# interpret the line as a text string mixed with variable tags
-				stream.write(self.parseLine(self.lines[self.index]))
+				if self.script_body is not None:
+					# function definition in progress, append the line to function body
+					self.script_body += self.lines[self.index]
+				else:
+					# interpret the line as a text string mixed with variable tags
+					stream.write(self.parseLine(self.lines[self.index]))
 			# move cursor to the next template line
 			self.index += 1
 
@@ -502,9 +530,6 @@ class Options:
 				Options.displayUsage()
 				sys.exit(0)
 				
-		if not Options.cfgFilename:
-			raise RuntimeError("Configuration filename is not specified")
-
 		Options.inStream = inFilename and open(inFilename, "r") or sys.stdin
 		Options.outStream = outFilename and open(outFilename, "w") or sys.stdout
 		
@@ -538,10 +563,12 @@ try:
 	#
 	Options.parse(sys.argv[1:])
 
-	ConfigParser.read(Options.cfgFilename)
+	if Options.cfgFilename:
+		ConfigParser.read(Options.cfgFilename)
 
 	parser = TemplateProcessor()
 	parser.parse(Options.inStream, Options.outStream)
 
-except RuntimeError, err:
-	print >> sys.stderr, "ERROR: %s" % str(err)
+except Exception, err:
+	print >> sys.stderr, "ERROR: at template line #%d: %s" % (parser.index, parser.lines[parser.index])
+	print >> sys.stderr, "  %s" % str(err)
