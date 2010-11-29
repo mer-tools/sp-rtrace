@@ -1,7 +1,9 @@
+lib_LTLIBRARIES = libsp-rtrace1.la 
 
-lib_LTLIBRARIES = libsp-rtrace1.la libsp-rtrace-main.la \
+module_LTLIBRARIES = libsp-rtrace-main.la \
 	libsp-rtrace-memory.la libsp-rtrace-memtransfer.la \
 	libsp-rtrace-shmsysv.la libsp-rtrace-file.la libsp-rtrace-gobject.la libsp-rtrace-qobject.la
+moduledir = $(libdir)/sp-rtrace
 
 libsp_rtrace1_la_SOURCES = library/sp_rtrace_context.c library/sp_rtrace_formatter.c \
 	common/formatter.c common/dlist.c common/htable.c common/utils.c common/rtrace_data.c common/header.c
