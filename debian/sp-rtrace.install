@@ -5,7 +5,7 @@ debian/tmp/usr/bin/sp-rtrace-allocmap
 debian/tmp/usr/lib/libsp-rtrace-main.so* /usr/lib/sp-rtrace/
 debian/tmp/usr/lib/libsp-rtrace-memory.so* /usr/lib/sp-rtrace/
 debian/tmp/usr/lib/libsp-rtrace-memtransfer.so* /usr/lib/sp-rtrace/
-debian/tmp/usr/lib/libsp-rtrace-shmseg.so* /usr/lib/sp-rtrace/
+debian/tmp/usr/lib/libsp-rtrace-shmsysv.so* /usr/lib/sp-rtrace/
 debian/tmp/usr/lib/libsp-rtrace-file.so* /usr/lib/sp-rtrace/
 debian/tmp/usr/lib/libsp-rtrace-gobject.so* /usr/lib/sp-rtrace/
 debian/tmp/usr/lib/libsp-rtrace-qobject.so* /usr/lib/sp-rtrace/

@@ -25,7 +25,7 @@
 
 
 /**
- * @file sp_rtrace_shmseg.c
+ * @file sp_rtrace_shmsysv.c
  *
  * Shared memory segment tracking module implementation.
  *
@@ -52,7 +52,7 @@ static sp_rtrace_module_info_t module_info = {
 		.type = MODULE_TYPE_PRELOAD,
 		.version_major = 1,
 		.version_minor = 0,
-		.name = "shmseg",
+		.name = "shmsysv",
 		.description = "Shared memory segment tracking module. "
 				       "Tracks shared memory segment creation and destruction by "
 				       "the current process.",
@@ -194,8 +194,8 @@ static void trace_initialize()
 		case MODULE_LOADED: {
 			if (sp_rtrace_initialize()) {
 				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
-				res_segment = sp_rtrace_register_resource("shmseg", "shared memory segment", SP_RTRACE_RESOURCE_REFCOUNT);
-				res_address = sp_rtrace_register_resource("shmaddr", "shared memory attachments", SP_RTRACE_RESOURCE_DEFAULT);
+				res_segment = sp_rtrace_register_resource("segment", "shared memory segment", SP_RTRACE_RESOURCE_REFCOUNT);
+				res_address = sp_rtrace_register_resource("address", "shared memory attachments", SP_RTRACE_RESOURCE_DEFAULT);
 				trace_init_rt = trace_rt;
 				init_mode = MODULE_READY;
 

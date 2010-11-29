@@ -20,6 +20,8 @@
 class ActivityGenerator: public ReportGenerator {
 private:
 
+	void out(int a, int b);
+
 	/**
 	 * The context related data container.
 	 *
@@ -231,7 +233,6 @@ public:
 	/**
 	 * @copydoc ReportGenerator::finalize
 	 */
-
 	void finalize();
 };
 
