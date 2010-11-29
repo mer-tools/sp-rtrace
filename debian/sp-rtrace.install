@@ -2,7 +2,7 @@ debian/tmp/usr/bin/sp-rtrace-postproc
 debian/tmp/usr/bin/sp-rtrace
 debian/tmp/usr/bin/sp-rtrace-resolve
 debian/tmp/usr/bin/sp-rtrace-allocmap
-debian/tmp/usr/lib/sp-rtrace/*
+debian/tmp/usr/lib/sp-rtrace/*so
 debian/tmp/usr/bin/rtrace-allocmap
 debian/tmp/usr/bin/rtrace-allocmap-animate
 debian/tmp/usr/bin/rtrace-rename
