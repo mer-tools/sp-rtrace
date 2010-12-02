@@ -96,6 +96,7 @@ typedef int (*fcntl_t)(int fd, int cmd, ...);
 typedef int (*socketpair_t)(int domain, int type, int protocol, int sv[2]);
 typedef int (*inotify_init_t)(void);
 typedef int (*pipe_t)(int pipefd[2]);
+typedef int (*pipe2_t)(int pipefd[2], int flags);
 
 
 typedef struct {
@@ -116,6 +117,7 @@ typedef struct {
 	socketpair_t socketpair;
 	inotify_init_t inotify_init;
 	pipe_t pipe;
+	pipe2_t pipe2;
 } trace_t;
 
 /* original function references */
@@ -169,6 +171,7 @@ static void trace_initialize()
 			trace_off.socketpair = (socketpair_t)dlsym(RTLD_NEXT, "socketpair");
 			trace_off.inotify_init = (inotify_init_t)dlsym(RTLD_NEXT, "inotify_init");
 			trace_off.pipe = (pipe_t)dlsym(RTLD_NEXT, "pipe");
+			trace_off.pipe2 = (pipe2_t)dlsym(RTLD_NEXT, "pipe2");
 			init_mode = MODULE_LOADED;
 
 			LOG("module loaded: %s (%d.%d)", module_info.name, module_info.version_major, module_info.version_minor);
@@ -664,6 +667,33 @@ static int trace_pipe(int pipefd[2])
 	return rc;
 }
 
+static int trace_pipe2(int pipefd[2], int flags)
+{
+	int rc = trace_off.pipe2(pipefd, flags);
+	if (rc != -1) {
+		sp_rtrace_fcall_t call1 = {
+				.type = SP_RTRACE_FTYPE_ALLOC,
+				.res_type = (void*)res_fd.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "pipe2",
+				.res_size = 1,
+				.res_id = (pointer_t)pipefd[0],
+		};
+		sp_rtrace_write_function_call(&call1, NULL);
+
+		sp_rtrace_fcall_t call2 = {
+				.type = SP_RTRACE_FTYPE_ALLOC,
+				.res_type = (void*)res_fd.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "pipe2",
+				.res_size = 1,
+				.res_id = (pointer_t)pipefd[1],
+		};
+		sp_rtrace_write_function_call(&call2, NULL);
+	}
+	return rc;
+}
+
 
 static trace_t trace_on = {
 	.open = trace_open,
@@ -683,6 +713,7 @@ static trace_t trace_on = {
 	.socketpair = trace_socketpair,
 	.inotify_init = trace_inotify_init,
 	.pipe = trace_pipe,
+	.pipe2 = trace_pipe2,
 };
 
 
@@ -843,6 +874,11 @@ int pipe(int pipefd[2])
 	return trace_rt->pipe(pipefd);
 }
 
+int pipe2(int pipefd[2], int flags)
+{
+	return trace_rt->pipe2(pipefd, flags);
+}
+
 /*
  * Initialization functions.
  */
@@ -1001,6 +1037,12 @@ static int init_pipe(int pipefd[2])
 	return trace_init_rt->pipe(pipefd);
 }
 
+static int init_pipe2(int pipefd[2], int flags)
+{
+	trace_initialize();
+	return trace_init_rt->pipe2(pipefd, flags);
+}
+
 
 static trace_t trace_init = {
 	.open = init_open,
@@ -1020,6 +1062,7 @@ static trace_t trace_init = {
 	.socketpair = init_socketpair,
 	.inotify_init = init_inotify_init,
 	.pipe = init_pipe,
+	.pipe2 = init_pipe2,
 };
 
 /* */

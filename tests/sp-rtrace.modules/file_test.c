@@ -55,6 +55,10 @@ void test_fd()
 	pipe(fds);
 	close(fds[0]);
 	close(fds[1]);
+
+	pipe2(fds, O_NONBLOCK);
+	close(fds[0]);
+	close(fds[1]);
 }
 
 void test_socket()

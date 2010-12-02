@@ -30,7 +30,7 @@ set src_opts "-O0"
 proc test_file_module { args } {
 	test_module file open:1 close:1 fopen:1 creat:1 open64:1 dup:1 dup2:1 fcntl:1 \
 		fdopen:1 pipe:1 socket:1 socketpair:1 inotify_init:1 \
-		fopen:1 freopen:1 fclose:1 fcloseall:1
+		fopen:1 freopen:1 fclose:1 fcloseall:1 pipe2:1
 }
 
 set result [rt_compile $src_dir $out_file $src_deps $src_opts]
