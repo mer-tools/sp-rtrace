@@ -52,8 +52,13 @@ static sp_rtrace_module_info_t module_info = {
 		.description = "GObject tracking module. Tracks GObject references.",
 };
 
-/* resource identifiers */
-static int res_gobject = 0;
+
+static sp_rtrace_resource_t res_gobject = {
+		.type = "gobject",
+		.desc = "GObject instance",
+		.flags = SP_RTRACE_RESOURCE_REFCOUNT,
+};
+
 
  /*
   * file module function set
@@ -117,7 +122,7 @@ static void trace_initialize()
 		case MODULE_LOADED: {
 			if (sp_rtrace_initialize()) {
 				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
-				res_gobject = sp_rtrace_register_resource("gobject", "GObject instance", SP_RTRACE_RESOURCE_REFCOUNT);
+				sp_rtrace_register_resource(&res_gobject);
 				trace_init_rt = trace_rt;
 				init_mode = MODULE_READY;
 
@@ -138,13 +143,23 @@ static gpointer trace_g_object_newv(GType object_type, guint n_parameters, GPara
 
 	GTypeQuery type_info = {0};
 	g_type_query(object_type, &type_info);
-	const char *args[] = {NULL, NULL};
 	if (type_info.type) {
-		args[0] = type_info.type_name;
 		res_size = type_info.instance_size;
 	}
 
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_gobject, "g_object_newv", res_size, res_id, args);
+	sp_rtrace_fcall_t call = {
+			.type = SP_RTRACE_FTYPE_ALLOC,
+			.res_type = (void*)res_gobject.id,
+			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.name = "g_object_newv",
+			.res_size = res_size,
+			.res_id = (pointer_t)res_id,
+	};
+	sp_rtrace_farg_t args[] = {
+			{.name = "type", .value = (char*)type_info.type_name},
+			{0}
+	};
+	sp_rtrace_write_function_call(&call, args);
 	return rc;
 }
 
@@ -152,11 +167,16 @@ static gpointer trace_g_object_newv(GType object_type, guint n_parameters, GPara
 static void trace_g_type_free_instance(GTypeInstance* instance)
 {
 	trace_off.g_type_free_instance(instance);
-	pointer_t res_id = (pointer_t)instance;
-	size_t res_size = (size_t)0;
-	const char** args = NULL;
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_gobject, "g_type_free_instance", res_size, res_id, args);
-	
+
+	sp_rtrace_fcall_t call = {
+			.type = SP_RTRACE_FTYPE_FREE,
+			.res_type = (void*)res_gobject.id,
+			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.name = "g_type_free_instance",
+			.res_size = 0,
+			.res_id = (pointer_t)(pointer_t)instance,
+	};
+	sp_rtrace_write_function_call(&call, NULL);
 }
 
 
@@ -168,12 +188,22 @@ static gpointer trace_g_object_ref(gpointer object)
 
 	GTypeQuery type_info = {0};
 	g_type_query(((GObject*)object)->g_type_instance.g_class->g_type, &type_info);
-	const char *args[] = {NULL, NULL};
 	if (type_info.type) {
-		args[0] = type_info.type_name;
 		res_size = type_info.instance_size;
 	}
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_gobject, "g_object_ref", res_size, res_id, args);
+	sp_rtrace_fcall_t call = {
+			.type = SP_RTRACE_FTYPE_ALLOC,
+			.res_type = (void*)res_gobject.id,
+			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.name = "g_object_ref",
+			.res_size = res_size,
+			.res_id = (pointer_t)res_id,
+	};
+	sp_rtrace_farg_t args[] = {
+			{.name = "type", .value = (char*)type_info.type_name},
+			{0}
+	};
+	sp_rtrace_write_function_call(&call, args);
 
 	return rc;
 }
@@ -182,11 +212,16 @@ static gpointer trace_g_object_ref(gpointer object)
 static void trace_g_object_unref(gpointer object)
 {
 	trace_off.g_object_unref(object);
-	pointer_t res_id = (pointer_t)object;
-	size_t res_size = (size_t)0;
-	const char** args = NULL;
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_gobject, "g_object_unref", res_size, res_id, args);
 	
+	sp_rtrace_fcall_t call = {
+			.type = SP_RTRACE_FTYPE_FREE,
+			.res_type = (void*)res_gobject.id,
+			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.name = "g_object_unref",
+			.res_size = 0,
+			.res_id = (pointer_t)(pointer_t)object,
+	};
+	sp_rtrace_write_function_call(&call, NULL);
 }
 
 

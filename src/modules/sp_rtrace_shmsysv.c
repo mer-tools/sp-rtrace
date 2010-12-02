@@ -58,9 +58,17 @@ static sp_rtrace_module_info_t module_info = {
 				       "the current process.",
 };
 
-/* the module identifier assigned by main module */
-static int res_segment = 0;
-static int res_address = 0;
+static sp_rtrace_resource_t res_segment = {
+		.type = "segment",
+		.desc = "shared memory segment",
+		.flags = SP_RTRACE_RESOURCE_REFCOUNT,
+};
+
+static sp_rtrace_resource_t res_address = {
+		.type = "address",
+		.desc = "shared memory attachments",
+		.flags = SP_RTRACE_RESOURCE_DEFAULT,
+};
 
 #
 #ifdef __amd64__
@@ -194,8 +202,8 @@ static void trace_initialize()
 		case MODULE_LOADED: {
 			if (sp_rtrace_initialize()) {
 				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
-				res_segment = sp_rtrace_register_resource("segment", "shared memory segment", SP_RTRACE_RESOURCE_REFCOUNT);
-				res_address = sp_rtrace_register_resource("address", "shared memory attachments", SP_RTRACE_RESOURCE_DEFAULT);
+				sp_rtrace_register_resource(&res_segment);
+				sp_rtrace_register_resource(&res_address);
 				trace_init_rt = trace_rt;
 				init_mode = MODULE_READY;
 
@@ -213,7 +221,15 @@ int trace_shmget(key_t key, size_t size, int shmflg)
 {
 	int rc = trace_off.shmget(key, size, shmflg);
 	if (rc != -1 && (shmflg & IPC_CREAT)) {
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_segment, "shmget", size, (pointer_t)rc, NULL);
+		sp_rtrace_fcall_t call = {
+				.type = SP_RTRACE_FTYPE_ALLOC,
+				.res_type = (void*)res_segment.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "shmget",
+				.res_size = size,
+				.res_id = (pointer_t)rc,
+		};
+		sp_rtrace_write_function_call(&call, NULL);
 	}
 	return rc;
 }
@@ -239,7 +255,15 @@ int trace_shmctl(int shmid, int cmd, struct shmid_ds *buf)
 		/* IPC_RMID command issued to segment with attachment counter 0.
 		 * This means that the segment is getting destroyed. It was created
 		 * by current process, so report its deallocation. */
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_segment, "shmctl", 0, (pointer_t)shmid, NULL);
+		sp_rtrace_fcall_t call = {
+				.type = SP_RTRACE_FTYPE_FREE,
+				.res_type = (void*)res_segment.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "shmctl",
+				.res_size = 0,
+				.res_id = (pointer_t)shmid,
+		};
+		sp_rtrace_write_function_call(&call, NULL);
 	}
 	return rc;
 }
@@ -251,13 +275,11 @@ void* trace_shmat(int shmid, const void *shmaddr, int shmflg)
 	if (rc != (void*)-1) {
 		struct shmid_ds ds;
 		/* use segment information as memory attachment parameters */
-		char arg1[100], arg2[100];
-		const char* args[] = {arg1, NULL, NULL};
-		sprintf(arg1, "id=0x%x", shmid);
+		char shmid_s[100], cpid_s[100] = {0};
+		sprintf(shmid_s, "0x%x", shmid);
 
 		if (trace_off.shmctl(shmid, IPC_STAT | IPC_64, &ds) == 0) {
-			sprintf(arg2, "cpid=%d", ds.shm_cpid);
-			args[1] = arg2;
+			sprintf(cpid_s, "%d", ds.shm_cpid);
 			size = ds.shm_segsz;
 
 			/* check if the segment was created by current process */
@@ -274,7 +296,20 @@ void* trace_shmat(int shmid, const void *shmaddr, int shmflg)
 				}
 			}
 		}
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_address, "shmat", size, (pointer_t)rc, args);
+		sp_rtrace_fcall_t call = {
+				.type = SP_RTRACE_FTYPE_ALLOC,
+				.res_type = (void*)res_address.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "shmat",
+				.res_size = size,
+				.res_id = (pointer_t)rc,
+		};
+		sp_rtrace_farg_t args[] = {
+				{.name = "shmid", .value = shmid_s},
+				{.name = "cpid", .value = cpid_s},
+				{0}
+		};
+		sp_rtrace_write_function_call(&call, args);
 	}
 	return rc;
 }
@@ -300,12 +335,28 @@ int trace_shmdt(const void *shmaddr)
 
 	if (rc == 0) {
 		/* report shared memory detachment */
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_address, "shmdt", 0, (pointer_t)shmaddr, NULL);
+		sp_rtrace_fcall_t call = {
+				.type = SP_RTRACE_FTYPE_FREE,
+				.res_type = (void*)res_address.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "shmdt",
+				.res_size = 0,
+				.res_id = (pointer_t)shmaddr,
+		};
+		sp_rtrace_write_function_call(&call, NULL);
 
 		/* if the segment was marked for removal it should be destroyed after detaching the
 		 * last address. */
 		if (nattach == 1) {
-			sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_segment, "shmdt", 0, (pointer_t)shmid, NULL);
+			sp_rtrace_fcall_t call = {
+					.type = SP_RTRACE_FTYPE_FREE,
+					.res_type = (void*)res_segment.id,
+					.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+					.name = "shmdt",
+					.res_size = 0,
+					.res_id = (pointer_t)shmid,
+			};
+			sp_rtrace_write_function_call(&call, NULL);
 		}
 	}
 	return rc;

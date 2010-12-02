@@ -53,9 +53,17 @@ static sp_rtrace_module_info_t module_info = {
 				       "Tracks file opening/closing operations.",
 };
 
-/* resource identifiers */
-static int res_fp = 0;
-static int res_fd = 0;
+static sp_rtrace_resource_t res_fd = {
+		.type = "fd",
+		.desc = "file descriptor",
+		.flags = SP_RTRACE_RESOURCE_DEFAULT,
+};
+
+static sp_rtrace_resource_t res_fp = {
+		.type = "fp",
+		.desc = "file pointer",
+		.flags = SP_RTRACE_RESOURCE_DEFAULT,
+};
 
 
 /* required for glibc < v2.11 */
@@ -169,8 +177,8 @@ static void trace_initialize()
 		case MODULE_LOADED: {
 			if (sp_rtrace_initialize()) {
 				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
-				res_fd = sp_rtrace_register_resource("fd", "file descriptor", SP_RTRACE_RESOURCE_DEFAULT);
-				res_fp = sp_rtrace_register_resource("fp", "file pointer", SP_RTRACE_RESOURCE_DEFAULT);
+				sp_rtrace_register_resource(&res_fd);
+				sp_rtrace_register_resource(&res_fp);
 				trace_init_rt = trace_rt;
 				init_mode = MODULE_READY;
 
@@ -198,10 +206,23 @@ static int trace_open(const char* pathname, int flags, ...)
 	backtrace_lock = 0;
 
 	if (rc != -1) {
-		char arg2[16];
-		const char *args[] = {pathname, arg2, NULL};
-		sprintf(arg2, "%x", flags);
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fd, "open", 1, (pointer_t)rc, args);
+		char flags_s[16];
+		sprintf(flags_s, "%x", flags);
+
+		sp_rtrace_fcall_t call = {
+				.type = SP_RTRACE_FTYPE_ALLOC,
+				.res_type = (void*)res_fd.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "open",
+				.res_size = 1,
+				.res_id = (pointer_t)rc,
+		};
+		sp_rtrace_farg_t args[] = {
+				{.name = "pathname", .value = (char*)pathname},
+				{.name = "flags", .value = flags_s},
+				{0}
+		};
+		sp_rtrace_write_function_call(&call, args);
 	}
 	return rc;
 }
@@ -224,10 +245,23 @@ static int trace_open64(const char* pathname, int flags, ...)
 	backtrace_lock = 0;
 
 	if (rc != -1) {
-		char arg2[16];
-		const char *args[] = {pathname, arg2, NULL};
-		sprintf(arg2, "%x", flags);
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fd, "open64", 1, (pointer_t)rc, args);
+		char flags_s[16];
+		sprintf(flags_s, "%x", flags);
+
+		sp_rtrace_fcall_t call = {
+				.type = SP_RTRACE_FTYPE_ALLOC,
+				.res_type = (void*)res_fd.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "open64",
+				.res_size = 1,
+				.res_id = (pointer_t)rc,
+		};
+		sp_rtrace_farg_t args[] = {
+				{.name = "pathname", .value = (char*)pathname},
+				{.name = "flags", .value = flags_s},
+				{0}
+		};
+		sp_rtrace_write_function_call(&call, args);
 	}
 	return rc;
 }
@@ -238,7 +272,15 @@ static int trace_close(int fd)
 	int rc = trace_off.close(fd);
 	backtrace_lock = 0;
 	if (rc != -1) {
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_fd, "close", 0, (pointer_t)fd, NULL);
+		sp_rtrace_fcall_t call = {
+				.type = SP_RTRACE_FTYPE_FREE,
+				.res_type = (void*)res_fd.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "close",
+				.res_size = 0,
+				.res_id = (pointer_t)fd,
+		};
+		sp_rtrace_write_function_call(&call, NULL);
 	}
 	return rc;
 }
@@ -247,8 +289,25 @@ static int trace_dup2(int oldfd, int newfd)
 {
 	int rc = trace_off.dup2(oldfd, newfd);
 	if (rc != -1) {
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_fd, "dup2", 0, (pointer_t)newfd, NULL);
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fd, "dup2", 1, (pointer_t)rc, NULL);
+		sp_rtrace_fcall_t call1 = {
+				.type = SP_RTRACE_FTYPE_FREE,
+				.res_type = (void*)res_fd.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "dup2",
+				.res_size = 0,
+				.res_id = (pointer_t)newfd,
+		};
+		sp_rtrace_write_function_call(&call1, NULL);
+
+		sp_rtrace_fcall_t call2 = {
+				.type = SP_RTRACE_FTYPE_ALLOC,
+				.res_type = (void*)res_fd.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "dup2",
+				.res_size = 1,
+				.res_id = (pointer_t)rc,
+		};
+		sp_rtrace_write_function_call(&call2, NULL);
 	}
 	return rc;
 }
@@ -257,12 +316,26 @@ static int trace_socket(int domain, int type, int protocol)
 {
 	int rc = trace_off.socket(domain, type, protocol);
 	if (rc != -1) {
-		char arg1[64], arg2[64], arg3[64];
-		const char* args[] = {arg1, arg2, arg3, NULL};
-		sprintf(arg1, "domain:0x%x", domain);
-		sprintf(arg2, "type:0x%x", type);
-		sprintf(arg3, "protocol:0x%x", protocol);
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fd, "socket", 1, (pointer_t)rc, args);
+		char domain_s[64], type_s[64], protocol_s[64];
+		snprintf(domain_s, sizeof(domain_s), "0x%x", domain);
+		snprintf(type_s, sizeof(type_s), "0x%x", type);
+		snprintf(protocol_s, sizeof(protocol_s), "0x%x", protocol);
+
+		sp_rtrace_fcall_t call = {
+				.type = SP_RTRACE_FTYPE_ALLOC,
+				.res_type = (void*)res_fd.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "socket",
+				.res_size = 1,
+				.res_id = (pointer_t)rc,
+		};
+		sp_rtrace_farg_t args[] = {
+				{.name = "domain", .value = domain_s},
+				{.name = "type", .value = type_s},
+				{.name = "protocol", .value = protocol_s},
+				{0}
+		};
+		sp_rtrace_write_function_call(&call, args);
 	}
 	return rc;
 }
@@ -271,8 +344,21 @@ static FILE *trace_fopen(const char *path, const char *mode)
 {
 	FILE* rc = trace_off.fopen(path, mode);
 	if (rc) {
-		const char* args[] = {path, mode, NULL};
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fp, "fopen", 1, (pointer_t)rc, args);
+		sp_rtrace_fcall_t call = {
+				.type = SP_RTRACE_FTYPE_ALLOC,
+				.res_type = (void*)res_fp.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "fopen",
+				.res_size = 1,
+				.res_id = (pointer_t)rc,
+		};
+		sp_rtrace_farg_t args[] = {
+				{.name = "path", .value = (char*)path},
+				{.name = "mode", .value = (char*)mode},
+				{0}
+		};
+		sp_rtrace_write_function_call(&call, args);
+
 	}
 	return rc;
 }
@@ -281,11 +367,33 @@ static FILE *trace_fdopen(int fd, const char *mode)
 {
 	FILE* rc = trace_off.fdopen(fd, mode);
 	if (rc) {
-		char arg1[32];
-		const char* args[] = {arg1, mode, NULL};
-		sprintf(arg1, "fd:0x%x", fd);
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_fd, "fdopen", 0, (pointer_t)fd, NULL);
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fp, "fdopen", 1, (pointer_t)rc, args);
+		char fd_s[32];
+		sprintf(fd_s, "%d", fd);
+		sp_rtrace_fcall_t call1 = {
+				.type = SP_RTRACE_FTYPE_FREE,
+				.res_type = (void*)res_fd.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "fdopen",
+				.res_size = 0,
+				.res_id = (pointer_t)fd,
+		};
+		sp_rtrace_write_function_call(&call1, NULL);
+
+		sp_rtrace_fcall_t call2 = {
+				.type = SP_RTRACE_FTYPE_ALLOC,
+				.res_type = (void*)res_fp.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "fdopen",
+				.res_size = 1,
+				.res_id = (pointer_t)rc,
+		};
+		sp_rtrace_farg_t args[] = {
+				{.name = "fd", .value = fd_s},
+				{.name = "mode", .value = (char*)mode},
+				{0}
+		};
+		sp_rtrace_write_function_call(&call2, args);
+
 	}
 	return rc;
 }
@@ -294,9 +402,31 @@ static FILE *trace_freopen(const char *path, const char *mode, FILE *stream)
 {
 	FILE* rc = trace_off.freopen(path, mode, stream);
 	if (rc) {
-		const char* args[] = {path, mode, NULL};
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_fp, "freopen", 0, (pointer_t)stream, NULL);
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fp, "freopen", 1, (pointer_t)rc, args);
+		sp_rtrace_fcall_t call1 = {
+				.type = SP_RTRACE_FTYPE_FREE,
+				.res_type = (void*)res_fp.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "freopen",
+				.res_size = 0,
+				.res_id = (pointer_t)stream,
+		};
+		sp_rtrace_write_function_call(&call1, NULL);
+
+		sp_rtrace_fcall_t call2 = {
+				.type = SP_RTRACE_FTYPE_ALLOC,
+				.res_type = (void*)res_fp.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "freopen",
+				.res_size = 1,
+				.res_id = (pointer_t)rc,
+		};
+		sp_rtrace_farg_t args[] = {
+				{.name = "path", .value = (char*)path},
+				{.name = "mode", .value = (char*)mode},
+				{0}
+		};
+		sp_rtrace_write_function_call(&call2, args);
+
 	}
 	return rc;
 }
@@ -305,7 +435,15 @@ static int trace_fclose(FILE *fp)
 {
 	int rc = trace_off.fclose(fp);
 	if (rc == 0) {
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_fp, "fclose", 0, (pointer_t)fp, NULL);
+		sp_rtrace_fcall_t call = {
+				.type = SP_RTRACE_FTYPE_FREE,
+				.res_type = (void*)res_fp.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "fclose",
+				.res_size = 0,
+				.res_id = (pointer_t)fp,
+		};
+		sp_rtrace_write_function_call(&call, NULL);
 	}
 	return rc;
 }
@@ -314,7 +452,15 @@ static int trace_fcloseall()
 {
 	int rc = trace_off.fcloseall();
 	if (rc == 0) {
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_fp, "fcloseall", 0, (pointer_t)-1, NULL);
+		sp_rtrace_fcall_t call = {
+				.type = SP_RTRACE_FTYPE_FREE,
+				.res_type = (void*)res_fp.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "fcloseall",
+				.res_size = 0,
+				.res_id = (pointer_t)-1,
+		};
+		sp_rtrace_write_function_call(&call, NULL);
 	}
 	return rc;
 }
@@ -323,10 +469,23 @@ static int trace_creat(const char *pathname, mode_t mode)
 {
 	int rc = trace_off.creat(pathname, mode);
 	if (rc != -1) {
-		char arg2[32];
-		const char* args[] = {pathname, arg2, NULL};
-		sprintf(arg2, "mode:0x%x", mode);
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fd, "creat", 1, (pointer_t)rc, args);
+		char mode_s[16];
+		sprintf(mode_s, "0x%x", mode);
+
+		sp_rtrace_fcall_t call = {
+				.type = SP_RTRACE_FTYPE_ALLOC,
+				.res_type = (void*)res_fd.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "creat",
+				.res_size = 1,
+				.res_id = (pointer_t)rc,
+		};
+		sp_rtrace_farg_t args[] = {
+				{.name = "pathname", .value = (char*)pathname},
+				{.name = "mode", .value = mode_s},
+				{0}
+		};
+		sp_rtrace_write_function_call(&call, args);
 	}
 	return rc;
 }
@@ -335,7 +494,15 @@ static int trace_accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
 {
 	int rc = trace_off.accept(sockfd, addr, addrlen);
 	if (rc != -1) {
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fd, "accept", 1, (pointer_t)rc, NULL);
+		sp_rtrace_fcall_t call = {
+				.type = SP_RTRACE_FTYPE_ALLOC,
+				.res_type = (void*)res_fd.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "accept",
+				.res_size = 1,
+				.res_id = (pointer_t)rc,
+		};
+		sp_rtrace_write_function_call(&call, NULL);
 	}
 	return rc;
 }
@@ -344,7 +511,15 @@ static int trace_dup(int oldfd)
 {
 	int rc = trace_off.dup(oldfd);
 	if (rc != -1) {
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fd, "dup", 1, (pointer_t)rc, NULL);
+		sp_rtrace_fcall_t call = {
+				.type = SP_RTRACE_FTYPE_ALLOC,
+				.res_type = (void*)res_fd.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "dup",
+				.res_size = 1,
+				.res_id = (pointer_t)rc,
+		};
+		sp_rtrace_write_function_call(&call, NULL);
 	}
 	return rc;
 }
@@ -374,8 +549,25 @@ static int trace_fcntl(int fd, int cmd, ...)
 			va_end(args);
 			rc = trace_off.fcntl(fd, cmd, newfd);
 			if ( (cmd == F_DUPFD || cmd == F_DUPFD_CLOEXEC) && rc != -1) {
-				sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, res_fd, "fcntl", 1, (pointer_t)newfd, NULL);
-				sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fd, "fcntl", 1, (pointer_t)rc, NULL);
+				sp_rtrace_fcall_t call1 = {
+						.type = SP_RTRACE_FTYPE_FREE,
+						.res_type = (void*)res_fd.id,
+						.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+						.name = "fcntl",
+						.res_size = 0,
+						.res_id = (pointer_t)newfd,
+				};
+				sp_rtrace_write_function_call(&call1, NULL);
+
+				sp_rtrace_fcall_t call2 = {
+						.type = SP_RTRACE_FTYPE_ALLOC,
+						.res_type = (void*)res_fd.id,
+						.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+						.name = "fcntl",
+						.res_size = 1,
+						.res_id = (pointer_t)rc,
+				};
+				sp_rtrace_write_function_call(&call2, NULL);
 			}
 			break;
 		}
@@ -393,8 +585,37 @@ static int trace_socketpair(int domain, int type, int protocol, int sv[2])
 {
 	int rc = trace_off.socketpair(domain, type, protocol, sv);
 	if (rc != -1) {
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fd, "socketpair", 1, (pointer_t)sv[0], NULL);
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fd, "socketpair", 1, (pointer_t)sv[1], NULL);
+		char domain_s[64], type_s[64], protocol_s[64];
+		snprintf(domain_s, sizeof(domain_s), "0x%x", domain);
+		snprintf(type_s, sizeof(type_s), "0x%x", type);
+		snprintf(protocol_s, sizeof(protocol_s), "0x%x", protocol);
+
+		sp_rtrace_farg_t args[] = {
+				{.name = "domain", .value = domain_s},
+				{.name = "type", .value = type_s},
+				{.name = "protocol", .value = protocol_s},
+				{0}
+		};
+
+		sp_rtrace_fcall_t call1 = {
+				.type = SP_RTRACE_FTYPE_ALLOC,
+				.res_type = (void*)res_fd.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "socketpair",
+				.res_size = 1,
+				.res_id = (pointer_t)sv[0],
+		};
+		sp_rtrace_write_function_call(&call1, args);
+
+		sp_rtrace_fcall_t call2 = {
+				.type = SP_RTRACE_FTYPE_ALLOC,
+				.res_type = (void*)res_fd.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "socketpair",
+				.res_size = 1,
+				.res_id = (pointer_t)sv[1],
+		};
+		sp_rtrace_write_function_call(&call2, args);
 	}
 	return rc;
 }
@@ -403,7 +624,15 @@ static int trace_inotify_init(void)
 {
 	int rc = trace_off.inotify_init();
 	if (rc != -1) {
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fd, "inotify_init", 1, (pointer_t)rc, NULL);
+		sp_rtrace_fcall_t call = {
+				.type = SP_RTRACE_FTYPE_ALLOC,
+				.res_type = (void*)res_fd.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "inotify_init",
+				.res_size = 1,
+				.res_id = (pointer_t)rc,
+		};
+		sp_rtrace_write_function_call(&call, NULL);
 	}
 	return rc;
 }
@@ -412,8 +641,25 @@ static int trace_pipe(int pipefd[2])
 {
 	int rc = trace_off.pipe(pipefd);
 	if (rc != -1) {
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fd, "pipe", 1, (pointer_t)pipefd[0], NULL);
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, res_fd, "pipe", 1, (pointer_t)pipefd[1], NULL);
+		sp_rtrace_fcall_t call1 = {
+				.type = SP_RTRACE_FTYPE_ALLOC,
+				.res_type = (void*)res_fd.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "pipe",
+				.res_size = 1,
+				.res_id = (pointer_t)pipefd[0],
+		};
+		sp_rtrace_write_function_call(&call1, NULL);
+
+		sp_rtrace_fcall_t call2 = {
+				.type = SP_RTRACE_FTYPE_ALLOC,
+				.res_type = (void*)res_fd.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "pipe",
+				.res_size = 1,
+				.res_id = (pointer_t)pipefd[1],
+		};
+		sp_rtrace_write_function_call(&call2, NULL);
 	}
 	return rc;
 }

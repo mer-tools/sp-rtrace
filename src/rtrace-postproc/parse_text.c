@@ -27,11 +27,12 @@
 #include <limits.h>
 
 #include "common/sp_rtrace_proto.h"
+#include "common/sp_rtrace_defs.h"
 #include "common/header.h"
 #include "sp_rtrace_postproc.h"
+#include "library/sp_rtrace_formatter.h"
 
 #include "parse_text.h"
-#include "common/formatter.h"
 #include "common/utils.h"
 
 /**
@@ -49,23 +50,23 @@ static void parse_header(rd_t* rd, const char* line)
 	rd->hshake = calloc_a(1, sizeof(rd_hshake_t));
 	rd->pinfo = calloc_a(1, sizeof(rd_pinfo_t));
 
-	header_t header;
+	sp_rtrace_header_t header;
 	header_read(&header, line);
 	
-	if (header.fields[HEADER_VERSION]) {
+	if (header.fields[SP_RTRACE_HEADER_VERSION]) {
 		int vmajor, vminor;
-		if (sscanf(header.fields[HEADER_VERSION], "%d.%d", &vmajor, &vminor) == 2) {
+		if (sscanf(header.fields[SP_RTRACE_HEADER_VERSION], "%d.%d", &vmajor, &vminor) == 2) {
 			rd->hshake->vmajor = vmajor;
 			rd->hshake->vminor = vminor;
 		}
 	}
-	if (header.fields[HEADER_ARCH]) {
-		rd->hshake->arch = strdup_a(header.fields[HEADER_ARCH]);
+	if (header.fields[SP_RTRACE_HEADER_ARCH]) {
+		rd->hshake->arch = strdup_a(header.fields[SP_RTRACE_HEADER_ARCH]);
 	}
 
-	if (header.fields[HEADER_TIMESTAMP]) {
+	if (header.fields[SP_RTRACE_HEADER_TIMESTAMP]) {
 		struct tm tm = {.tm_isdst = daylight};
-		if (sscanf(header.fields[HEADER_TIMESTAMP], "%d.%d.%d %d:%d:%d", &tm.tm_year, &tm.tm_mon, &tm.tm_mday,
+		if (sscanf(header.fields[SP_RTRACE_HEADER_TIMESTAMP], "%d.%d.%d %d:%d:%d", &tm.tm_year, &tm.tm_mon, &tm.tm_mday,
 				&tm.tm_hour, &tm.tm_min, &tm.tm_sec) == 6) {
 			tm.tm_year -= 1900;
 			tm.tm_mon--;
@@ -74,17 +75,17 @@ static void parse_header(rd_t* rd, const char* line)
 		}
 	}
 
-	if (header.fields[HEADER_PROCESS]) {
-		rd->pinfo->name = strdup_a(header.fields[HEADER_PROCESS]);
+	if (header.fields[SP_RTRACE_HEADER_PROCESS]) {
+		rd->pinfo->name = strdup_a(header.fields[SP_RTRACE_HEADER_PROCESS]);
 	}
-	if (header.fields[HEADER_PID]) {
-		rd->pinfo->pid = atoi(header.fields[HEADER_PID]);
+	if (header.fields[SP_RTRACE_HEADER_PID]) {
+		rd->pinfo->pid = atoi(header.fields[SP_RTRACE_HEADER_PID]);
 	}
-	if (header.fields[HEADER_FILTER]) {
+	if (header.fields[SP_RTRACE_HEADER_FILTER]) {
 		rd->filter = header_get_filter(&header);
 	}
-	if (header.fields[HEADER_BACKTRACE_DEPTH]) {
-		rd->pinfo->backtrace_depth = atoi(header.fields[HEADER_BACKTRACE_DEPTH]);
+	if (header.fields[SP_RTRACE_HEADER_BACKTRACE_DEPTH]) {
+		rd->pinfo->backtrace_depth = atoi(header.fields[SP_RTRACE_HEADER_BACKTRACE_DEPTH]);
 	}
 	else {
 		rd->pinfo->backtrace_depth = -1;
@@ -106,9 +107,9 @@ static void* parse_memory_mapping(char* line)
 	pointer_t from, to;
 	if (sscanf(line, ": %s => 0x%lx-0x%lx", module, &from, &to) == 3) {
 		mmap = 	(rd_mmap_t*)dlist_create_node(sizeof(rd_mmap_t));
-		mmap->module = strdup_a(module);
-		mmap->from = from;
-		mmap->to = to;
+		mmap->data.module = strdup_a(module);
+		mmap->data.from = from;
+		mmap->data.to = to;
 	}
 	return mmap;
 }
@@ -127,8 +128,8 @@ static void* parse_context_registry(char* line)
 	unsigned int id;
 	if (sscanf(line, "@ %x : %[^\n]", &id, name) == 2) {
 		context = dlist_create_node(sizeof(rd_context_t));
-		context->id = id;
-		context->name = strdup_a(name);
+		context->data.id = id;
+		context->data.name = strdup_a(name);
 	}
 	return context;
 }
@@ -137,7 +138,7 @@ static unsigned int parse_resource_flags(const char* text) {
 	unsigned int nflag = 0, flag, flags = 0;
 	
 	while ( (flag = 1 << nflag) <= SP_RTRACE_RESOURCE_LAST_FLAG ) {
-		if (strstr(text, resource_flags_text[nflag++])) flags |= flag; 
+		if (strstr(text, sp_rtrace_resource_flags_text[nflag++])) flags |= flag;
 	}
 	return flags;
 }
@@ -157,12 +158,11 @@ static void* parse_resource_registry(char* line)
 	int fields;
 	if ( (fields = sscanf(line, "<%x> : %[^ ] (%[^)]) [%[^]]]", &id, type, desc, flags)) >= 3) {
 		resource = dlist_create_node(sizeof(rd_resource_t));
-		resource->id = ffs(id);
-		resource->type = strdup_a(type);
-		resource->desc = strdup_a(desc);
+		resource->data.id = ffs(id);
+		resource->data.type = strdup_a(type);
+		resource->data.desc = strdup_a(desc);
 		if (fields >= 4) {
-			fprintf(stderr, "flags parsed: %s\n", flags);
-			resource->flags = parse_resource_flags(flags);
+			resource->data.flags = parse_resource_flags(flags);
 		}
 		resource->hide = false;
 	}
@@ -186,7 +186,7 @@ static void* parse_function_call(char* line)
 	pointer_t res_id;
 	int res_size;
 	char name[512], *ptr = line, delim, function_type;
-	char* res_type;
+	unsigned int res_type_flag = SP_RTRACE_FCALL_RFIELD_UNDEF;
 	/* parse index field <index>. */
 	if (sscanf(ptr, "%d%c", &index, &delim) != 2 || delim != '.') return NULL;
 	/* move cursor beyond index field */
@@ -220,10 +220,7 @@ static void* parse_function_call(char* line)
 		}
 		ptr = strchr(ptr, '(');
 		if (!ptr) return NULL;
-		res_type = res_type_name;
-	}
-	else {
-		res_type = NULL;
+		res_type_flag = SP_RTRACE_FCALL_RFIELD_NAME;
 	}
 	if (sscanf(ptr, "(%d) = 0x%lx", &res_size, &res_id) == 2) {
 		function_type = SP_RTRACE_FTYPE_ALLOC;
@@ -237,18 +234,20 @@ static void* parse_function_call(char* line)
 		return NULL;
 	}
 	rd_fcall_t* call = dlist_create_node(sizeof(rd_fcall_t));
-	call->index = index;
+    sp_rtrace_fcall_t* cd = &call->data;
+	cd->index = index;
 	/* temporary assign the resource type name to res_type field. After returning
 	 * from this function the correct resource type structure will be found and
 	 * assigned instead. */
-	call->res_type = (rd_resource_t*)(long)res_type;
+	cd->res_type_flag = res_type_flag;
+	cd->res_type = res_type_flag == SP_RTRACE_FCALL_RFIELD_NAME ? res_type_name : NULL;
 
-	call->type = function_type;
-	call->context = context;
-	call->name = strdup_a(name);
-	call->res_id = res_id;
-	call->res_size = (long)res_size;
-	call->timestamp = timestamp;
+	cd->type = function_type;
+	cd->context = context;
+	cd->name = strdup_a(name);
+	cd->res_id = res_id;
+	cd->res_size = (long)res_size;
+	cd->timestamp = timestamp;
 	call->trace = NULL;
 	call->args = NULL;
 	call->ref = NULL;
@@ -300,19 +299,19 @@ static void store_backtrace(rd_t* rd, dlist_t* calls, bt_step_t* bt, int size)
 	int i;
 
 	rd_ftrace_t* trace = htable_create_node(sizeof(rd_ftrace_t));
-	trace->resolved_names = NULL;
+	trace->data.resolved_names = NULL;
 	trace->ref_count = 0;
-	trace->nframes = size;
-	trace->frames = size ? malloc_a(size * sizeof(rd_ftrace_t)) : NULL;
+	trace->data.nframes = size;
+	trace->data.frames = size ? malloc_a(size * sizeof(rd_ftrace_t)) : NULL;
 	dlist_init(&trace->calls);
 	/* copy the collected backtrace data */
 	for (i = 0; i < size; i++) {
-		trace->frames[i] = bt[i].addr;
+		trace->data.frames[i] = bt[i].addr;
 		if (bt[i].name) {
-			if (trace->resolved_names == NULL) {
-				trace->resolved_names = calloc_a(size, sizeof(char*));
+			if (trace->data.resolved_names == NULL) {
+				trace->data.resolved_names = calloc_a(size, sizeof(char*));
 			}
-			trace->resolved_names[i] = bt[i].name;
+			trace->data.resolved_names[i] = bt[i].name;
 			bt[i].name = NULL;
 		}
 	}
@@ -328,14 +327,14 @@ static void store_backtrace(rd_t* rd, dlist_t* calls, bt_step_t* bt, int size)
  * @return            true if function argument was parsed successfully,
  *                    false otherwise (not a function argument record).
  */
-static bool parse_arguments(char* line, char** parg)
+static bool parse_arguments(char* line, sp_rtrace_farg_t* parg)
 {
-	char arg[PATH_MAX], delim;
-	int index;
+	char value[PATH_MAX], name[128], delim;
 
-	int n = sscanf(line, "%c$%d = %s", &delim, &index, arg);
+	int n = sscanf(line, "%c$%s = %s", &delim, name, value);
 	if (n < 3 || delim != '\t') return false;
-	*parg = strdup_a(arg);
+	parg->name = strdup_a(name);
+	parg->value = strdup_a(value);
 	return true;
 }
 
@@ -349,12 +348,13 @@ static bool parse_arguments(char* line, char** parg)
  * @param[in] size   the number of function arguments.
  * @return
  */
-static void store_call_arguments(rd_fcall_t* call, char** args, int size)
+static void store_call_arguments(rd_fcall_t* call, sp_rtrace_farg_t* args, int size)
 {
 	rd_fargs_t* fargs = (rd_fargs_t*)malloc_a(sizeof(rd_fargs_t));
-	fargs->args = malloc_a(sizeof(char*) * (size + 1));
-	memcpy(fargs->args, args, sizeof(char*) * size);
-	fargs->args[size] = NULL;
+	fargs->data = malloc_a(sizeof(sp_rtrace_farg_t) * (size + 1));
+	memcpy(fargs->data, args, sizeof(sp_rtrace_farg_t) * size);
+	fargs->data[size].name = NULL;
+	fargs->data[size].value = NULL;
 	call->args = fargs;
 }
 
@@ -363,7 +363,7 @@ static void store_call_arguments(rd_fcall_t* call, char** args, int size)
  */
 static long compare_resource(rd_resource_t* res, rd_resource_t* template)
 {
-	return strcmp(res->type, template->type);
+	return strcmp(res->data.type, template->data.type);
 }
 
 /**
@@ -374,8 +374,8 @@ static long compare_resource(rd_resource_t* res, rd_resource_t* template)
  */
 static long compare_calls(rd_fcall_t* call1, rd_fcall_t* call2)
 {
-	if (call1->timestamp == call2->timestamp) return call1->index - call2->index;
-	return call1->timestamp - call2->timestamp;
+	if (call1->data.timestamp == call2->data.timestamp) return call1->data.index - call2->data.index;
+	return call1->data.timestamp - call2->data.timestamp;
 }
 
 /**
@@ -408,7 +408,7 @@ static void read_text_data(rd_t* rd, FILE* fp)
 	dlist_init(&last_calls);
 
 	bt_step_t* bt = malloc_a(sizeof(bt_step_t) * bt_limit);
-	char** args = malloc_a(sizeof(char*) * args_limit);
+	sp_rtrace_farg_t* args = malloc_a(sizeof(sp_rtrace_farg_t) * args_limit);
 
 	/* The associated function call index for comments. Practically
 	 * its the last call index. Used for comment ordering in output
@@ -434,7 +434,7 @@ static void read_text_data(rd_t* rd, FILE* fp)
 			args_index++;
 			if (args_index == args_limit) {
 				args_limit *= 2;
-				args = realloc_a(args, sizeof(char*) * args_limit);
+				args = realloc_a(args, sizeof(sp_rtrace_farg_t) * args_limit);
 			}
 			continue;
 		}
@@ -466,21 +466,22 @@ static void read_text_data(rd_t* rd, FILE* fp)
 			/* The res_type field temporary has the resource type name string assigned.
 			 * Lookup the resource record and correctly assign to it.
 			 * The resource type name is stored in a static buffer, so it must be left unfreed */
-			if (RD_FCALL(data)->res_type) {
-				rd_resource_t resource = {.type = (char*)RD_FCALL(data)->res_type};
-				RD_FCALL(data)->res_type = dlist_find(&rd->resources, (void*)&resource,	(op_binary_t)compare_resource);
+			if (RD_FCALL(data)->data.res_type_flag == SP_RTRACE_FCALL_RFIELD_NAME) {
+				rd_resource_t resource = {.data = {.type = (char*)RD_FCALL(data)->data.res_type} };
+				RD_FCALL(data)->data.res_type = dlist_find(&rd->resources, (void*)&resource, (op_binary_t)compare_resource);
 			}
 			else {
 				/* If resource type was not set in text log, it means only one resource type is present.
 				 * So assign the first (and only) resource to call record. */
-				RD_FCALL(data)->res_type = (rd_resource_t*)dlist_first(&rd->resources);
+				RD_FCALL(data)->data.res_type = (rd_resource_t*)dlist_first(&rd->resources);
 			}
+			RD_FCALL(data)->data.res_type_flag = SP_RTRACE_FCALL_RFIELD_REF;
 
 			dlist_add(&rd->calls, data);
 			ref_node_t* ref = (ref_node_t*)dlist_create_node(sizeof(ref_node_t));
 			ref->ref = data;
 			dlist_add(&last_calls, ref);
-			comment_index = RD_FCALL(data)->index;
+			comment_index = RD_FCALL(data)->data.index;
 			continue;
 		}
 

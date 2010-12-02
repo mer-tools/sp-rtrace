@@ -188,7 +188,7 @@ proc test_toggle_trace { start mode options} {
 	set on_sid ""
 	for { set i 1 } { $i <= 5 } { incr i } {
 		if { $start == ""} {
-			spawn sp-rtrace $mode -t $pid
+			eval spawn sp-rtrace $mode -t $pid
 			set on_sid $spawn_id
 		} else {
 			set start ""
@@ -196,7 +196,7 @@ proc test_toggle_trace { start mode options} {
 		after 2000
 		set log_file ""
 		
-		catch { exec sp-rtrace $mode -t $pid } result
+		catch { eval exec sp-rtrace $mode -t $pid } result
 		after 1000
 
 		# in managed mode the logging sp-rtrace process will be spawned by the main module -

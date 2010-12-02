@@ -123,7 +123,7 @@ dlist_t s_mmaps;
  */
 static long mmap_compare(rd_mmap_t* mmap, const char* name)
 {
-	return strcmp(mmap->module, name);
+	return strcmp(mmap->data.module, name);
 }
 /**
  * Parse maps file and write memory map packets into output stream.
@@ -146,17 +146,17 @@ static int scan_mmap_data()
 				rd_mmap_t* mmap = (rd_mmap_t*)dlist_find(&s_mmaps, (void*)buffer, (op_binary_t)mmap_compare);
 				if (mmap) {
 					/* if the addresses are the same - skip */
-					if (mmap->from == from && mmap->to == to) continue;
+					if (mmap->data.from == from && mmap->data.to == to) continue;
 					/* update addresses */
-					mmap->from = from;
-					mmap->to = to;
+					mmap->data.from = from;
+					mmap->data.to = to;
 				}
 				else {
 					/* add new memory mapping record to internal cache */
 					mmap = dlist_create_node(sizeof(rd_mmap_t));
-					mmap->from = from;
-					mmap->to = to;
-					mmap->module = strdup_a(buffer);
+					mmap->data.from = from;
+					mmap->data.to = to;
+					mmap->data.module = strdup_a(buffer);
 					dlist_add(&s_mmaps, mmap);
 				}
 				/* assemble and write MM packet */

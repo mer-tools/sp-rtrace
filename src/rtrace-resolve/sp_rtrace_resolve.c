@@ -58,8 +58,9 @@
 
 #include "common/utils.h"
 #include "common/rtrace_data.h"
+#include "common/sp_rtrace_defs.h"
 #include "common/header.h"
-#include "common/formatter.h"
+#include "library/sp_rtrace_formatter.h"
 #include "namecache.h"
 #include "resolver.h"
 #include "sp_rtrace_resolve.h"
@@ -360,19 +361,19 @@ static void read_header(FILE* fpin, FILE* fpout)
 		fprintf(stderr, "ERROR: while reading input stream (%s)\n", strerror(errno));
 		exit (-1);
 	}
-	header_t header;
+	sp_rtrace_header_t header;
 	header_read(&header, line);
 	
 	/* check source stream architecture */
-	if (header.fields[HEADER_ARCH] && strcmp(header.fields[HEADER_ARCH], BUILD_ARCH)) {
+	if (header.fields[SP_RTRACE_HEADER_ARCH] && strcmp(header.fields[SP_RTRACE_HEADER_ARCH], BUILD_ARCH)) {
 		fprintf(stderr, "ERROR: unsupported architecture: %s (expected %s)\n",
-				header.fields[HEADER_ARCH], BUILD_ARCH);
+				header.fields[SP_RTRACE_HEADER_ARCH], BUILD_ARCH);
 	    exit (-1);
 	}
 	/* set the resolve filter tag */
 	header_set_filter(&header, header_get_filter(&header) | FILTER_MASK_RESOLVE);
 	/* write the header into output file */
-	formatter_write_header(&header, fpout);
+	sp_rtrace_print_header(fpout, &header);
 }
 
 /**

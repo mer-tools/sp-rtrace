@@ -53,11 +53,6 @@
 #define SP_RTRACE_PROTO_OUTPUT_SETTINGS    SP_RTRACE_PROTO_PACKET_TYPE('O', 'C', 'F', 'G')
 #define SP_RTRACE_PROTO_RESOURCE_REGISTRY  SP_RTRACE_PROTO_PACKET_TYPE('R', 'E', 'S', 'R')
 
-/* call type for FC packets */
-#define SP_RTRACE_FTYPE_UNDEF          0
-#define SP_RTRACE_FTYPE_FREE           1
-#define SP_RTRACE_FTYPE_ALLOC          2
-
 /* protocol version */
 #define SP_RTRACE_PROTO_VERSION_MAJOR     1
 #define SP_RTRACE_PROTO_VERSION_MINOR     3
@@ -93,9 +88,6 @@
 #else
  #define SP_RTRACE_PROTO_CHECK_ALIGNMENT(value)
 #endif
-
-
-typedef unsigned long pointer_t;
 
 /**
  * Reads byte from binary stream.

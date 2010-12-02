@@ -15,12 +15,13 @@
 #  $6 backtrace depth
 #
 
+#echo sp-rtrace -pmemory $2 $3 $4 $5 $6 -x $1 >> launch.log
 sp-rtrace -pmemory $2 $3 $4 $5 $6 -x $1 &
 sleep 1
 
 app_name=${1##*/}
 app_name=${app_name%% *}
-while pidof $app_name  ; do
+while pidof $app_name > /dev/null ; do
 	sleep 1
 done
 

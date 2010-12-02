@@ -47,6 +47,7 @@
 #include "sp_context_impl.h"
 #include "common/debug_log.h"
 #include "common/sp_rtrace_proto.h"
+#include "common/sp_rtrace_defs.h"
 #include "common/utils.h"
 #include "libunwind_support.h"
 
@@ -131,15 +132,7 @@ static unsigned int rtrace_module_index = 0;
 /*
  * Resource type registry
  */
-typedef struct {
-	const char* type;
-	const char* desc;
-	int id;
-	unsigned int flags;
-} rtrace_resource_t;
-
-
-static rtrace_resource_t rtrace_resources[32];
+static sp_rtrace_resource_t rtrace_resources[32];
 static unsigned int rtrace_resource_index = 0;
 
 /**
@@ -363,15 +356,15 @@ static int write_module_info(int id, const char* name, unsigned char major, unsi
 }
 
 
-static int write_resource_registry(int id, const char* type, const char* desc, unsigned int flags)
+static int write_resource_registry(const sp_rtrace_resource_t* resource)
 {
 	if (!sp_rtrace_options->enable) return 0;
 	char* buffer = pipe_buffer_lock(), *ptr = buffer + SP_RTRACE_PROTO_TYPE_SIZE;
 	ptr += write_dword(ptr, SP_RTRACE_PROTO_RESOURCE_REGISTRY);
-	ptr += write_dword(ptr, id);
-	ptr += write_dword(ptr, flags);
-	ptr += write_string(ptr, type);
-	ptr += write_string(ptr, desc);
+	ptr += write_dword(ptr, resource->id);
+	ptr += write_dword(ptr, resource->flags);
+	ptr += write_string(ptr, resource->type);
+	ptr += write_string(ptr, resource->desc);
 	int size = ptr - buffer;
 	write_dword(buffer, size - SP_RTRACE_PROTO_TYPE_SIZE);
 	pipe_buffer_unlock(buffer, size);
@@ -533,8 +526,7 @@ static void write_initial_data()
     }
 	/* write resource registry records */
 	for (i = 0; i < rtrace_resource_index; i++) {
-	    rtrace_resource_t* resource = &rtrace_resources[i];
-	    write_resource_registry(resource->id, resource->type, resource->desc, resource->flags);
+	    write_resource_registry(&rtrace_resources[i]);
     }
 
 	write_new_library("*");
@@ -651,27 +643,33 @@ static char* _itoa(char* buffer, int value)
  * Public API implementation
  */
 
-int sp_rtrace_write_context_registry(int context_id, const char* name)
+int sp_rtrace_write_context_registry(sp_rtrace_context_t* context)
 {
 	if (!sp_rtrace_options->enable) return 0;
 	char* buffer = pipe_buffer_lock(), *ptr = buffer + SP_RTRACE_PROTO_TYPE_SIZE;
 	ptr += write_dword(ptr, SP_RTRACE_PROTO_CONTEXT_REGISTRY);
-	ptr += write_dword(ptr, context_id);
-	ptr += write_string(ptr, name);
+	ptr += write_dword(ptr, context->id);
+	ptr += write_string(ptr, context->name);
 	int size = ptr - buffer;
 	write_dword(buffer, size - SP_RTRACE_PROTO_TYPE_SIZE);
 	pipe_buffer_unlock(buffer, size);
 	return size;
 }
 
-int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* name, size_t res_size, pointer_t id, const char** args)
+int sp_rtrace_write_function_call(sp_rtrace_fcall_t* call, sp_rtrace_farg_t* args)
 {
 	if (!sp_rtrace_options->enable) return 0;
+
+	/* check if the resource type contains resource identifier */
+	if (call->res_type_flag != SP_RTRACE_FCALL_RFIELD_ID) {
+		return -EINVAL;
+	}
+
 	int size = 0;
 	int nframes = 0;
 	void* bt_frames[256];
 
-	if (sp_rtrace_options->backtrace_depth && (type == SP_RTRACE_FTYPE_ALLOC || sp_rtrace_options->backtrace_all)) {
+	if (sp_rtrace_options->backtrace_depth && (call->type == SP_RTRACE_FTYPE_ALLOC || sp_rtrace_options->backtrace_all)) {
 		unsigned int bt_depth = sp_rtrace_options->backtrace_depth + BT_SKIP_TOP + BT_SKIP_BOTTOM;
 		if (bt_depth > sizeof(bt_frames) / sizeof(bt_frames[0])) {
 			bt_depth = sizeof(bt_frames) / sizeof(bt_frames[0]);
@@ -681,7 +679,7 @@ int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* n
 		 * functions for the current thread  */
 		int tid = pthread_self();
 		if (tid == backtrace_lock) {
-			fprintf(stderr, "ERROR: infinite recursion detected backtrace() calling %s()\n", name);
+			fprintf(stderr, "ERROR: infinite recursion detected backtrace() calling %s()\n", call->name);
 			exit (-1);
 		}
 		while (!sync_bool_compare_and_swap(&backtrace_lock, 0, tid));
@@ -693,7 +691,8 @@ int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* n
 	/* write FC packet */
 	ptr += write_dword(ptr, SP_RTRACE_PROTO_FUNCTION_CALL);
 
-	ptr += write_dword(ptr, res_type);
+	ptr += write_dword(ptr, (unsigned long)call->res_type);
+
 	ptr += write_dword(ptr, sp_rtrace_get_call_context());
 
 	int timestamp = 0;
@@ -704,10 +703,10 @@ int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* n
 		}
 	}
 	ptr += write_dword(ptr, timestamp);
-	ptr += write_dword(ptr, type);
-	ptr += write_string(ptr, name);
-	ptr += write_dword(ptr, res_size);
-	ptr += write_pointer(ptr, id);
+	ptr += write_dword(ptr, call->type);
+	ptr += write_string(ptr, call->name);
+	ptr += write_dword(ptr, call->res_size);
+	ptr += write_pointer(ptr, call->res_id);
 	size = ptr - buffer;
 	write_dword(buffer, size - SP_RTRACE_PROTO_TYPE_SIZE);
 
@@ -718,13 +717,13 @@ int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* n
 		ptr += write_dword(ptr, SP_RTRACE_PROTO_FUNCTION_ARGS);
 		char* pargs = ptr;
 		ptr += sizeof(int);
-		int argc = 0;
-		while (*args) {
-			const char* arg = *args++;
-			ptr += write_string(ptr, arg);
-			++argc;
+		const sp_rtrace_farg_t* first_arg = args;
+		while (args->name) {
+			ptr += write_string(ptr, args->name);
+			ptr += write_string(ptr, args->value);
+			args++;
 		}
-		write_dword(pargs, argc);
+		write_dword(pargs, args - first_arg);
 		size = ptr - psize;
 		write_dword(psize, size - SP_RTRACE_PROTO_TYPE_SIZE);
 	}
@@ -777,18 +776,15 @@ unsigned int sp_rtrace_register_module(const char* name, unsigned char vmajor, u
 	return module->id;
 }
 
-unsigned int sp_rtrace_register_resource(const char* type, const char* desc, unsigned int flags)
+unsigned int sp_rtrace_register_resource(sp_rtrace_resource_t* resource)
 {
 	if (rtrace_resource_index >= sizeof(rtrace_resources) / sizeof(rtrace_resources[0])) {
 		return -1;
 	}
-	rtrace_resource_t* resource = &rtrace_resources[rtrace_resource_index];
-    resource->type = type;
-    resource->desc = desc;
-    resource->flags = flags;
-    resource->id = ++rtrace_resource_index;
+    ((sp_rtrace_resource_t*)resource)->id = ++rtrace_resource_index;
+	rtrace_resources[rtrace_resource_index] = *resource;
 	if (sp_rtrace_options->enable) {
-		write_resource_registry(resource->id, type, desc, flags);
+		write_resource_registry(resource);
 	}
 	return resource->id;
 }

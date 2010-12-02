@@ -1,23 +1,22 @@
-version=1.0, arch=i486-linux-gnu, timestamp=2010.10.18 14:34:34, process=../bin/alloc_context_test, pid=31495, filter=leaks|compress, 
+version=1.3, arch=i686, timestamp=2010.12.2 12:56:31, process=../bin/alloc_context_test, pid=30892, filter=leaks|compress, backtrace depth=10, 
 @ 1 : first context
 @ 2 : second context
 <1> : memory (memory allocation in bytes)
-: /usr/lib/libsp-rtrace1.so.1.0.0 => 0x19a000-0x19f000
-: /lib/tls/i686/cmov/libc-2.11.1.so => 0x1a1000-0x2f4000
-: /lib/tls/i686/cmov/libpthread-2.11.1.so => 0x315000-0x32a000
-: /lib/tls/i686/cmov/librt-2.11.1.so => 0x462000-0x469000
-: /usr/lib/sp-rtrace/libsp-rtrace-memory.so.1.0.0 => 0x750000-0x752000
-: /lib/tls/i686/cmov/libdl-2.11.1.so => 0x952000-0x954000
-: /lib/ld-2.11.1.so => 0xafc000-0xb17000
-: /lib/tls/i686/cmov/libm-2.11.1.so => 0xd5c000-0xd80000
-: /lib/libgcc_s.so.1 => 0xdd6000-0xdf3000
-: /usr/lib/sp-rtrace/libsp-rtrace-main.so.1.0.0 => 0xf01000-0xf06000
+: /lib/libpthread-2.12.1.so => 0x207000-0x21c000
+: /lib/libc-2.12.1.so => 0x295000-0x3ec000
+: /lib/ld-2.12.1.so => 0x5bc000-0x5d8000
+: /usr/lib/sp-rtrace/libsp-rtrace-memory.so => 0x69d000-0x69f000
+: /lib/librt-2.12.1.so => 0x7a8000-0x7af000
+: /usr/lib/libsp-rtrace1.so.1.0.2 => 0x8a1000-0x8a5000
+: /lib/libdl-2.12.1.so => 0xa6c000-0xa6e000
+: /lib/libm-2.12.1.so => 0xafa000-0xb1e000
+: /usr/lib/sp-rtrace/libsp-rtrace-main.so => 0xbbe000-0xbc3000
 : /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_context_test => 0x8048000-0x8049000
 ## heap status information:
-##   heap bottom 0x93b2000
-##   heap top 0x93d3000
-##   lowest block 0x93b2008
-##   highest block 0x93b9600
+##   heap bottom 0x97b8000
+##   heap top 0x97d9000
+##   lowest block 0x97b8008
+##   highest block 0x97bf610
 ##   non-mapped space allocated from system 135168
 ##   number of free chunks 1
 ##   number of fastbin blocks 0
@@ -25,85 +24,85 @@ version=1.0, arch=i486-linux-gnu, timestamp=2010.10.18 14:34:34, process=../bin/
 ##   space in mapped regions 0
 ##   maximum total allocated space 0
 ##   space available in freed fastbin blocks 0
-##   total allocated space 30200
-##   total free space 104968
-##   top-most, releasable (via malloc_trim) space 104968
+##   total allocated space 30216
+##   total free space 104952
+##   top-most, releasable (via malloc_trim) space 104952
 ## tracing module: [0] main (1.0)
 ## tracing module: [1] memory (1.0)
-63. @3 [01:12:20.682] malloc(1000) = 0x93b7a70
-72. @3 [01:12:20.682] malloc(1000) = 0x93b8640
-81. @3 [01:12:20.682] malloc(1000) = 0x93b9210
+63. @3 [17:55:56.735] malloc(1000) = 0x97bda80
+72. @3 [17:55:56.735] malloc(1000) = 0x97be650
+81. @3 [17:55:56.735] malloc(1000) = 0x97bf220
 # allocation summary: 3 block(s) with total size 3000
-	0x80486a6
-	0x80486f8
-	0x804874f
-	0x8048805
-	0x8048827
-	0x1b7bd6
-	0x8048601
+	0x8048616
+	0x8048668
+	0x80486bf
+	0x8048775
+	0x8048797
+	0x2abce7
+	0x8048571
 
-62. @3 [01:12:20.682] malloc(1001) = 0x93b7680
-71. @3 [01:12:20.682] malloc(1001) = 0x93b8250
-80. @3 [01:12:20.682] malloc(1001) = 0x93b8e20
+62. @3 [17:55:56.735] malloc(1001) = 0x97bd690
+71. @3 [17:55:56.735] malloc(1001) = 0x97be260
+80. @3 [17:55:56.735] malloc(1001) = 0x97bee30
 # allocation summary: 3 block(s) with total size 3003
-	0x80486e3
-	0x804874f
-	0x8048805
-	0x8048827
-	0x1b7bd6
-	0x8048601
+	0x8048653
+	0x80486bf
+	0x8048775
+	0x8048797
+	0x2abce7
+	0x8048571
 
-61. @2 [01:12:20.682] malloc(1002) = 0x93b7290
-70. @2 [01:12:20.682] malloc(1002) = 0x93b7e60
-79. @2 [01:12:20.682] malloc(1002) = 0x93b8a30
+61. @2 [17:55:56.735] malloc(1002) = 0x97bd2a0
+70. @2 [17:55:56.735] malloc(1002) = 0x97bde70
+79. @2 [17:55:56.735] malloc(1002) = 0x97bea40
 # allocation summary: 3 block(s) with total size 3006
-	0x804873a
-	0x8048805
-	0x8048827
-	0x1b7bd6
-	0x8048601
+	0x80486aa
+	0x8048775
+	0x8048797
+	0x2abce7
+	0x8048571
 
-4. @3 [01:12:20.682] malloc(1000) = 0x93b2fa0
-16. @3 [01:12:20.682] malloc(1000) = 0x93b3f60
-28. @3 [01:12:20.682] malloc(1000) = 0x93b4f20
-40. @3 [01:12:20.682] malloc(1000) = 0x93b5ee0
-52. @3 [01:12:20.682] malloc(1000) = 0x93b6ea0
+4. @3 [17:55:56.735] malloc(1000) = 0x97b8fb0
+16. @3 [17:55:56.735] malloc(1000) = 0x97b9f70
+28. @3 [17:55:56.735] malloc(1000) = 0x97baf30
+40. @3 [17:55:56.735] malloc(1000) = 0x97bbef0
+52. @3 [17:55:56.735] malloc(1000) = 0x97bceb0
 # allocation summary: 5 block(s) with total size 5000
-	0x80486a6
-	0x80486f8
-	0x804874f
-	0x8048799
-	0x80487e5
-	0x8048827
-	0x1b7bd6
-	0x8048601
+	0x8048616
+	0x8048668
+	0x80486bf
+	0x8048709
+	0x8048755
+	0x8048797
+	0x2abce7
+	0x8048571
 
-3. @3 [01:12:20.682] malloc(1001) = 0x93b2bb0
-15. @3 [01:12:20.682] malloc(1001) = 0x93b3b70
-27. @3 [01:12:20.682] malloc(1001) = 0x93b4b30
-39. @3 [01:12:20.682] malloc(1001) = 0x93b5af0
-51. @3 [01:12:20.682] malloc(1001) = 0x93b6ab0
+3. @3 [17:55:56.735] malloc(1001) = 0x97b8bc0
+15. @3 [17:55:56.735] malloc(1001) = 0x97b9b80
+27. @3 [17:55:56.735] malloc(1001) = 0x97bab40
+39. @3 [17:55:56.735] malloc(1001) = 0x97bbb00
+51. @3 [17:55:56.735] malloc(1001) = 0x97bcac0
 # allocation summary: 5 block(s) with total size 5005
-	0x80486e3
-	0x804874f
-	0x8048799
-	0x80487e5
-	0x8048827
-	0x1b7bd6
-	0x8048601
+	0x8048653
+	0x80486bf
+	0x8048709
+	0x8048755
+	0x8048797
+	0x2abce7
+	0x8048571
 
-2. @2 [01:12:20.682] malloc(1002) = 0x93b27c0
-14. @2 [01:12:20.682] malloc(1002) = 0x93b3780
-26. @2 [01:12:20.682] malloc(1002) = 0x93b4740
-38. @2 [01:12:20.682] malloc(1002) = 0x93b5700
-50. @2 [01:12:20.682] malloc(1002) = 0x93b66c0
+2. @2 [17:55:56.735] malloc(1002) = 0x97b87d0
+14. @2 [17:55:56.735] malloc(1002) = 0x97b9790
+26. @2 [17:55:56.735] malloc(1002) = 0x97ba750
+38. @2 [17:55:56.735] malloc(1002) = 0x97bb710
+50. @2 [17:55:56.735] malloc(1002) = 0x97bc6d0
 # allocation summary: 5 block(s) with total size 5010
-	0x804873a
-	0x8048799
-	0x80487e5
-	0x8048827
-	0x1b7bd6
-	0x8048601
+	0x80486aa
+	0x8048709
+	0x8048755
+	0x8048797
+	0x2abce7
+	0x8048571
 
 # Resource - memory (memory allocation in bytes):
 # 24 block(s) leaked with total size of 24024 bytes

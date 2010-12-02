@@ -39,6 +39,7 @@
 #include "sp_rtrace_main.h"
 #include "sp_rtrace_module.h"
 #include "common/sp_rtrace_proto.h"
+#include "common/sp_rtrace_defs.h"
 #include "common/debug_log.h"
 #include "common/utils.h"
 
@@ -56,9 +57,11 @@ static sp_rtrace_module_info_t module_info = {
 				       "and free functions.",
 };
 
-/* the module identifier assigned by main module */
-static int resource_id = 0;
-
+static sp_rtrace_resource_t res_memory = {
+		.type = "memory",
+		.desc = "memory allocation in bytes",
+		.flags = SP_RTRACE_RESOURCE_DEFAULT,
+};
 
 /* Internal allocation function emulation heap.
  *
@@ -142,7 +145,7 @@ static void trace_initialize()
 		case MODULE_LOADED: {
 			if (sp_rtrace_initialize()) {
 				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
-				resource_id = sp_rtrace_register_resource("memory", "memory allocation in bytes", SP_RTRACE_RESOURCE_DEFAULT);
+				sp_rtrace_register_resource(&res_memory);
 				trace_init_rt = trace_rt;
 				init_mode = MODULE_READY;
 
@@ -282,7 +285,15 @@ static void* trace_malloc(size_t size)
 	backtrace_lock = 0;
 
 	if (rc) {
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "malloc", size, (pointer_t)rc, NULL);
+		sp_rtrace_fcall_t call = {
+				.type = SP_RTRACE_FTYPE_ALLOC,
+				.res_type = (void*)res_memory.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "malloc",
+				.res_size = size,
+				.res_id = (pointer_t)rc,
+		};
+		sp_rtrace_write_function_call(&call, NULL);
 		sp_rtrace_store_heap_info();
 	}
 	return rc;
@@ -295,7 +306,15 @@ static void* trace_calloc(size_t nmemb, size_t size)
 	backtrace_lock = 0;
 
 	if (rc) {
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "calloc", nmemb * size, (pointer_t)rc, NULL);
+		sp_rtrace_fcall_t call = {
+				.type = SP_RTRACE_FTYPE_ALLOC,
+				.res_type = (void*)res_memory.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "calloc",
+				.res_size = nmemb * size,
+				.res_id = (pointer_t)rc,
+		};
+		sp_rtrace_write_function_call(&call, NULL);
 		sp_rtrace_store_heap_info();
 	}
 	return rc;
@@ -309,11 +328,27 @@ static void* trace_realloc(void* ptr, size_t size)
 	/* if allocation was successful or the requested size was 0,
 	 *  and the old pointer was not NULL - register old pointer freeing */
 	if ((rc || !size) && ptr) {
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, resource_id, "realloc", 0, (pointer_t)ptr, NULL);
+		sp_rtrace_fcall_t call = {
+				.type = SP_RTRACE_FTYPE_FREE,
+				.res_type = (void*)res_memory.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "realloc",
+				.res_size = 0,
+				.res_id = (pointer_t)ptr,
+		};
+		sp_rtrace_write_function_call(&call, NULL);
 	}
 	/* if allocation was successful register new pointer allocation */
 	if (rc) {
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "realloc", size, (pointer_t)rc, NULL);
+		sp_rtrace_fcall_t call = {
+				.type = SP_RTRACE_FTYPE_ALLOC,
+				.res_type = (void*)res_memory.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "realloc",
+				.res_size = size,
+				.res_id = (pointer_t)rc,
+		};
+		sp_rtrace_write_function_call(&call, NULL);
 		sp_rtrace_store_heap_info();
 	}
 	return rc;
@@ -323,7 +358,15 @@ static int trace_posix_memalign(void **memptr, size_t alignment, size_t size)
 {
 	int rc = trace_off.posix_memalign(memptr, alignment, size);
 	if (rc == 0) {
-		sp_rtrace_write_function_call(SP_RTRACE_FTYPE_ALLOC, resource_id, "posix_memalign", size, (pointer_t)*memptr, NULL);
+		sp_rtrace_fcall_t call = {
+				.type = SP_RTRACE_FTYPE_ALLOC,
+				.res_type = (void*)res_memory.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "posix_memalign",
+				.res_size = size,
+				.res_id = (pointer_t)*memptr,
+		};
+		sp_rtrace_write_function_call(&call, NULL);
 		sp_rtrace_store_heap_info();
 	}
 	return rc;
@@ -335,7 +378,15 @@ static void trace_free(void* ptr)
 	/* unlock backtrace after the original function has been called */
 	backtrace_lock = 0;
 
-	sp_rtrace_write_function_call(SP_RTRACE_FTYPE_FREE, resource_id, "free", 0, (pointer_t)ptr, NULL);
+	sp_rtrace_fcall_t call = {
+			.type = SP_RTRACE_FTYPE_FREE,
+			.res_type = (void*)res_memory.id,
+			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.name = "free",
+			.res_size = 0,
+			.res_id = (pointer_t)ptr,
+	};
+	sp_rtrace_write_function_call(&call, NULL);
 	sp_rtrace_store_heap_info();
 }
 

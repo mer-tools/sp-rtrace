@@ -35,6 +35,7 @@
 
 #include "library/sp_rtrace_formatter.h"
 #include "common/utils.h"
+#include "common/sp_rtrace_defs.h"
 
 #define PRINT_HEADER 		"header"
 #define PRINT_MMAP			"mmap"
@@ -102,17 +103,18 @@ enum {
  */
 static void print_header(char* argv[])
 {
-	int pid = atoi(argv[HEADER_PID]);
-	struct tm tm = {.tm_isdst = daylight};
-	struct timeval tv = {0};
-
-	sscanf(argv[HEADER_TIMESTAMP], "%d.%d.%d %d:%d:%d", &tm.tm_mday, &tm.tm_mon, &tm.tm_year,
-			&tm.tm_hour, &tm.tm_min, &tm.tm_sec);
-	tm.tm_mon--;
-	tm.tm_year -= 1900;
-	tv.tv_sec = timelocal(&tm);
-
-	sp_rtrace_print_header(stdout, argv[HEADER_VERSION], argv[HEADER_ARCH], &tv, pid, argv[HEADER_NAME]);
+	sp_rtrace_header_t header = {
+			.fields = {
+					argv[HEADER_VERSION],
+					argv[HEADER_ARCH],
+					argv[HEADER_TIMESTAMP],
+					argv[HEADER_NAME],
+					argv[HEADER_PID],
+					NULL,
+					NULL,
+			}
+	};
+	sp_rtrace_print_header(stdout, &header);
 }
 
 /**
@@ -127,10 +129,14 @@ static void print_header(char* argv[])
 static void print_mmap(char* argv[])
 {
 	void *from = NULL, *to = NULL;
-	sscanf(argv[MMAP_FROM], "%p", &from);
-	sscanf(argv[MMAP_TO], "%p", &to);
+	sp_rtrace_mmap_t mmap = {
+			.module = argv[MMAP_MODULE],
+	};
 
-	sp_rtrace_print_mmap(stdout, argv[MMAP_MODULE], from, to);
+	sscanf(argv[MMAP_FROM], "%lx", &mmap.from);
+	sscanf(argv[MMAP_TO], "%lx", &mmap.to);
+
+	sp_rtrace_print_mmap(stdout, &mmap);
 }
 
 /**
@@ -148,18 +154,25 @@ static void print_mmap(char* argv[])
  */
 static void print_call(char* argv[])
 {
-	int index = atoi(argv[CALL_INDEX]);
-	int context = 0;
-	sscanf(argv[CALL_CONTEXT], "%x", &context);
+	sp_rtrace_fcall_t call = {
+			.type = SP_RTRACE_FTYPE_ALLOC,
+			.index = atoi(argv[CALL_INDEX]),
+			.res_size = atoi(argv[CALL_RES_SIZE]),
+			.res_type = *argv[CALL_RES_TYPE] ? argv[CALL_RES_TYPE] : NULL,
+			.res_type_flag = SP_RTRACE_FCALL_RFIELD_NAME,
+			.name = argv[CALL_NAME],
+	};
+	if (!call.res_size) call.type = SP_RTRACE_FTYPE_FREE;
+
+	sscanf(argv[CALL_CONTEXT], "%x", &call.context);
+
 	int hours = 0, minutes = 0, seconds = 0, msecs = 0;
 	sscanf(argv[CALL_TIMESTAMP], "%d:%d:%d.%d", &hours, &minutes, &seconds, &msecs);
-	int timestamp = hours * 60 * 60 * 1000 + minutes * 60 * 1000 + seconds * 1000 + msecs;
-	int res_size = atoi(argv[CALL_RES_SIZE]);
-	void* res_id = NULL;
-	sscanf(argv[CALL_RES_ID], "%p", &res_id);
-	char* res_type = *argv[CALL_RES_TYPE] ? argv[CALL_RES_TYPE] : NULL;
+	call.timestamp = hours * 60 * 60 * 1000 + minutes * 60 * 1000 + seconds * 1000 + msecs;
 
-	sp_rtrace_print_call(stdout, index, context, timestamp, argv[CALL_NAME], res_size, res_id, res_type);
+	sscanf(argv[CALL_RES_ID], "%lx", &call.res_id);
+
+	sp_rtrace_print_call(stdout, &call);
 }
 
 /**
@@ -177,27 +190,29 @@ static void print_call(char* argv[])
  */
 static void print_trace(char* argv[])
 {
-	int nframes = atoi(argv[TRACE_FRAMES]);
+	sp_rtrace_ftrace_t trace = {
+		.nframes = atoi(argv[TRACE_FRAMES])
+	};
 	int i;
-	void** frames = malloc_a(sizeof(void*) * nframes);
-	char** resolved = calloc(nframes, sizeof(char*));
+	trace.frames = malloc_a(sizeof(void*) * trace.nframes);
+	trace.resolved_names = calloc(trace.nframes, sizeof(char*));
 	char** parg = &argv[TRACE_FRAMES + 1];
 	bool is_resolved = false;
-	for (i = 0; i < nframes; i++) {
-		sscanf(*parg++, "%p", &frames[i]);
+	for (i = 0; i < trace.nframes; i++) {
+		sscanf(*parg++, "%lx", &trace.frames[i]);
 		if (**parg) {
-			resolved[i] = strdup_a(*parg);
+			trace.resolved_names[i] = strdup_a(*parg);
 			is_resolved = true;
 		}
 		parg++;
 	}
-	sp_rtrace_print_trace(stdout, frames, is_resolved ? resolved : NULL, nframes);
+	sp_rtrace_print_trace(stdout, &trace);
 
-	for (i = 0; i < nframes; i++) {
-		if (resolved[i]) free(resolved[i]);
+	for (i = 0; i < trace.nframes; i++) {
+		if (trace.resolved_names[i]) free(trace.resolved_names[i]);
 	}
-	free(frames);
-	free(resolved);
+	free(trace.frames);
+	free(trace.resolved_names);
 }
 
 
@@ -228,9 +243,11 @@ static void print_trace_step(char* argv[])
  */
 static void print_context(char* argv[])
 {
-	int context_id = 0;
-	sscanf(argv[CONTEXT_ID], "%x", &context_id);
-	sp_rtrace_print_context(stdout, context_id, argv[CONTEXT_NAME]);
+	sp_rtrace_context_t context = {
+			.name = argv[CONTEXT_NAME],
+	};
+	sscanf(argv[CONTEXT_ID], "%x", &context.id);
+	sp_rtrace_print_context(stdout, &context);
 }
 
 /**
@@ -245,9 +262,12 @@ static void print_context(char* argv[])
  */
 static void print_resource(char* argv[])
 {
-	int res_id = 0;
-	sscanf(argv[RESOURCE_ID], "%x", &res_id);
-	sp_rtrace_print_resource(stdout, res_id, argv[RESOURCE_TYPE], argv[RESOURCE_DESC]);
+	sp_rtrace_resource_t resource = {
+			.type = argv[RESOURCE_TYPE],
+			.desc = argv[RESOURCE_DESC],
+	};
+	sscanf(argv[RESOURCE_ID], "%x", &resource.id);
+	sp_rtrace_print_resource(stdout, &resource);
 }
 
 
@@ -278,7 +298,19 @@ static void print_comment(char* argv[])
  */
 static void print_args(char* argv[])
 {
-	sp_rtrace_print_args(stdout, argv);
+	sp_rtrace_farg_t args[32], *parg = args;
+	while (**argv) {
+		char* ptr = strchr(*argv, '=');
+		if (ptr) {
+			*ptr++ = '\0';
+			parg->name = *argv;
+			parg->value = ptr;
+		}
+		argv++;
+	}
+	parg->name = NULL;
+	parg->value = NULL;
+	sp_rtrace_print_args(stdout, args);
 }
 
 

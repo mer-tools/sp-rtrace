@@ -76,6 +76,7 @@ int main()
 {
 	test_multi();
 	test_wide();
-
+	
+	sleep(1);
 	return 0;
 }

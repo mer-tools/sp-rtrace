@@ -133,7 +133,7 @@ if [ ! -f $TARGET ]; then
 	exit 1
 fi
 
-sp-rtrace -s -p shmseg -x $TARGET
+sp-rtrace -s -p shmsysv -x $TARGET
 
 LOG_RAW=$(ls *.rtrace)
 if [ -z "$LOG_RAW" ]; then
@@ -141,19 +141,19 @@ if [ -z "$LOG_RAW" ]; then
 	exit 1
 fi
 
-LOG_RAW=$(ls *.rtrace)
-LOG_SAMPLE="resource.txt"
+#LOG_RAW=$(ls *.rtrace)
+#LOG_SAMPLE="resource.txt"
 
-sp-rtrace-postproc -i $LOG_RAW > $LOG_SAMPLE
-rm $LOG_RAW
+#sp-rtrace-postproc -i $LOG_RAW > $LOG_SAMPLE
+#rm $LOG_RAW
 
-sp-rtrace-postproc  -i $LOG_SAMPLE > $LOG_SAMPLE..
-sp-rtrace-postproc -R1 -i $LOG_SAMPLE > $LOG_SAMPLE.R1.
-sp-rtrace-postproc -R2 -i $LOG_SAMPLE > $LOG_SAMPLE.R2.
-sp-rtrace-postproc -R3 -i $LOG_SAMPLE > $LOG_SAMPLE.R3.
+#sp-rtrace-postproc  -i $LOG_SAMPLE > $LOG_SAMPLE..
+#sp-rtrace-postproc -R1 -i $LOG_SAMPLE > $LOG_SAMPLE.R1.
+#sp-rtrace-postproc -R2 -i $LOG_SAMPLE > $LOG_SAMPLE.R2.
+#sp-rtrace-postproc -R3 -i $LOG_SAMPLE > $LOG_SAMPLE.R3.
 
-sp-rtrace-postproc  -lci $LOG_SAMPLE > $LOG_SAMPLE..lc
-sp-rtrace-postproc -R1 -lci $LOG_SAMPLE > $LOG_SAMPLE.R1.lc
-sp-rtrace-postproc -R2 -lci $LOG_SAMPLE > $LOG_SAMPLE.R2.lc
-sp-rtrace-postproc -R3 -lci $LOG_SAMPLE > $LOG_SAMPLE.R3.lc
+#sp-rtrace-postproc  -lci $LOG_SAMPLE > $LOG_SAMPLE..lc
+#sp-rtrace-postproc -R1 -lci $LOG_SAMPLE > $LOG_SAMPLE.R1.lc
+#sp-rtrace-postproc -R2 -lci $LOG_SAMPLE > $LOG_SAMPLE.R2.lc
+#sp-rtrace-postproc -R3 -lci $LOG_SAMPLE > $LOG_SAMPLE.R3.lc
 

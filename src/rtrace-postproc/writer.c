@@ -32,8 +32,9 @@
 #include "leaks_sort.h"
 #include "sp_rtrace_postproc.h"
 
-#include "common/formatter.h"
 #include "common/header.h"
+
+#include "library/sp_rtrace_formatter.h"
 
 #define TRY(x) {\
 	int rc = x;\
@@ -52,7 +53,7 @@
  */
 static int write_module_info(rd_minfo_t* minfo, FILE* fp)
 {
-	TRY(formatter_printf(fp, "## tracing module: [%x] %s (%d.%d)\n", minfo->id, minfo->name, minfo->vmajor, minfo->vminor));
+	TRY(sp_rtrace_print_comment(fp, "## tracing module: [%x] %s (%d.%d)\n", minfo->id, minfo->name, minfo->vmajor, minfo->vminor));
 	return 0;
 }
 
@@ -71,6 +72,18 @@ static long comment_check_index(rd_comment_t* comment, void* data)
 }
 
 /**
+ * Prints comment.
+ *
+ * @param comment
+ * @param fp
+ * @return
+ */
+static int fcall_write_comment(const rd_comment_t* comment, FILE* fp)
+{
+	return sp_rtrace_print_comment(fp, comment->text);
+}
+
+/**
  * Writes function call data into text log.
  *
  * This function writes full function call data including backtrace
@@ -84,13 +97,13 @@ static int write_function_call(rd_fcall_t* call, fmt_data_t* fmt)
 	/* first write all comments with index less than current call index */
 	if (fmt->comment) {
 		fmt->comment = dlist_foreach2_in(&fmt->rd->comments, fmt->comment,
-				(op_binary_t)comment_check_index, (void*)(long)call->index, (op_binary_t)formatter_write_comment, fmt->fp);
+				(op_binary_t)comment_check_index, (void*)(long)call->data.index, (op_binary_t)fcall_write_comment, fmt->fp);
 	}
 
 	/* then write the function call itself */
-	TRY(formatter_write_fcall(call, fmt->fp));
-	if (call->args) TRY(formatter_write_fargs(call->args, fmt->fp));
-	if (call->trace) TRY(formatter_write_ftrace(call->trace, fmt->fp));
+	TRY(sp_rtrace_print_call(fmt->fp, &call->data));
+	if (call->args) TRY(sp_rtrace_print_args(fmt->fp, call->args->data));
+	if (call->trace) TRY(sp_rtrace_print_trace(fmt->fp, &call->trace->data));
 	return 0;
 }
 
@@ -110,12 +123,12 @@ static int write_compressed_function_call(ref_node_t* node, fmt_data_t* fmt)
 	/* first write all comments with index less than current call index */
 	if (fmt->comment) {
 		fmt->comment = dlist_foreach2_in(&fmt->rd->comments, fmt->comment,
-				(op_binary_t)comment_check_index, (void*)(long)call->index, (op_binary_t)formatter_write_comment, fmt->fp);
+				(op_binary_t)comment_check_index, (void*)(long)call->data.index, (op_binary_t)fcall_write_comment, fmt->fp);
 	}
 
 	/* then write the function call itself */
-	TRY(formatter_write_fcall(call, fmt->fp));
-	if (call->args) TRY(formatter_write_fargs(call->args, fmt->fp));
+	TRY(sp_rtrace_print_call(fmt->fp, &call->data));
+	if (call->args) TRY(sp_rtrace_print_args(fmt->fp, call->args->data));
 	return 0;
 }
 
@@ -133,9 +146,9 @@ static int write_compressed_function_call(ref_node_t* node, fmt_data_t* fmt)
 static int write_compressed_backtrace(ftrace_ref_t* trace, fmt_data_t* fmt)
 {
 	dlist_foreach2(&trace->ref->calls, (op_binary_t)write_compressed_function_call, fmt);
-	TRY(formatter_printf(fmt->fp, "# allocation summary: %d block(s) with total size %d\n",
+	TRY(sp_rtrace_print_comment(fmt->fp, "# allocation summary: %d block(s) with total size %d\n",
             trace->leak_count, trace->leak_size));
-	TRY(formatter_write_ftrace(trace->ref, fmt->fp));
+	TRY(sp_rtrace_print_trace(fmt->fp, &trace->ref->data));
 	return 0;
 }
 
@@ -148,21 +161,21 @@ static int write_compressed_backtrace(ftrace_ref_t* trace, fmt_data_t* fmt)
  */
 static void write_heap_information(FILE* fp, rd_hinfo_t* hinfo)
 {
-	TRY(formatter_printf(fp, "## heap status information:\n"));
-	TRY(formatter_printf(fp, "##   heap bottom 0x%lx\n", hinfo->heap_bottom));
-	TRY(formatter_printf(fp, "##   heap top 0x%lx\n", hinfo->heap_top));
-	TRY(formatter_printf(fp, "##   lowest block 0x%lx\n", hinfo->lowest_block));
-	TRY(formatter_printf(fp, "##   highest block 0x%lx\n", hinfo->highest_block));
-	TRY(formatter_printf(fp, "##   non-mapped space allocated from system %d\n", hinfo->arena));
-	TRY(formatter_printf(fp, "##   number of free chunks %d\n", hinfo->ordblks));
-	TRY(formatter_printf(fp, "##   number of fastbin blocks %d\n", hinfo->smblks));
-	TRY(formatter_printf(fp, "##   number of mapped regions %d\n", hinfo->hblks));
-	TRY(formatter_printf(fp, "##   space in mapped regions %d\n", hinfo->hblkhd));
-	TRY(formatter_printf(fp, "##   maximum total allocated space %d\n", hinfo->usmblks));
-	TRY(formatter_printf(fp, "##   space available in freed fastbin blocks %d\n", hinfo->fsmblks));
-	TRY(formatter_printf(fp, "##   total allocated space %d\n", hinfo->uordblks));
-	TRY(formatter_printf(fp, "##   total free space %d\n", hinfo->fordblks));
-	TRY(formatter_printf(fp, "##   top-most, releasable (via malloc_trim) space %d\n", hinfo->keepcost));
+	TRY(sp_rtrace_print_comment(fp, "## heap status information:\n"));
+	TRY(sp_rtrace_print_comment(fp, "##   heap bottom 0x%lx\n", hinfo->heap_bottom));
+	TRY(sp_rtrace_print_comment(fp, "##   heap top 0x%lx\n", hinfo->heap_top));
+	TRY(sp_rtrace_print_comment(fp, "##   lowest block 0x%lx\n", hinfo->lowest_block));
+	TRY(sp_rtrace_print_comment(fp, "##   highest block 0x%lx\n", hinfo->highest_block));
+	TRY(sp_rtrace_print_comment(fp, "##   non-mapped space allocated from system %d\n", hinfo->arena));
+	TRY(sp_rtrace_print_comment(fp, "##   number of free chunks %d\n", hinfo->ordblks));
+	TRY(sp_rtrace_print_comment(fp, "##   number of fastbin blocks %d\n", hinfo->smblks));
+	TRY(sp_rtrace_print_comment(fp, "##   number of mapped regions %d\n", hinfo->hblks));
+	TRY(sp_rtrace_print_comment(fp, "##   space in mapped regions %d\n", hinfo->hblkhd));
+	TRY(sp_rtrace_print_comment(fp, "##   maximum total allocated space %d\n", hinfo->usmblks));
+	TRY(sp_rtrace_print_comment(fp, "##   space available in freed fastbin blocks %d\n", hinfo->fsmblks));
+	TRY(sp_rtrace_print_comment(fp, "##   total allocated space %d\n", hinfo->uordblks));
+	TRY(sp_rtrace_print_comment(fp, "##   total free space %d\n", hinfo->fordblks));
+	TRY(sp_rtrace_print_comment(fp, "##   top-most, releasable (via malloc_trim) space %d\n", hinfo->keepcost));
 }
 
 typedef struct {
@@ -170,13 +183,56 @@ typedef struct {
 	leak_data_t leaks[32];
 } leaks_t;
 
+/**
+ * Prints leaks information.
+ *
+ * @param res
+ * @param leaks
+ */
 static void write_leaks(rd_resource_t* res, leaks_t* leaks)
 {
-	TRY(formatter_printf(leaks->fp, "# Resource - %s (%s):\n", res->type, res->desc));
-	int index = ffs(res->id) - 1;
-	TRY(formatter_printf(leaks->fp, "# %d block(s) leaked with total size of %d bytes\n", leaks->leaks[index].count, leaks->leaks[index].total_size));
+	TRY(sp_rtrace_print_comment(leaks->fp, "# Resource - %s (%s):\n", res->data.type, res->data.desc));
+	int index = ffs(res->data.id) - 1;
+	TRY(sp_rtrace_print_comment(leaks->fp, "# %d block(s) leaked with total size of %d bytes\n", leaks->leaks[index].count, leaks->leaks[index].total_size));
 
 }
+
+/**
+ * Prints memory mapping information.
+ *
+ * @param mmap
+ * @param fp
+ * @return
+ */
+static int write_mmap(const rd_mmap_t* mmap, FILE* fp)
+{
+	return sp_rtrace_print_mmap(fp, &mmap->data);
+}
+
+/**
+ * Writes context data.
+ *
+ * @param context
+ * @param fp
+ * @return
+ */
+static int write_context(const rd_context_t* context, FILE* fp)
+{
+	return sp_rtrace_print_context(fp, &context->data);
+}
+
+/**
+ * Writes resource type information.
+ *
+ * @param context
+ * @param fp
+ * @return
+ */
+static int write_resource(const rd_resource_t* resource, FILE* fp)
+{
+	return sp_rtrace_print_resource(fp, &resource->data);
+}
+
 
 /*
  * Public API
@@ -201,7 +257,7 @@ void write_trace_environment(fmt_data_t* fmt)
 	sprintf(timestamp, "%d.%d.%d %02d:%02d:%02d", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
 	sprintf(btdepth, "%d", fmt->rd->pinfo->backtrace_depth);
 	
-	header_t header =  {
+	sp_rtrace_header_t header =  {
 			.fields = { 
 					version,                // HEADER_VERSION
 					fmt->rd->hshake->arch,  // HEADER_ARCH 
@@ -221,7 +277,7 @@ void write_trace_environment(fmt_data_t* fmt)
 	header_set_filter(&header, filter);
 	
 	/* write header data */
-	TRY(formatter_write_header(&header, fmt->fp));
+	TRY(sp_rtrace_print_header(fmt->fp, &header));
 
 	/* write heap information if exists */
 	if (fmt->rd->hinfo) write_heap_information(fmt->fp, fmt->rd->hinfo);
@@ -230,13 +286,13 @@ void write_trace_environment(fmt_data_t* fmt)
 	dlist_foreach2(&fmt->rd->minfo, (op_binary_t)write_module_info, fmt->fp);
 
 	/* write context registry */
-	dlist_foreach2(&fmt->rd->contexts, (op_binary_t)formatter_write_context, fmt->fp);
+	dlist_foreach2(&fmt->rd->contexts, (op_binary_t)write_context, fmt->fp);
 
 	/* write resource registry */
-	dlist_foreach2(&fmt->rd->resources, (op_binary_t)formatter_write_resource, fmt->fp);
+	dlist_foreach2(&fmt->rd->resources, (op_binary_t)write_resource, fmt->fp);
 
 	/* write memory mapping data */
-	dlist_foreach2(&fmt->rd->mmaps, (op_binary_t)formatter_write_mmap, fmt->fp);
+	dlist_foreach2(&fmt->rd->mmaps, (op_binary_t)write_mmap, fmt->fp);
 }
 
 void write_trace_calls(fmt_data_t* fmt)
@@ -255,6 +311,6 @@ void write_trace_calls(fmt_data_t* fmt)
 
 	if (fmt->comment) {
 		fmt->comment = dlist_foreach2_in(&fmt->rd->comments, fmt->comment,
-				(op_binary_t)comment_check_index, (void*)(long)LONG_MAX, (op_binary_t)formatter_write_comment, fmt->fp);
+				(op_binary_t)comment_check_index, (void*)(long)LONG_MAX, (op_binary_t)fcall_write_comment, fmt->fp);
 	}
 }

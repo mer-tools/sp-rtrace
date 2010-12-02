@@ -42,7 +42,6 @@
 #include "common/sp_rtrace_proto.h"
 #include "common/rtrace_data.h"
 #include "common/utils.h"
-#include "common/formatter.h"
 
 #include "rtrace_common.h"
 

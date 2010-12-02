@@ -28,75 +28,118 @@
 #include <stdarg.h>
 #include <sys/time.h>
 #include <errno.h>
+#include <limits.h>
 
 #include "sp_rtrace_formatter.h"
-#include "common/formatter.h"
 #include "common/sp_rtrace_proto.h"
+#include "common/sp_rtrace_defs.h"
+#include "common/header.h"
+#include "common/rtrace_data.h"
 
-int sp_rtrace_print_header(FILE* fp, const char* version, const char* arch,
-		const struct timeval *timestamp, int pid, const char* process_name, int backtrace_depth)
+char* sp_rtrace_resource_flags_text[2] = {
+		"refcount",
+		NULL,
+};
+
+int sp_rtrace_print_header(FILE* fp, const struct sp_rtrace_header_t* header)
 {
-	struct timeval tv;
-	if (timestamp == NULL) {
+	char timestamp_s[32];
+	if (!header->fields[SP_RTRACE_HEADER_TIMESTAMP]) {
+		struct timeval tv;
 		gettimeofday(&tv, NULL);
-		timestamp = &tv;
+		struct tm* tm = localtime(&tv.tv_sec);
+		sprintf(timestamp_s, "%02d.%02d.%04d %02d:%02d:%02d", tm->tm_mday, tm->tm_mon + 1, tm->tm_year + 1900,
+				tm->tm_hour, tm->tm_min, tm->tm_sec);
 	}
 
-	char timestamp_s[32], btdepth[16];
-	struct tm* tm = localtime(&timestamp->tv_sec);
-	sprintf(timestamp_s, "%02d.%02d.%04d %02d:%02d:%02d", tm->tm_mday, tm->tm_mon + 1, tm->tm_year + 1900,
-			tm->tm_hour, tm->tm_min, tm->tm_sec);
-
-	char pid_s[10];
-	sprintf(pid_s, "%d", pid);
-	sprintf(btdepth, "%d", backtrace_depth);
-
-	const header_t header=  {
-			.fields = { 
-					(char*)version,       // HEADER_VERSION
-					(char*)arch,          // HEADER_ARCH 
-					timestamp_s,          // HEADER_TIMESTAMP
-					(char*)process_name,  // HEADER_PROCESS
-					pid_s,                // HEADER_PID
-					NULL,                  // HEADER_FILTER
-					backtrace_depth == -1 ? NULL : btdepth, // HEADER_BACKTRACE_DEPTH
-			},
-	};
-	return formatter_write_header(&header, fp);
+	char buffer[PATH_MAX];
+	int size = 0, i;
+	for (i = 0; i < SP_RTRACE_HEADER_MAX; i++) {
+		const char* value = header->fields[i];
+		if (!value && i == SP_RTRACE_HEADER_TIMESTAMP) value = timestamp_s;
+		if (value) {
+			size += snprintf(buffer + size, PATH_MAX - size, "%s=%s, ", header_fields[i], value);
+		}
+	}
+	buffer[size++] = '\n';
+	buffer[size] = '\0';
+	if (fputs(buffer, fp) == EOF) return -errno;
+	return 0;
 }
 
 
-int sp_rtrace_print_mmap(FILE* fp, const char* module, void* from, void* to)
+int sp_rtrace_print_mmap(FILE* fp, const struct sp_rtrace_mmap_t* mmap)
 {
-	const rd_mmap_t mmap = {.module = (char*)module, .from = (pointer_t)from, .to = (pointer_t)to};
-	return formatter_write_mmap(&mmap, fp);
+	if (fprintf(fp, ": %s => 0x%lx-0x%lx\n", mmap->module, mmap->from, mmap->to) == 0) return -errno;
+	return 0;
 }
 
 
-int sp_rtrace_print_call(FILE* fp, int index, unsigned int context, unsigned int timestamp,
-		const char* name, int res_size, void* res_id, const char* res_type)
+int sp_rtrace_print_call(FILE* fp, const struct sp_rtrace_fcall_t* call)
 {
-	rd_resource_t resource = {
-			.type = (char*)res_type,
-	};
-	const rd_fcall_t call = {
-			.index = index,
-			.context = context,
-			.timestamp = timestamp,
-			.type = res_size ? SP_RTRACE_FTYPE_ALLOC : SP_RTRACE_FTYPE_FREE,
-			.name = (char*)name,
-			.res_id = (pointer_t)res_id,
-			.res_size = res_size,
-			.res_type = res_type ? &resource : NULL,
-	};
-	return formatter_write_fcall(&call, fp);
+	char buffer[2048], *ptr = buffer;
+
+	ptr += sprintf(ptr, "%d. ", call->index);
+	if (call->context) {
+		ptr += sprintf(ptr, "@%x ", (int)call->context);
+	}
+	if (call->timestamp) {
+		int hours = call->timestamp / (1000 * 60 * 60);
+		int usecs = call->timestamp % (1000 * 60 * 60);
+		int minutes = usecs / (1000 * 60);
+		usecs %= 1000 * 60;
+		int seconds = usecs / 1000;
+		usecs %= 1000;
+		ptr += sprintf(ptr, "[%02d:%02d:%02d.%03d] ", hours, minutes, seconds, usecs);
+	}
+	ptr += sprintf(ptr, "%s", call->name);
+
+	/* append resource type for multi resource traces */
+	char* res_name = NULL;
+	switch (call->res_type_flag) {
+		case SP_RTRACE_FCALL_RFIELD_REF: {
+			rd_resource_t* res = call->res_type;
+			if (res && !res->hide) {
+				res_name =  res->data.type;
+			}
+			break;
+		}
+		case SP_RTRACE_FCALL_RFIELD_NAME: {
+			res_name = call->res_type;
+			break;
+		}
+	}
+	if (res_name) {
+		ptr += sprintf(ptr, "<%s>", res_name);
+	}
+
+	if (call->type == SP_RTRACE_FTYPE_ALLOC) {
+		ptr += sprintf(ptr, "(%d) = 0x%lx", call->res_size, call->res_id);
+	}
+	else {
+		ptr += sprintf(ptr, "(0x%lx)", call->res_id);
+	}
+	*ptr++ = '\n';
+	if (fwrite(buffer, 1, ptr - buffer, fp) < (size_t)(ptr - buffer)) return -errno;
+	return 0;
 }
 
 
-int sp_rtrace_print_trace(FILE* fp, void** frames, char** resolved, int nframes)
+int sp_rtrace_print_trace(FILE* fp, const struct sp_rtrace_ftrace_t* trace)
 {
-	const rd_ftrace_t trace = {.frames = (pointer_t*)frames, .nframes = nframes, .resolved_names = (char**)resolved};
-	return formatter_write_ftrace(&trace, fp);
+	int i, size = trace->nframes;
+	char buffer[PATH_MAX];
+	for (i = 0; i < size; i++) {
+		char* ptr = buffer;
+		ptr += sprintf(ptr, "\t0x%lx", trace->frames[i]);
+		if (trace->resolved_names && trace->resolved_names[i]) {
+			ptr += sprintf(ptr, " %s", trace->resolved_names[i]);
+		}
+		*ptr++ = '\n';
+		if (fwrite(buffer, 1, ptr - buffer, fp) < (size_t)(ptr - buffer)) return -errno;
+	}
+	if (fputc('\n', fp) == EOF) return -errno;
+	return 0;
 }
 
 
@@ -116,17 +159,31 @@ int sp_rtrace_print_trace_step(FILE* fp, void* addr, const char* resolved)
 }
 
 
-int sp_rtrace_print_context(FILE* fp, unsigned int id, const char* name)
+int sp_rtrace_print_context(FILE* fp, const struct sp_rtrace_context_t* context)
 {
-	const rd_context_t context = {.id = id, .name = (char*)name};
-	return formatter_write_context(&context, fp);
+	if (fprintf(fp, "@ %x : %s\n", (int)context->id, context->name) == 0) return -errno;
+	return 0;
 }
 
 
-int sp_rtrace_print_resource(FILE* fp, unsigned int id, const char* type, const char* desc, unsigned int flags)
+int sp_rtrace_print_resource(FILE* fp, const struct sp_rtrace_resource_t* resource)
 {
-	rd_resource_t resource = {.id = id, .type = (char*)type, .desc = (char*)desc, .flags = flags};
-	return formatter_write_resource(&resource, fp);
+	char buffer[PATH_MAX], *ptr = buffer;
+	ptr += sprintf(ptr, "<%x> : %s (%s)", 1 << ((int)resource->id - 1), resource->type, resource->desc);
+	if (resource->flags) {
+		*ptr++ = ' ';
+		*ptr++ = '[';
+		unsigned int nflag = 0, flag;
+		while ( (flag = 1 << nflag) <= SP_RTRACE_RESOURCE_LAST_FLAG) {
+			if (nflag) *ptr++ = '|';
+			ptr += sprintf(ptr, "%s", sp_rtrace_resource_flags_text[nflag++]);
+		}
+		*ptr++ = ']';
+	}
+	*ptr++ = '\n';
+	*ptr = '\0';
+	if (fwrite(buffer, 1, ptr - buffer, fp) < (size_t)(ptr - buffer)) return -errno;
+	return 0;
 }
 
 
@@ -144,10 +201,13 @@ int sp_rtrace_print_comment(FILE* fp, const char* format, ...)
 }
 
 
-int sp_rtrace_print_args(FILE* fp, char** args)
+int sp_rtrace_print_args(FILE* fp, const struct sp_rtrace_farg_t* args)
 {
-	const rd_fargs_t fargs = {.args = (char**)args};
-	return formatter_write_fargs(&fargs, fp);
+	while (args->name) {
+		if (fprintf(fp, "\t$%s = %s\n", args->name, args->value) == 0) return -errno;
+		args++;
+	}
+	return 0;
 }
 
 

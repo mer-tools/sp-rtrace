@@ -41,6 +41,7 @@
 #include "htable.h"
 #include "dlist.h"
 #include "sp_rtrace_proto.h"
+#include "sp_rtrace_defs.h"
 
 
 /**
@@ -127,9 +128,7 @@ void rd_minfo_free(rd_minfo_t* minfo);
 typedef struct rd_mmap_t {
 	dlist_node_t node;
 
-	pointer_t from;
-	pointer_t to;
-	char* module;
+	sp_rtrace_mmap_t data;
 } rd_mmap_t;
 
 #define RD_MMAP(x) ((rd_mmap_t*)x)
@@ -151,10 +150,8 @@ void rd_mmap_free(rd_mmap_t* mmap);
 typedef struct rd_context_t {
     /* double linked list support */
     dlist_node_t node;
-	/* the context id */
-	unsigned int id;
-	/* the context name */
-	char* name;
+
+    sp_rtrace_context_t data;
 } rd_context_t;
 
 #define RD_CONTEXT(x) ((rd_context_t*)x)
@@ -176,14 +173,9 @@ void rd_context_free(rd_context_t* context);
 typedef struct rd_resource_t {
     /* double linked list support */
     dlist_node_t node;
-	/* the resource type id */
-	unsigned int id;
-	/* the resource type */
-	char* type;
-	/* the resource description */
-	char* desc;
-	/* resource behaviour flags */
-	unsigned int flags;
+
+    /* the resource data */
+    sp_rtrace_resource_t data;
 	/* flag to hide resource from call records */
 	bool hide;
 } rd_resource_t;
@@ -209,24 +201,11 @@ void rd_resource_free(rd_resource_t* resource);
 typedef struct rd_fcall_t {
     /* double linked list support */
     dlist_node_t node;
-	/* the function index */
-	int index;
-	/* the function call type (SP_RTRACE_FTYPE_* definitions)
-	 * in sp-rtrace-proto.h */
-	unsigned int type;
-	/* the function call context */
-	unsigned int context;
-	/* the function call timestamp */
-	unsigned int timestamp;
-	/* the function name */
-	char* name;
-	/* the resource type */
-	rd_resource_t* res_type;
-	/* the associated (allocated/freed) resource identifier */
-	pointer_t res_id;
-	/* the associated (allocated) resource size */
-	int res_size;
-	/* the function call backtrace */
+
+    /* the function call data */
+    sp_rtrace_fcall_t data;
+
+    /* the function call backtrace */
 	struct rd_ftrace_t* trace;
 
 	/* back reference from ftrace record */
@@ -237,6 +216,8 @@ typedef struct rd_fcall_t {
 } rd_fcall_t;
 
 #define RD_FCALL(x) ((rd_fcall_t*)x)
+
+#define RD_FCALL_RESOURCE(x) (((rd_fcall_t*)x)->res_type_flag == SP_RTRACE_FCALL_RFIELD_REF ? ((rd_fcall_t*)x)->res_type : NULL)
 
 /**
  * Frees function call data.
@@ -261,16 +242,8 @@ typedef struct rd_ftrace_t {
 	/* the reference counter */
 	int ref_count;
 
-	/* number of frames in backtrace */
-	unsigned int nframes;
-
-	/* the frame return addresses */
-	pointer_t* frames;
-
-	/* The resolved address names. NULL when parsing binary data,
-	 * but text files could contain already resolved names -
-	 * in this case keep them intact. */
-	char** resolved_names;
+	/* the backtrce data */
+	sp_rtrace_ftrace_t data;
 
 	/* list of function calls associated with the backtrace */
 	dlist_t calls;
@@ -294,7 +267,7 @@ void rd_ftrace_free(rd_ftrace_t* trace);
  * in text format.
  */
 typedef struct rd_fargs_t {
-	char** args;
+	sp_rtrace_farg_t* data;
 } rd_fargs_t;
 
 #define RD_FARGS(x) ((rd_fargs_t*)x)

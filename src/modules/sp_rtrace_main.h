@@ -30,6 +30,7 @@
 #include <limits.h>
 
 #include "common/sp_rtrace_proto.h"
+#include "common/sp_rtrace_defs.h"
 
 /**
  * @file sp_rtrace_main.h
@@ -65,20 +66,13 @@ typedef struct sp_rtrace_options_t {
 extern sp_rtrace_options_t* sp_rtrace_options;
 
 /**
- * Writes function call packet into processor pipe.
+ * Writes function call pacaket into processor pipe.
  *
- * @param[in] moduleid the source module identifier (returned by sp_rtrace_register_module).
- * @param[in] type     the function call type (see SP_RTRACE_FTYPE_* defines in sp_rtrace_proto.h).
- * @param[in] res_type the resource type identifier returned by sp_rtrace_register_resource().
- * @param[in] name     the function name. Note that the name must be reference to preallocated
- *                     string (either static or dynamic), which must not be freed until the module
- *                     is unloaded.
- * @param[in] size     the resource size.
- * @param[in] id       the resource identifier.
- * @param[in] args     the function argument array, ending with NULL. Optional.
- * @return             the number of bytes written.
+ * @param[in] call  the function call data.
+ * @param[in] args  the function argument data (can be NULL).
+ * @return          the number of bytes written.
  */
-int sp_rtrace_write_function_call(int type, unsigned int res_type, const char* name, size_t size, pointer_t id, const char** args);
+int sp_rtrace_write_function_call(sp_rtrace_fcall_t* call, sp_rtrace_farg_t* args);
 
 
 typedef void (*sp_rtrace_enable_tracing_t)(bool);
@@ -111,15 +105,14 @@ unsigned int sp_rtrace_register_module(const char* name, unsigned char vmajor, u
  * Note that the resource type and desc values must refer to preallocated
  * strings (either static or dynamic), which must not be freed until the module
  * is unloaded.
- * @param[in] type     the resource type.
- * @param[in] desc     the resource description.
- * @param[in] flags    the resource behavior flags (see resource_flags_t enum in sp_rtrace_proto.h).
- * @return             the resource type id or 0 if resource registry is full.
+ * @param[in,out] resource in  - the resource data.
+ *                         out - the resource identifier.
+ * @return                 the resource type id or 0 if resource registry is full.
  */
-unsigned int sp_rtrace_register_resource(const char* type, const char* desc, unsigned int flags);
+unsigned int sp_rtrace_register_resource(sp_rtrace_resource_t* resource);
 
 /**
- * Stores current heap information (mallinf()) so it can be sent to pre-processor
+ * Stores current heap information (mallinfo()) so it can be sent to pre-processor
  * when tracing is disabled.
  *
  * @return
@@ -129,11 +122,10 @@ void sp_rtrace_store_heap_info();
 /**
  * Writes context registry packet into processor pipe.
  *
- * @param[in] context_id  the context identifier.
- * @param[in] name        the context name.
+ * @param[in] context     the context data.
  * @return                the number of bytes written.
  */
-int sp_rtrace_write_context_registry(int context_id, const char* name);
+int sp_rtrace_write_context_registry(sp_rtrace_context_t* context);
 
 
 /**

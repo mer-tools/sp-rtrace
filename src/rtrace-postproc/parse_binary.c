@@ -32,6 +32,7 @@
 
 #include "sp_rtrace_postproc.h"
 #include "common/sp_rtrace_proto.h"
+#include "common/sp_rtrace_defs.h"
 
 #include "parse_binary.h"
 #include "common/utils.h"
@@ -79,8 +80,8 @@ static rd_context_t* read_packet_CR(const rd_hshake_t* hs __attribute__((unused)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
 	rd_context_t* context = (rd_context_t*)dlist_create_node(sizeof(rd_context_t));
-	data += read_dword(data, &context->id);
-	read_stringa(data, &context->name);
+	data += read_dword(data, &context->data.id);
+	read_stringa(data, &context->data.name);
 	return context;
 }
 
@@ -92,16 +93,16 @@ static rd_context_t* read_packet_CR(const rd_hshake_t* hs __attribute__((unused)
  * @param[in] size   the data size.
  * @return           the resource registry record.
  */
-static rd_resource_t* read_packet_RR(const rd_hshake_t* hs __attribute__((unused)), const char* data)
+static rd_resource_t* read_packet_RR(const rd_hshake_t* hs, const char* data)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
 	rd_resource_t* res = (rd_resource_t*)dlist_create_node(sizeof(rd_resource_t));
-	data += read_dword(data, &res->id);
+	data += read_dword(data, &res->data.id);
 	if (HS_CHECK_VERSION(hs, 1, 3)) {
-		data += read_dword(data, &res->flags);
+		data += read_dword(data, &res->data.flags);
 	}
-	data += read_stringa(data, &res->type);
-	read_stringa(data, &res->desc);
+	data += read_stringa(data, &res->data.type);
+	read_stringa(data, &res->data.desc);
 	res->hide = false;
 	return res;
 }
@@ -119,9 +120,9 @@ static rd_mmap_t* read_packet_MM(const rd_hshake_t* hs __attribute__((unused)), 
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
 
 	rd_mmap_t* fmap = (rd_mmap_t*)dlist_create_node(sizeof(rd_mmap_t));
-	data += read_pointer(data, &fmap->from);
-	data += read_pointer(data, &fmap->to);
-	read_stringa(data, &fmap->module);
+	data += read_pointer(data, &fmap->data.from);
+	data += read_pointer(data, &fmap->data.to);
+	read_stringa(data, &fmap->data.module);
 	return fmap;
 }
 
@@ -132,7 +133,7 @@ static rd_mmap_t* read_packet_MM(const rd_hshake_t* hs __attribute__((unused)), 
  * @param[in] size   the data size.
  * @return           the process info record.
  */
-static rd_pinfo_t* read_packet_PI(const rd_hshake_t* hs __attribute__((unused)), const char* data)
+static rd_pinfo_t* read_packet_PI(const rd_hshake_t* hs, const char* data)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
 
@@ -188,19 +189,21 @@ static rd_fcall_t* read_packet_FC(const rd_hshake_t* hs __attribute__((unused)),
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
     rd_fcall_t* call = (rd_fcall_t*)dlist_create_node(sizeof(rd_fcall_t));
-    call->index = call_index++;
-    /* read resource id into res_type field. A reference to the resource
+    sp_rtrace_fcall_t* cd = &call->data;
+    cd->index = call_index++;
+    /* read resource type id into res_type field. A reference to the resource
      * type data will be properly stored after returning from this function */
     unsigned int res_type;
     data += read_dword(data, &res_type);
-    call->res_type = (rd_resource_t*)(long)res_type;
+    cd->res_type = (void*)(long)res_type;
+    cd->res_type_flag = SP_RTRACE_FCALL_RFIELD_ID;
     /* */
-    data += read_dword(data, &call->context);
-    data += read_dword(data, &call->timestamp);
-    data += read_dword(data, &call->type);
-    data += read_stringa(data, &call->name);
-    data += read_dword(data, (unsigned int*)&call->res_size);
-    read_pointer(data, &call->res_id);
+    data += read_dword(data, &cd->context);
+    data += read_dword(data, &cd->timestamp);
+    data += read_dword(data, &cd->type);
+    data += read_stringa(data, &cd->name);
+    data += read_dword(data, (unsigned int*)&cd->res_size);
+    read_pointer(data, &cd->res_id);
     call->trace = NULL;
     call->args = NULL;
     call->ref = NULL;
@@ -221,11 +224,11 @@ static rd_ftrace_t* read_packet_BT(const rd_hshake_t* hs __attribute__((unused))
 
     rd_ftrace_t* trace = (rd_ftrace_t*)htable_create_node(sizeof(rd_ftrace_t));
     trace->ref_count = 0;
-    data += read_dword(data, &trace->nframes);
-    trace->frames = (pointer_t*)malloc_a(sizeof(pointer_t) * trace->nframes);
-    memcpy(trace->frames, data, sizeof(pointer_t) * trace->nframes);
+    data += read_dword(data, &trace->data.nframes);
+    trace->data.frames = (pointer_t*)malloc_a(sizeof(pointer_t) * trace->data.nframes);
+    memcpy(trace->data.frames, data, sizeof(pointer_t) * trace->data.nframes);
     /* binary packets can't contain resolved address names */
-    trace->resolved_names = NULL;
+    trace->data.resolved_names = NULL;
 
     dlist_init(&trace->calls);
     return trace;
@@ -245,11 +248,13 @@ static rd_fargs_t* read_packet_FA(const rd_hshake_t* hs __attribute__((unused)),
 	rd_fargs_t* args = (rd_fargs_t*)malloc_a(sizeof(rd_fargs_t));
 	unsigned int argc, i;
 	data += read_dword(data, &argc);
-	args->args = (char**)malloc_a(sizeof(char*) * (argc + 1));
+	args->data = malloc_a(sizeof(sp_rtrace_farg_t) * (argc + 1));
 	for (i = 0; i < argc; i++) {
-		data += read_stringa(data, &args->args[i]);
+		data += read_stringa(data, &args->data[i].name);
+		data += read_stringa(data, &args->data[i].value);
 	}
-	args->args[i] = NULL;
+	args->data[i].name = NULL;
+	args->data[i].value = NULL;
     return args;
 }
 
@@ -315,14 +320,15 @@ static int read_generic_packet(rd_t* rd, const char* data, int size)
 		case SP_RTRACE_PROTO_RESOURCE_REGISTRY: {
 			rd_resource_t* res = read_packet_RR(rd->hshake, data);
 			dlist_add(&rd->resources, res);
-			res_index[res->id] = res;
+			res_index[res->data.id] = res;
 		    fcall_prev = NULL;
 			break;
 		}
 		case SP_RTRACE_PROTO_FUNCTION_CALL: {
             fcall_prev = read_packet_FC(rd->hshake, data);
             dlist_add(&rd->calls, fcall_prev);
-            fcall_prev->res_type = res_index[(long)fcall_prev->res_type];
+            fcall_prev->data.res_type = res_index[(long)fcall_prev->data.res_type];
+            fcall_prev->data.res_type_flag = SP_RTRACE_FCALL_RFIELD_REF;
             break;
         }
 		case SP_RTRACE_PROTO_BACKTRACE: {

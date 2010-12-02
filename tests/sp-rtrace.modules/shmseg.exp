@@ -28,7 +28,7 @@ set src_deps "$src_dir/$out_file.c"
 set src_opts "-O0"
 
 proc test_shmseg_module { args } {
-	test_module shmseg shmget:1 shmdt:3 shmat:2
+	test_module shmsysv shmget:1 shmdt:3 shmat:2
 }
 
 set result [rt_compile $src_dir $out_file $src_deps $src_opts]

@@ -125,11 +125,12 @@ stack trace of the last function call.
 The function arguments packet is an optional packet which could be sent after FC+BT
 packets. It contains detalized information about function arguments.
 
-  [number][value][value]...[value]
+  [number][arg1][arg2]...[argN]
     [number] - the number of function arguments (dword)
     [arg1][arg2]...[argN] - function argument list
-      [argX] - the function argument X (string)
-
+      [argX] - the function argument X ([name][value])
+        [name] - the function argument name (string)
+	[value] - te function argument value (string)
 
 8. New library [NL]
 The new library packet is sent at beginning and whenever a new library

@@ -28,7 +28,7 @@
 #include "common/utils.h"
 
 /* header field names */
-const char* header_fields[HEADER_MAX] = {
+const char* header_fields[SP_RTRACE_HEADER_MAX] = {
 		"version",
 		"arch",
 		"timestamp",
@@ -45,16 +45,16 @@ const char* filter_tags[FILTER_MAX] = {
 		"resolve",
 };
 
-int header_read(header_t* header, const char* text)
+int header_read(sp_rtrace_header_t* header, const char* text)
 {
 	char key[256], value[256];
 	const char* ptr = text;
 	int i;
 	
-	memset(header, 0, sizeof(header_t));
+	memset(header, 0, sizeof(sp_rtrace_header_t));
 	
 	while (sscanf(ptr, "%[^=]=%[^,]", key, value) == 2) {
-		for (i = 0; i < HEADER_MAX; i++) {
+		for (i = 0; i < SP_RTRACE_HEADER_MAX; i++) {
 			if (!strcmp(key, header_fields[i])) { 
 				if (header->fields[i]) free(header->fields[i]);
 				header->fields[i] = strdup_a(value);
@@ -69,17 +69,17 @@ int header_read(header_t* header, const char* text)
 	return 0;
 }
 
-void header_free(header_t* header)
+void header_free(sp_rtrace_header_t* header)
 {
 	int i;
-	for (i = 0; i < HEADER_MAX; i++) {
+	for (i = 0; i < SP_RTRACE_HEADER_MAX; i++) {
 		if (header->fields[i]) free(header->fields[i]);
 	}
 }
 
-unsigned int header_get_filter(header_t* header)
+unsigned int header_get_filter(sp_rtrace_header_t* header)
 {
-	const char* filter = header->fields[HEADER_FILTER];
+	const char* filter = header->fields[SP_RTRACE_HEADER_FILTER];
 	unsigned int filter_mask = 0;
 	if (filter) {
 		int i;
@@ -92,9 +92,9 @@ unsigned int header_get_filter(header_t* header)
 	return filter_mask;
 }
 
-void header_set_filter(header_t* header, unsigned int filter_mask)
+void header_set_filter(sp_rtrace_header_t* header, unsigned int filter_mask)
 {
-	if (header->fields[HEADER_FILTER]) free(header->fields[HEADER_FILTER]);
+	if (header->fields[SP_RTRACE_HEADER_FILTER]) free(header->fields[SP_RTRACE_HEADER_FILTER]);
 	if (filter_mask) {
 		char filter_text[4096], *ptr = filter_text;
 		int i;
@@ -104,9 +104,9 @@ void header_set_filter(header_t* header, unsigned int filter_mask)
 				ptr = stpcpy(ptr, filter_tags[i]);
 			}
 		}
-		header->fields[HEADER_FILTER] = strdup_a(filter_text);
+		header->fields[SP_RTRACE_HEADER_FILTER] = strdup_a(filter_text);
 	}
 	else {
-		header->fields[HEADER_FILTER] = NULL;
+		header->fields[SP_RTRACE_HEADER_FILTER] = NULL;
 	}
 }

@@ -283,7 +283,7 @@ proc check_print_argument { args } {
 	eval spawn $::bin_dir/$::out_file args $args
 	set index 0
 	expect {
-		-re {(?n)^\t\$[0-9]+ = ([^\n\r]+)\s*$} {
+		-re {(?n)^\t\$([^\n\r]+)\s*$} {
 			set out_arg $expect_out(1,string)
 			set in_arg [lindex $args $index]
 			if {  $in_arg != $out_arg } {
@@ -397,9 +397,9 @@ proc test_print_comment { args } {
 
 proc test_print_argument { args } {
 	if { [check_print_argument] == -1} {return -1}
-	if { [check_print_argument "1"] == -1} {return -1}
-	if { [check_print_argument "1" "second arg"] == -1} {return -1}
-	if { [check_print_argument "1" "second arg" "III"] == -1} {return -1}
+	if { [check_print_argument "arg1=1"] == -1} {return -1}
+	if { [check_print_argument "arg1=1" "arg2=second arg"] == -1} {return -1}
+	if { [check_print_argument "arg1=1" "arg2=second arg" "arg3=III"] == -1} {return -1}
 
 	pass "sp_rtrace_print_arg"
 }

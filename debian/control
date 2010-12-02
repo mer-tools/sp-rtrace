@@ -33,7 +33,7 @@ Description: Debug symbols for resource consumption tracing support library.
 Package: sp-rtrace
 Section: utils
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}, libsp-rtrace1-1 (= ${binary:Version})
 Description: Resource consumption tracing toolset. 
  This package provides tools for tracing allocation and deallocation of various
  resources (for example memory, memory transfers etc), and post-processing

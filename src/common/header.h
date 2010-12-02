@@ -29,18 +29,7 @@
 #ifndef HEADER_H_
 #define HEADER_H_
 
-/* header field index */
-enum header_index_t {
-	HEADER_VERSION,
-	HEADER_ARCH,
-	HEADER_TIMESTAMP,
-	HEADER_PROCESS,
-	HEADER_PID,
-	HEADER_FILTER,
-	HEADER_BACKTRACE_DEPTH,
-	
-	HEADER_MAX,
-};
+#include "sp_rtrace_defs.h"
 
 /* header filter field tag index */
 enum filter_index_t {
@@ -60,11 +49,7 @@ enum filter_mask_t {
 	FILTER_MASK_RESET = ~(FILTER_MASK_COMPRESS),
 };
 
-extern const char* header_fields[HEADER_MAX];
-
-typedef struct {
-	char* fields[HEADER_MAX];	
-} header_t;
+extern const char* header_fields[SP_RTRACE_HEADER_MAX];
 
 
 /**
@@ -74,21 +59,21 @@ typedef struct {
  * @param[in] text     the text to parse
  * @return             0 - success.
  */
-int header_read(header_t* header, const char* text);
+int header_read(sp_rtrace_header_t* header, const char* text);
 
 /**
  * Frees the header resources.
  * 
  * @param[in] header   the header to free.
  */
-void header_free(header_t* header);
+void header_free(sp_rtrace_header_t* header);
 
 /**
  * Retrieves filter mask from the header filter field.
  * @param[in] header  the header data.
  * @return            the filter mask (see filter_mask_t structure).
  */
-unsigned int header_get_filter(header_t* header);
+unsigned int header_get_filter(sp_rtrace_header_t* header);
 
 /**
  * Sets header filter field.
@@ -96,7 +81,7 @@ unsigned int header_get_filter(header_t* header);
  * @param[in] header       the header data.
  * @param[in] filter_mask  the mask to set (see filter_mask_t structure).
  */
-void header_set_filter(header_t* header, unsigned int filter_mask);
+void header_set_filter(sp_rtrace_header_t* header, unsigned int filter_mask);
 
 
 

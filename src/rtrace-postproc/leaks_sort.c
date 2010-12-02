@@ -42,7 +42,7 @@ typedef struct {
 static long count_leaks(ref_node_t* call_ref, ftrace_ref_t* trace_ref)
 {
 	trace_ref->leak_count++;
-	trace_ref->leak_size += ((rd_fcall_t*)call_ref->ref)->res_size;
+	trace_ref->leak_size += ((rd_fcall_t*)call_ref->ref)->data.res_size;
 	return 0;
 }
 

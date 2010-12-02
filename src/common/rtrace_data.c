@@ -52,41 +52,41 @@ void rd_minfo_free(rd_minfo_t* minfo)
 
 void rd_mmap_free(rd_mmap_t* mmap)
 {
-	if (mmap->module) free(mmap->module);
+	if (mmap->data.module) free(mmap->data.module);
 	free(mmap);
 }
 
 void rd_context_free(rd_context_t* context)
 {
-	if (context->name) free(context->name);
+	if (context->data.name) free(context->data.name);
 	free(context);
 }
 
 
 void rd_resource_free(rd_resource_t* resource)
 {
-	if (resource->type) free(resource->type);
-	if (resource->desc) free(resource->desc);
+	if (resource->data.type) free(resource->data.type);
+	if (resource->data.desc) free(resource->data.desc);
 	free(resource);
 }
 
 void rd_fcall_free(rd_fcall_t* call)
 {
-	if (call->name) free(call->name);
+	if (call->data.name) free(call->data.name);
 	free(call);
 }
 
 void rd_ftrace_free(rd_ftrace_t* trace)
 {
-	if (trace->frames) free(trace->frames);
-	if (trace->resolved_names) {
+	if (trace->data.frames) free(trace->data.frames);
+	if (trace->data.resolved_names) {
 		unsigned int i;
-		for (i = 0; i < trace->nframes; i++) {
-			if (trace->resolved_names[i]) {
-				free(trace->resolved_names[i]);
+		for (i = 0; i < trace->data.nframes; i++) {
+			if (trace->data.resolved_names[i]) {
+				free(trace->data.resolved_names[i]);
 			}
 		}
-		free(trace->resolved_names);
+		free(trace->data.resolved_names);
 	}
 	/* Free the function call references, but don't touch
 	 * the function calls themselves. */
@@ -96,12 +96,14 @@ void rd_ftrace_free(rd_ftrace_t* trace)
 
 void rd_fargs_free(rd_fargs_t* args)
 {
-	if (args->args) {
-		char** ptr = args->args;
-		while (*ptr) {
-			free(*ptr++);
+	if (args->data) {
+		sp_rtrace_farg_t* ptr = args->data;
+		while (ptr->name) {
+			free(ptr->name);
+			free(ptr->value);
+			ptr++;
 		}
-		free(args->args);
+		free(args->data);
 	}
 	free(args);
 }
@@ -140,10 +142,10 @@ void rd_hinfo_free(rd_hinfo_t* hinfo)
  */
 static long bt_compare(const rd_ftrace_t* bt1, const rd_ftrace_t* bt2)
 {
-	if (bt1->nframes == bt2->nframes) {
-		return memcmp(bt1->frames, bt2->frames, bt1->nframes * sizeof(bt1->frames[0]));
+	if (bt1->data.nframes == bt2->data.nframes) {
+		return memcmp(bt1->data.frames, bt2->data.frames, bt1->data.nframes * sizeof(bt1->data.frames[0]));
 	}
-	return bt1->nframes - bt2->nframes;
+	return bt1->data.nframes - bt2->data.nframes;
 }
 
 /**
@@ -156,8 +158,8 @@ static long bt_compare(const rd_ftrace_t* bt1, const rd_ftrace_t* bt2)
 static long bt_hash(rd_ftrace_t* bt)
 {
 	unsigned long hash = 0, i;
-	for (i = 0; i < bt->nframes; i++) {
-		unsigned long value = (unsigned long)bt->frames[i];
+	for (i = 0; i < bt->data.nframes; i++) {
+		unsigned long value = (unsigned long)bt->data.frames[i];
 		while (value) {
 			hash ^= value & ((1 << 16) - 1);
 			value >>= 3;

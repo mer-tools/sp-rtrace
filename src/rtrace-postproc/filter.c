@@ -83,18 +83,20 @@ void free_fres_rec(fres_t* res)
  */
 static long res_compare(const fres_t* res1, const fres_t* res2)
 {
-	if (res1->call->res_type == res2->call->res_type) {
-		return res1->call->res_id - res2->call->res_id;
+	if (res1->call->data.res_type == res2->call->data.res_type) {
+		return res1->call->data.res_id - res2->call->data.res_id;
 	}
-	if (!res1->call->res_type) {
-		fprintf(stderr, "WARNING: resource type is not set for record #%d\n", res1->call->index);
+	if (!res1->call->data.res_type) {
+		fprintf(stderr, "WARNING: resource type is not set for record #%d\n", res1->call->data.index);
 		return -1;
 	}
-	if (!res2->call->res_type) {
-		fprintf(stderr, "WARNING: resource type is not set for record #%d\n", res1->call->index);
+	if (!res2->call->data.res_type) {
+		fprintf(stderr, "WARNING: resource type is not set for record #%d\n", res1->call->data.index);
 		return 1;
 	}
-	return res1->call->res_type->id - res2->call->res_type->id;
+	rd_resource_t* res_type1 = res1->call->data.res_type;
+	rd_resource_t* res_type2 = res2->call->data.res_type;
+	return res_type1->data.id - res_type2->data.id;
 }
 
 /**
@@ -107,13 +109,14 @@ static long res_compare(const fres_t* res1, const fres_t* res2)
 static long res_hash(const fres_t* res)
 {
 	unsigned long hash = 0;
-	unsigned long value = (unsigned long)res->call->res_id;
+	unsigned long value = (unsigned long)res->call->data.res_id;
 	while (value) {
 		hash ^= value & ((1 << 16) - 1);
 		value >>= 3;
 	}
-	if (res->call->res_type) {
-		value = res->call->res_type->id;
+	if (res->call->data.res_type) {
+		rd_resource_t* res_type = res->call->data.res_type;
+		value = res_type->data.id;
 		while (value) {
 			hash ^= value & ((1 << 16) - 1);
 			value >>= 3;
@@ -142,9 +145,10 @@ static long fcall_remove_freed(rd_fcall_t* call, void* data)
 	fres_index_t* index = (fres_index_t*)data;
 	fres_t find_res = {.call = call};
     fres_t* res = htable_find(&index->table, &find_res);
+    rd_resource_t* res_type = call->data.res_type;
 
-    if (call->type == SP_RTRACE_FTYPE_ALLOC) {
-    	if (res && (call->res_type->flags & SP_RTRACE_RESOURCE_REFCOUNT)) {
+    if (call->data.type == SP_RTRACE_FTYPE_ALLOC) {
+    	if (res && (res_type->data.flags & SP_RTRACE_RESOURCE_REFCOUNT)) {
     		res->ref_count++;
 			rd_fcall_remove(index->rd, call);
     	}
@@ -158,13 +162,13 @@ static long fcall_remove_freed(rd_fcall_t* call, void* data)
 			if (old_res) free_fres_rec(old_res);
     	}
     }
-    else if (call->type == SP_RTRACE_FTYPE_FREE) {
+    else if (call->data.type == SP_RTRACE_FTYPE_FREE) {
     	/* create resource template for htable_find function. As the
     	 * compare function of resource hash table uses only call->res
     	 * id value, setting the .call field is enough for lookups */
         if (res) {
         	res->ref_count--;
-        	if (res->ref_count == 0 || !(call->res_type->flags & SP_RTRACE_RESOURCE_REFCOUNT)) {
+        	if (res->ref_count == 0 || !(res_type->data.flags & SP_RTRACE_RESOURCE_REFCOUNT)) {
 				/* The resource allocation record found. Remove the record
 				 * from function call list and free it. Also remove and
 				 * free the resource index record */
@@ -189,8 +193,8 @@ static long fcall_remove_freed(rd_fcall_t* call, void* data)
  */
 static void fcall_filter_context(rd_fcall_t* call, rd_t* rd)
 {
-	if ( (postproc_options.filter_context && !(call->context & postproc_options.filter_context)) ||
-			(!postproc_options.filter_context && call->context) ) {
+	if ( (postproc_options.filter_context && !(call->data.context & postproc_options.filter_context)) ||
+			(!postproc_options.filter_context && call->data.context) ) {
 		rd_fcall_remove(rd, call);
 	}
 }
@@ -205,7 +209,8 @@ static void fcall_filter_context(rd_fcall_t* call, rd_t* rd)
  */
 static void fcall_filter_resource(rd_fcall_t* call, rd_t* rd)
 {
-	if (call->res_type && !( (1 << (call->res_type->id - 1)) & postproc_options.filter_resource)) {
+	rd_resource_t* res = call->data.res_type;
+	if (res && !( (1 << (res->data.id - 1)) & postproc_options.filter_resource)) {
 		rd_fcall_remove(rd, call);
 	}
 }
@@ -219,12 +224,12 @@ static void fcall_filter_resource(rd_fcall_t* call, rd_t* rd)
  */
 static void fcall_find_lowhigh_blocks(rd_fcall_t* call, rd_hinfo_t* hinfo)
 {
-	if (call->type == SP_RTRACE_FTYPE_ALLOC) {
-		if (call->res_id < hinfo->lowest_block) {
-			hinfo->lowest_block = call->res_id;
+	if (call->data.type == SP_RTRACE_FTYPE_ALLOC) {
+		if (call->data.res_id < hinfo->lowest_block) {
+			hinfo->lowest_block = call->data.res_id;
 		}
-		if (call->res_id > hinfo->highest_block) {
-			hinfo->highest_block = call->res_id;
+		if (call->data.res_id > hinfo->highest_block) {
+			hinfo->highest_block = call->data.res_id;
 		}
 	}
 }
@@ -237,7 +242,7 @@ static void fcall_find_lowhigh_blocks(rd_fcall_t* call, rd_hinfo_t* hinfo)
  */
 static void context_filter_mask(rd_context_t* context, dlist_t* list)
 {
-	if (! (context->id & postproc_options.filter_context) ) {
+	if (! (context->data.id & postproc_options.filter_context) ) {
 		dlist_remove(list, (void*)context);
 	}
 }
@@ -250,7 +255,7 @@ static void context_filter_mask(rd_context_t* context, dlist_t* list)
  */
 static void resource_filter_mask(rd_resource_t* resource, dlist_t* list)
 {
-	if (! ( (1 << (resource->id - 1)) & postproc_options.filter_resource) ) {
+	if (! ( (1 << (resource->data.id - 1)) & postproc_options.filter_resource) ) {
 		dlist_remove(list, (void*)resource);
 	}
 }
@@ -266,8 +271,8 @@ static void resource_filter_mask(rd_resource_t* resource, dlist_t* list)
  */
 static int trim_backtrace(rd_ftrace_t* trace, unsigned int backtrace_depth)
 {
-	if (trace->nframes > backtrace_depth) {
-		trace->nframes = backtrace_depth;
+	if (trace->data.nframes > backtrace_depth) {
+		trace->data.nframes = backtrace_depth;
 	}
 	return 0;
 }
@@ -310,7 +315,7 @@ void filter_update_resource_visibility(rd_t* rd)
 		/* if only one resource is present, reset its index and hide it */
 		rd_resource_t* res = (rd_resource_t*)dlist_first(&rd->resources);
 		res->hide = true;
-		res->id = 1;
+		res->data.id = 1;
 	}
 }
 
@@ -323,13 +328,14 @@ void filter_find_lowhigh_blocks(rd_t* rd)
 
 long filter_sum_leaks(rd_fcall_t* call, leak_data_t* leaks)
 {
-	if (call->type == SP_RTRACE_FTYPE_ALLOC) {
+	if (call->data.type == SP_RTRACE_FTYPE_ALLOC) {
 		/* Resource type 0 is used when only when one resource type is present, to
 		 * hide the resource types in call reports. In reality the resource type
 		 * is 1	 */
-		leak_data_t* leak = &leaks[call->res_type ? call->res_type->id - 1 : 0];
+		rd_resource_t* res = call->data.res_type;
+		leak_data_t* leak = &leaks[res ? res->data.id - 1 : 0];
 		leak->count++;
-		leak->total_size += call->res_size;
+		leak->total_size += call->data.res_size;
 	}
 	return 0;
 }
