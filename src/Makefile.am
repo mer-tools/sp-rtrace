@@ -2,11 +2,13 @@ lib_LTLIBRARIES = libsp-rtrace1.la
 
 module_LTLIBRARIES = libsp-rtrace-main.la \
 	libsp-rtrace-memory.la libsp-rtrace-memtransfer.la \
-	libsp-rtrace-shmsysv.la libsp-rtrace-file.la libsp-rtrace-gobject.la libsp-rtrace-qobject.la
+	libsp-rtrace-shmsysv.la libsp-rtrace-file.la libsp-rtrace-gobject.la libsp-rtrace-qobject.la \
+	libsp-rtrace-audit.la
 moduledir = $(libdir)/sp-rtrace
 
 libsp_rtrace1_la_SOURCES = library/sp_rtrace_context.c library/sp_rtrace_formatter.c \
-	common/dlist.c common/htable.c common/utils.c common/rtrace_data.c common/header.c
+	library/sp_rtrace_tracker.c \
+	common/dlist.c common/htable.c common/utils.c common/rtrace_data.c common/header.c 
 libsp_rtrace1_la_LDFLAGS = $(VERSION_INFO)
 libsp_rtrace1_la_LIBADD = -ldl
 
@@ -45,6 +47,11 @@ libsp_rtrace_qobject_la_SOURCES = modules/sp_rtrace_qobject.c
 libsp_rtrace_qobject_la_CFLAGS = -rdynamic $(GLIB_CFLAGS) $(AM_CFLAGS)
 libsp_rtrace_qobject_la_LDFLAGS = -avoid-version -module
 libsp_rtrace_qobject_la_LIBADD = -ldl 
+
+libsp_rtrace_audit_la_SOURCES = modules/sp_rtrace_audit.c 
+libsp_rtrace_audit_la_CFLAGS = -rdynamic $(GLIB_CFLAGS) $(AM_CFLAGS)
+libsp_rtrace_audit_la_LDFLAGS = -avoid-version -module
+libsp_rtrace_audit_la_LIBADD = -ldl -lsp-rtrace1 -lsp-rtrace-main
 
 bin_PROGRAMS = sp-rtrace sp-rtrace-postproc sp-rtrace-resolve sp-rtrace-allocmap sp-rtrace-timeline
 

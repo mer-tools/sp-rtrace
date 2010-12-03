@@ -159,7 +159,7 @@ static gpointer trace_g_object_newv(GType object_type, guint n_parameters, GPara
 			{.name = "type", .value = (char*)type_info.type_name},
 			{0}
 	};
-	sp_rtrace_write_function_call(&call, args);
+	sp_rtrace_write_function_call(&call, NULL, args);
 	return rc;
 }
 
@@ -176,7 +176,7 @@ static void trace_g_type_free_instance(GTypeInstance* instance)
 			.res_size = 0,
 			.res_id = (pointer_t)(pointer_t)instance,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 }
 
 
@@ -203,7 +203,7 @@ static gpointer trace_g_object_ref(gpointer object)
 			{.name = "type", .value = (char*)type_info.type_name},
 			{0}
 	};
-	sp_rtrace_write_function_call(&call, args);
+	sp_rtrace_write_function_call(&call, NULL, args);
 
 	return rc;
 }
@@ -221,7 +221,7 @@ static void trace_g_object_unref(gpointer object)
 			.res_size = 0,
 			.res_id = (pointer_t)(pointer_t)object,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 }
 
 

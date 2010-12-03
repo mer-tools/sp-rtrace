@@ -229,7 +229,7 @@ int trace_shmget(key_t key, size_t size, int shmflg)
 				.res_size = size,
 				.res_id = (pointer_t)rc,
 		};
-		sp_rtrace_write_function_call(&call, NULL);
+		sp_rtrace_write_function_call(&call, NULL, NULL);
 	}
 	return rc;
 }
@@ -263,7 +263,7 @@ int trace_shmctl(int shmid, int cmd, struct shmid_ds *buf)
 				.res_size = 0,
 				.res_id = (pointer_t)shmid,
 		};
-		sp_rtrace_write_function_call(&call, NULL);
+		sp_rtrace_write_function_call(&call, NULL, NULL);
 	}
 	return rc;
 }
@@ -309,7 +309,7 @@ void* trace_shmat(int shmid, const void *shmaddr, int shmflg)
 				{.name = "cpid", .value = cpid_s},
 				{0}
 		};
-		sp_rtrace_write_function_call(&call, args);
+		sp_rtrace_write_function_call(&call, NULL, args);
 	}
 	return rc;
 }
@@ -343,7 +343,7 @@ int trace_shmdt(const void *shmaddr)
 				.res_size = 0,
 				.res_id = (pointer_t)shmaddr,
 		};
-		sp_rtrace_write_function_call(&call, NULL);
+		sp_rtrace_write_function_call(&call, NULL, NULL);
 
 		/* if the segment was marked for removal it should be destroyed after detaching the
 		 * last address. */
@@ -356,7 +356,7 @@ int trace_shmdt(const void *shmaddr)
 					.res_size = 0,
 					.res_id = (pointer_t)shmid,
 			};
-			sp_rtrace_write_function_call(&call, NULL);
+			sp_rtrace_write_function_call(&call, NULL, NULL);
 		}
 	}
 	return rc;

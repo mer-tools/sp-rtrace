@@ -293,7 +293,7 @@ static void* trace_malloc(size_t size)
 				.res_size = size,
 				.res_id = (pointer_t)rc,
 		};
-		sp_rtrace_write_function_call(&call, NULL);
+		sp_rtrace_write_function_call(&call, NULL, NULL);
 		sp_rtrace_store_heap_info();
 	}
 	return rc;
@@ -314,7 +314,7 @@ static void* trace_calloc(size_t nmemb, size_t size)
 				.res_size = nmemb * size,
 				.res_id = (pointer_t)rc,
 		};
-		sp_rtrace_write_function_call(&call, NULL);
+		sp_rtrace_write_function_call(&call, NULL, NULL);
 		sp_rtrace_store_heap_info();
 	}
 	return rc;
@@ -336,7 +336,7 @@ static void* trace_realloc(void* ptr, size_t size)
 				.res_size = 0,
 				.res_id = (pointer_t)ptr,
 		};
-		sp_rtrace_write_function_call(&call, NULL);
+		sp_rtrace_write_function_call(&call, NULL, NULL);
 	}
 	/* if allocation was successful register new pointer allocation */
 	if (rc) {
@@ -348,7 +348,7 @@ static void* trace_realloc(void* ptr, size_t size)
 				.res_size = size,
 				.res_id = (pointer_t)rc,
 		};
-		sp_rtrace_write_function_call(&call, NULL);
+		sp_rtrace_write_function_call(&call, NULL, NULL);
 		sp_rtrace_store_heap_info();
 	}
 	return rc;
@@ -366,7 +366,7 @@ static int trace_posix_memalign(void **memptr, size_t alignment, size_t size)
 				.res_size = size,
 				.res_id = (pointer_t)*memptr,
 		};
-		sp_rtrace_write_function_call(&call, NULL);
+		sp_rtrace_write_function_call(&call, NULL, NULL);
 		sp_rtrace_store_heap_info();
 	}
 	return rc;
@@ -386,7 +386,7 @@ static void trace_free(void* ptr)
 			.res_size = 0,
 			.res_id = (pointer_t)ptr,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 	sp_rtrace_store_heap_info();
 }
 

@@ -198,39 +198,45 @@ static void set_environment()
 	if (rtrace_options.backtrace_all) setenv(rtrace_env_opt[OPT_BACKTRACE_ALL], OPT_ENABLE, 1);
 	if (rtrace_options.libunwind) setenv(rtrace_env_opt[OPT_LIBUNWIND], OPT_ENABLE, 1);
 
-	if (rtrace_options.audit) setenv("LD_AUDIT", rtrace_options.audit, 1);
-
-	char preload[PATH_MAX], *ppreload = preload;
-	ppreload += sprintf(preload, SP_RTRACE_LIB_PATH "%s:", SP_RTRACE_MAIN_MODULE);
-
-	if (rtrace_options.preload) {
-		char* module = strtok(rtrace_options.preload, ":");
-		while (module) {
-			int len = strlen(module);
-			if (!strcmp(module + len - 3, ".so")) {
-				ppreload += sprintf(ppreload, "%s:", module);
-			}
-			else {
-				ppreload += sprintf(ppreload, SP_RTRACE_LIB_PATH "libsp-rtrace-%s.so:", module);
-			}
-			module = strtok(NULL, ":");
-		}
-	}
-	if (query_scratchbox()) {
-		LOG("scratchbox environment detected");
-		FILE* fp = fopen("/etc/ld.so.preload", "w");
-		if (fp) {
-			fputs(preload, fp);
-			fclose(fp);
-		}
-		else {
-			fprintf(stderr, "ERROR: failed to setup scratchbox preloading file /etc/ld.so.preload\n");
-			exit (-1);
-		}
+	if (rtrace_options.audit) {
+		setenv("LD_AUDIT", SP_RTRACE_LIB_PATH SP_RTRACE_AUDIT_MODULE, 1);
+		setenv(rtrace_env_opt[OPT_AUDIT], rtrace_options.audit, 1);
 	}
 	else {
-		setenv("LD_PRELOAD", preload, 1);
+
+		char preload[PATH_MAX], *ppreload = preload;
+		ppreload += sprintf(preload, SP_RTRACE_LIB_PATH "%s:", SP_RTRACE_MAIN_MODULE);
+
+		if (rtrace_options.preload) {
+			char* module = strtok(rtrace_options.preload, ":");
+			while (module) {
+				int len = strlen(module);
+				if (!strcmp(module + len - 3, ".so")) {
+					ppreload += sprintf(ppreload, "%s:", module);
+				}
+				else {
+					ppreload += sprintf(ppreload, SP_RTRACE_LIB_PATH "libsp-rtrace-%s.so:", module);
+				}
+				module = strtok(NULL, ":");
+			}
+		}
+		if (query_scratchbox()) {
+			LOG("scratchbox environment detected");
+			FILE* fp = fopen("/etc/ld.so.preload", "w");
+			if (fp) {
+				fputs(preload, fp);
+				fclose(fp);
+			}
+			else {
+				fprintf(stderr, "ERROR: failed to setup scratchbox preloading file /etc/ld.so.preload\n");
+				exit (-1);
+			}
+		}
+		else {
+			setenv("LD_PRELOAD", preload, 1);
+		}
 	}
+
 }
 
 /**

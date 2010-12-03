@@ -72,7 +72,7 @@ extern sp_rtrace_options_t* sp_rtrace_options;
  * @param[in] args  the function argument data (can be NULL).
  * @return          the number of bytes written.
  */
-int sp_rtrace_write_function_call(sp_rtrace_fcall_t* call, sp_rtrace_farg_t* args);
+int sp_rtrace_write_function_call(sp_rtrace_fcall_t* call, sp_rtrace_ftrace_t* trace, sp_rtrace_farg_t* args);
 
 
 typedef void (*sp_rtrace_enable_tracing_t)(bool);

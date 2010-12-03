@@ -37,6 +37,9 @@
 /* the main tracing module */
 #define SP_RTRACE_MAIN_MODULE      "libsp-rtrace-main.so"
 
+/* the audit tracing module */
+#define SP_RTRACE_AUDIT_MODULE      "libsp-rtrace-audit.so"
+
 /* pre-processor  */
 #define SP_RTRACE_PREPROC          "sp-rtrace"
 

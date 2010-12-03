@@ -656,7 +656,7 @@ int sp_rtrace_write_context_registry(sp_rtrace_context_t* context)
 	return size;
 }
 
-int sp_rtrace_write_function_call(sp_rtrace_fcall_t* call, sp_rtrace_farg_t* args)
+int sp_rtrace_write_function_call(sp_rtrace_fcall_t* call, sp_rtrace_ftrace_t* trace, sp_rtrace_farg_t* args)
 {
 	if (!sp_rtrace_options->enable) return 0;
 
@@ -666,10 +666,13 @@ int sp_rtrace_write_function_call(sp_rtrace_fcall_t* call, sp_rtrace_farg_t* arg
 	}
 
 	int size = 0;
-	int nframes = 0;
-	void* bt_frames[256];
+	pointer_t bt_frames[256];
+	sp_rtrace_ftrace_t trace_data = {
+			.nframes = 0,
+			.frames = bt_frames + BT_SKIP_TOP,
+	};
 
-	if (sp_rtrace_options->backtrace_depth && (call->type == SP_RTRACE_FTYPE_ALLOC || sp_rtrace_options->backtrace_all)) {
+	if (!trace && sp_rtrace_options->backtrace_depth && (call->type == SP_RTRACE_FTYPE_ALLOC || sp_rtrace_options->backtrace_all)) {
 		unsigned int bt_depth = sp_rtrace_options->backtrace_depth + BT_SKIP_TOP + BT_SKIP_BOTTOM;
 		if (bt_depth > sizeof(bt_frames) / sizeof(bt_frames[0])) {
 			bt_depth = sizeof(bt_frames) / sizeof(bt_frames[0]);
@@ -683,8 +686,16 @@ int sp_rtrace_write_function_call(sp_rtrace_fcall_t* call, sp_rtrace_farg_t* arg
 			exit (-1);
 		}
 		while (!sync_bool_compare_and_swap(&backtrace_lock, 0, tid));
-		nframes = backtrace_impl(bt_frames, bt_depth);
+		trace_data.nframes = backtrace_impl((void**)bt_frames, bt_depth);
 		backtrace_lock = 0;
+
+		trace_data.nframes -= BT_SKIP_TOP + BT_SKIP_BOTTOM;
+		if ((int)trace_data.nframes > sp_rtrace_options->backtrace_depth) {
+			trace_data.nframes = sp_rtrace_options->backtrace_depth;
+		}
+		if (trace_data.nframes > 0) {
+			trace = &trace_data;
+		}
 	}
 	char* buffer = pipe_buffer_lock(), *ptr = buffer + SP_RTRACE_PROTO_TYPE_SIZE;
 
@@ -730,17 +741,13 @@ int sp_rtrace_write_function_call(sp_rtrace_fcall_t* call, sp_rtrace_farg_t* arg
 
 	/* write BT packet */
 	/* strip the unnecessary frames from the top and bottom */
-	if (nframes > BT_SKIP_TOP + BT_SKIP_BOTTOM) {
-		int i;
-		nframes -= BT_SKIP_TOP + BT_SKIP_BOTTOM;
-		if (nframes > sp_rtrace_options->backtrace_depth) {
-			nframes = sp_rtrace_options->backtrace_depth;
-		}
-		ptr += write_dword(ptr, sizeof(int) * 2 + sizeof(pointer_t) * nframes);
+	if (trace && trace->nframes) {
+		unsigned int i;
+		ptr += write_dword(ptr, sizeof(int) * 2 + sizeof(pointer_t) * trace->nframes);
 		ptr += write_dword(ptr, SP_RTRACE_PROTO_BACKTRACE);
-		ptr += write_dword(ptr, nframes);
-		for (i = BT_SKIP_TOP; i < nframes + BT_SKIP_TOP; i++) {
-			ptr += write_pointer(ptr, (pointer_t)bt_frames[i]);
+		ptr += write_dword(ptr, trace->nframes);
+		for (i = 0; i < trace->nframes; i++) {
+			ptr += write_pointer(ptr, (pointer_t)trace->frames[i]);
 		}
 		size += ptr - buffer - size;
 	}

@@ -180,7 +180,7 @@ static void trace_qobject_dtor0(void* self)
 			.res_size = 0,
 			.res_id = (pointer_t)self,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 }
 
 static void trace_qobject_dtor1(void* self)
@@ -195,7 +195,7 @@ static void trace_qobject_dtor1(void* self)
 			.res_size = 0,
 			.res_id = (pointer_t)self,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 }
 
 static void trace_qobject_dtor2(void* self)
@@ -210,7 +210,7 @@ static void trace_qobject_dtor2(void* self)
 			.res_size = 0,
 			.res_id = (pointer_t)self,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 }
 
 
@@ -226,7 +226,7 @@ static void trace_qobject_ctor1(void* self, void* parent)
 			.res_size = QOBJECT_RES_SIZE,
 			.res_id = (pointer_t)self,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 }
 
 static void trace_qobject_ctor1_char(void* self, void* parent, const char* arg)
@@ -241,7 +241,7 @@ static void trace_qobject_ctor1_char(void* self, void* parent, const char* arg)
 			.res_size = QOBJECT_RES_SIZE,
 			.res_id = (pointer_t)self,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 }
 
 static void trace_qobject_ctor1_priv(void* self, void* priv, void* parent)
@@ -256,7 +256,7 @@ static void trace_qobject_ctor1_priv(void* self, void* priv, void* parent)
 			.res_size = QOBJECT_RES_SIZE,
 			.res_id = (pointer_t)self,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 }
 
 
@@ -272,7 +272,7 @@ static void trace_qobject_ctor2(void* self, void* parent)
 			.res_size = QOBJECT_RES_SIZE,
 			.res_id = (pointer_t)self,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 }
 
 static void trace_qobject_ctor2_char(void* self, void* parent, const char* arg)
@@ -287,7 +287,7 @@ static void trace_qobject_ctor2_char(void* self, void* parent, const char* arg)
 			.res_size = QOBJECT_RES_SIZE,
 			.res_id = (pointer_t)self,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 }
 
 static void trace_qobject_ctor2_priv(void* self, void* priv, void* parent)
@@ -302,7 +302,7 @@ static void trace_qobject_ctor2_priv(void* self, void* priv, void* parent)
 			.res_size = QOBJECT_RES_SIZE,
 			.res_id = (pointer_t)self,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 }
 
 static trace_t trace_on = {

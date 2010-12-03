@@ -85,13 +85,13 @@ char *rtrace_env_opt[] = {
 		"SP_RTRACE_PRELOAD",
 		/**
 		 * --audit
-		 * List of LD_AUDIT tracing modules, separated by ':'
+		 * List of items tracked by audit module
 		 */
 		"SP_RTRACE_AUDIT",
 		/**
 		 * --start
 		 * Defines that trace should be started automatically when the target process is spawned.
-		 * By default rtace is started in disabled mode and toggle signal must be sent to the
+		 * By default trace is started in disabled mode and toggle signal must be sent to the
 		 * target process to start tracing.
 		 */
 		"SP_RTRACE_START",

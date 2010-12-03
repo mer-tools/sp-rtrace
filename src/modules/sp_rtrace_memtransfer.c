@@ -251,7 +251,7 @@ static char* trace_strcpy(char* dst, const char* src)
 			.res_size = strlen(src),
 			.res_id = (pointer_t)src,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 	return rc;
 }
 
@@ -266,7 +266,7 @@ static void* trace_mempcpy(void *dest, const void *src, size_t n)
 			.res_size = n,
 			.res_id = (pointer_t)src,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 	return rc;
 }
 
@@ -281,7 +281,7 @@ static void* trace_memmove(void *dest, const void *src, size_t n)
 			.res_size = n,
 			.res_id = (pointer_t)src,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 	return rc;
 }
 
@@ -296,7 +296,7 @@ static void* trace_memcpy(void *dest, const void *src, size_t n)
 			.res_size = n,
 			.res_id = (pointer_t)src,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 	return rc;
 }
 
@@ -311,7 +311,7 @@ static void* trace_memset(void *s, int c, size_t n)
 			.res_size = n,
 			.res_id = (pointer_t)s,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 	return rc;
 }
 
@@ -326,7 +326,7 @@ static char* trace_strncpy(char *dest, const char *src, size_t n)
 			.res_size = n,
 			.res_id = (pointer_t)src,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 	return rc;
 }
 
@@ -341,7 +341,7 @@ static char* trace_stpcpy(char *dest, const char *src)
 			.res_size = strlen(src),
 			.res_id = (pointer_t)src,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 	return rc;
 }
 
@@ -356,7 +356,7 @@ static char* trace_strcat(char *dest, const char *src)
 			.res_size = strlen(src),
 			.res_id = (pointer_t)src,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 	return rc;
 }
 
@@ -371,7 +371,7 @@ static char* trace_strncat(char *dest, const char *src, size_t n)
 			.res_size = n,
 			.res_id = (pointer_t)src,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 	return rc;
 }
 
@@ -386,7 +386,7 @@ static void trace_bcopy(const void *src, void *dest, size_t n)
 			.res_size = n,
 			.res_id = (pointer_t)src,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 }
 
 static void trace_bzero(void *s, size_t n)
@@ -400,7 +400,7 @@ static void trace_bzero(void *s, size_t n)
 			.res_size = n,
 			.res_id = (pointer_t)s,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 }
 
 static char* trace_strdup(const char *s)
@@ -414,7 +414,7 @@ static char* trace_strdup(const char *s)
 			.res_size = strlen(s),
 			.res_id = (pointer_t)s,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 	return rc;
 }
 
@@ -429,7 +429,7 @@ static char* trace_strndup(const char *s, size_t n)
 			.res_size = n,
 			.res_id = (pointer_t)s,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 	return rc;
 }
 
@@ -444,7 +444,7 @@ static char* trace_strdupa(const char *s)
 			.res_size = strlen(s),
 			.res_id = (pointer_t)s,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 	return rc;
 }
 
@@ -459,7 +459,7 @@ static char* trace_strndupa(const char *s, size_t n)
 			.res_size = n,
 			.res_id = (pointer_t)s,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 	return rc;
 }
 
@@ -474,7 +474,7 @@ static wchar_t* trace_wmemcpy(wchar_t *dest, const wchar_t *src, size_t n)
 			.res_size = n * sizeof(wchar_t),
 			.res_id = (pointer_t)src,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 	return rc;
 }
 
@@ -489,7 +489,7 @@ static wchar_t* trace_wmempcpy(wchar_t *dest, const wchar_t *src, size_t n)
 			.res_size = n * sizeof(wchar_t),
 			.res_id = (pointer_t)src,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 	return rc;
 }
 
@@ -504,7 +504,7 @@ static wchar_t* trace_wmemmove(wchar_t* dest, const wchar_t* src, size_t n)
 			.res_size = n * sizeof(wchar_t),
 			.res_id = (pointer_t)src,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 	return rc;
 }
 
@@ -519,7 +519,7 @@ static wchar_t* trace_wmemset(wchar_t *s, int c, size_t n)
 			.res_size = n * sizeof(wchar_t),
 			.res_id = (pointer_t)s,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 	return rc;
 }
 
@@ -534,7 +534,7 @@ static wchar_t* trace_wcscpy(wchar_t *dest, const wchar_t *src)
 			.res_size =  wcslen(src) * sizeof(wchar_t),
 			.res_id = (pointer_t)src,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 	return rc;
 }
 
@@ -549,7 +549,7 @@ static wchar_t* trace_wcsncpy(wchar_t *dest, const wchar_t *src, size_t n)
 			.res_size =  n * sizeof(wchar_t),
 			.res_id = (pointer_t)src,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 	return rc;
 }
 
@@ -564,7 +564,7 @@ static wchar_t* trace_wcpcpy(wchar_t *dest, const wchar_t *src)
 			.res_size =  wcslen(src) * sizeof(wchar_t),
 			.res_id = (pointer_t)src,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 	return rc;
 }
 
@@ -579,7 +579,7 @@ static wchar_t* trace_wcpncpy(wchar_t *dest, const wchar_t *src, size_t n)
 			.res_size =  n * sizeof(wchar_t),
 			.res_id = (pointer_t)src,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 	return rc;
 }
 
@@ -594,7 +594,7 @@ static wchar_t* trace_wcscat(wchar_t *dest, const wchar_t *src)
 			.res_size =  wcslen(src) * sizeof(wchar_t),
 			.res_id = (pointer_t)src,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 	return rc;
 }
 
@@ -609,7 +609,7 @@ static wchar_t* trace_wcsncat(wchar_t *dest, const wchar_t *src, size_t n)
 			.res_size =  n * sizeof(wchar_t),
 			.res_id = (pointer_t)src,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 	return rc;
 }
 
@@ -624,7 +624,7 @@ static wchar_t* trace_wcsdup(const wchar_t *s)
 			.res_size =   wcslen(s) * sizeof(wchar_t),
 			.res_id = (pointer_t)s,
 	};
-	sp_rtrace_write_function_call(&call, NULL);
+	sp_rtrace_write_function_call(&call, NULL, NULL);
 	return rc;
 }
 
