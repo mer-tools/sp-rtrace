@@ -205,7 +205,7 @@ static void set_environment()
 	else {
 
 		char preload[PATH_MAX], *ppreload = preload;
-		ppreload += sprintf(preload, SP_RTRACE_LIB_PATH "%s:", SP_RTRACE_MAIN_MODULE);
+		ppreload += sprintf(preload, "%s:", SP_RTRACE_MAIN_MODULE);
 
 		if (rtrace_options.preload) {
 			char* module = strtok(rtrace_options.preload, ":");

@@ -79,6 +79,8 @@ static pointer_t heap_bottom = 0;
 
 static fn_backtrace_t backtrace_impl = backtrace;
 
+static char proc_name[PATH_MAX];
+
 /**
  * The default options.
  */
@@ -368,6 +370,7 @@ static int write_resource_registry(const sp_rtrace_resource_t* resource)
 	int size = ptr - buffer;
 	write_dword(buffer, size - SP_RTRACE_PROTO_TYPE_SIZE);
 	pipe_buffer_unlock(buffer, size);
+
 	return size;
 }
 
@@ -445,8 +448,6 @@ static int write_process_info()
 	/* store backtrace depth setting */
 	ptr += write_dword(ptr, sp_rtrace_options->backtrace_depth);
 	/* store process name */
-	char proc_name[PATH_MAX];
-	get_proc_name(proc_name, sizeof(proc_name));
 	ptr += write_string(ptr, proc_name);
 
 	int size = ptr - buffer;
@@ -521,7 +522,7 @@ static void write_initial_data()
 	write_module_info(0, module_info.name, module_info.version_major, module_info.version_minor);
 	/* write MI packets for all tracing modules */
 	for (i = 0; i < rtrace_module_index; i++) {
-	    rtrace_module_t* module = &rtrace_modules[i];
+		rtrace_module_t* module = &rtrace_modules[i];
 	    write_module_info(module->id, module->name, module->vmajor, module->vminor);
     }
 	/* write resource registry records */
@@ -785,11 +786,22 @@ unsigned int sp_rtrace_register_module(const char* name, unsigned char vmajor, u
 
 unsigned int sp_rtrace_register_resource(sp_rtrace_resource_t* resource)
 {
+	/* Check if the specified resource type is already registered. If so return
+	 * the registered id. */
+	unsigned int i;
+	for (i = 0; i < rtrace_resource_index; i++) {
+	   if (!strcmp(rtrace_resources[i].type, resource->type)) {
+		   resource->id = rtrace_resources[i].id;
+		   return resource->id;
+	   }
+    }
+
+	/* Register new resource type */
 	if (rtrace_resource_index >= sizeof(rtrace_resources) / sizeof(rtrace_resources[0])) {
 		return -1;
 	}
-    ((sp_rtrace_resource_t*)resource)->id = ++rtrace_resource_index;
-	rtrace_resources[rtrace_resource_index] = *resource;
+    ((sp_rtrace_resource_t*)resource)->id = rtrace_resource_index + 1;
+	rtrace_resources[rtrace_resource_index++] = *resource;
 	if (sp_rtrace_options->enable) {
 		write_resource_registry(resource);
 	}
@@ -819,6 +831,12 @@ bool sp_rtrace_initialize()
 		if (query_scratchbox()) {
 			unlink("/etc/ld.so.preload");
 		}
+
+		/* initialize call context support */
+		sp_rtrace_init_context();
+
+		/* read process name */
+		get_proc_name(proc_name, sizeof(proc_name));
 
 		/* get the pre-processor named pipe name */
 		char* ptr = _stpncpy(pipe_path, SP_RTRACE_PIPE_PATTERN, sizeof(pipe_path));
@@ -890,16 +908,18 @@ bool sp_rtrace_initialize()
 				backtrace_impl = backtrace;
 			}
 		}
+
+		/* enable tracing if needed */
 		if (sp_rtrace_options->enable) {
 			fd_proc = open_pipe();
 			write_initial_data();
 			enable_tracing(true);
+
 		}
-		/* initialize call context support */
-		sp_rtrace_init_context();
+		initialize_lock = 2;
 		return true;
 	}
-	return false;
+	return true;
 }
 
 static void trace_main_init(void) __attribute__((constructor));

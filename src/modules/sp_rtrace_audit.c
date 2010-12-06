@@ -12,8 +12,12 @@
 #include "common/sp_rtrace_proto.h"
 #include "common/sp_rtrace_defs.h"
 #include "library/sp_rtrace_tracker.h"
+#include "rtrace/rtrace_env.h"
+
 
 static sp_rtrace_tracker_t tracker;
+
+//static unsigned int context_mask = 0;
 
 /**
  * Module information
@@ -28,7 +32,7 @@ static sp_rtrace_module_info_t module_info = {
 
 static bool is_tracking_enabled = false;
 
-static int backtrace_depth = 10;
+static unsigned int backtrace_depth = 10;
 
 /* virtual resource size/id */
 #define RES_SIZE		1
@@ -72,7 +76,7 @@ unsigned int la_objopen(
 
 	/* executable itself */
 	if (!(*name))
-		return LA_FLG_BINDFROM;
+		return LA_FLG_BINDTO | LA_FLG_BINDFROM;
 
 	/* strip the path and version information from library name */
 	char stripped[PATH_MAX];
@@ -84,8 +88,15 @@ unsigned int la_objopen(
 	memcpy(stripped, ptr, len);
 	stripped[len] = '\0';
 
+	/* context support */
+	/*
+	if (!strcmp("libsp-rtrace1.so", stripped)) {
+		return LA_FLG_BINDTO | LA_FLG_BINDFROM;
+	}
+	*/
+
 	if (sp_rtrace_tracker_query_library(&tracker, stripped)) {
-		return LA_FLG_BINDTO;
+		return LA_FLG_BINDTO | LA_FLG_BINDFROM;
 	}
 	return 0;
 }
@@ -100,7 +111,7 @@ uintptr_t la_symbind32(
 	)
 {
 	 if (sp_rtrace_tracker_query_symbol(&tracker, symname)) {
-		 *flags = 0;
+		 *flags |= LA_SYMB_NOPLTEXIT;
 	 }
 	 else {
 		 *flags |= LA_SYMB_NOPLTENTER | LA_SYMB_NOPLTEXIT;
@@ -115,22 +126,29 @@ uintptr_t la_symbind32(
 # define La_retval La_i86_retval
 # define int_retval lrv_eax
 
-int backtrace_audit(void** frames, int length, La_regs *regs)
+// number of 'internal' stack frames that should be skipped
+#define TOP		2
+
+/**
+ * Retrieves current stack trace.
+ *
+ * @param[in] frames   the output buffer.
+ * @param[in] length   the number of frames to retrieve.
+ * @param[in] regs     the registers before function call
+ * @return             a reference to the first stack frame in the output buffer.
+ */
+static pointer_t* backtrace_audit(pointer_t* frames, unsigned int* nframes, La_regs *regs)
 {
-	if (length > backtrace_depth) length = backtrace_depth;
-	int nframes = backtrace(frames, length);
-	if (nframes) frames[0] =  *((long*)regs->lr_ebp + 1);
-	fprintf(stderr, "backtrace_audit (depth=%d)\n", nframes);
-	int i;
-	for (i = 0; i < nframes - 3; i++) {
-		fprintf(stderr, "\t%p\n", frames[i]);
+	unsigned int length = *nframes > backtrace_depth + TOP ? backtrace_depth + TOP : *nframes;
+	*nframes = backtrace((void**)frames, length);
+	if (*nframes <= TOP) {
+		*nframes = 0;
+		return frames;
 	}
-	for (i = 0; i < 16; i++) {
-		fprintf(stderr, "%x(%d) ", *((long*)regs->lr_ebp - 8 + i), - 8 + i);
-	}
-	fprintf(stderr, "\n");
-	fprintf(stderr, "bp=%x, sp=%x, rc=%x\n", regs->lr_ebp, regs->lr_esp, *((long*)regs->lr_ebp - 4));
-	return nframes;
+	*nframes -= TOP;
+	frames += TOP;
+	frames[0] =  *(pointer_t*)regs->lr_esp;
+	return frames;
 }
 
 #elif defined __arm__
@@ -140,6 +158,30 @@ int backtrace_audit(void** frames, int length, La_regs *regs)
 # define La_retval La_arm_retval
 # define int_retval lrv_reg[0]
 
+// number of 'internal' stack frames that should be skipped
+#define TOP		3
+
+/**
+ * Retrieves current stack trace.
+ *
+ * @param[in] frames   the output buffer.
+ * @param[in] length   the number of frames to retrieve.
+ * @param[in] regs     the registers before function call
+ * @return             a reference to the first stack frame in the output buffer.
+ */
+static pointer_t* backtrace_audit(pointer_t* frames, unsigned int* nframes, La_regs *regs)
+{
+	unsigned int length = *nframes > backtrace_depth + TOP ? backtrace_depth + TOP : *nframes;
+	*nframes = backtrace((void**)frames, length);
+	if (*nframes <= TOP) {
+		*nframes = 0;
+		return frames;
+	}
+	*nframes -= TOP;
+	frames += TOP;
+	frames[0] =  (pointer_t)regs->lr_lr;
+	return frames;
+}
 
 #endif
 
@@ -155,51 +197,30 @@ pltenter(
     long int *framesizep  __attribute__((unused))
 	)
 {
-	 if (is_tracking_enabled && sp_rtrace_tracker_query_symbol(&tracker, symname)) {
+	if (is_tracking_enabled) {
+		if (sp_rtrace_tracker_query_symbol(&tracker, symname)) {
 			sp_rtrace_fcall_t call = {
 					.type = SP_RTRACE_FTYPE_ALLOC,
 					.res_type = (void*)res_audit.id,
 					.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
-					.name = symname,
+					.name = (char*)symname,
 					.res_size = RES_SIZE,
 					.res_id = (pointer_t)RES_ID,
 			};
 
-			void* frames[256];
+			pointer_t frames[256];
 			sp_rtrace_ftrace_t trace = {
 				.nframes = 0,
-				.frames = frames,
+				.frames = NULL,
 			};
-			if (backtrace_depth) trace.nframes = backtrace_audit(frames, sizeof(frames) / sizeof(frames[0]), regs);
+			if (backtrace_depth) {
+				trace.nframes = sizeof(frames) / sizeof(frames[0]);
+				trace.frames = backtrace_audit(frames, &trace.nframes, regs);
 			sp_rtrace_write_function_call(&call, &trace, NULL);
-
-			 *framesizep = 1000;
-	 }
-	 return sym->st_value;
-}
-
-unsigned int pltexit(Elf32_Sym *sym, unsigned int ndx,
-        uintptr_t *refcook, uintptr_t *defcook,
-        const La_regs *inregs, La_retval *outregs,
-        const char *symname)
-{
-	 if (is_tracking_enabled && sp_rtrace_tracker_query_symbol(&tracker, symname)) {
-			sp_rtrace_fcall_t call = {
-					.type = SP_RTRACE_FTYPE_FREE,
-					.res_type = (void*)res_audit.id,
-					.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
-					.name = symname,
-					.res_size = RES_SIZE,
-					.res_id = (pointer_t)RES_ID,
-			};
-			void* frames[256];
-			sp_rtrace_ftrace_t trace = {
-				.nframes = 0,
-				.frames = frames,
-			};
-			if (backtrace_depth) trace.nframes = backtrace_audit(frames, sizeof(frames) / sizeof(frames[0]), inregs);
-			sp_rtrace_write_function_call(&call, &trace, NULL);
-	 }
+		}
+		*framesizep = 1000;
+	}
+	return sym->st_value;
 }
 
 
@@ -208,7 +229,12 @@ static void trace_audit_fini(void) __attribute__((destructor));
 
 static void trace_audit_init(void)
 {
-	sp_rtrace_tracker_init(&tracker, getenv("SP_RTRACE_AUDIT"));
+	const char* env_backtrace_depth = getenv(rtrace_env_opt[OPT_BACKTRACE_DEPTH]);
+	if (env_backtrace_depth && *env_backtrace_depth) {
+		backtrace_depth = atoi(env_backtrace_depth);
+	}
+
+	sp_rtrace_tracker_init(&tracker, getenv(rtrace_env_opt[OPT_AUDIT]));
 
 	sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
 	sp_rtrace_register_resource(&res_audit);

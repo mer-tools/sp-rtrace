@@ -1,6 +1,6 @@
-lib_LTLIBRARIES = libsp-rtrace1.la 
+lib_LTLIBRARIES = libsp-rtrace1.la  libsp-rtrace-main.la
 
-module_LTLIBRARIES = libsp-rtrace-main.la \
+module_LTLIBRARIES = \
 	libsp-rtrace-memory.la libsp-rtrace-memtransfer.la \
 	libsp-rtrace-shmsysv.la libsp-rtrace-file.la libsp-rtrace-gobject.la libsp-rtrace-qobject.la \
 	libsp-rtrace-audit.la
@@ -10,28 +10,28 @@ libsp_rtrace1_la_SOURCES = library/sp_rtrace_context.c library/sp_rtrace_formatt
 	library/sp_rtrace_tracker.c \
 	common/dlist.c common/htable.c common/utils.c common/rtrace_data.c common/header.c 
 libsp_rtrace1_la_LDFLAGS = $(VERSION_INFO)
-libsp_rtrace1_la_LIBADD = -ldl
+#libsp_rtrace1_la_LIBADD = -ldl
 
 libsp_rtrace_main_la_SOURCES = modules/sp_rtrace_main.c rtrace/rtrace_env.c common/utils.c \
 	modules/libunwind_support.c modules/sp_context_impl.c
-libsp_rtrace_main_la_LDFLAGS = -avoid-version -module
+libsp_rtrace_main_la_LDFLAGS = $(VERSION_INFO)
 libsp_rtrace_main_la_CFLAGS = -rdynamic $(AM_CFLAGS)
-libsp_rtrace_main_la_LIBADD = -lrt -ldl -lpthread
+libsp_rtrace_main_la_LIBADD = -lrt -ldl -lpthread 
 
 libsp_rtrace_memory_la_SOURCES = modules/sp_rtrace_memory.c
 libsp_rtrace_memory_la_CFLAGS = -rdynamic $(AM_CFLAGS)
 libsp_rtrace_memory_la_LDFLAGS = -avoid-version -module
-libsp_rtrace_memory_la_LIBADD = -ldl -lpthread 
+libsp_rtrace_memory_la_LIBADD = -ldl -lpthread  
 
 libsp_rtrace_memtransfer_la_SOURCES = modules/sp_rtrace_memtransfer.c
 libsp_rtrace_memtransfer_la_CFLAGS = -rdynamic $(AM_CFLAGS)
 libsp_rtrace_memtransfer_la_LDFLAGS = -avoid-version -module
-libsp_rtrace_memtransfer_la_LIBADD = -ldl 
+libsp_rtrace_memtransfer_la_LIBADD = -ldl  
 
 libsp_rtrace_shmsysv_la_SOURCES = modules/sp_rtrace_shmsysv.c common/htable.c common/dlist.c
 libsp_rtrace_shmsysv_la_CFLAGS = -rdynamic $(AM_CFLAGS)
 libsp_rtrace_shmsysv_la_LDFLAGS = -avoid-version -module
-libsp_rtrace_shmsysv_la_LIBADD = -ldl 
+libsp_rtrace_shmsysv_la_LIBADD = -ldl
 
 libsp_rtrace_file_la_SOURCES = modules/sp_rtrace_file.c 
 libsp_rtrace_file_la_CFLAGS = -rdynamic $(AM_CFLAGS)
@@ -41,14 +41,14 @@ libsp_rtrace_file_la_LIBADD = -ldl -lpthread
 libsp_rtrace_gobject_la_SOURCES = modules/sp_rtrace_gobject.c 
 libsp_rtrace_gobject_la_CFLAGS = -rdynamic $(GLIB_CFLAGS) $(AM_CFLAGS)
 libsp_rtrace_gobject_la_LDFLAGS = -avoid-version -module
-libsp_rtrace_gobject_la_LIBADD = -ldl $(GLIB_LIBS)
+libsp_rtrace_gobject_la_LIBADD = -ldl $(GLIB_LIBS) 
 
 libsp_rtrace_qobject_la_SOURCES = modules/sp_rtrace_qobject.c 
 libsp_rtrace_qobject_la_CFLAGS = -rdynamic $(GLIB_CFLAGS) $(AM_CFLAGS)
 libsp_rtrace_qobject_la_LDFLAGS = -avoid-version -module
 libsp_rtrace_qobject_la_LIBADD = -ldl 
 
-libsp_rtrace_audit_la_SOURCES = modules/sp_rtrace_audit.c 
+libsp_rtrace_audit_la_SOURCES = modules/sp_rtrace_audit.c rtrace/rtrace_env.c
 libsp_rtrace_audit_la_CFLAGS = -rdynamic $(GLIB_CFLAGS) $(AM_CFLAGS)
 libsp_rtrace_audit_la_LDFLAGS = -avoid-version -module
 libsp_rtrace_audit_la_LIBADD = -ldl -lsp-rtrace1 -lsp-rtrace-main
