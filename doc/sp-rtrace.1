@@ -80,6 +80,8 @@ module libsp-rtrace-memory.so
 \fI--audit\fP=<item1>[;<item2>[...;<itemN>]]\fP (\fI-a\fP <item1>[;<item2>[...;<itemN>]])
 Specifies symbols for audit module. The <itemX> contains either a symbol to track
 or '@' prefixed filename containing a list of symbols to track.
+
+When audit module is used the preload modules are ignored.
 .TP
 \fI--disable-packet-buffering\fP (\fI-B\fP)
 Disables internal packet buffering. Normally the packets are stored in to
