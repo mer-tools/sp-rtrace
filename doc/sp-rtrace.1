@@ -81,7 +81,14 @@ module libsp-rtrace-memory.so
 Specifies symbols for audit module. The <itemX> contains either a symbol to track
 or '@' prefixed filename containing a list of symbols to track.
 
-When audit module is used the preload modules are ignored.
+.RS
+Because of the way the audit module is implemented, there are some limitations:
+.TP
+1) Audit module can't be used together with preload modules. So when audit option
+is specified the preload modules are ignored.
+.TP
+2) Audit module does not support call contexts.
+.RE
 .TP
 \fI--disable-packet-buffering\fP (\fI-B\fP)
 Disables internal packet buffering. Normally the packets are stored in to
