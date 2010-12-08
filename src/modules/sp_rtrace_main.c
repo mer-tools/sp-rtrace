@@ -488,22 +488,6 @@ static int write_heap_info()
 }
 
 
-/**
- * Writes new library (NL) packet.
- *
- * @param[in] library   the library name.
- * @return              the number of bytes written.
- */
-static int write_new_library(const char* library)
-{
-	char* buffer = pipe_buffer_lock(), *ptr = buffer + SP_RTRACE_PROTO_TYPE_SIZE;
-	ptr += write_dword(ptr, SP_RTRACE_PROTO_NEW_LIBRARY);
-	ptr += write_string(ptr, library);
-	int size = ptr - buffer;
-	write_dword(buffer, size - SP_RTRACE_PROTO_TYPE_SIZE);
-	pipe_buffer_unlock(buffer, size);
-	return size;
-}
 
 /**
  * Writes initial data packets (HS + MI) into processor pipe
@@ -530,27 +514,27 @@ static void write_initial_data()
 	    write_resource_registry(&rtrace_resources[i]);
     }
 
-	write_new_library("*");
+	sp_rtrace_write_new_library("*");
 	pipe_buffer_flush();
 }
 
 /**
  * Monitor dlopen calls to generate new library (NL) packets.
  */
-void* (*dlopen_rt)(const char*, int);
+static void* (*dlopen_rt)(const char*, int);
 
-void* dlopen_init(const char* library, int flag) {
+static void* dlopen_init(const char* library, int flag) {
 	dlopen_rt = dlsym(RTLD_NEXT, "dlopen");
 	return dlopen(library, flag);
 }
 
-void* (*dlopen_rt)(const char*, int) = dlopen_init;
+static void* (*dlopen_rt)(const char*, int) = dlopen_init;
 
 void* dlopen(const char* library, int flag)
 {
 	void* handle = dlopen_rt(library, flag);
 	if (handle && sp_rtrace_options->enable) {
-		write_new_library(library);
+		sp_rtrace_write_new_library(library);
 	}
 	return handle;
 }
@@ -571,7 +555,7 @@ static void signal_toggle_tracing(int signo __attribute((unused)))
 	}
 	else {
 		if (fd_proc > 0) {
-			write_new_library("*");
+			sp_rtrace_write_new_library("*");
 			write_heap_info();
 			enable_tracing(false);
 			pipe_buffer_flush();
@@ -643,6 +627,17 @@ static char* _itoa(char* buffer, int value)
 /*
  * Public API implementation
  */
+
+int sp_rtrace_write_new_library(const char* library)
+{
+	char* buffer = pipe_buffer_lock(), *ptr = buffer + SP_RTRACE_PROTO_TYPE_SIZE;
+	ptr += write_dword(ptr, SP_RTRACE_PROTO_NEW_LIBRARY);
+	ptr += write_string(ptr, library);
+	int size = ptr - buffer;
+	write_dword(buffer, size - SP_RTRACE_PROTO_TYPE_SIZE);
+	pipe_buffer_unlock(buffer, size);
+	return size;
+}
 
 int sp_rtrace_write_context_registry(sp_rtrace_context_t* context)
 {
@@ -832,8 +827,15 @@ bool sp_rtrace_initialize()
 			unlink("/etc/ld.so.preload");
 		}
 
-		/* initialize call context support */
-		sp_rtrace_init_context();
+		/* Looks like there are conflicts when calling dlsym (which is done by sp_rtrace_init_context
+		 * from audit libraries. As context is not supported by audit anyway, just skip context
+		 * support initialization.
+		 * TODO: investigate what's exactly happening.
+		 */
+		if (!getenv(rtrace_env_opt[OPT_AUDIT])) {
+			/* Initialize call context support. */
+			sp_rtrace_init_context();
+		}
 
 		/* read process name */
 		get_proc_name(proc_name, sizeof(proc_name));
@@ -914,8 +916,8 @@ bool sp_rtrace_initialize()
 			fd_proc = open_pipe();
 			write_initial_data();
 			enable_tracing(true);
-
 		}
+
 		initialize_lock = 2;
 		return true;
 	}
@@ -930,6 +932,7 @@ static void trace_main_fini(void) __attribute__((destructor));
  */
 static void trace_main_init(void)
 {
+
 	sp_rtrace_initialize();
 
 	/* cache the heap bottom address */
@@ -957,7 +960,7 @@ static void trace_main_fini(void)
 {
 	if (fd_proc > 0) {
 		if (sp_rtrace_options->enable) {
-			write_new_library("*");
+			sp_rtrace_write_new_library("*");
 			write_heap_info();
 		}
 		pipe_buffer_flush();

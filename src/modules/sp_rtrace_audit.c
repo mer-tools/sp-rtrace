@@ -14,7 +14,6 @@
 #include "library/sp_rtrace_tracker.h"
 #include "rtrace/rtrace_env.h"
 
-
 static sp_rtrace_tracker_t tracker;
 
 //static unsigned int context_mask = 0;
@@ -70,35 +69,10 @@ unsigned int la_objopen(
 		uintptr_t *cookie __attribute__((unused))
 	)
 {
-	char *name = l->l_name;
-	if (!name)
-		return 0;
-
-	/* executable itself */
-	if (!(*name))
-		return LA_FLG_BINDTO | LA_FLG_BINDFROM;
-
-	/* strip the path and version information from library name */
-	char stripped[PATH_MAX];
-	char* ptr = strrchr(name, '/');
-	if (!ptr) ptr = name;
-	else ptr++;
-	char* end = strstr(name, ".so");
-	int len = end - ptr + 3;
-	memcpy(stripped, ptr, len);
-	stripped[len] = '\0';
-
-	/* context support */
-	/*
-	if (!strcmp("libsp-rtrace1.so", stripped)) {
-		return LA_FLG_BINDTO | LA_FLG_BINDFROM;
+	if (l->l_name && *l->l_name) {
+		sp_rtrace_write_new_library(l->l_name);
 	}
-	*/
-
-	if (sp_rtrace_tracker_query_library(&tracker, stripped)) {
-		return LA_FLG_BINDTO | LA_FLG_BINDFROM;
-	}
-	return 0;
+	return LA_FLG_BINDTO | LA_FLG_BINDFROM;
 }
 
 uintptr_t la_symbind32(
@@ -198,12 +172,13 @@ pltenter(
 	)
 {
 	if (is_tracking_enabled) {
-		if (sp_rtrace_tracker_query_symbol(&tracker, symname)) {
+		const char* symbol = sp_rtrace_tracker_query_symbol(&tracker, symname);
+		if (symbol) {
 			sp_rtrace_fcall_t call = {
 					.type = SP_RTRACE_FTYPE_ALLOC,
 					.res_type = (void*)res_audit.id,
 					.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
-					.name = (char*)symname,
+					.name = (char*)symbol,
 					.res_size = RES_SIZE,
 					.res_id = (pointer_t)RES_ID,
 			};
@@ -216,9 +191,9 @@ pltenter(
 			if (backtrace_depth) {
 				trace.nframes = sizeof(frames) / sizeof(frames[0]);
 				trace.frames = backtrace_audit(frames, &trace.nframes, regs);
+			}
 			sp_rtrace_write_function_call(&call, &trace, NULL);
 		}
-		*framesizep = 1000;
 	}
 	return sym->st_value;
 }

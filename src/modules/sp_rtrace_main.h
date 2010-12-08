@@ -66,7 +66,7 @@ typedef struct sp_rtrace_options_t {
 extern sp_rtrace_options_t* sp_rtrace_options;
 
 /**
- * Writes function call pacaket into processor pipe.
+ * Writes function call packet into processor pipe.
  *
  * @param[in] call  the function call data.
  * @param[in] args  the function argument data (can be NULL).
@@ -135,6 +135,14 @@ int sp_rtrace_write_context_registry(sp_rtrace_context_t* context);
  *           false - the initialization failed.
  */
 bool sp_rtrace_initialize();
+
+/**
+ * Writes new library (NL) packet into processor pipe.
+ *
+ * @param[in] library   the library name.
+ * @return              the number of bytes written.
+ */
+ int sp_rtrace_write_new_library(const char* library);
 
 
 #endif

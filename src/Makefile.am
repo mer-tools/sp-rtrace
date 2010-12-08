@@ -10,7 +10,7 @@ libsp_rtrace1_la_SOURCES = library/sp_rtrace_context.c library/sp_rtrace_formatt
 	library/sp_rtrace_tracker.c \
 	common/dlist.c common/htable.c common/utils.c common/rtrace_data.c common/header.c 
 libsp_rtrace1_la_LDFLAGS = $(VERSION_INFO)
-#libsp_rtrace1_la_LIBADD = -ldl
+libsp_rtrace1_la_LIBADD = -liberty_pic
 
 libsp_rtrace_main_la_SOURCES = modules/sp_rtrace_main.c rtrace/rtrace_env.c common/utils.c \
 	modules/libunwind_support.c modules/sp_context_impl.c
@@ -51,7 +51,7 @@ libsp_rtrace_qobject_la_LIBADD = -ldl
 libsp_rtrace_audit_la_SOURCES = modules/sp_rtrace_audit.c rtrace/rtrace_env.c
 libsp_rtrace_audit_la_CFLAGS = -rdynamic $(GLIB_CFLAGS) $(AM_CFLAGS)
 libsp_rtrace_audit_la_LDFLAGS = -avoid-version -module
-libsp_rtrace_audit_la_LIBADD = -ldl -lsp-rtrace1 -lsp-rtrace-main
+libsp_rtrace_audit_la_LIBADD = -ldl -lsp-rtrace1 -lsp-rtrace-main 
 
 bin_PROGRAMS = sp-rtrace sp-rtrace-postproc sp-rtrace-resolve sp-rtrace-allocmap sp-rtrace-timeline
 

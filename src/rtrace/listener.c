@@ -125,6 +125,14 @@ static long mmap_compare(rd_mmap_t* mmap, const char* name)
 {
 	return strcmp(mmap->data.module, name);
 }
+
+static long range_compare(rd_mmap_t* mmap1, sp_rtrace_mmap_t* mmap2)
+{
+	if (mmap1->data.to < mmap2->from) return -1;
+	if (mmap1->data.from > mmap2->to) return 1;
+	return 0;
+}
+
 /**
  * Parse maps file and write memory map packets into output stream.
  *
@@ -143,13 +151,20 @@ static int scan_mmap_data()
 			if (sscanf(name, "%lx-%lx %s %[^ ] %[^ ] %[^ ] %[^ ]", &from, &to, rights, buffer, buffer, buffer, buffer) == 7 && rights[2] == 'x') {
 				if (*buffer) buffer[strlen(buffer) - 1] = '\0';
 				/* check if the memory mapping is not already registered */
-				rd_mmap_t* mmap = (rd_mmap_t*)dlist_find(&s_mmaps, (void*)buffer, (op_binary_t)mmap_compare);
+				sp_rtrace_mmap_t map = {
+						.module = buffer,
+						.from = from,
+						.to = to,
+				};
+				rd_mmap_t* mmap = (rd_mmap_t*)dlist_find(&s_mmaps, (void*)&map, (op_binary_t)range_compare);
 				if (mmap) {
 					/* if the addresses are the same - skip */
-					if (mmap->data.from == from && mmap->data.to == to) continue;
-					/* update addresses */
+					if (!strcmp(mmap->data.module, buffer) && mmap->data.from == from && mmap->data.to == to) continue;
+					/* update mapping record */
+					rd_mmap_free(mmap);
 					mmap->data.from = from;
 					mmap->data.to = to;
+					mmap->data.module = strdup_a(buffer);
 				}
 				else {
 					/* add new memory mapping record to internal cache */

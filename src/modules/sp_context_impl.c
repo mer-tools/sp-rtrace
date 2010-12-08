@@ -31,6 +31,7 @@
 
 #include "common/utils.h"
 
+
 /**
  * Empty call context function, used when context library is not available.
  * @return
@@ -46,7 +47,7 @@ int sp_rtrace_init_context()
 	if (fn) {
 		sp_rtrace_get_call_context = fn;
 	}
-	return sp_rtrace_get_call_context();
+	return 0;
 }
 
 int (*sp_rtrace_get_call_context)() = empty_get_call_context;
