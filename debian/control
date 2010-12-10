@@ -34,24 +34,32 @@ Package: sp-rtrace
 Section: utils
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, libsp-rtrace1-1 (= ${binary:Version})
-Description: Resource consumption tracing toolset. 
- This package provides tools for tracing allocation and deallocation of various
- resources (for example memory, memory transfers etc), and post-processing
+Description: Resource consumption tracing and post-processing tools.
+ This package provides tools for tracing allocation and deallocation of
+ various resources (memory, memory transfers etc), and post-processing
  of the resulting traces.
 
 Package: sp-rtrace-dbg
 Section: debug
 Architecture: any
 Depends: ${misc:Depends}, sp-rtrace (=${binary:Version})
-Description: Debug symbols for resource consumption tracing toolset.
+Description: Debug symbols for resource consumption tracing and post-processing tools.
  This package provides debug symbols for resource consuption tracing toolset
  (sp-rtrace).
  
 Package: sp-rtrace-visualize
 Section: utils
 Architecture: any
-Depends: ${misc:Depends}, sp-rtrace, python, graphviz, gnuplot-nox
-Description: Post-processing/visualization scripts for rtrace format files.
- This package contains various post-processing and visualization scripts
- for rtrace text format reports. The scripts also uses rtrace post-processor/
- resolver.
+Depends: ${shlibs:Depends}, ${misc:Depends}, sp-rtrace, python, graphviz, gnuplot-nox
+Description: Visualization utilities for rtrace format files.
+ This package contains various visualization (alloc addressmap,
+ histogram, timeline, callgraph) utilities for rtrace text format
+ reports.
+
+Package: sp-rtrace-visualize-dbg
+Section: debug
+Architecture: any
+Depends: ${misc:Depends}, sp-rtrace-visualize (=${binary:Version})
+Description: Debug symbols for the rtrace format file visualization binaries
+ This package provides debug symbols for rtrace format visualization
+ utility binaries (sp-rtrace-visualize).
