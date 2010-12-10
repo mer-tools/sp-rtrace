@@ -26,6 +26,14 @@
 # Originally this file was a part of libleaks package, but moved
 # to the sp-rtrace package during libleaks redesign.
 #
+#
+# CHANGES
+# 
+# 2010-12-10
+# - store temp files into same directory as where the file is
+#   (as $TMPDIR may be full and user cannot change its location)
+# - use faster postproc & grep options and better error handling
+# - show how many allocations were outside of heap
 
 # show help
 if [ $# -lt 1 ]; then
@@ -44,6 +52,15 @@ fi
 
 map=sp-rtrace-allocmap
 postproc=sp-rtrace-postproc
+addresses=allocmap-allocs.txt
+noheap=allocs-not-in-heap.txt
+postfix=allocmap.tmp
+
+if [ -f $noheap ] || [ -f $addresses ]; then
+	echo "ERROR: temporary allocmap files exist already:"
+	ls -l $noheap $addresses 2> /dev/null
+	exit
+fi
 
 if [ -z "$(which $map)" ]; then
 	echo "$map binary needed for producing the ASCII address map is missing."
@@ -55,43 +72,64 @@ if [ -z "$(which $postproc)" ]; then
 	exit
 fi
 
-tmp=/tmp/multileaks.tmp
-tmp_leaks=$(tempfile)
-
-rm -f $tmp
-for leaks in $*; do
-  echo "Parsing '$leaks'..."
-  
-  # remove freed allocations
-  $postproc -lc -i$leaks > $tmp_leaks
-  
-  # get the addresses and sizes from leaks report and pipe them to
-  # allocmap for producing an ASCII chart of where they are.
-  top=$(grep 'heap top' $tmp_leaks|sed 's/^.*\(0x[0-9a-z]\+\)/\1/')
-  high=$(grep 'highest block' $tmp_leaks|sed 's/^.*\(0x[0-9a-z]\+\)/\1/')
-  trim=$(grep 'malloc_trim' $tmp_leaks|sed 's/^.* \([0-9]\+\)$/\1/')
-  low=$(grep 'lowest block' $tmp_leaks|sed 's/^.*\(0x[0-9a-z]\+\)/\1/')
-  base=$(grep 'heap bottom' $tmp_leaks|sed 's/^.*\(0x[0-9a-z]\+\)/\1/')
-  filter='s/^[0-9]\+\. [^(]\+(\([0-9]\+\)) = \(0x[0-9a-f]\+\).*$/\2 \1/'
-
-  if [ -z "$top" -o -z "$trim" -o -z "$high" -o -z "$low" -o -z "$base" ]; then
-	echo "Warning: heap bottom/low/high/trim/top value missing from the leak report!"
-	echo "Is the trace file from other than rtrace memory module or just broken?"
+# args: line match string, prefix for desired dec/hex number, file name
+get_value ()
+{
+	value=$(grep -m 1 "\b$1\b" $3|sed "s/^.*$2\([0-9a-z]\+$\)/\1/")
+	if [ \! -z "$value" ]; then
+		return
+	fi
+	echo "ERROR: '$1' header line is missing from the trace!"
+	echo
+	echo "See the sp-rtrace-postproc output in:"
+	echo "  $3"
+	echo
+	echo "Isn't the trace file from sp-rtrace memory/mallopt module?"
 	exit
-  fi
-  echo "# base=$base" >> $tmp
-  echo "# top=$top" >> $tmp
-  echo "# low=$low" >> $tmp
-  echo "# keepcost=$trim" >> $tmp
-  grep -E "^[0-9]+\. " $tmp_leaks|sed "$filter"|sort -n >> $tmp
-  
-  rm "$tmp_leaks"
+}
+
+filter='s/^[0-9]\+\. [^(]\+(\([0-9]\+\)) = \(0x[0-9a-f]\+\).*$/\2 \1/'
+
+for trace in $*; do
+	echo "Parsing '$trace'..."
+
+	tmp_leaks=$trace-$postfix
+
+	# remove freed allocations
+	$postproc -l -b 0 < $trace > $tmp_leaks
+
+	# get the addresses and sizes from leaks report and pipe them to
+	# allocmap for producing an ASCII chart of where they are.
+	get_value 'heap bottom' '0x' $tmp_leaks
+	base=$value
+	get_value 'heap top' '0x' $tmp_leaks
+	top=$value
+	get_value  'lowest block' '0x' $tmp_leaks
+	low=$value
+	get_value 'malloc_trim' ' ' $tmp_leaks
+	trim=$value
+
+	echo "# base=0x$base"     >> $addresses
+	echo "# top=0x$top"       >> $addresses
+	echo "# low=0x$low"       >> $addresses
+	echo "# keepcost=$trim" >> $addresses
+	grep -E "^[0-9]+\. " $tmp_leaks|sed "$filter"|sort -n >> $addresses
+	rm $tmp_leaks
 done
 
 if [ $# -eq 1 ]; then
 	# only single report
-	$map -s < $tmp
+	opts="-s"
 else
-	$map < $tmp
+	opts=""
 fi
-rm $tmp
+$map $opts < $addresses 2> $noheap
+rm $addresses
+
+lines=$(wc -l $noheap|cut -d' ' -f1)
+if [ $lines -ne 0 ]; then
+	echo "WARNING: $lines of the traced allocations were outside of heap."
+	echo "See $noheap file for details."
+else
+	rm $noheap
+fi
