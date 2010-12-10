@@ -1,3 +1,22 @@
+sp-rtrace (1.3) unstable; urgency=low
+
+  * C++ rewrite of rtrace-timeline to make it faster
+  * Improved support for resource reference counting
+  * Binary and ASCII trace file format changes for above
+  * Added module generator script, module code template & examples
+  * New modules for tracing QObject and Gobject create/reference/free
+  * Renamed shmseg module to shmsysv (as it's in functracer)
+  * Experimental user specified function tracing support and module
+    based on dynamic linker LD_AUDIT framework
+    Fixes: NB#164143
+  * Put allocmap temp files to current dir, use faster options
+    and better error handling in rtrace-allocmap
+    Fixes: NB#207896
+  * Support new Linux pipe2() function in sp-rtrace file module
+    Fixes: NB#210523
+
+ -- Tommi Rantala <ext-tommi.1.rantala@nokia.com>  Fri, 10 Dec 2010 16:06:59 +0200
+
 sp-rtrace (1.2) unstable; urgency=low
 
   * rtrace-timeline script rewrite:
