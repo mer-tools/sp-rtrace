@@ -52,6 +52,8 @@
 #   as alloc/dealloc activity chart isn't so useful in an overview
 # - Handle more potential error corner-cases and check sp-rtrace version
 # - Show the resulting graphs with xdg-open tool and use SVG instead of EPS
+# 2010-12-10:
+# - Use the new C++ timeline utility instead of the Python one
 
 usage ()
 {
@@ -241,8 +243,8 @@ done
 
 # if no timeline tool, skip graphs
 if [ \! -z "$timelines" ]; then
-	if [ -z "$(which rtrace-timeline)" ]; then
-		echo "WARNING: rtrace-timeline missing, skipping timelines creation!"
+	if [ -z "$(which sp-rtrace-timeline)" ]; then
+		echo "WARNING: sp-rtrace-timeline missing, skipping timelines creation!"
 		timelines=""
 	elif [ -z "$(which gnuplot)" ]; then
 		# timeline notices this too, but better skip it early
@@ -266,8 +268,8 @@ for src in $timelines; do
 		ls $dst-*.png
 		continue
 	fi
-	echo "  rtrace-timeline -t -l -c -s -i $src -o $dst"
-	rtrace-timeline -t -l -c -s -i $src -o $dst
+	echo "  sp-rtrace-timeline -t -l -c -s -i $src -o $dst"
+	sp-rtrace-timeline -t -l -c -s -i $src -o $dst
 	if [ $? -ne 0 ]; then
 		echo "  ERROR: timelines creation failed!"
 		exit 1
