@@ -1337,7 +1337,7 @@ class Options:
                 "QHashData::", "QListData::", "QMapData::",
                 "QVectorData::", "QString in ", "QEventLoop::",
                 "QMetaObject::", "QObjectPrivate::", "QObject::",
-                "QMetaCallEvent::",
+                "QMetaCallEvent::", "QMetaMethod::",
                 "qDBusAddSpyHook", "qt_plugin_instance"
                 ]
                 # these can cause complication calls/loops
