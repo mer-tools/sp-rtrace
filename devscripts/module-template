@@ -1,3 +1,53 @@
+<script>
+def ARG(name):
+	return name
+	
+def REF(name):
+	return "*(%s)" % name
+
+class ArgStr:
+	def __init__(self, name):
+		self.name = name
+
+	def getName(self):
+		return "\"%s\"" % self.name
+
+	def calcValue(self):
+		return ""
+
+	def getValue(self):
+		return "(char*)%s" % self.name
+
+class ArgHex:
+	def __init__(self, name):
+		self.name = name
+	
+	def getName(self):
+		return "\"%s\"" % self.name
+		
+	def calcValue(self):
+		return "char arg_%s[16]; snprintf(arg_%s, sizeof(arg_%s), \"0x%%x\", %s);" % \
+			(self.name, self.name, self.name, self.name)
+		
+	def getValue(self):
+		return "arg_%s" % self.name
+
+class ArgInt:
+	def __init__(self, name):
+		self.name = name
+	
+	def getName(self):
+		return "\"%s\"" % self.name
+		
+	def calcValue(self):
+		return "char arg_%s[16]; snprintf(arg_%s, sizeof(arg_%s), \"%%d\", %s);" % \
+			(self.name, self.name, self.name, self.name)
+		
+	def getValue(self):
+		return "arg_%s" % self.name
+
+</script>
+
 /*
  * This file is part of sp-rtrace package.
  *
@@ -56,7 +106,16 @@ static sp_rtrace_module_info_t module_info = {
 
 /* resource identifiers */
 <for resource in sections("resource")>
-static int res_<$resource.name> = 0;
+<set flags = "SP_RTRACE_RESOURCE_DEFAULT">
+<if resource.flags.find("refcount") != -1>
+  <set flags = "%s | SP_RTRACE_RESOURCE_REFCOUNT" % flags>
+</if>
+static sp_rtrace_resource_t res_<$resource.name> = {
+	.type = "<$resource.name>",
+	.desc = "<$resource.description>",
+	.flags = <$flags>,
+};
+
 </for>
 
  /*
@@ -127,11 +186,7 @@ static void trace_initialize()
 			if (sp_rtrace_initialize()) {
 				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
 				<for resource in sections("resource")>
-				  <set flags = "SP_RTRACE_RESOURCE_DEFAULT">
-				  <if resource.flags.find("refcount") != -1>
-				    <set flags = "%s | SP_RTRACE_RESOURCE_REFCOUNT" % flags>
-				  </if>
-				res_<$resource.name> = sp_rtrace_register_resource("<$resource.name>", "<$resource.description>", <$flags>);
+				sp_rtrace_register_resource(&res_<$resource.name>);
 				</for>
 				trace_init_rt = trace_rt;
 				init_mode = MODULE_READY;
@@ -155,39 +210,58 @@ static <$fc.type> trace_<$fc.name>(<$fc.args>)
 	  <set rc_expr = "return rc;">
 	  <set rc_decl = "%s rc = " % fc.type>
 	</if>
+<!-- call the original function -->
 	<$rc_decl>trace_off.<$fc.name>(<$fc.arg_names>);
+<!-- add synchronization if necessary -->
 	<if hasattr(function, "sync")>
 	backtrace_lock = 0;
 	</if>
+<!-- add call failure check -->
 	<if hasattr(function, "fail")>
-	if (<$function.fail>) return rc;
+	if (<$eval(function.fail)>) return rc;
 	</if>
-	pointer_t res_id = (pointer_t)<$function.res_id>;
-	size_t res_size = (size_t)<$function.res_size>;
+<!-- get the function report name -->
 	<if hasattr(function, "report_name")>
-	  <set name = "\"%s\"" % function.report_name>
+	  <set name = function.report_name>
 	<else>
-	  <set name = "\"%s\"" % fc.name>
+	  <set name = fc.name>
 	</if>
-	<if function.res_size == "0">
+<!-- determine call type (allocation/free) -->
+	<if eval(function.res_size) == '0'>
 	  <set type = "SP_RTRACE_FTYPE_FREE">
 	<else>
 	  <set type = "SP_RTRACE_FTYPE_ALLOC">
 	</if>
+<!-- define the call structure data -->
+	sp_rtrace_fcall_t call = {
+		.type = <$type>,
+		.res_type = (void*)res_<$function.resource>.id,
+		.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+		.name = "<$name>",
+		.res_id = (pointer_t)<$eval(function.res_id)>,
+		.res_size = (size_t)<$eval(function.res_size)>,
+	};
+
+<!-- process arguments -->
 	<if hasattr(function, "args")>
-	<set index = 1>
-	<set args = "">
+<!-- first format argument values -->
 	<for arg in function.args>
-	char arg<$index>[512];
-	snprintf(arg<$index>, sizeof(arg<$index>), <$arg>);
-	<set args = "%sarg%d, " % (args, index)>
-	<set index = index + 1>
-	</for>
-	const char* args[] = {<$args>NULL};
+	<set argobj = eval(arg)>
+	<$argobj.calcValue()>
+	  </for>
+<!-- then prepare argument data structure -->
+	sp_rtrace_farg_t args[] = {
+	  <for arg in function.args>
+	    <set argobj = eval(arg)>
+		{.name=<$argobj.getName()>, .value=<$argobj.getValue()>},
+	  </for>
+		{0}
+	};
 	<else>
-	const char** args = NULL;
+<!-- if no arguments were specified, set argument data structure reference to NULL -->
+	sp_rtrace_farg_t* args = NULL;
 	</if>
-	sp_rtrace_write_function_call(<$type>, res_<$function.resource>, <$name>, res_size, res_id, args);
+	sp_rtrace_write_function_call(&call, NULL, args);
 	<$rc_expr>
 }
 

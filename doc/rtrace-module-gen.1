@@ -277,17 +277,23 @@ resource = <resource>
 The processed resource. The resource name must match one of the 
 resource section name item values.
 .TP
-res_id = <variable>
-The resource id variable. The variable can be either rc (the function
-return value) or any of the parameter names, specified in function
-prototype.
+res_id = <expression>
+The resoure identifier. Expression must evaluate to a string value
+containing code to read the resource id. Use ARG('<name>') macro
+to access argument value and REF(<ptr>) macro to dereference pointers.
+For example REF(ARG('memptr')) will retrieve resource identifier for
+posix_memalign function with prototype:
+int posix_memalign(void **memptr, size_t alignment, size_t size).
+REF(ARG('memptr')) returns value referenced by the memptr arguemnt.
 .TP
 res_size = <expresson>
-The resource size expression. The expression can be either rc (the
-function return value) or any of the parameter names, specified in
-function prototype or an expression involving more than one parameter
-(as example calloc size definition is multiplication of block size
-and number of blocks).
+The resource size. Expression must evaluate to a string value
+containing code to read/calculate the allocated resource size.
+For deallocation(free) functions it must contain '0' string.
+Like in resource id expression the ARG(), REF() macros can be used 
+here. For example '(%s * %s)' % (ARG('size'), ARG('nmemb')) will
+calculate allocation size for calloc funcction with prototype:
+void* calloc(size_t nmemb, size_t size).
 .TP
 args[] = <format>
 The argument format expression (optional). Must contain printf format
@@ -305,6 +311,12 @@ report_name = <name>
 The funciton name reported to the main module (optional). By default the
 name is parsed from the function prototype. But it's possible to override
 it by directly specifying report name. 
+.TP
+ft_name = <name>
+The function name recognized by functracer. It allows to override the
+detection name for functracer in the case it's different from function
+or symbol name.
+.TP
 sync = True
 Forces backtrace synchronization. Must be specified for functions that
 are called from libc backtrace() function to avoid infinite recursion.    

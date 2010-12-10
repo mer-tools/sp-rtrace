@@ -85,37 +85,50 @@ contain multiple function sections.
   resource = <resource>
     The processed resource. The resource name must match one of the 
     resource section name item values.
-  res_id = <variable>
-    The resource id variable. The variable can be either rc (the function
-    return value) or any of the parameter names, specified in function
-    prototype.
+  res_id = <expression>
+    The resoure identifier. Expression must evaluate to a string value
+    containing code to read the resource id. Use ARG('<name>') macro
+    to access argument value and REF(<ptr>) macro to dereference pointers.
+    For example REF(ARG('memptr')) will retrieve resource identifier for
+    posix_memalign function with prototype:
+    int posix_memalign(void **memptr, size_t alignment, size_t size).
+    REF(ARG('memptr')) returns value referenced by the memptr arguemnt.
+    
   res_size = <expresson>
-    The resource size expression. The expression can be either rc (the
-    function return value) or any of the parameter names, specified in
-    function prototype or an expression involving more than one parameter
-    (as example calloc size definition is multiplication of block size
-    and number of blocks).
+    The resource size. Expression must evaluate to a string value
+    containing code to read/calculate the allocated resource size.
+    For deallocation(free) functions it must contain '0' string.
+    Like in resource id expression the ARG(), REF() macros can be used 
+    here. For example '(%s * %s)' % (ARG('size'), ARG('nmemb')) will
+    calculate allocation size for calloc funcction with prototype:
+    void* calloc(size_t nmemb, size_t size).
+    
   args[] = <format>
-    The argument format expression (optional). Must contain printf format
-    field plus value, where value must be one of the parameters specifie in
-    prototype. For example void* malloc(size_t size) argument could be
-    described as "%d", size
+    The argument format expression (optional). Must evaluate to an
+    argument object (ArgStr, ArgInt, ArgHex). The argument object is
+    template specific and is  declared in the template. It provides 
+    getName(), getValue(), calcValue() methods for argument reporting code
+    generation.
   symbol_name = <name>
     The real symbolic name of the function to track (optional). By default the
     name is parsed from the function prototype. But it's possible to override
     it by directly specifying symbolic name. It can be usefull make C++ 
     mangle function tracking modules more readable.
   report_name = <name>
-    The funciton name reported to the main module (optional). By default the
+    The function name reported to the main module (optional). By default the
     name is parsed from the function prototype. But it's possible to override
     it by directly specifying report name. 
+  ft_name = <name>
+    The function name recognized by functracer. It allows to override the
+    detection name for functracer in the case it's different from function
+    or symbol name.
   sync = True
     Forces backtrace synchronization. Must be specified for functions that
     are called from libc backtrace() function to avoid infinite recursion.    
   fail = <expression>
     The original function failure expression (optional). If specified the
-	module will not report the function if after the original function call
-	the fail expression evaluates to true.
+    module will not report the function if after the original function call
+    the fail expression evaluates to true.
 
 
 sp-rtrace module generator template metalanguage
@@ -166,6 +179,11 @@ commands:
   The iterator variable is also accessible after the loop has been finished.
   This tag must be always finished with </for> tag.
   
+<script>
+  code
+</script>
+  Script tag. Evaluates code expression where the code is valid python expression.
+  Can be used to declare own functions/classes in the template file.
 
 Template sample:
 
