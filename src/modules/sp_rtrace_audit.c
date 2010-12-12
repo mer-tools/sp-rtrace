@@ -60,6 +60,10 @@ static sp_rtrace_resource_t res_audit = {
 
 unsigned int la_version(unsigned int version)
 {
+	FILE* fp = fopen("out", "w");
+	fprintf(fp, "done\n");
+	fclose(fp);
+	fprintf(stderr, "la_version\n");
 	return version;
 }
 
@@ -84,21 +88,73 @@ uintptr_t la_symbind32(
         const char *symname
 	)
 {
-	 if (sp_rtrace_tracker_query_symbol(&tracker, symname)) {
-		 *flags |= LA_SYMB_NOPLTEXIT;
-	 }
-	 else {
-		 *flags |= LA_SYMB_NOPLTENTER | LA_SYMB_NOPLTEXIT;
-	 }
-	 return sym->st_value;
+	if (sp_rtrace_tracker_query_symbol(&tracker, symname)) {
+		*flags |= LA_SYMB_NOPLTEXIT;
+	}
+	else {
+		*flags |= LA_SYMB_NOPLTENTER | LA_SYMB_NOPLTEXIT;
+	}
+	return sym->st_value;
 }
+
+#ifdef __x86_64__
+
+uintptr_t la_symbind64(
+		Elf64_Sym *sym,
+		unsigned int ndx  __attribute__((unused)),
+        uintptr_t *refcook __attribute__((unused)),
+        uintptr_t *defcook  __attribute__((unused)),
+        unsigned int *flags,
+        const char *symname
+	)
+{
+	if (sp_rtrace_tracker_query_symbol(&tracker, symname)) {
+		*flags |= LA_SYMB_NOPLTEXIT;
+	}
+	else {
+		*flags |= LA_SYMB_NOPLTENTER | LA_SYMB_NOPLTEXIT;
+	}
+	return sym->st_value;
+}
+
+# define pltenter la_x86_64_gnu_pltenter
+# define pltexit la_x86_64_gnu_pltexit
+# define La_regs La_x86_64_regs
+# define La_retval La_x86_64_retval
+
+// number of 'internal' stack frames that should be skipped
+#define TOP		2
+
+/**
+ * Retrieves current stack trace.
+ *
+ * @param[in] frames   the output buffer.
+ * @param[in] length   the number of frames to retrieve.
+ * @param[in] regs     the registers before function call
+ * @return             a reference to the first stack frame in the output buffer.
+ */
+static pointer_t* backtrace_audit(pointer_t* frames, unsigned int* nframes, La_regs *regs)
+{
+	unsigned int length = *nframes > backtrace_depth + TOP ? backtrace_depth + TOP : *nframes;
+	*nframes = backtrace((void**)frames, length);
+
+	if (*nframes <= TOP) {
+		*nframes = 0;
+		return frames;
+	}
+	*nframes -= TOP;
+	frames += TOP;
+	frames[0] =  *(pointer_t*)regs->lr_rsp;
+	return frames;
+}
+
+#endif
 
 #ifdef __i386__
 # define pltenter la_i86_gnu_pltenter
 # define pltexit la_i86_gnu_pltexit
 # define La_regs La_i86_regs
 # define La_retval La_i86_retval
-# define int_retval lrv_eax
 
 // number of 'internal' stack frames that should be skipped
 #define TOP		2
@@ -130,7 +186,6 @@ static pointer_t* backtrace_audit(pointer_t* frames, unsigned int* nframes, La_r
 # define pltexit la_arm_gnu_pltexit
 # define La_regs La_arm_regs
 # define La_retval La_arm_retval
-# define int_retval lrv_reg[0]
 
 // number of 'internal' stack frames that should be skipped
 #define TOP		3
@@ -176,7 +231,7 @@ pltenter(
 		if (symbol) {
 			sp_rtrace_fcall_t call = {
 					.type = SP_RTRACE_FTYPE_ALLOC,
-					.res_type = (void*)res_audit.id,
+					.res_type = (void*)(long)res_audit.id,
 					.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
 					.name = (char*)symbol,
 					.res_size = RES_SIZE,
