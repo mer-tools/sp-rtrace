@@ -116,6 +116,7 @@ void LifetimeGenerator::finalize() {
 	plotter.setTitle("Resource life-time");
 	plotter.setAxisX("time (secs)", xrange_min, xrange_max);
 	plotter.setAxisY("size", yrange_min, yrange_max, "%.1s%c");
+	if (atoi(Options::getInstance()->getLogscaleSize().c_str()) > 1) plotter.setLogscale("y", Options::getInstance()->getLogscaleSize());
 
 	if (total_lifelines > DETAILS_LIMIT) plotter.setStyle("data lines");
 	else plotter.setStyle("data linespoints");

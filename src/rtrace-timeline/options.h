@@ -31,7 +31,9 @@ private:
 	// description of the specified filters
 	std::string filter_desc;
 
-	
+	// logarithmic scaling of y axis containing size values
+	std::string logscale_size;
+
 	/**
 	 * Displays application usage instructions.
 	 */
@@ -180,6 +182,16 @@ public:
 	 */
 	const std::string& getWorkingDir() const {
 		return working_dir;
+	}
+
+
+	/**
+	 * Retrieves logscale value for size axis.
+	 *
+	 * @return
+	 */
+	const std::string& getLogscaleSize() const {
+		return logscale_size;
 	}
 };
 

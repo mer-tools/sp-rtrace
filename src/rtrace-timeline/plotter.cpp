@@ -231,4 +231,8 @@ void Plotter::addGraph(const Plotter::DataFile* file, const std::string& col_x, 
 	graphs.push_back(data.str());
 }
 
+void Plotter::setLogscale(const std::string& axis, const std::string& scale)
+{
+	config << "set logscale " << axis << " " << scale << "\n";
+}
 

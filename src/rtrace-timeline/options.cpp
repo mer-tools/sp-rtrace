@@ -16,7 +16,8 @@
 Options::Options()
 	: scale_x(100),
 	  scale_y(100),
-	  slice(200)
+	  slice(200),
+	  logscale_size("10")
 {
 }
 
@@ -70,6 +71,7 @@ void Options::displayUsage()
 		"               default).\n"
 		"    -i <file>  input file.\n"
 		"    -o <file>  output file.\n"
+		"    -L <base>  the logarithmic scaling value of size axis for lifetime reports.\n"
 		"\n"
 		"    --scale=<value>\n"
 		"    --scalex=<value>\n"
@@ -133,6 +135,7 @@ void Options::parseCommandLine(int argc, char* const argv[], Processor* processo
 			 {"filter-resource", 1, 0, 'R'},
 			 {"working-dir", 1, 0, 'W'},
 			 {"help", 0, 0, 'h'},
+			 {"logscale-size", 1, 0, 'L'},
 			 {0, 0, 0, 0},
 	};
 
@@ -140,7 +143,7 @@ void Options::parseCommandLine(int argc, char* const argv[], Processor* processo
 	bool is_terminal_set = false;
 	int opt;
 	opterr = 0;
-	while ( (opt = getopt_long(argc, argv, "tlacsi:o:S:ewhdW:", long_options, NULL)) != -1) {
+	while ( (opt = getopt_long(argc, argv, "tlacsi:o:S:ewhdW:L:", long_options, NULL)) != -1) {
 		switch (opt) {
 			case 'h': {
 				displayUsage();
@@ -189,6 +192,11 @@ void Options::parseCommandLine(int argc, char* const argv[], Processor* processo
 
 			case 'W': {
 				working_dir = optarg;
+				break;
+			}
+
+			case 'L': {
+				logscale_size = optarg;
 				break;
 			}
 

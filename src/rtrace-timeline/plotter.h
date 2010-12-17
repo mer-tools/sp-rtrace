@@ -433,6 +433,15 @@ public:
 	 */
 	void addGraph(const DataFile* file, const std::string& col_x, const std::string& col_y, const std::string& title = "",
 			const std::string& axis = "", int style = -1, const std::string& prefix = "");
+
+
+	/**
+	 * Sets the logarithmic scaling value for the specified axis.
+	 *
+	 * @param[in] axis   the axis to set scaling for.
+	 * @param[in] scale  the scaling value.
+	 */
+	void setLogscale(const std::string& axis, const std::string& scale);
 };
 
 #endif

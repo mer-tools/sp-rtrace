@@ -121,7 +121,7 @@ public:
 	 * Creates a new class instance.
 	 */
 	LifetimeGenerator()
-		: ReportGenerator("lifetime"), xrange_min(-1), xrange_max(0), yrange_min(0), yrange_max(0), total_lifelines(0) {
+		: ReportGenerator("lifetime"), xrange_min(-1), xrange_max(0), yrange_min(1), yrange_max(0), total_lifelines(0) {
 	}
 
 	/**
