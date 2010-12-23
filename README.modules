@@ -69,6 +69,29 @@ qobject
   QObject module is used to analyse QObject creation/destruction. It reports
   'qobject' resource by tracking QObject constructors/destructors.
 
+shmposix
+  Posix shared memory object moule is used to analyse posix shared memory
+  object creation/destruction and memory mapping/unmapping. It reports the
+  following resource usage:
+  'pshmobj' - posix shared memory object creation/destruction, tracked by
+              shm_open, shm_unlink funcitons.
+  'pshmfd'  - posix shared memory object opening/closing, tracked by 
+              shm_open, close() functions.
+  'pshmmap' - posix shared memory object mapping/unmapping, tracked by 
+              mmap, mmap2, mmap64, munmap functions.
+  'fshmmap' - file mapping/unmapping, tracked by mmap, mmap2, mmap64, munmap
+              functions.
+  'shmmap' -  generic shared memory object mapping/unmapping, tracked by 
+              mmap, mmap2, mmap64, munmap functions.
+
+   This plugin keeps track on opened file descriptors to determine the
+   descriptor 'type' for mapping functions. If the descriptor was opened
+   with shm_open, then 'pshmmap' resource type is reported by mapping
+   functions. If the descriptor was opened by open, open64, creat functions,
+   then 'fshmmap' resource type is reported by mapping functions. Otherwise
+   (when the descriptor source was not determined) 'shmmap' resource type
+   is reported by mapping functions.
+
 audit
   Audit plugin is used to analyse calls of custom defined functions. Those
   functions are specified with -a command line option:
