@@ -3,7 +3,7 @@ lib_LTLIBRARIES = libsp-rtrace1.la  libsp-rtrace-main.la
 module_LTLIBRARIES = \
 	libsp-rtrace-memory.la libsp-rtrace-memtransfer.la \
 	libsp-rtrace-shmsysv.la libsp-rtrace-file.la libsp-rtrace-gobject.la libsp-rtrace-qobject.la \
-	libsp-rtrace-audit.la
+	libsp-rtrace-audit.la libsp-rtrace-shmposix.la
 moduledir = $(libdir)/sp-rtrace
 
 libsp_rtrace1_la_SOURCES = library/sp_rtrace_context.c library/sp_rtrace_formatter.c \
@@ -52,6 +52,11 @@ libsp_rtrace_audit_la_SOURCES = modules/sp_rtrace_audit.c rtrace/rtrace_env.c
 libsp_rtrace_audit_la_CFLAGS = -rdynamic $(GLIB_CFLAGS) $(AM_CFLAGS)
 libsp_rtrace_audit_la_LDFLAGS = -avoid-version -module
 libsp_rtrace_audit_la_LIBADD = -ldl -lsp-rtrace1 -lsp-rtrace-main 
+
+libsp_rtrace_shmposix_la_SOURCES = modules/sp_rtrace_shmposix.c 
+libsp_rtrace_shmposix_la_CFLAGS = -rdynamic $(GLIB_CFLAGS) $(AM_CFLAGS)
+libsp_rtrace_shmposix_la_LDFLAGS = -avoid-version -module
+libsp_rtrace_shmposix_la_LIBADD = -ldl 
 
 bin_PROGRAMS = sp-rtrace sp-rtrace-postproc sp-rtrace-resolve sp-rtrace-allocmap sp-rtrace-timeline
 

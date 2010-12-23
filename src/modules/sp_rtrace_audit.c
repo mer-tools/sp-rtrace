@@ -60,10 +60,6 @@ static sp_rtrace_resource_t res_audit = {
 
 unsigned int la_version(unsigned int version)
 {
-	FILE* fp = fopen("out", "w");
-	fprintf(fp, "done\n");
-	fclose(fp);
-	fprintf(stderr, "la_version\n");
 	return version;
 }
 

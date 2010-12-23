@@ -86,9 +86,11 @@ class ArgInt:
 #include <stdarg.h>
 #include <unistd.h>
 #include <pthread.h>
-<for include in impl.include>
+<if hasattr(impl, "include")>
+  <for include in impl.include>
 #include <$lt><$include><$gt>
-</for>
+  </for>
+</if>
 
 #include "sp_rtrace_main.h"
 #include "sp_rtrace_module.h"
@@ -319,6 +321,7 @@ static <$fc.type> init_<$fc.name>(<$fc.args>)
 	<$rc_decl>trace_init_rt-><$fc.name>(<$fc.arg_names>);
 	<$rc_expr>
 }
+
 </for>
 
 static trace_t trace_init = {
