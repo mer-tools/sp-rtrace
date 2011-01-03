@@ -7,18 +7,23 @@ during post-processing and resolving.
 
 1. Header
    Header consists of key=value pairs specifying general information about the 
-   report. It is the first line in the report:
-     version=<version>, source=<source>, timestamps=yes|no, resolved=yes|no,
-       arch=<system architecture>, time=<start timestamp>
-   Where:
-     <version> - the format version
-     <source>  - the name of the tool that generated the report (functracer-0.5,
-                 libleaks etc)
-     timestamps - 'yes' for timestamps in  allocation/deallocation reports
-     resolved   - 'yes' for resolved names
-     <system architecture> - the system architecture. Practically it's the 
-                             DEB_BUILD_GNU_TYPE variable of dpkg-architecture.
-
+   report. It is the first line in the report containing key-value pairs in format
+     <key>=<value>[,<key>=<value>[,...]]
+   Where keys can be:
+     <version>         - the format version
+     <arch>            - the report origin system architecture
+     <timestamp>       - the report creation time
+     <process>         - the tracked process name
+     <pid>             - the tracked process identifier
+     <filter>          - the applied filters. Currently the following filters 
+                         are supported: 
+                            leaks -     freed resources removal
+                            compress -  log compression by grouping calls by
+					backtraces
+                            resolve -   backtrace resolving
+     <backtrace depth> - the maximum number of stack frames in backtraces
+     <origin>          - the initial log generator tool
+     
 2. Memory map
    Contains executable and library memory mapping information used to resolve
    names. Usually written in begining of the report, but can be anywhere (it
@@ -49,7 +54,7 @@ during post-processing and resolving.
    Contains information about resource (memory, file descriptors, GObjects) 
    allocation. 
      <index>. [@<context id>] \[<timestamp>\] <function name>\<<resource type>\>
-	         (<resource size>) = <resource id>
+                 (<resource size>) = <resource id>
      <bactrace>
    Where:
      <index>         - the allocation/deallocation report index.
@@ -130,8 +135,8 @@ during post-processing and resolving.
       1...n             - the argument number
       <value>           - the argument value. Could have complex value for 
                           structure and array values.
-			  
-			  
+                          
+                          
 9. Resource registry
     Contains information about tracked resource types. The resource types are
     used to identify resources when multiple modules or a mudule, tracking
@@ -139,8 +144,8 @@ during post-processing and resolving.
       \<<id>\> : <type> (<desc>) [\[<flag1>[|<flag2>]...\]]
     Where:
       <id>    - the resource id.
-	  <type>  - the resource type name.
-	  <desc>  - the resource type description.
-	  <flag1>, <flag2> .. - the resource behaviour flags.
-	      refcount - speecifies that the resource allocs/frees uses reference 
-	                 counting.
+          <type>  - the resource type name.
+          <desc>  - the resource type description.
+          <flag1>, <flag2> .. - the resource behaviour flags.
+              refcount - speecifies that the resource allocs/frees uses reference 
+                         counting.
