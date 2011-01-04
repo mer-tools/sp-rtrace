@@ -81,8 +81,8 @@ public:
 	 */
 	static timestamp_t fromString(const std::string& text) {
 		timestamp_t timestamp = 0;
-		int lpos = text.size();
-		int mpos = text.find('.');
+		unsigned int lpos = text.size();
+		unsigned int mpos = text.find('.');
 		if (mpos != std::string::npos) {
 			timestamp = atoi(text.substr(mpos + 1, lpos - mpos - 1).c_str());
 			lpos = mpos - 1;

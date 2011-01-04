@@ -40,7 +40,7 @@ void LifetimeGenerator::reportAlloc(const Resource* resource, event_ptr_t& event
 	ResourceData* rd = resources.getData(resource);
 
 	// update X axis range
-	if (xrange_min == -1) xrange_min = event->timestamp;
+	if (xrange_min == (unsigned int)-1) xrange_min = event->timestamp;
 	if (xrange_max < event->timestamp) xrange_max = event->timestamp;
 	// update Y axis range
 	if (yrange_max < event->res_size) yrange_max = event->res_size;
@@ -77,7 +77,7 @@ void LifetimeGenerator::finalize() {
 	// Adjust X axis range to contain at least single point
 	if (xrange_max == xrange_min) xrange_max++;
 	// number of graphs in report.
-	int ngraphs = 0;
+	unsigned int ngraphs = 0;
 
 	for (ResourceData* rd = resources.first(); rd; rd = resources.next()) {
 		// add graphs to the plot. This is the point where we must decide which resolution (context or resource)
@@ -159,7 +159,7 @@ void LifetimeGenerator::finalize() {
 		resource_index += 2;
 	}
 	// Reserve space at the bottom for statistics data
-	int bmargin = ngraphs + 9;
+	unsigned int bmargin = ngraphs + 9;
 	if (bmargin < 9 + ngraphs) bmargin = 9 + ngraphs;
 	if (bmargin < 15) bmargin = 15;
 

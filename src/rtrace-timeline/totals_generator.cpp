@@ -39,7 +39,7 @@ void TotalsGenerator::reportAllocInContext(const Resource* resource, const Conte
 	cd->file_totals->write(event->timestamp, cd->total);
 
 	// upate X axis range
-	if (xrange_min == -1) xrange_min = event->timestamp;
+	if (xrange_min == (unsigned int)-1) xrange_min = event->timestamp;
 	if (xrange_max < event->timestamp) xrange_max = event->timestamp;
 	// update Y axis range
 	if (cd->total > yrange_max) yrange_max = cd->total;
@@ -84,7 +84,7 @@ void TotalsGenerator::finalize() {
 	// increase Y range, so top graph isn't hidden beyond the axis
 	yrange_max = yrange_max * 105 / 100;
 	// number of graphs not counting overhead data
-	int ngraphs = 0;
+	unsigned int ngraphs = 0;
 
 	// add the collected data to the graph
 	for (ResourceData* rd = resources.first(); rd; rd = resources.next()) {
@@ -138,7 +138,7 @@ void TotalsGenerator::finalize() {
 
 
 	// write summary data
-	int resource_index = 3;
+	unsigned int resource_index = 3;
 	for (ResourceData* rd = resources.first(); rd; rd = resources.next()) {
 		Stats& stats = rd->stats;
 		table->setText(resource_index, 0, rd->key->name, Plotter::Label::ALIGN_LEFT);
@@ -159,7 +159,7 @@ void TotalsGenerator::finalize() {
 	}
 
 	// Reserve space at the bottom for leak data
-	int bmargin = ngraphs + 9;
+	unsigned int bmargin = ngraphs + 9;
 	if (bmargin < 9 + table->rows) bmargin = 9 + table->rows;
 	if (bmargin < 15) bmargin = 15;
 	plotter.setBMargin(bmargin);

@@ -1,3 +1,7 @@
+AM_CFLAGS = -Wall -Wextra -Wno-unused-function -Wno-missing-field-initializers -Wno-unused-parameter
+AM_CXXFLAGS = -Wall -Wextra -Wno-unused-function -Wno-missing-field-initializers -Wno-unused-parameter
+
+
 lib_LTLIBRARIES = libsp-rtrace1.la  libsp-rtrace-main.la
 
 module_LTLIBRARIES = \

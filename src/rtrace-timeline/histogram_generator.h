@@ -92,7 +92,7 @@ protected:
 
 public:
 	// Y axis range
-	int yrange_max;
+	unsigned int yrange_max;
 
 	// Y axis label
 	std::string ylabel;
@@ -115,7 +115,7 @@ public:
 	 */
 	HistogramGenerator(const std::string& mode, const std::string& title, const std::string& ylabel)
 		: ReportGenerator("histogram-" + mode), yrange_max(0),
-		  title(title), ylabel(ylabel), resource_type(NULL), mode(mode) {
+		  ylabel(ylabel), resource_type(NULL), mode(mode), title(title) {
 	}
 
 	/**

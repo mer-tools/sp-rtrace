@@ -62,11 +62,11 @@ void HistogramGenerator::finalize() {
 	for (keys_t::iterator iter = keys.begin(); iter != keys.end(); iter++) {
 		unsigned int size = *iter;
 		Alloc& alloc = rd->allocs[size];
-		for (int i = 0; i < alloc.freed; i++) {
+		for (unsigned int i = 0; i < alloc.freed; i++) {
 			stats_freed.allocs.push_back(size);
 			stats_summ.allocs.push_back(size);
 		}
-		for (int i = 0; i < alloc.total - alloc.freed; i++) {
+		for (unsigned int i = 0; i < alloc.total - alloc.freed; i++) {
 			stats_unfreed.allocs.push_back(size);
 			stats_summ.allocs.push_back(size);
 		}

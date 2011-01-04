@@ -169,13 +169,13 @@ private:
 
 public:
 	// X axis (time) range
-	int xrange_min;
-	int xrange_max;
+	unsigned int xrange_min;
+	unsigned int xrange_max;
 	// Y axis (rate) range
-	int yrange_min;
-	int yrange_max;
+	unsigned int yrange_min;
+	unsigned int yrange_max;
 	// Y2 axis (allocation/deallocation count) range
-	int y2range_max;
+	unsigned int y2range_max;
 
 	// the timestamp of the current activity step
 	timestamp_t activity_step;

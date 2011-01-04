@@ -42,7 +42,7 @@ public:
 	 *                      0 (FREE events).
 	 */
 	Event(unsigned int type, int index, context_t context, timestamp_t timestamp, resource_id_t res_id, size_t res_size) :
-		type(type), index(index), context(context), timestamp(timestamp), res_id(res_id), res_size(res_size) {
+		index(index), ref_count(0), context(context), timestamp(timestamp), res_size(res_size), res_id(res_id), type(type) {
 	}
 
 };

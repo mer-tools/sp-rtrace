@@ -156,7 +156,7 @@ public:
 			 * @param[in] text     the cell text.
 			 * @param[in] align    the cell alignment.
 			 */
-			void setCell(int row, const std::string& text, int align);
+			void setCell(unsigned int row, const std::string& text, int align);
 
 			/**
 			 * Writes the column data into gnuplot configuration file.
@@ -165,16 +165,16 @@ public:
 			 * @param[in] rows       the number of rows in table.
 			 * @param[in] offset     the offset column.
 			 */
-			int write(std::ostream& file, int rows, int offset);
+			int write(std::ostream& file, unsigned int rows, int offset);
 		};
 		typedef std::tr1::shared_ptr<Column> column_ptr_t;
 
 		// the number of rows in table
-		int rows;
+		unsigned int rows;
 		// the row position of the top left table corner
-		int row;
+		unsigned int row;
 		// the column position of the top left table corner
-		int col;
+		unsigned int col;
 		// the table columns
 		typedef std::vector<column_ptr_t> columns_t;
 		columns_t columns;
@@ -186,7 +186,7 @@ public:
 		 * @param[in] col    the column position of the top left table corner.
 		 */
 		Table(int row, int col)
-			: row(row), col(col), rows(0) {
+			: rows(0), row(row), col(col) {
 		}
 
 		/**
@@ -206,7 +206,7 @@ public:
 		 * @param[in] text   the cell alignment.
 		 * @param[in] align  the cell text.
 		 */
-		void setText(int row, int col, const std::string& text, int align = Label::ALIGN_RIGHT);
+		void setText(unsigned int row, unsigned int col, const std::string& text, int align = Label::ALIGN_RIGHT);
 		
 		/**
 		 * Writes the table data into gnuplot configuration file.
