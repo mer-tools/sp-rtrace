@@ -162,18 +162,13 @@ static int scan_mmap_data()
 					if (!strcmp(mmap->data.module, buffer) && mmap->data.from == from && mmap->data.to == to) continue;
 					/* update mapping record */
 					rd_mmap_free(mmap);
-					mmap->data.from = from;
-					mmap->data.to = to;
-					mmap->data.module = strdup_a(buffer);
 				}
-				else {
-					/* add new memory mapping record to internal cache */
-					mmap = dlist_create_node(sizeof(rd_mmap_t));
-					mmap->data.from = from;
-					mmap->data.to = to;
-					mmap->data.module = strdup_a(buffer);
-					dlist_add(&s_mmaps, mmap);
-				}
+				mmap = dlist_create_node(sizeof(rd_mmap_t));
+				mmap->data.from = from;
+				mmap->data.to = to;
+				mmap->data.module = strdup_a(buffer);
+				dlist_add(&s_mmaps, mmap);
+
 				/* assemble and write MM packet */
 				char* ptr = name + SP_RTRACE_PROTO_TYPE_SIZE;
 				ptr += write_dword(ptr, SP_RTRACE_PROTO_MEMORY_MAP);
