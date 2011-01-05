@@ -70,6 +70,12 @@ static sp_rtrace_resource_t res_address = {
 		.flags = SP_RTRACE_RESOURCE_DEFAULT,
 };
 
+static sp_rtrace_resource_t res_control = {
+		.type = "control",
+		.desc = "shared memory segment control operation",
+		.flags = SP_RTRACE_RESOURCE_DEFAULT,
+};
+
 #
 #ifdef __amd64__
  #define IPC_64  0x00
@@ -204,6 +210,7 @@ static void trace_initialize()
 				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
 				sp_rtrace_register_resource(&res_segment);
 				sp_rtrace_register_resource(&res_address);
+				sp_rtrace_register_resource(&res_control);
 				trace_init_rt = trace_rt;
 				init_mode = MODULE_READY;
 
@@ -249,6 +256,19 @@ int trace_shmctl(int shmid, int cmd, struct shmid_ds *buf)
 				nattach = ds.shm_nattch;
 			}
 		}
+		sp_rtrace_fcall_t call = {
+				.type = SP_RTRACE_FTYPE_FREE,
+				.res_type = (void*)res_control.id,
+				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.name = "shmctl",
+				.res_size = 0,
+				.res_id = (pointer_t)shmid,
+		};
+		sp_rtrace_farg_t args[] = {
+				{.name = "cmd", .value = "IPC_RMID"},
+				{0}
+		};
+		sp_rtrace_write_function_call(&call, NULL, args);
 	}
 	int rc = trace_off.shmctl(shmid, cmd, buf);
 	if (rc != -1 && nattach == 0) {
