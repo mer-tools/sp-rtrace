@@ -161,6 +161,7 @@ static int scan_mmap_data()
 					/* if the addresses are the same - skip */
 					if (!strcmp(mmap->data.module, buffer) && mmap->data.from == from && mmap->data.to == to) continue;
 					/* update mapping record */
+					dlist_remove(&s_mmaps, mmap);
 					rd_mmap_free(mmap);
 				}
 				mmap = dlist_create_node(sizeof(rd_mmap_t));
