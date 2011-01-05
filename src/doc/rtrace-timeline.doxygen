@@ -1,0 +1,8 @@
+++ Doxyfile	2010-12-23 11:55:24.000000000 +0200
+PROJECT_NAME           = "sp-rtrace timeline"
+BUILTIN_STL_SUPPORT    = YES
+INPUT                  = ../rtrace-timeline
+FILE_PATTERNS          = *.h *.c *.cpp
+RECURSIVE              = YES
+GENERATE_LATEX         = NO
+HAVE_DOT               = YES
