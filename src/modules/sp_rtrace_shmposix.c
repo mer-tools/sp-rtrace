@@ -552,7 +552,10 @@ static void trace_initialize()
 		}
 
 		case MODULE_LOADED: {
-			if (sp_rtrace_initialize()) {
+			fprintf(stderr, "\tcalling sp_rtrace_initialize()\n");
+			if (sp_rtrace_initialize() && init_mode == MODULE_LOADED) {
+				init_mode = MODULE_READY;
+
 				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
 				sp_rtrace_register_resource(&res_pshmmap);
 				sp_rtrace_register_resource(&res_fshmmap);
@@ -560,7 +563,6 @@ static void trace_initialize()
 				sp_rtrace_register_resource(&res_pshmobj);
 				sp_rtrace_register_resource(&res_pshmfd);
 				trace_init_rt = trace_rt;
-				init_mode = MODULE_READY;
 
 				LOG("module ready: %s (%d.%d)", module_info.name, module_info.version_major, module_info.version_minor);
 			}

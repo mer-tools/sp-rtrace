@@ -51,7 +51,6 @@ int sp_rtrace_print_header(FILE* fp, const struct sp_rtrace_header_t* header)
 		sprintf(timestamp_s, "%02d.%02d.%04d %02d:%02d:%02d", tm->tm_mday, tm->tm_mon + 1, tm->tm_year + 1900,
 				tm->tm_hour, tm->tm_min, tm->tm_sec);
 	}
-
 	char buffer[PATH_MAX];
 	int size = 0, i;
 	for (i = 0; i < SP_RTRACE_HEADER_MAX; i++) {

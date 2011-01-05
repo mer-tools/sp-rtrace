@@ -178,7 +178,7 @@ static void trace_initialize()
 		}
 
 		case MODULE_LOADED: {
-			if (sp_rtrace_initialize()) {
+			if (sp_rtrace_initialize() && init_mode == MODULE_LOADED) {
 				init_mode = MODULE_READY;
 
 				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);

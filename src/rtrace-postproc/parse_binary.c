@@ -153,6 +153,7 @@ static rd_pinfo_t* read_packet_PI(const rd_hshake_t* hs, const char* data)
 	}
 	//
 	read_stringa(data, &info->name);
+	info->trace_origin = strdup_a(PACKAGE_STRING);
 
 	return info;
 }

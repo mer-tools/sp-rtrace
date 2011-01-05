@@ -266,6 +266,7 @@ void write_trace_environment(fmt_data_t* fmt)
 					spid,                   // HEADER_PID
 					NULL,                    // HEADER_FILTER
 					fmt->rd->pinfo->backtrace_depth == -1 ? NULL : btdepth, // HEADER_BACKTRACE_DEPTH
+					fmt->rd->pinfo->trace_origin, // HEADER_ORIGIN
 			},
 	};
 	unsigned int filter = fmt->rd->filter;

@@ -78,6 +78,9 @@ static void parse_header(rd_t* rd, const char* line)
 	if (header.fields[SP_RTRACE_HEADER_PROCESS]) {
 		rd->pinfo->name = strdup_a(header.fields[SP_RTRACE_HEADER_PROCESS]);
 	}
+	if (header.fields[SP_RTRACE_HEADER_ORIGIN]) {
+		rd->pinfo->trace_origin = strdup_a(header.fields[SP_RTRACE_HEADER_ORIGIN]);
+	}
 	if (header.fields[SP_RTRACE_HEADER_PID]) {
 		rd->pinfo->pid = atoi(header.fields[SP_RTRACE_HEADER_PID]);
 	}

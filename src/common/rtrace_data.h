@@ -81,6 +81,7 @@ typedef struct rd_pinfo_t {
 	int backtrace_depth;
 	char* name;
 	struct timeval timestamp;
+	char* trace_origin;
 } rd_pinfo_t;
 
 #define RD_PINFO(x) ((rd_pinfo_t*)x)
