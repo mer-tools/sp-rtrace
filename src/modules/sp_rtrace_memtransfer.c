@@ -754,7 +754,7 @@ wchar_t* wmemmove(wchar_t* dest, const wchar_t* src, size_t b)
 	return trace_rt->wmemmove(dest, src, b);
 }
 
-wchar_t* wmemset(wchar_t *s, wchar_t c, size_t n)
+wchar_t* wmemset(wchar_t *s, int c, size_t n)
 {
 	return trace_rt->wmemset(s, c, n);
 }
@@ -906,7 +906,7 @@ static wchar_t* init_wmemmove(wchar_t* dest, const wchar_t* src, size_t b)
 	return trace_init_rt->wmemmove(dest, src, b);
 }
 
-static wchar_t* init_wmemset(wchar_t *s, wchar_t c, size_t n)
+static wchar_t* init_wmemset(wchar_t *s, int c, size_t n)
 {
 	trace_initialize();
 	return trace_init_rt->wmemset(s, c, n);
