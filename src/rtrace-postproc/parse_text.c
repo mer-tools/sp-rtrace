@@ -167,6 +167,9 @@ static void* parse_resource_registry(char* line)
 		if (fields >= 4) {
 			resource->data.flags = parse_resource_flags(flags);
 		}
+		else {
+			resource->data.flags = 0;
+		}
 		resource->hide = false;
 	}
 	return resource;

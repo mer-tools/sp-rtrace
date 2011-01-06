@@ -279,6 +279,8 @@ void write_trace_environment(fmt_data_t* fmt)
 	
 	/* write header data */
 	TRY(sp_rtrace_print_header(fmt->fp, &header));
+	/* clear the header filter to free the header filter field */
+	header_set_filter(&header, 0);
 
 	/* write heap information if exists */
 	if (fmt->rd->hinfo) write_heap_information(fmt->fp, fmt->rd->hinfo);

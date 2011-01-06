@@ -454,6 +454,7 @@ static int rs_load_symbols(rs_cache_record_t* rec, const char* filename)
 		symcount = bfd_read_minisymbols(rec->file, FALSE, (void *) &rec->symbols, &size);
 	}
 	if (symcount == 0 && !(resolve_options.mode & MODE_ELF)) {
+		if (rec->symbols) free(rec->symbols);
 		symcount = bfd_read_minisymbols(rec->file, TRUE, (void *) &rec->symbols, &size);
 	}
 	if (resolve_options.mode & MODE_ELF) {

@@ -101,6 +101,9 @@ static rd_resource_t* read_packet_RR(const rd_hshake_t* hs, const char* data)
 	if (HS_CHECK_VERSION(hs, 1, 3)) {
 		data += read_dword(data, &res->data.flags);
 	}
+	else {
+		res->data.flags = 0;
+	}
 	data += read_stringa(data, &res->data.type);
 	read_stringa(data, &res->data.desc);
 	res->hide = false;

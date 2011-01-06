@@ -374,6 +374,7 @@ static void read_header(FILE* fpin, FILE* fpout)
 	header_set_filter(&header, header_get_filter(&header) | FILTER_MASK_RESOLVE);
 	/* write the header into output file */
 	sp_rtrace_print_header(fpout, &header);
+	header_free(&header);
 }
 
 /**
