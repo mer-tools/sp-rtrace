@@ -113,7 +113,7 @@ typedef char* (*strndupa_t)(const char *s, size_t n);
 typedef wchar_t* (*wmemcpy_t)(wchar_t *dest, const wchar_t *src, size_t n);
 typedef wchar_t* (*wmempcpy_t)(wchar_t *dest, const wchar_t *src, size_t n);
 typedef wchar_t* (*wmemmove_t)(wchar_t* dest, const wchar_t* src, size_t b);
-typedef wchar_t* (*wmemset_t)(wchar_t *s, int c, size_t n);
+typedef wchar_t* (*wmemset_t)(wchar_t *s, wchar_t c, size_t n);
 typedef wchar_t* (*wcscpy_t)(wchar_t *dest, const wchar_t *src);
 typedef wchar_t* (*wcsncpy_t)(wchar_t *dest, const wchar_t *src, size_t n);
 typedef wchar_t* (*wcpcpy_t)(wchar_t *dest, const wchar_t *src);
@@ -508,7 +508,7 @@ static wchar_t* trace_wmemmove(wchar_t* dest, const wchar_t* src, size_t n)
 	return rc;
 }
 
-static wchar_t* trace_wmemset(wchar_t *s, int c, size_t n)
+static wchar_t* trace_wmemset(wchar_t *s, wchar_t c, size_t n)
 {
 	wchar_t* rc = trace_off.wmemset(s, c, n);
 	sp_rtrace_fcall_t call = {
@@ -754,7 +754,7 @@ wchar_t* wmemmove(wchar_t* dest, const wchar_t* src, size_t b)
 	return trace_rt->wmemmove(dest, src, b);
 }
 
-wchar_t* wmemset(wchar_t *s, int c, size_t n)
+wchar_t* wmemset(wchar_t *s, wchar_t c, size_t n)
 {
 	return trace_rt->wmemset(s, c, n);
 }
@@ -906,7 +906,7 @@ static wchar_t* init_wmemmove(wchar_t* dest, const wchar_t* src, size_t b)
 	return trace_init_rt->wmemmove(dest, src, b);
 }
 
-static wchar_t* init_wmemset(wchar_t *s, int c, size_t n)
+static wchar_t* init_wmemset(wchar_t *s, wchar_t c, size_t n)
 {
 	trace_initialize();
 	return trace_init_rt->wmemset(s, c, n);
