@@ -1,4 +1,4 @@
-.TH RTRACE-GRAPHS-FUNCTION 1 "2010-11-02" "sp-rtrace"
+.TH RTRACE-GRAPHS-FUNCTION 1 "2011-01-10" "sp-rtrace"
 .SH NAME
 rtrace-graphs-function - create callgraph of given function's allocs
 .SH SYNOPSIS
@@ -23,7 +23,7 @@ missing, script will just provide the input files for further steps.
 The produced files have the same file names as input files with
 following extensions appended to them:
 .TP
-.B -callgraph.txt
+.B -callgraph.rtrace.txt
 data post-processed and resolved for \fIrtrace-calltree\fP use.
 .TP
 .B -callgraph.dot
@@ -35,8 +35,8 @@ the \fIrtrace-calltree\fP output .dot files.  These show
 a general overview of the unfreed allocations.
 .PP
 SVG and intermediate dot files are saved to a <function name>
-subdirectory in current directory and the post-processed *.txt trace
-file into same directory where the input files are (so that it's
+subdirectory in current directory and the post-processed *.rtrace.txt
+trace file into same directory where the input files are (so that it's
 easier to share it with \fIrtrace-graphs-overview\fP script).
 .PP
 To re-generated above files, just remove them or the subdirectory
@@ -59,7 +59,7 @@ modified from the ones (shown to be) used by this script.
 .IR rtrace-calltree (1),
 .IR dot (1)
 .SH COPYRIGHT
-Copyright (C) 2007,2010 Nokia Corporation.
+Copyright (C) 2007,2010,2011 Nokia Corporation.
 .PP
 This is free software.  You may redistribute copies of it under the
 terms of the GNU General Public License v2 included with the software.

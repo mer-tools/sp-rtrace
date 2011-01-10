@@ -3,7 +3,7 @@
 # This script generates leak graphs for given function for all given
 # leak files. This file is part of sp-rtrace.
 #
-# Copyright (C) 2006,2010 by Nokia Corporation
+# Copyright (C) 2006,2010,2011 by Nokia Corporation
 #
 # Contact: Eero Tamminen <eero.tamminen@nokia.com>
 #
@@ -41,6 +41,8 @@
 # 2010-11-10
 # - Use SVG instead of EPS, open generated file with xdg-open,
 #   better corner-case error checks
+# 2011-01-10
+# - retain rtrace.txt extension for post-processed files
 
 # script name
 name=${0##*/}
@@ -52,7 +54,7 @@ usage ()
 $name generates SVG callgraph(s) of resource allocation
 backtraces going through the methods/functions/libraries with given
 name prefix, in all the given trace files.  The graphs are saved
-to a subdirectory with a same name prefix.
+to a subdirectory with a given function name prefix.
 
 (Giving "" as name will list everything.)
 
@@ -119,6 +121,7 @@ check_dot ()
 	fi
 }
 
+# post-processes given binary trace file, uses $src and $dst
 convert_binary ()
 {
 	# merge & remove leaks & resolve
@@ -132,6 +135,8 @@ convert_binary ()
 	fi
 	return 0
 }
+
+# post-processes given ASCII trace file, uses $src and $dst,
 # ASCII trace allows skipping unnecessary steps
 convert_ascii ()
 {
@@ -180,8 +185,11 @@ do
 	if [ \! -f $src ]; then
 		usage "given '$src' trace file doesn't exist"
 	fi
-	dst=${src%-callgraph.txt}
-	dst=${dst%.txt}-callgraph.txt
+	dst=${src%-callgraph*}
+	dst=${dst%.rtrace.txt}
+	dir=${dst%.rtrace}
+	dst=${dst%.txt}
+	dst=$dst-callgraph.rtrace.txt
 	echo "'$src' -> '$dst'"
 
 	if [ "$src" = "$dst" ]; then
@@ -212,7 +220,7 @@ do
 
 	# remove path & extention
 	dot=${dst##*/}
-	dot=${dot%.txt}
+	dot=${dot%.rtrace.txt}
 	# add own extention
 	dot=$fundir/$dot.dot
 	if [ \! -f $dot ] || [ $dot -ot $dst ]; then
@@ -239,6 +247,7 @@ do
 			echo "ERROR: 'dot' (GraphViz) call failed"
 			exit 1
 		fi
+		echo "xdg-open $svg &"
 		xdg-open $svg &
 		count=$((count+1))
 	fi
