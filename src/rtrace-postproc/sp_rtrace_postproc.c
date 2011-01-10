@@ -263,6 +263,7 @@ int main(int argc, char* argv[])
 		case 'i':
 			if (postproc_options.input_file) {
 				fprintf(stderr, "WARNING: Overriding previously given option: -i %s\n", postproc_options.input_file);
+				free(postproc_options.input_file);
 			}
 			postproc_options.input_file = strdup_a(optarg);
 			break;
@@ -270,6 +271,7 @@ int main(int argc, char* argv[])
 		case 'o':
 			if (postproc_options.output_dir) {
 				fprintf(stderr, "WARNING: Overriding previously given option: -o %s\n", postproc_options.output_dir);
+				free(postproc_options.output_dir);
 			}
 			postproc_options.output_dir = strdup_a(optarg);
 			break;
@@ -384,8 +386,13 @@ int main(int argc, char* argv[])
 	}
 	else {
 		FILE* fp = fdopen(fd, "r");
+		if (!fp) {
+			fprintf(stderr, "ERROR: Failed to reopen input stream.\n");
+			exit (-1);
+		}
 		ungetc(proto_id, fp);
 		process_text_data(rd, fp);
+		fclose(fp);
 	}
 
 	if (!rd->pinfo) {

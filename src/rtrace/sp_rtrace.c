@@ -595,7 +595,7 @@ static void toggle_tracing()
  * is executed.
  * @return    0 - success.
  */
-static void start_process(char* app, char* args[])
+static int start_process(char* app, char* args[])
 {
 	rtrace_options.pid = fork();
 	if (rtrace_options.pid == -1) {
@@ -636,8 +636,9 @@ static void start_process(char* app, char* args[])
 
 		disconnect_output();
 		disconnect_input(pipe_path);
-		exit (rc);
+		return rc;
 	}
+	return 0;
 }
 
 
@@ -831,6 +832,7 @@ int main(int argc, char* argv[])
 		case 'o':
 			if (rtrace_options.output_dir) {
 				fprintf(stderr, "WARNING: Overriding previously given option: -o %s\n", rtrace_options.output_dir);
+				free(rtrace_options.output_dir);
 			}
 			rtrace_options.output_dir = strdup_a(optarg);
 			break;
@@ -842,6 +844,7 @@ int main(int argc, char* argv[])
 		case 'p':
 			if (rtrace_options.preload) {
 				fprintf(stderr, "WARNING: Overriding previously given option: -p %s\n", rtrace_options.preload);
+				free(rtrace_options.preload);
 			}
 			rtrace_options.preload = strdup_a(optarg);
 			break;
@@ -849,6 +852,7 @@ int main(int argc, char* argv[])
 		case 'a':
 			if (rtrace_options.audit) {
 				fprintf(stderr, "WARNING: Overriding previously given option: -a %s\n", rtrace_options.audit);
+				free(rtrace_options.audit);
 			}
 			rtrace_options.audit = strdup_a(optarg);
 			break;
@@ -873,6 +877,7 @@ int main(int argc, char* argv[])
 		case 'b':
 			if (rtrace_options.backtrace_depth) {
 				fprintf(stderr, "WARNING: Overriding previously given option: -b %s\n", rtrace_options.backtrace_depth);
+				free(rtrace_options.backtrace_depth);
 			}
 			rtrace_options.backtrace_depth = strdup_a(optarg);
 			break;
@@ -888,6 +893,7 @@ int main(int argc, char* argv[])
 		case 'P':
 			if (rtrace_options.postproc) {
 				fprintf(stderr, "WARNING: Overriding previously given option: -P %s\n", rtrace_options.postproc);
+				free(rtrace_options.backtrace_depth);
 			}
 			rtrace_options.postproc = strdup_a(optarg ? optarg : "");
 			break;
@@ -926,6 +932,7 @@ int main(int argc, char* argv[])
 			exit (-1);
 		}
 	}
+	int rc = 0;
 
 	switch (rtrace_options.mode) {
 		case MODE_TOGGLE: {
@@ -939,7 +946,7 @@ int main(int argc, char* argv[])
 				start_process_managed(optarg, argv + optind - 1);
 			}
 			else {
-				start_process(optarg, argv + optind - 1);
+				rc = start_process(optarg, argv + optind - 1);
 			}
 			break;
 		}
@@ -961,5 +968,5 @@ int main(int argc, char* argv[])
 	}
 	free_options();
 
-	return 0;
+	return rc;
 }

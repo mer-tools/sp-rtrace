@@ -470,6 +470,7 @@ int main(int argc, char* argv[])
 		case 'i':
 			if (resolve_options.input_file) {
 				fprintf(stderr, "WARNING: Overriding previously given option: -i %s\n", resolve_options.input_file);
+				free(resolve_options.input_file);
 			}
 			resolve_options.input_file = strdup_a(optarg);
 			break;
@@ -477,6 +478,7 @@ int main(int argc, char* argv[])
 		case 'o':
 			if (resolve_options.output_file) {
 				fprintf(stderr, "WARNING: Overriding previously given option: -o %s\n", resolve_options.output_file);
+				free(resolve_options.output_file);
 			}
 			resolve_options.output_file = strdup_a(optarg);
 			break;

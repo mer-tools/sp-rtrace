@@ -51,22 +51,21 @@ int sp_rtrace_print_header(FILE* fp, const struct sp_rtrace_header_t* header)
 		sprintf(timestamp_s, "%02d.%02d.%04d %02d:%02d:%02d", tm->tm_mday, tm->tm_mon + 1, tm->tm_year + 1900,
 				tm->tm_hour, tm->tm_min, tm->tm_sec);
 	}
-	if (!header->fields[SP_RTRACE_HEADER_VERSION]) {
-		snprintf(version_s, sizeof(version_s), "%d.%d", SP_RTRACE_PROTO_VERSION_MAJOR, SP_RTRACE_PROTO_VERSION_MINOR);
-	}
+	snprintf(version_s, sizeof(version_s), "%d.%d", SP_RTRACE_PROTO_VERSION_MAJOR, SP_RTRACE_PROTO_VERSION_MINOR);
+
 	char buffer[PATH_MAX];
 	int size = 0, i;
 	for (i = 0; i < SP_RTRACE_HEADER_MAX; i++) {
 		const char* value = header->fields[i];
-		if (!value) {
-			switch (i) {
-				case SP_RTRACE_HEADER_TIMESTAMP:
-					value = timestamp_s;
-					break;
-				case SP_RTRACE_HEADER_VERSION:
-					value = version_s;
-					break;
-			}
+		switch (i) {
+			case SP_RTRACE_HEADER_TIMESTAMP:
+				/* fill in timestamp value if the timestamp field is NULL */
+				if (!value) value = timestamp_s;
+				break;
+			case SP_RTRACE_HEADER_VERSION:
+				/* override the version information with the predefined version number */
+				value = version_s;
+				break;
 		}
 		if (value) {
 			size += snprintf(buffer + size, PATH_MAX - size, "%s=%s, ", header_fields[i], value);

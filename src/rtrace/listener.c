@@ -242,7 +242,10 @@ static int process_packet(const char* data, size_t size)
 		offset += read_string(data + offset, value, PATH_MAX);
 		if (*value) rtrace_options.output_dir = strdup_a(value);
 		offset += read_string(data + offset, value, PATH_MAX);
-		if (*value) rtrace_options.postproc = strdup_a(value);
+		if (*value) {
+			if (rtrace_options.postproc) free(rtrace_options.postproc);
+			rtrace_options.postproc = strdup_a(value);
+		}
 
 		/* output settings updated, now the output stream can be initialized */
 		rtrace_connect_output();
