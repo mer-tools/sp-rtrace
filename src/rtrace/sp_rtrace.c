@@ -829,6 +829,9 @@ int main(int argc, char* argv[])
 	while ( opt != 'x' && (opt = getopt_long(argc, argv, rtrace_short_opt, rtrace_long_opt, NULL)) != -1) {
 		switch(opt) {
 		case 'o':
+			if (rtrace_options.output_dir) {
+				fprintf(stderr, "WARNING: Overriding previously given option: -o %s\n", rtrace_options.output_dir);
+			}
 			rtrace_options.output_dir = strdup_a(optarg);
 			break;
 
@@ -837,10 +840,16 @@ int main(int argc, char* argv[])
 			break;
 
 		case 'p':
+			if (rtrace_options.preload) {
+				fprintf(stderr, "WARNING: Overriding previously given option: -p %s\n", rtrace_options.preload);
+			}
 			rtrace_options.preload = strdup_a(optarg);
 			break;
 
 		case 'a':
+			if (rtrace_options.audit) {
+				fprintf(stderr, "WARNING: Overriding previously given option: -a %s\n", rtrace_options.audit);
+			}
 			rtrace_options.audit = strdup_a(optarg);
 			break;
 
@@ -862,6 +871,9 @@ int main(int argc, char* argv[])
 			break;
 
 		case 'b':
+			if (rtrace_options.backtrace_depth) {
+				fprintf(stderr, "WARNING: Overriding previously given option: -b %s\n", rtrace_options.backtrace_depth);
+			}
 			rtrace_options.backtrace_depth = strdup_a(optarg);
 			break;
 
@@ -874,6 +886,9 @@ int main(int argc, char* argv[])
 			break;
 
 		case 'P':
+			if (rtrace_options.postproc) {
+				fprintf(stderr, "WARNING: Overriding previously given option: -P %s\n", rtrace_options.postproc);
+			}
 			rtrace_options.postproc = strdup_a(optarg ? optarg : "");
 			break;
 

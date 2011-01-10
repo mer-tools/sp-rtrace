@@ -468,14 +468,23 @@ int main(int argc, char* argv[])
 			exit (0);
 
 		case 'i':
+			if (resolve_options.input_file) {
+				fprintf(stderr, "WARNING: Overriding previously given option: -i %s\n", resolve_options.input_file);
+			}
 			resolve_options.input_file = strdup_a(optarg);
 			break;
 
 		case 'o':
+			if (resolve_options.output_file) {
+				fprintf(stderr, "WARNING: Overriding previously given option: -o %s\n", resolve_options.output_file);
+			}
 			resolve_options.output_file = strdup_a(optarg);
 			break;
 
 		case 'm':
+			if ((resolve_options.mode & MODE_OPERATION_MASK) != MODE_FULL_CACHE) {
+				fprintf(stderr, "WARNING: Overriding previously given operation mode option (-m <mode>)\n");
+			}
 			if (!strcmp(optarg, "multi-pass")) resolve_options.mode = (resolve_options.mode & (~MODE_OPERATION_MASK)) | MODE_MULTI_PASS;
 			else if (!strcmp(optarg, "single-cache")) resolve_options.mode = (resolve_options.mode & (~MODE_OPERATION_MASK)) | MODE_SINGLE_CACHE;
 			else {
@@ -485,6 +494,10 @@ int main(int argc, char* argv[])
 			break;
 
 		case 't':
+			if ((resolve_options.mode & MODE_METHOD_MASK) != (MODE_BFD | MODE_ELF)) {
+				fprintf(stderr, "WARNING: Overriding previously given resolving method option (-t <method>)\n");
+			}
+
 			if (!strcmp(optarg, "elf")) resolve_options.mode = (resolve_options.mode & (~MODE_METHOD_MASK)) | MODE_ELF;
 			else if (!strcmp(optarg, "bfd")) resolve_options.mode = (resolve_options.mode & (~MODE_METHOD_MASK)) | MODE_BFD;
 			else {
