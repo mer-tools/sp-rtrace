@@ -250,22 +250,22 @@ void write_leak_summary(fmt_data_t* fmt)
 void write_trace_environment(fmt_data_t* fmt)
 {
 	/* prepare version and timestamp strings */
-	char version[8], timestamp[64], spid[8], btdepth[16];
+	char timestamp[64], spid[8], btdepth[16];
 	sprintf(spid, "%d", fmt->rd->pinfo->pid);
-	sprintf(version, "%d.%d", fmt->rd->hshake->vmajor, fmt->rd->hshake->vminor);
 	struct tm* tm = localtime(&fmt->rd->pinfo->timestamp.tv_sec);
 	sprintf(timestamp, "%d.%d.%d %02d:%02d:%02d", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
 	sprintf(btdepth, "%d", fmt->rd->pinfo->backtrace_depth);
 	
 	sp_rtrace_header_t header =  {
 			.fields = { 
-					version,                // HEADER_VERSION
+					NULL,                   // HEADER_VERSION
 					fmt->rd->hshake->arch,  // HEADER_ARCH 
 					timestamp,              // HEADER_TIMESTAMP
 					fmt->rd->pinfo->name,   // HEADER_PROCESS
 					spid,                   // HEADER_PID
 					NULL,                    // HEADER_FILTER
 					fmt->rd->pinfo->backtrace_depth == -1 ? NULL : btdepth, // HEADER_BACKTRACE_DEPTH
+					fmt->rd->pinfo->trace_origin, // HEADER_ORIGIN
 			},
 	};
 	unsigned int filter = fmt->rd->filter;
@@ -278,6 +278,8 @@ void write_trace_environment(fmt_data_t* fmt)
 	
 	/* write header data */
 	TRY(sp_rtrace_print_header(fmt->fp, &header));
+	/* clear the header filter to free the header filter field */
+	header_set_filter(&header, 0);
 
 	/* write heap information if exists */
 	if (fmt->rd->hinfo) write_heap_information(fmt->fp, fmt->rd->hinfo);

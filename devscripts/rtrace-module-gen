@@ -26,7 +26,7 @@ def sections(value):
 class Function:
 	"""
 	The function class is used to parse function prototype
-    string into its components - type, name, arguments.
+	string into its components - type, name, arguments.
 	"""
 	reFunction = re.compile("(.*) ([^ (]+)\(([^)]*)\)")
 	reArgs = re.compile("[^,]*[ *]([a-zA-Z0-9_]+)(, *|)(.*)")
@@ -38,15 +38,29 @@ class Function:
 		self.type = match.group(1)
 		self.name = match.group(2)
 		self.args = match.group(3)
+		self.arg_items = []
 		self.arg_names = self.stripArgs(self.args)
 		
 	def stripArgs(self, args):
 		match = self.reArgs.match(args)
 		if match:
 			if match.group(3) != "":
+				self.arg_items.append(match.group(1))
 				return "%s%s%s" % (match.group(1), match.group(2), self.stripArgs(match.group(3)))
-		 	return match.group(1)
+			self.arg_items.append(match.group(1))
+			return match.group(1)
 		return args
+
+	def index2name(self, index):
+		return self.arg_items[index]
+	
+	def name2index(self, name):
+		for index in range(0, len(self.arg_items)):
+			if self.arg_items[index] == name:
+				return index
+		raise RuntimeError("Argument name %s not found in argument list" % name)
+
+# /class Function				
 
 # /class Function		
 		

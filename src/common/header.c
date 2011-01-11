@@ -37,6 +37,7 @@ const char* header_fields[SP_RTRACE_HEADER_MAX] = {
 		"pid",
 		"filter",
 		"backtrace depth",
+		"origin",
 };
 
 /* hader filter field tags */

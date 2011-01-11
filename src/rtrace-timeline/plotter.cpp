@@ -28,13 +28,13 @@ void Plotter::Label::write(std::ostream& file, int row, int col, int width) {
 	file << "set label \"" << text << "\" at character " << col << "," << row << " " << align_values[align] << "\n";
 }
 
-void Plotter::Table::Column::setCell(int row, const std::string& text, int align) {
+void Plotter::Table::Column::setCell(unsigned int row, const std::string& text, int align) {
 	if (cells.size() <= row) cells.resize(row + 1);
 	cells[row] = label_ptr_t(new Label(text, align));
 }
 
-int Plotter::Table::Column::write(std::ostream& file, int rows, int offset) {
-	int row = 0;
+int Plotter::Table::Column::write(std::ostream& file, unsigned int rows, int offset) {
+	unsigned int row = 0;
 	for (cells_t::iterator iter = cells.begin(); iter < cells.end(); iter++) {
 		if (iter->get()) {
 			iter->get()->write(file, rows - row, offset, width);
@@ -44,7 +44,7 @@ int Plotter::Table::Column::write(std::ostream& file, int rows, int offset) {
 	return width;
 }
 
-void Plotter::Table::setText(int row, int col, const std::string& text, int align) {
+void Plotter::Table::setText(unsigned int row, unsigned int col, const std::string& text, int align) {
 	if (col >= columns.size()) throw std::runtime_error(Formatter() << "Table column number " << col <<
 			" out of range (" << columns.size() << ")");
 

@@ -40,7 +40,7 @@ Function sections can be iterated with sections("function").
 
 <for function in sections("function")>
 Function: <$function.name>
-  <for arg in funciton.args>
+  <for arg in function.args>
   arg: <$arg>
   </for>
 </for>

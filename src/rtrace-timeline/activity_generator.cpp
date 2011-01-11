@@ -78,7 +78,7 @@ void ActivityGenerator::updateRangeY(const ContextData* cd)
 void ActivityGenerator::updateRangeX(timestamp_t timestamp)
 {
 	// update X axis range
-	if (xrange_min == -1) xrange_min = timestamp;
+	if (xrange_min == (unsigned int)-1) xrange_min = timestamp;
 	if (xrange_max < timestamp) xrange_max = timestamp;
 }
 
@@ -95,7 +95,7 @@ int ActivityGenerator::reportEvent(const Resource* resource, event_ptr_t& event)
 	if (old_slice_timestamp != activity_step) {
 		ResourceData* rd = resources.getData(resource);
 		Stats* stats = &rd->stats;
-		rd->stats.update(rd->getData(&context_all), activity_step);
+		stats->update(rd->getData(&context_all), activity_step);
 		old_slice_timestamp = activity_step;
 	}
 	return OK;
@@ -215,7 +215,7 @@ void ActivityGenerator::finalize()
 	table->setText(0, 3, "Size", Plotter::Label::ALIGN_CENTER);
 
 	// write summary data
-	int resource_index = 2;
+	unsigned int resource_index = 2;
 	for (ResourceData* rd = resources.first(); rd; rd = resources.next()) {
 		Stats& stats = rd->stats;
 		table->setText(resource_index, 0, rd->key->name, Plotter::Label::ALIGN_LEFT);
@@ -237,7 +237,7 @@ void ActivityGenerator::finalize()
 	}
 
 	// Reserve space at the bottom for leak data
-	int bmargin = ngraphs + 9;
+	unsigned int bmargin = ngraphs + 9;
 	if (bmargin < 9 + table->rows) bmargin = 9 + table->rows;
 	if (bmargin < 15) bmargin = 15;
 	plotter.setBMargin(bmargin);

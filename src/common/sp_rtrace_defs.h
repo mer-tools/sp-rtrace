@@ -102,16 +102,31 @@ enum sp_rtrace_fcall_rfield_t {
 };
 
 
-/* header field index */
+/**
+ * Header field index values.
+ *
+ * Also see the TEXT_PROTOCOL file for the header field
+ * description.
+ */
 enum sp_rtrace_header_index_t {
+	/* the protocol version, set internally by sp-rtrace */
 	SP_RTRACE_HEADER_VERSION,
+	/* the architecture of the report source system */
 	SP_RTRACE_HEADER_ARCH,
+	/* the report creation timestamp, set by sp-rtrace if left NULL */
 	SP_RTRACE_HEADER_TIMESTAMP,
+	/* the tracked process name */
 	SP_RTRACE_HEADER_PROCESS,
+	/* the tracked process identifier */
 	SP_RTRACE_HEADER_PID,
+	/* the filters, applied to the report */
 	SP_RTRACE_HEADER_FILTER,
+	/* the maximum depth of the function stack trace */
 	SP_RTRACE_HEADER_BACKTRACE_DEPTH,
+	/* the initial report generator tool */
+	SP_RTRACE_HEADER_ORIGIN,
 
+	/* the number of header fields */
 	SP_RTRACE_HEADER_MAX,
 };
 

@@ -488,9 +488,9 @@ class Graph:
 class Rtrace:
     def __init__(self, tracefile):
         # format: <index>. [@<context id>] [\[<timestamp>\]] <function name>\<<resource type>\>(<resource size>) = <hex ID>
-        self.alloc_pattern = re.compile("^[0-9]+\. [^a-zA-Z_]+([^(]+)\(([0-9]+)\) = (0x[a-fA-F0-9]+)")
+        self.alloc_pattern = re.compile("^[0-9]+\.( @[0-9a-fA-F]+|)( \[[^]]+\]|) ([a-zA-Z_][^(]+)\(([0-9]+)\) = (0x[a-fA-F0-9]+)")
         # format: <index>. [@<context id>] [\[<timestamp>\]] <function name>\<<resource type>\>(<hex ID>)
-        self.free_pattern  = re.compile("^[0-9]+\. [^a-zA-Z_]+([^(]+)\((0x[a-fA-F0-9]+)\)")
+        self.free_pattern  = re.compile("^[0-9]+\.( @[0-9a-fA-F]+|)( \[[^]]+\]|) ([a-zA-Z_][^(]+)\((0x[a-fA-F0-9]+)\)")
         # format: at <source file>:<line nro>
         self.gdb_src_pattern = re.compile(".* at ([^:]+):([0-9]+)$")
         self.leaks = open(tracefile)
@@ -575,10 +575,10 @@ class Rtrace:
         "return name and size & ID for alloc, but negative sizes for frees"
         match = self.alloc_pattern.match(line)
         if match:
-            return (match.group(1), int(match.group(2)), int(match.group(3), 16))
+            return (match.group(3), int(match.group(4)), int(match.group(5), 16))
         match = self.free_pattern.match(line)
         if match:
-            return (match.group(1), -1, int(match.group(2), 16))
+            return (match.group(3), -1, int(match.group(4), 16))
         error_exit("this alloc/free line doesn't match the patterns:\n%s" % line)
     
     def ignore(self, line, options):

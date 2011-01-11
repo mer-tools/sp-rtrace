@@ -5,7 +5,7 @@
 #
 # This file is part of sp-rtrace.
 #
-# Copyright (C) 2006,2007,2010 by Nokia Corporation
+# Copyright (C) 2006,2007,2010,2011 by Nokia Corporation
 #
 # Contact: Eero Tamminen <eero.tamminen@nokia.com>
 #
@@ -52,17 +52,21 @@
 #   as alloc/dealloc activity chart isn't so useful in an overview
 # - Handle more potential error corner-cases and check sp-rtrace version
 # - Show the resulting graphs with xdg-open tool and use SVG instead of EPS
-# 2010-12-10:
+# 2010-12-10
 # - Use the new C++ timeline utility instead of the Python one
+# 2011-01-10
+# - retain rtrace.txt extension for post-processed files
 
 usage ()
 {
 	name=${0##*/}
 	cat << EOF
+ERROR: $1!
 
 $name is a helper script to generate several overview
 graphs of the given resource traces. Graphs include both timelines
-in PNG format and a callgraph as SVG file.
+in PNG format and a callgraph as SVG file and are saved to
+overview/ -directory.
 
 By default input is expected to be an unprocessed binary trace file,
 but in case you want to do the address resolving on another device
@@ -72,6 +76,7 @@ resolved.
 
 If tools needed for producing the graphs or the intermediate files are
 missing, script will just provide the input files for these tools.
+The postprocessed files are named <basename>-<type>.<extension>.
 
 EOF
 	# ' <- jed editor shell-mode workaround
@@ -143,6 +148,16 @@ if [ \! -z "$binaries" ]; then
 	fi
 fi
 
+# set "base" as trace name without any (added) extensions
+trace_basename ()
+{
+	base=${1%-callgraph*}
+	base=${base%-timeline*}
+	base=${base%.rtrace.txt}
+	base=${base%.rtrace}
+	base=${base%.txt}
+}
+
 # how many files were processed
 count=0
 # result directory name
@@ -161,7 +176,8 @@ if [ \! -z "$binaries" ]; then
 	echo "Converting binary trace files for timeline use:"
 fi
 for src in $binaries; do
-	dst=${src%.txt}-timeline.txt
+	trace_basename $src
+	dst=$base-timeline.rtrace.txt
 	echo "- $src -> $dst..."
 	# newer target file?
 	if [ -f $dst ] && [ $dst -nt $src ]; then
@@ -207,8 +223,8 @@ for src in $texts; do
 		continue
 	fi
 	# needs conversion
-	dst=${src%-timeline.txt}
-	dst=${dst%.txt}-timeline.txt
+	trace_basename $src
+	dst=$base-timeline.rtrace.txt
 	echo "- $src -> $dst..."
 	if [ $src = $dst ]; then
 		echo "  WARNING: target file exists, but cannot be used as it's compressed"
@@ -260,8 +276,8 @@ if [ \! -z "$timelines" ]; then
 fi
 for src in $timelines; do
 	mkdir -p $dir
-	dst=${src##*/}
-	dst=$dir/${dst%.txt}
+	trace_basename $src
+	dst=$dir/${base##*/}-timeline
 	echo "- $src -> $dst-*.png..."
 	if [ \! -z "$(ls $dst-*.png 2> /dev/null)" ]; then
 		echo "  Skipping, PNG files already created:"
@@ -290,7 +306,8 @@ if [ \! -z "$binaries" ]; then
 	echo "Converting binary trace files for callgraph use:"
 fi
 for src in $binaries; do	
-	dst=${src%.txt}-callgraph.txt
+	trace_basename $src
+	dst=$base-callgraph.rtrace.txt
 	echo "- $src -> $dst..."
 	# newer target file?
 	if [ -f $dst ] && [ $dst -nt $src ]; then
@@ -330,8 +347,8 @@ for src in $texts; do
 		continue
 	fi
 	# needs conversion
-	dst=${src%-callgraph.txt}
-	dst=${dst%.txt}-callgraph.txt
+	trace_basename $src
+	dst=$base-callgraph.rtrace.txt
 	echo "- $src -> $dst..."
 	if [ $src = $dst ]; then
 		echo "  SKIPPING: target file already exists, but it lacks required filtering."
@@ -391,8 +408,8 @@ if [ \! -z "$callgraphs" ]; then
 fi
 for src in $callgraphs; do
 	mkdir -p $dir
-	dst=${src##*/}
-	dst=$dir/${dst%.txt}.dot
+	trace_basename $src
+	dst=$dir/${base##*/}-callgraph.dot
 	echo "- $src -> $dst..."
 	# newer target file?
 	if [ -f $dst ] && [ $dst -nt $src ]; then
@@ -431,10 +448,10 @@ if [ \! -z "$callgraphs" ]; then
 fi
 for i in $callgraphs; do
 	mkdir -p $dir
-	i=${i##*/}
-	i=${i%.txt}
-	src=$dir/$i.dot
-	dst=$dir/$i.svg
+	trace_basename $i
+	i=$dir/${base##*/}-callgraph
+	src=$i.dot
+	dst=$i.svg
 	echo "- $src -> $dst"
 	# newer target file?
 	if [ -f $dst ] && [ $dst -nt $src ]; then
@@ -472,7 +489,7 @@ if [ $count -eq 0 ]; then
 	ls $dir/*-timeline-*.png $dir/*-callgraph.svg
 	echo
 	echo "Remove these to get them and the data re-post-processed:"
-	ls *-timeline.txt *-callgraph.txt
+	ls *-timeline.rtrace.txt *-callgraph.rtrace.txt
 	exit 1
 fi
 
@@ -484,7 +501,7 @@ else
 	reports=""
 	for i in $timelines; do
 		name=${i##*/}
-		name=${name%.txt}
+		name=${name%.rtrace.txt}
 		# '*' wildcard, so need to use ls (not xargs) below
 		reports="$reports $dir/$name-*.png"
 	done
@@ -498,7 +515,7 @@ else
 	echo "CALLGRAPH REPORTS:"
 	for i in $callgraphs; do
 		name=${i##*/}
-		echo $dir/${name%.txt}.svg
+		echo $dir/${name%.rtrace.txt}.svg
 	done|xargs ls|sed 's/^/- /'
 	echo
 	echo "Please use the 'rtrace-graphs-function' script to get more detailed"

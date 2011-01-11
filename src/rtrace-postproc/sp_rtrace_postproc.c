@@ -261,10 +261,18 @@ int main(int argc, char* argv[])
 			exit (0);
 
 		case 'i':
+			if (postproc_options.input_file) {
+				fprintf(stderr, "WARNING: Overriding previously given option: -i %s\n", postproc_options.input_file);
+				free(postproc_options.input_file);
+			}
 			postproc_options.input_file = strdup_a(optarg);
 			break;
 
 		case 'o':
+			if (postproc_options.output_dir) {
+				fprintf(stderr, "WARNING: Overriding previously given option: -o %s\n", postproc_options.output_dir);
+				free(postproc_options.output_dir);
+			}
 			postproc_options.output_dir = strdup_a(optarg);
 			break;
 
@@ -281,10 +289,16 @@ int main(int argc, char* argv[])
 			break;
 
 		case 'b':
+			if (postproc_options.backtrace_depth != -1) {
+				fprintf(stderr, "WARNING: Overriding previously given option: -b %d\n", postproc_options.backtrace_depth);
+			}
 			postproc_options.backtrace_depth = atoi(optarg);
 			break;
 			
 		case 's':
+			if (postproc_options.compare_leaks) {
+				fprintf(stderr, "WARNING: Overriding previously given sort option (-s <order>)\n");
+			}
 			if (!strcmp(optarg, "size"))
 				postproc_options.compare_leaks = (op_binary_t)leaks_compare_by_size_desc;
 			else if (!strcmp(optarg, "size-asc"))
@@ -300,6 +314,9 @@ int main(int argc, char* argv[])
 			break;
 
 		case 'C':
+			if (postproc_options.filter_context != -1) {
+				fprintf(stderr, "WARNING: Overriding previously given option: -C %x\n", postproc_options.filter_context);
+			}
 			if (sscanf(optarg, "%x", &postproc_options.filter_context) != 1) {
 				fprintf(stderr, "ERROR: invalid context mask: %s\n", optarg);
 				exit (-1);
@@ -307,6 +324,9 @@ int main(int argc, char* argv[])
 			break;
 
 		case 'R':
+			if (postproc_options.filter_resource) {
+				fprintf(stderr, "WARNING: Overriding previously given option: -R %x\n", postproc_options.filter_resource);
+			}
 			if (sscanf(optarg, "%x", &postproc_options.filter_resource) != 1) {
 				fprintf(stderr, "ERROR: invalid resource type mask: %s\n", optarg);
 				exit (-1);
@@ -366,8 +386,13 @@ int main(int argc, char* argv[])
 	}
 	else {
 		FILE* fp = fdopen(fd, "r");
+		if (!fp) {
+			fprintf(stderr, "ERROR: Failed to reopen input stream.\n");
+			exit (-1);
+		}
 		ungetc(proto_id, fp);
 		process_text_data(rd, fp);
+		fclose(fp);
 	}
 
 	if (!rd->pinfo) {

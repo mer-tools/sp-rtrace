@@ -41,6 +41,7 @@ void rd_hashake_free(rd_hshake_t* hs)
 void rd_pinfo_free(rd_pinfo_t* pinfo)
 {
 	if (pinfo->name) free(pinfo->name);
+	if (pinfo->trace_origin) free(pinfo->trace_origin);
 	free(pinfo);
 }
 

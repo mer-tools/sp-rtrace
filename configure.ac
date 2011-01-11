@@ -1,5 +1,5 @@
 AC_PREREQ([2.5])
-AC_INIT([sp-rtrace], [1.2], [none])
+AC_INIT([sp-rtrace], [1.4], [none])
 
 AC_CONFIG_AUX_DIR([aux])
 
@@ -11,6 +11,9 @@ AC_CONFIG_HEADERS([config.h])
 AC_PREFIX_DEFAULT(/usr)
 
 # Checks for programs.
+
+CXXFLAGS += '-g -O3'
+ 
 AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_LIBTOOL

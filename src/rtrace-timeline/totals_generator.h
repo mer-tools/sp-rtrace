@@ -86,7 +86,7 @@ private:
 		 * Creates a new class instance.
 		 */
 		ContextData()
-			: total(0), file_totals(0) {
+			:  file_totals(0), total(0) {
 		}
 	};
 
@@ -114,11 +114,11 @@ private:
 
 public:
 	// X axis range
-	int xrange_min;
-	int xrange_max;
+	unsigned int xrange_min;
+	unsigned int xrange_max;
 	// Y axis range
-	int yrange_min;
-	int yrange_max;
+	unsigned int yrange_min;
+	unsigned int yrange_max;
 
 	/**
 	 * Creates a new class instance.

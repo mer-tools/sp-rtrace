@@ -108,11 +108,11 @@ private:
 
 public:
 	// X Axis range
-	int xrange_min;
-	int xrange_max;
+	unsigned int xrange_min;
+	unsigned int xrange_max;
 	// Y axis range
-	int yrange_min;
-	int yrange_max;
+	unsigned int yrange_min;
+	unsigned int yrange_max;
 
 	// the number of registered lifelines
 	unsigned int total_lifelines;
