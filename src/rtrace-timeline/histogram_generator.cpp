@@ -10,7 +10,7 @@ unsigned int HistogramGenerator::Stats::getMedian() {
 	return median;
 }
 
-void HistogramGenerator::reportAlloc(const Resource* resource, event_ptr_t& event) {
+int HistogramGenerator::reportAlloc(const Resource* resource, event_ptr_t& event) {
 	ResourceData* rd = resources.getData(resource);
 
 	// Abort if the input data contains multiple resource types as histogram
@@ -33,13 +33,15 @@ void HistogramGenerator::reportAlloc(const Resource* resource, event_ptr_t& even
 		iter = pair.first;
 	}
 	iter->second.total++;
+	return OK;
 }
 
-void HistogramGenerator::reportFree(const Resource* resource, event_ptr_t& event, event_ptr_t& alloc_event) {
+int HistogramGenerator::reportFree(const Resource* resource, event_ptr_t& event, event_ptr_t& alloc_event) {
 	ResourceData* rd = resources.getData(resource);
 	// free events are reported only for allocated resources. That means the alloc data for this
 	// resource will be already created in reportAlloc() method.
 	rd->allocs[event->res_size].freed++;
+	return OK;
 }
 
 void HistogramGenerator::finalize() {

@@ -53,10 +53,15 @@ void Processor::registerAlloc(int index, context_t context, timestamp_t timestam
 	// TODO: FIRE_EXISTS is returned if an event with the same id was already registered
 	// probably would be good to show some warning message or something.
 	if (rc > 0) {
-		for (generator_list_t::iterator iter = generators.begin(); iter != generators.end(); iter++) {
+		for (generator_list_t::iterator iter = generators.begin(); iter != generators.end(); ) {
 			ReportGenerator* generator = iter->get();
 			// report the generic allocation event
-			generator->reportAlloc(&registry->resource, event);
+			if (generator->reportAlloc(&registry->resource, event) == ReportGenerator::ABORT) {
+				// remove generator if the event reporting failed and generator cannot continue
+				generator_list_t::iterator iter_del = iter++;
+				generators.erase(iter_del);
+				continue;
+			}
 			if (!context_registry.empty()) {
 				// report the allocation event in matching contexts.
 				for (context_map_t::iterator ctx_iter = context_registry.begin(); ctx_iter != context_registry.end(); ctx_iter++) {
@@ -66,6 +71,7 @@ void Processor::registerAlloc(int index, context_t context, timestamp_t timestam
 				}
 				if (!context) generator->reportAllocInContext(&registry->resource, &context_none, event);
 			}
+			iter++;
 		}
 	}
 }
@@ -93,10 +99,15 @@ void Processor::registerFree(int index, context_t context, timestamp_t timestamp
 	}
 	// only process deallocation events that are done for resources allocated in our scope
 	if (rc > 0) {
-		for (generator_list_t::iterator iter = generators.begin(); iter != generators.end(); iter++) {
+		for (generator_list_t::iterator iter = generators.begin(); iter != generators.end();) {
 			ReportGenerator* generator = iter->get();
 			// report the generic allocation event
-			generator->reportFree(&registry->resource, event, alloc_event);
+			if (generator->reportFree(&registry->resource, event, alloc_event) == ReportGenerator::ABORT) {
+				// remove generator if the event reporting failed and generator cannot continue
+				generator_list_t::iterator iter_del = iter++;
+				generators.erase(iter_del);
+				continue;
+			}
 			if (!context_registry.empty()) {
 				// report the allocation event in matching contexts.
 				for (context_map_t::iterator ctx_iter = context_registry.begin(); ctx_iter != context_registry.end(); ctx_iter++) {
@@ -106,6 +117,7 @@ void Processor::registerFree(int index, context_t context, timestamp_t timestamp
 				}
 				if (!context) generator->reportFreeInContext(&registry->resource, &context_none, event, alloc_event);
 			}
+			iter++;
 		}
 	}
 }

@@ -58,6 +58,14 @@ protected:
 public:
 
 	/**
+	 * Event reporting return code
+	 */
+	enum {
+		OK = 0,      // event was registered normally
+		ABORT = -1,  // event registration failed, generator can't generate report
+	};
+
+	/**
 	 * Creates the ReportGenerator instance.
 	 *
 	 * The context_all context is initialized to a mask matching
@@ -81,7 +89,7 @@ public:
 	 * @param[in] resource  the allocated resource type.
 	 * @param[in] event     the allocation event.
 	 */
-	virtual void reportAlloc(const Resource* resource, event_ptr_t& event) = 0;
+	virtual int reportAlloc(const Resource* resource, event_ptr_t& event) = 0;
 
 	/**
 	 * Reports occurrence of an allocation event in the specified context.
@@ -90,7 +98,7 @@ public:
 	 * @param[in] context   the allocation context.
 	 * @param[in] event     the allocation event.
 	 */
-	virtual void reportAllocInContext(const Resource*, const Context* context, event_ptr_t& event) = 0;
+	virtual int reportAllocInContext(const Resource*, const Context* context, event_ptr_t& event) = 0;
 
 	/**
 	 * Reports occurrence of an deallocation event.
@@ -99,7 +107,7 @@ public:
 	 * @param[in] event        the deallocation event.
 	 * @param[in] alloc_event  the event that allocated the resource thats is being freed now.
 	 */
-	virtual void reportFree(const Resource* resource, event_ptr_t& event, event_ptr_t& alloc_event) = 0;
+	virtual int reportFree(const Resource* resource, event_ptr_t& event, event_ptr_t& alloc_event) = 0;
 
 	/**
 	 * Reports occurrence of an deallocation event in the specified context.
@@ -109,7 +117,7 @@ public:
 	 * @param[in] event        the deallocation event.
 	 * @param[in] alloc_event  the event that allocated the resource thats is being freed now.
 	 */
-	virtual void reportFreeInContext(const Resource* resource, const Context* context, event_ptr_t& event, event_ptr_t& alloc_event) = 0;
+	virtual int reportFreeInContext(const Resource* resource, const Context* context, event_ptr_t& event, event_ptr_t& alloc_event) = 0;
 
 	/**
 	 * Reports occurrences of all unfreed allocations after all events are processed.
@@ -117,7 +125,7 @@ public:
 	 * @param[in] resource   the allocated resource type.
 	 * @param[in] event      the allocation event.
 	 */
-	virtual void reportUnfreedAlloc(const Resource* resource, event_ptr_t& event) = 0;
+	virtual int reportUnfreedAlloc(const Resource* resource, event_ptr_t& event) = 0;
 
 	/**
 	 * Processes the accumulated data and generates the final report.

@@ -2,7 +2,11 @@
 
 #include "timestamp.h"
 
-void TotalsGenerator::reportAlloc(const Resource* resource, event_ptr_t& event) {
+int TotalsGenerator::reportAlloc(const Resource* resource, event_ptr_t& event) {
+	if (event->timestamp == 0) {
+		fprintf(stderr, "WARNING: Totals report requires input log to have timestamps. Aborting totals report generation.\n");
+		return ABORT;
+	}
 	ResourceData* rd = resources.getData(resource);
 	if (resource->overhead && !rd->file_overhead) {
 		// new resource found, create a new overhead data file
@@ -24,9 +28,10 @@ void TotalsGenerator::reportAlloc(const Resource* resource, event_ptr_t& event) 
 		rd->file_overhead->write(event->timestamp, rd->overhead);
 		if (rd->overhead > yrange_max) yrange_max = rd->overhead;
 	}
+	return OK;
 }
 
-void TotalsGenerator::reportAllocInContext(const Resource* resource, const Context* context, event_ptr_t& event) {
+int TotalsGenerator::reportAllocInContext(const Resource* resource, const Context* context, event_ptr_t& event) {
 	ResourceData* rd = resources.getData(resource);
 	ContextData* cd = rd->getData(context);
 	if (!cd->file_totals) {
@@ -43,9 +48,10 @@ void TotalsGenerator::reportAllocInContext(const Resource* resource, const Conte
 	if (xrange_max < event->timestamp) xrange_max = event->timestamp;
 	// update Y axis range
 	if (cd->total > yrange_max) yrange_max = cd->total;
+	return OK;
 }
 
-void TotalsGenerator::reportFree(const Resource* resource, event_ptr_t& event, event_ptr_t& alloc_event) {
+int TotalsGenerator::reportFree(const Resource* resource, event_ptr_t& event, event_ptr_t& alloc_event) {
 	ResourceData* rd = resources.getData(resource);
 	// The free event is reported only for the resources allocated in the scope. Hence
 	// the resource data container and its data file will always be created here.
@@ -59,10 +65,10 @@ void TotalsGenerator::reportFree(const Resource* resource, event_ptr_t& event, e
 		rd->overhead -= (event->res_size + resource->overhead);
 		rd->file_overhead->write(event->timestamp, rd->overhead);
 	}
-
+	return OK;
 }
 
-void TotalsGenerator::reportFreeInContext(const Resource* resource, const Context* context, event_ptr_t& event, event_ptr_t& alloc_event) {
+int TotalsGenerator::reportFreeInContext(const Resource* resource, const Context* context, event_ptr_t& event, event_ptr_t& alloc_event) {
 	ResourceData* rd = resources.getData(resource);
 	ContextData* cd = rd->getData(context);
 	if (!cd->file_totals) {
@@ -73,6 +79,7 @@ void TotalsGenerator::reportFreeInContext(const Resource* resource, const Contex
 	// update allocation data
 	cd->total -= event->res_size;
 	cd->file_totals->write(event->timestamp, cd->total);
+	return OK;
 }
 
 void TotalsGenerator::finalize() {

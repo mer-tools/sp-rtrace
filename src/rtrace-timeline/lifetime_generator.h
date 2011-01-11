@@ -127,33 +127,37 @@ public:
 	/**
 	 * @copydoc ReportGenerator::reportAlloc 
 	 */
-	void reportAlloc(const Resource* resource, event_ptr_t& event);
+	int reportAlloc(const Resource* resource, event_ptr_t& event);
 	
 	
 	/**
 	 * @copydoc ReportGenerator::reportAllocInContext 
 	 */
-	void reportAllocInContext(const Resource* resource, const Context* context, event_ptr_t& event) {
+	int reportAllocInContext(const Resource* resource, const Context* context, event_ptr_t& event) {
+		return OK;
 	}
 
 	/**
 	 * @copydoc ReportGenerator::reportFree 
 	 */
-	void reportFree(const Resource* resource, event_ptr_t& event, event_ptr_t& alloc_event) {
+	int reportFree( const Resource* resource, event_ptr_t& event, event_ptr_t& alloc_event) {
 		registerLifeline(resources.getData(resource), alloc_event, event->timestamp);
+		return OK;
 	}
 
 	/**
 	 * @copydoc ReportGenerator::reportFreeInContext 
 	 */
-	void reportFreeInContext(const Resource* resource, const Context* context, event_ptr_t& event, event_ptr_t& alloc_event) {
+	int reportFreeInContext(const Resource* resource, const Context* context, event_ptr_t& event, event_ptr_t& alloc_event) {
+		return OK;
 	}
 
 	/**
 	 * @copydoc ReportGenerator::reportUnfreedAlloc 
 	 */
-	void reportUnfreedAlloc(const Resource* resource, event_ptr_t& event) {
+	int reportUnfreedAlloc(const Resource* resource, event_ptr_t& event) {
 		registerLifeline(resources.getData(resource), event, xrange_max);
+		return OK;
 	}
 
 	/**

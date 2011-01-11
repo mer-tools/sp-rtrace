@@ -82,8 +82,12 @@ void ActivityGenerator::updateRangeX(timestamp_t timestamp)
 	if (xrange_max < timestamp) xrange_max = timestamp;
 }
 
-void ActivityGenerator::reportEvent(const Resource* resource, event_ptr_t& event)
+int ActivityGenerator::reportEvent(const Resource* resource, event_ptr_t& event)
 {
+	if (event->timestamp == 0) {
+		fprintf(stderr, "WARNING: Activity report requires input log to have timestamps. Aborting activity report generation.\n");
+		return ABORT;
+	}
 	timestamp_t old_slice_timestamp = activity_step;
 	reportEventInContext(resource, &context_all, event);
 
@@ -94,9 +98,10 @@ void ActivityGenerator::reportEvent(const Resource* resource, event_ptr_t& event
 		rd->stats.update(rd->getData(&context_all), activity_step);
 		old_slice_timestamp = activity_step;
 	}
+	return OK;
 }
 
-void ActivityGenerator::reportEventInContext(const Resource* resource, const Context* context, event_ptr_t& event) {
+int ActivityGenerator::reportEventInContext(const Resource* resource, const Context* context, event_ptr_t& event) {
 	ResourceData* rd = resources.getData(resource);
 	ContextData* cd = rd->getData(context);
 	if (!cd->file_allocs) {
@@ -116,6 +121,7 @@ void ActivityGenerator::reportEventInContext(const Resource* resource, const Con
 		activity_step = timestamp;
 	}
 	cd->addEvent(event);
+	return OK;
 }
 
 ActivityGenerator::ActivityGenerator()

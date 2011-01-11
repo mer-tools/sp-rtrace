@@ -36,7 +36,13 @@ void LifetimeGenerator::registerLifeline(ResourceData* rd, event_ptr_t& event, t
 }
 
 
-void LifetimeGenerator::reportAlloc(const Resource* resource, event_ptr_t& event) {
+int LifetimeGenerator::reportAlloc(const Resource* resource, event_ptr_t& event) {
+
+	if (event->timestamp == 0) {
+		fprintf(stderr, "WARNING: Lifetime report requires input log to have timestamps. Aborting lifetime report generation.\n");
+		return ABORT;
+	}
+
 	ResourceData* rd = resources.getData(resource);
 
 	// update X axis range
@@ -63,6 +69,7 @@ void LifetimeGenerator::reportAlloc(const Resource* resource, event_ptr_t& event
 		stats.max.timestamp = event->timestamp;
 	}
 	if (event->res_size == stats.max.size) stats.max.count++;
+	return OK;
 }
 
 

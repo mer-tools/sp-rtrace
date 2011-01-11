@@ -154,7 +154,7 @@ private:
 	 * @param[in] resource   the allocated/freed resource type.
 	 * @param[in] event      the event.
 	 */
-	void reportEvent(const Resource* resource, event_ptr_t& event);
+	int reportEvent(const Resource* resource, event_ptr_t& event);
 
 	/**
 	 * Reports occurance of an event (allocation or deallocation) in
@@ -165,7 +165,7 @@ private:
 	 *                       allocated/freed.
 	 * @param[in] event      the event.
 	 */
-	void reportEventInContext(const Resource* resource, const Context* context, event_ptr_t& event);
+	int reportEventInContext(const Resource* resource, const Context* context, event_ptr_t& event);
 
 public:
 	// X axis (time) range
@@ -199,35 +199,36 @@ public:
 	/**
 	 * @copydoc ReportGenerator::reportAlloc
 	 */
-	void reportAlloc(const Resource* resource, event_ptr_t& event) {
-		reportEvent(resource, event);
+	int reportAlloc(const Resource* resource, event_ptr_t& event) {
+		return reportEvent(resource, event);
 	}
 
 	/**
 	 * @copydoc ReportGenerator::reportAllocInContext
 	 */
-	void reportAllocInContext(const Resource* resource, const Context* context, event_ptr_t& event) {
-		reportEventInContext(resource, context, event);
+	int reportAllocInContext(const Resource* resource, const Context* context, event_ptr_t& event) {
+		return reportEventInContext(resource, context, event);
 	}
 
 	/**
 	 * @copydoc ReportGenerator::reportFree
 	 */
-	void reportFree(const Resource* resource, event_ptr_t& event, event_ptr_t& alloc_event) {
-		reportEvent(resource, event);
+	int reportFree(const Resource* resource, event_ptr_t& event, event_ptr_t& alloc_event) {
+		return reportEvent(resource, event);
 	}
 
 	/**
 	 * @copydoc ReportGenerator::reportFreeInContext
 	 */
-	void reportFreeInContext(const Resource* resource, const Context* context, event_ptr_t& event, event_ptr_t& alloc_event) {
-		reportEventInContext(resource, context, event);
+	int reportFreeInContext(const Resource* resource, const Context* context, event_ptr_t& event, event_ptr_t& alloc_event) {
+		return reportEventInContext(resource, context, event);
 	}
 
 	/**
 	 * @copydoc ReportGenerator::reportUnfreedAlloc
 	 */
-	void reportUnfreedAlloc(const Resource* resource, event_ptr_t& event) {
+	int reportUnfreedAlloc(const Resource* resource, event_ptr_t& event) {
+		return OK;
 	}
 
 	/**
