@@ -13,7 +13,7 @@ moduledir = $(libdir)/sp-rtrace
 libsp_rtrace1_la_SOURCES = library/sp_rtrace_context.c library/sp_rtrace_formatter.c \
 	library/sp_rtrace_tracker.c \
 	common/dlist.c common/htable.c common/utils.c common/rtrace_data.c common/header.c 
-libsp_rtrace1_la_LDFLAGS = $(VERSION_INFO) $(LIBS_IBERTY)
+libsp_rtrace1_la_LDFLAGS = $(VERSION_INFO)
 libsp_rtrace1_la_LIBADD = $(LIBS_IBERTY)
 
 libsp_rtrace_main_la_SOURCES = modules/sp_rtrace_main.c rtrace/rtrace_env.c common/utils.c \
