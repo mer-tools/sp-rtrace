@@ -46,13 +46,21 @@ AC_CHECK_LIB([rt], [clock_gettime],
   [AC_MSG_ERROR([rt library is required])],
 )
 
+# Check for liberty_pic
+AC_CHECK_LIB([iberty_pic], [cplus_demangle],
+ [LIBS_IBERTY="-liberty_pic"],
+ [LIBS_IBERTY="-liberty"]
+)
+
+AC_SUBST(LIBS_IBERTY)
+
 PKG_CHECK_MODULES([GLIB], [glib-2.0])
 
 case $build in
   i486-*|i586-*|i686-*)
     CFLAGS="$CFLAGS -march=i486"
     ;;
-  arm-*)
+  arm*)
     # libatomic-ops is required for the older armel toolchain
     AS_VERSION_COMPARE($($CC -dumpversion), "4.3.3", 
       [AC_CHECK_HEADER([atomic_ops.h], 
@@ -61,8 +69,8 @@ case $build in
         )],
     )
     ;;
-	x86_64*)
-	;;
+  x86_64*)
+    ;;
   *)
     AC_MSG_ERROR([Unsupported architecture: $build])
     ;;
