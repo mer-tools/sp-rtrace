@@ -128,6 +128,7 @@ public:
 	 */
 	int reportAllocInContext(const Resource* resource, const Context* context, event_ptr_t& event) {
 		// context data are ignored for histograms
+		return OK;
 	}
 
 	/**
