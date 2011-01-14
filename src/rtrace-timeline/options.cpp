@@ -216,21 +216,21 @@ void Options::parseCommandLine(int argc, char* const argv[], Processor* processo
 
 			case 'z': {
 				int scale = atoi(optarg);
-				if (scale == 0) throw std::runtime_error(Formatter() << "Invalid scaling factor: " << optarg);
+				if (scale == 0) throw std::runtime_error(Formatter() << "Invalid scaling percent value: " << optarg);
 				scale_x = scale_y = scale;
 				break;
 			}
 
 			case 'x': {
 				int scale = atoi(optarg);
-				if (scale == 0) throw std::runtime_error(Formatter() << "Invalid scaling factor: " << optarg);
+				if (scale == 0) throw std::runtime_error(Formatter() << "Invalid scaling percent value: " << optarg);
 				scale_x = scale;
 				break;
 			}
 
 			case 'y': {
 				int scale = atoi(optarg);
-				if (scale == 0) throw std::runtime_error(Formatter() << "Invalid scaling factor: " << optarg);
+				if (scale == 0) throw std::runtime_error(Formatter() << "Invalid scaling percent value: " << optarg);
 				scale_y = scale;
 				break;
 			}
