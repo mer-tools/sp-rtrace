@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010,2011 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -180,6 +180,23 @@ static rd_minfo_t* read_packet_MI(const rd_hshake_t* hs __attribute__((unused)),
 	info->vminor = version & 0xFFFF;
     read_stringa(data, &info->name);
 	return info;
+}
+
+/**
+ * Reads file attachment packet.
+ *
+ * @param[in] data   the binary data.
+ * @param[in] size   the data size.
+ * @return           the file attachment record.
+ */
+static rd_attachment_t* read_packet_FILE(const rd_hshake_t* hs __attribute__((unused)), const char* data)
+{
+	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
+
+	rd_attachment_t* file = (rd_attachment_t*)dlist_create_node(sizeof(rd_attachment_t));
+	data += read_stringa(data, &file->data.name);
+	read_stringa(data, &file->data.path);
+	return file;
 }
 
 /**
@@ -374,6 +391,10 @@ static int read_generic_packet(rd_t* rd, const char* data, int size)
 			break;
 		}
 		case SP_RTRACE_PROTO_OUTPUT_SETTINGS: {
+			break;
+		}
+		case SP_RTRACE_PROTO_ATTACHMENT: {
+			dlist_add(&rd->files, read_packet_FILE(rd->hshake, data));
 			break;
 		}
 

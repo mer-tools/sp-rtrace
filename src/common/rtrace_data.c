@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010,2011 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -120,6 +120,13 @@ void rd_hinfo_free(rd_hinfo_t* hinfo)
 	free(hinfo);
 }
 
+void rd_attachment_free(rd_attachment_t* attachment)
+{
+	if (attachment->data.name) free(attachment->data.name);
+	if (attachment->data.path) free(attachment->data.path);
+	free(attachment);
+}
+
 /*
  * Utility functions used internally by the records
  */
@@ -206,6 +213,7 @@ void rd_free(rd_t* data)
 	dlist_free(&data->comments, (op_unary_t)rd_comment_free);
 	dlist_free(&data->mmaps, (op_unary_t)rd_mmap_free);
 	dlist_free(&data->resources, (op_unary_t)rd_resource_free);
+	dlist_free(&data->files, (op_unary_t)rd_attachment_free);
 
 	/* free single records */
 	if (data->hshake) rd_hashake_free(data->hshake);

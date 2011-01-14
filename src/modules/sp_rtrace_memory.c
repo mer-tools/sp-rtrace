@@ -23,7 +23,7 @@
 #include "config.h"
 
 /**
- * @file sp-_rtrace_memory.c
+ * @file sp_rtrace_memory.c
  *
  * Memory tracing module (libsp-rtrace-memory.so) implementation.
  *

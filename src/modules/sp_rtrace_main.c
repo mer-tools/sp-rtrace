@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010,2011 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -639,6 +639,18 @@ int sp_rtrace_write_new_library(const char* library)
 	return size;
 }
 
+int sp_rtrace_write_attachment(const sp_rtrace_attachment_t* file)
+{
+	char* buffer = pipe_buffer_lock(), *ptr = buffer + SP_RTRACE_PROTO_TYPE_SIZE;
+	ptr += write_dword(ptr, SP_RTRACE_PROTO_ATTACHMENT);
+	ptr += write_string(ptr, file->name);
+	ptr += write_string(ptr, file->path);
+	int size = ptr - buffer;
+	write_dword(buffer, size - SP_RTRACE_PROTO_TYPE_SIZE);
+	pipe_buffer_unlock(buffer, size);
+	return size;
+}
+
 int sp_rtrace_write_context_registry(sp_rtrace_context_t* context)
 {
 	if (!sp_rtrace_options->enable) return 0;
@@ -924,6 +936,47 @@ bool sp_rtrace_initialize()
 	return true;
 }
 
+void sp_rtrace_get_out_filename(const char* pattern, char* buffer, size_t size)
+{
+	char* ptr = buffer;
+	if (*sp_rtrace_options->output_dir) _stpncpy(buffer, sp_rtrace_options->output_dir, size);
+	else *ptr++ = '.';
+	*ptr++ = '/';
+	ptr = _stpncpy(ptr, pattern, size - (ptr - buffer));
+	*ptr++ = '-';
+	int index = 0;
+	do {
+		_itoa(ptr, index++);
+	} while (access(buffer, F_OK) == 0);
+}
+
+
+int sp_rtrace_copy_file(const char* source, const char* dest)
+{
+	int rc = 0;
+	int fd_in = open(source, O_RDONLY);
+	if (fd_in == -1) return -errno;
+	int fd_out = creat(dest, 0644);
+	if (fd_out == -1) {
+		rc = -errno;
+		close(fd_in);
+		return rc;
+	}
+	char buffer[0x8000];
+	int n_in;
+	while (n_in = read(fd_in, buffer, sizeof(buffer))) {
+		int n_out = write(fd_out, buffer, n_in);
+		if (n_in != n_out) {
+			rc = -errno;
+			break;
+		}
+	}
+	close(fd_in);
+	close(fd_out);
+	return rc;
+}
+
+
 static void trace_main_init(void) __attribute__((constructor));
 static void trace_main_fini(void) __attribute__((destructor));
 
@@ -963,8 +1016,8 @@ static void trace_main_fini(void)
 			sp_rtrace_write_new_library("*");
 			write_heap_info();
 		}
-		pipe_buffer_flush();
 		enable_tracing(false);
+		pipe_buffer_flush();
 		close_pipe(fd_proc);
 	}
 }

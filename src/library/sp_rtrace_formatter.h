@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010,2011 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -39,6 +39,7 @@ struct sp_rtrace_ftrace_t;
 struct sp_rtrace_context_t;
 struct sp_rtrace_resource_t;
 struct sp_rtrace_farg_t;
+struct sp_rtrace_attachment_t;
 
 char* sp_rtrace_resource_flags_text[2];
 
@@ -128,5 +129,13 @@ int sp_rtrace_print_comment(FILE* fp, const char* format, ...);
  */
 int sp_rtrace_print_args(FILE* fp, const struct sp_rtrace_farg_t* args);
 
+/**
+ * Prints attachment information.
+ *
+ * @param[in] fp     the output stream.
+ * @param[in] file   the attachment data.
+ * @return           0 - success, -errno - failure
+ */
+int sp_rtrace_print_attachment(FILE* fp, const struct sp_rtrace_attachment_t* file);
 
 #endif

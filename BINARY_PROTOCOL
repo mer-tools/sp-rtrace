@@ -57,7 +57,7 @@ Generic data types used in the protocol:
 
 The Protocol defines following packet types:
 
-1. Process information [PI]
+1. Process information [PINF]
 The process information packet is sent when the tracing is started.
 
 [pid][timestamp][name]
@@ -69,7 +69,7 @@ The process information packet is sent when the tracing is started.
   [name] - the process name (string).
   
   
-2. Module information [MI]
+2. Module information [MINF]
 The module information packet is sent when tracing is started.
 
 [id][version][name]
@@ -80,7 +80,7 @@ The module information packet is sent when tracing is started.
   [name] - the module name (string).
 
    
-3. Memory mapping [MM]
+3. Memory mapping [MMAP]
 The memory mapping packets contains start/end addresses and names of the
 executable modules mapped in memory. 
 
@@ -90,7 +90,7 @@ executable modules mapped in memory.
   [path] - the module path (string)
 
 
-4. Context registry [CR]
+4. Context registry [CTXR]
 The context registry packet is sent when a call context is created by
 sp_context_create function. It contains context id and name.
 
@@ -99,7 +99,7 @@ sp_context_create function. It contains context id and name.
   [name] - context name (string)
 
 
-5. Function call [FC]
+5. Function call [CALL]
 Function call packet is sent when a function call has been done.
 
 [timestamp][resource type][context][type][name][id][size]
@@ -112,7 +112,7 @@ Function call packet is sent when a function call has been done.
   [size] - the resource size (integer)
 
 
-6. Backtrace [BT]
+6. Backtrace [BTRC]
 The backtrace packet is sent after function call packet. It contains
 stack trace of the last function call.
 
@@ -121,7 +121,7 @@ stack trace of the last function call.
    [address] - return address from the corresponding stack frame (pointer)
 
 
-7. Function arguments [FA]
+7. Function arguments [ARGS]
 The function arguments packet is an optional packet which could be sent after FC+BT
 packets. It contains detalized information about function arguments.
 
@@ -132,7 +132,7 @@ packets. It contains detalized information about function arguments.
         [name] - the function argument name (string)
 	[value] - te function argument value (string)
 
-8. New library [NL]
+8. New library [NLIB]
 The new library packet is sent at beginning and whenever a new library
 is loaded with dlopen() function. This packet is only sent from the main
 tracing module to the pre-processor and is not stored into log file or
@@ -141,7 +141,7 @@ forwarded to post-processor.
   [name] - the library name (string). Specify * to scan all libraries.
   
   
-9. Heap information [HI]
+9. Heap information [HINF]
 The heap information packet is sent at the end of the report (before the
 trace is disabled or target process has been finished). It contains
 heap statistics returned by mallinfo() function if sp_rtrace_store_heap_info()
@@ -167,7 +167,7 @@ was called during the trace.
   
   
 
-10. Output settings [OS]
+10. Output settings [OCFG]
 The output settings packet contains post-processor options and output
 directory path. This packet is used to pass the post-processor options
 back to the sp-rtrace when it's used in toggle mode to enable tracing.
@@ -177,7 +177,7 @@ The OS packet is not stored on disk or passed to post-processor.
   [path] - the output directory (string)
   [options] - the post-processor options (string)
 
-11. Resource registry [RR]
+11. Resource registry [RESR]
 The resource registry packet contains resource type id and name. If multiple
 resource types are being tracked, then resource id is used to identify
 the tracked resource type in function call records.
@@ -189,10 +189,25 @@ the tracked resource type in function call records.
 	             counting.
   [type] - the resource type (string)
   [desc] - the resource desription (string)
-  
-  
+
+12. File attachment [FILE]
+File attachment packet is used to bundle the sp-rtrace log with a custom data
+stored in a file. The attached files are optional and are used only by specific
+post-processing tools. The files are stored in the same directory as the sp-rtrace
+log files. 
+
+[name][path]
+  [name] - the attachment name (string). The name must consist of alphanumeric charaters.
+  [path] - the attached file name (string)
+
+The name is used to identify attachment type, while the path points to the real file name.
+
 --------------
 Version log
+
+v1.4
+Added file attachment packet.
+
 v1.2
 Added backtrace depth field to process info packet.
 

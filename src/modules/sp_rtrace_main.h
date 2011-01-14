@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010,2011 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -142,7 +142,36 @@ bool sp_rtrace_initialize();
  * @param[in] library   the library name.
  * @return              the number of bytes written.
  */
- int sp_rtrace_write_new_library(const char* library);
+int sp_rtrace_write_new_library(const char* library);
 
+
+/**
+ * Write file attachment packet into processor pipe.
+ *
+ * @param[in] file     the attachment data.
+ * @return             the number of bytes written.
+ */
+int sp_rtrace_write_attachment(const sp_rtrace_attachment_t* file);
+
+/**
+ * Generates unique filename in the output directory.
+ *
+ * The filename starts with the specified pattern and an incremental
+ * index is added until new filename is found.
+ * @param[in] pattern  the name pattern.
+ * @param[out] buffer  the output buffer.
+ * @param[in] size     the output buffer size.
+ */
+void sp_rtrace_get_out_filename(const char* pattern, char* buffer, size_t size);
+
+/**
+ * Copies file.
+ *
+ * @param[in] source  the source file path.
+ * @param[in] dest    the destination file path.
+ * @return             0 - success
+ *                    <0 - -errno
+ */
+int sp_rtrace_copy_file(const char* source, const char* dest);
 
 #endif

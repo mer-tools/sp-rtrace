@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010,2011 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -175,6 +175,24 @@ static void* parse_resource_registry(char* line)
 	return resource;
 }
 
+/**
+ * Parses file attachment record.
+ *
+ * @param[in] line   the line to parse.
+ * @return           the file attachment record,
+ *                   or NULL if parsing failed (not a file attachment record).
+ */
+static void* parse_file_attachment(char* line)
+{
+	rd_attachment_t* file = NULL;
+	char name[512], path[PATH_MAX];
+	if (sscanf(line, "& %s : %s", name, path) == 2) {
+		file = dlist_create_node(sizeof(rd_attachment_t));
+		file->data.name = strdup_a(name);
+		file->data.path = strdup_a(path);
+	}
+	return file;
+}
 
 /**
  * Parses function call record.
@@ -520,6 +538,12 @@ static void read_text_data(rd_t* rd, FILE* fp)
 			else {
 				rd_resource_free((rd_resource_t*)data);
 			}
+			continue;
+		}
+		/* check if the line contains file attachment record */
+		data = parse_file_attachment(line);
+		if (data) {
+			dlist_add(&rd->files, data);
 			continue;
 		}
 		/* otherwise assume that line contains comment record */

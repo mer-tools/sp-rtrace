@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010,2011 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -221,3 +221,8 @@ int sp_rtrace_print_args(FILE* fp, const struct sp_rtrace_farg_t* args)
 }
 
 
+int sp_rtrace_print_attachment(FILE* fp, const struct sp_rtrace_attachment_t* file)
+{
+	if (fprintf(fp, "& %s : %s\n", file->name, file->path) == 0) return -errno;
+	return 0;
+}

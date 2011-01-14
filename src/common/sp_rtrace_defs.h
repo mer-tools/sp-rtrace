@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010,2011 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -200,5 +200,15 @@ typedef struct sp_rtrace_farg_t {
 	/* the function argument value. */
 	char* value;
 } sp_rtrace_farg_t;
+
+/**
+ * File attachment data
+ */
+typedef struct sp_rtrace_attachment_t {
+	/* the attachment name */
+	char* name;
+	/* name of the attached file */
+	char* path;
+} sp_rtrace_attachment_t;
 
 #endif

@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010,2011 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -47,8 +47,8 @@
 /**
  * Writes module information log record into text log.
  *
- * @param[in] minfo   the module information data.
- * @param[in] formatter  the log file handle.
+ * @param[in] minfo      the module information data.
+ * @param[in] formatter  the log file.
  * @return
  */
 static int write_module_info(rd_minfo_t* minfo, FILE* fp)
@@ -57,6 +57,18 @@ static int write_module_info(rd_minfo_t* minfo, FILE* fp)
 	return 0;
 }
 
+/**
+ * Writes file attachment record into text log.
+ *
+ * @param[in] file  the file attachment data.
+ * @param[in] fp    the log file.
+ * @return
+ */
+static int write_attachment_info(rd_attachment_t* file, FILE* fp)
+{
+	TRY(sp_rtrace_print_attachment(fp, &file->data));
+	return 0;
+}
 
 /**
  * Range function for dlist_foreach2_in.
@@ -280,6 +292,9 @@ void write_trace_environment(fmt_data_t* fmt)
 	TRY(sp_rtrace_print_header(fmt->fp, &header));
 	/* clear the header filter to free the header filter field */
 	header_set_filter(&header, 0);
+
+	/* write attachment data */
+	dlist_foreach2(&fmt->rd->files, (op_binary_t)write_attachment_info, fmt->fp);
 
 	/* write heap information if exists */
 	if (fmt->rd->hinfo) write_heap_information(fmt->fp, fmt->rd->hinfo);
