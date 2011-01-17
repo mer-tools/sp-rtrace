@@ -48,9 +48,12 @@ void sp_rtrace_tracker_free(sp_rtrace_tracker_t* tracker);
 /**
  * Checks if the specified function is being tracked.
  *
+ * Note that this function allocates memory for the found symbol
+ * storage and the caller is responsible for releasing it.
  * @param[in] tracker  the tracker.
  * @param[in] name     the function name.
  * @return             The tracked symbol (demangled) or NULL.
+ *
  */
 const char* sp_rtrace_tracker_query_symbol(sp_rtrace_tracker_t* tracker, const char* name);
 

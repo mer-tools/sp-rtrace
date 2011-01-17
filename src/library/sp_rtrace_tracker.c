@@ -19,6 +19,29 @@ extern char* cplus_demangle(const char* symbol, int flags);
 static void tracker_parse_item(sp_rtrace_tracker_t* tracker, char* item);
 
 /**
+ * Performs partial match between two strings.
+ *
+ * If one of the strings ends with '*', then the strings are matched
+ * until the '*' character (partial match). Otherwise full match is performed.
+ * @param[in] str1  the first string.
+ * @param[in] str2  the second string.
+ * @return          <0 first string is less than second
+ *                  >0 first string is greather than second
+ *                  =0 the strings matches.
+ */
+static int _strcmpp(const char* str1, const char* str2)
+{
+	while (true) {
+		if (*str1 == '*' && *(str1 + 1) == '\0') return 0;
+		if (*str2 == '*' && *(str2 + 1) == '\0') return 0;
+		if (!*str1 || *str1++ != *str2++) break;
+		str1++;
+		str2++;
+	}
+	return *(unsigned char*)str1 - *(unsigned char*)str2;
+}
+
+/**
  * Adds a value to the tracked resource list.
  *
  * The item is either library or function name.
@@ -30,7 +53,7 @@ static int tree_add_value(void** root, const char* value)
 {
 	char* item = strdup(value);
 	if (!item) return -ENOMEM;
-	void* ptr = tsearch(item, root, (int (*)(const void *, const void *))strcmp);
+	void* ptr = tsearch(item, root, (int (*)(const void *, const void *))_strcmpp);
 	if (ptr == NULL) return -EINVAL;
 	if ( *(char**)ptr != item) {
 		free(item);
@@ -116,7 +139,8 @@ void sp_rtrace_tracker_free(sp_rtrace_tracker_t* tracker)
 const char* sp_rtrace_tracker_query_symbol(sp_rtrace_tracker_t* tracker, const char* name)
 {
 	char* demangled_name = (char*)cplus_demangle(name, DMGL_ANSI | DMGL_PARAMS);
-	void* ptr = tfind(demangled_name ? demangled_name : name, &tracker->symbols, (int (*)(const void *, const void *))strcmp);
-	if (demangled_name) free(demangled_name);
-	return ptr ? *(char**)ptr : NULL;
+	if (!tfind(demangled_name ? demangled_name : name, &tracker->symbols, (int (*)(const void *, const void *))_strcmpp)) {
+		return NULL;
+	}
+	return demangled_name ? demangled_name : strdup(name);
 }

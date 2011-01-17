@@ -244,6 +244,7 @@ pltenter(
 				trace.frames = backtrace_audit(frames, &trace.nframes, regs);
 			}
 			sp_rtrace_write_function_call(&call, &trace, NULL);
+			free(symbol);
 		}
 	}
 	return sym->st_value;
