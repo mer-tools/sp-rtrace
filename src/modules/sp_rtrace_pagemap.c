@@ -362,6 +362,15 @@ static void enable_tracing(bool value)
 		};
 		sp_rtrace_copy_file("/proc/kpageflags", filename);
 		sp_rtrace_write_attachment(&file_kpageflags);
+
+		/* scan for zero pages */
+		sp_rtrace_get_out_filename("pagemap-zeropages", filename, sizeof(filename));
+		find_zero_memory_pages(filename);
+		sp_rtrace_attachment_t file_zeropages = {
+				.name = "zeropages",
+				.path = filename,
+		};
+		sp_rtrace_write_attachment(&file_pagemap);
 	}
 	trace_enabled = value;
 }
