@@ -392,7 +392,6 @@ int main(int argc, char* argv[])
 		}
 		ungetc(proto_id, fp);
 		process_text_data(rd, fp);
-		fclose(fp);
 	}
 
 	if (!rd->pinfo) {

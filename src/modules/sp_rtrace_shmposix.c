@@ -552,7 +552,6 @@ static void trace_initialize()
 		}
 
 		case MODULE_LOADED: {
-			fprintf(stderr, "\tcalling sp_rtrace_initialize()\n");
 			if (sp_rtrace_initialize() && init_mode == MODULE_LOADED) {
 				init_mode = MODULE_READY;
 

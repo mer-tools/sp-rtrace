@@ -40,10 +40,13 @@ bool Parser::parseCallRecord(const char* buffer)
 		if (!ptr) return false;
 		ptr++;
 	}
-	if (sscanf(ptr, "%[^(<]", name) != 1) {
-		return false;
-	}
-	ptr += strlen(name);
+	const char* ptr2 = strrchr(ptr, '(');
+	if (!ptr2) return NULL;
+	if (*(ptr2 - 1) == '>') ptr2 = strrchr(ptr, '<');
+
+	memcpy(name, ptr, ptr2 - ptr);
+	name[ptr2 - ptr] = '\0';
+	ptr = ptr2;
 	if (*ptr == '<') {
 		if (sscanf(ptr, "<%[^>]>", res_type_name) == 0) {
 			return false;
