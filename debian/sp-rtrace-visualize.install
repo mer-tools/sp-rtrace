@@ -4,7 +4,6 @@ debian/tmp/usr/bin/rtrace-calltree
 debian/tmp/usr/bin/rtrace-from-function
 debian/tmp/usr/bin/rtrace-graphs-function
 debian/tmp/usr/bin/rtrace-graphs-overview
-debian/tmp/usr/bin/rtrace-timeline
 debian/tmp/usr/bin/sp-rtrace-allocmap
 debian/tmp/usr/bin/sp-rtrace-timeline
 debian/tmp/usr/share/man/man1/rtrace-allocmap.1

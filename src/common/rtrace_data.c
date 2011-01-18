@@ -193,6 +193,7 @@ rd_t* rd_create()
 	dlist_init(&rd->resources);
 	htable_init(&rd->ftraces, HASH_SIZE, (op_unary_t)bt_hash, (op_binary_t)bt_compare);
 	dlist_init(&rd->mmaps);
+	dlist_init(&rd->files);
 	/* initialize single records */
 	rd->hshake = NULL;
 	rd->pinfo = NULL;

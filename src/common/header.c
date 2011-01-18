@@ -25,20 +25,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "common/sp_rtrace_defs.h"
 #include "header.h"
 #include "common/utils.h"
-
-/* header field names */
-const char* header_fields[SP_RTRACE_HEADER_MAX] = {
-		"version",
-		"arch",
-		"timestamp",
-		"process",
-		"pid",
-		"filter",
-		"backtrace depth",
-		"origin",
-};
 
 /* hader filter field tags */
 const char* filter_tags[FILTER_MAX] = {
@@ -47,37 +36,6 @@ const char* filter_tags[FILTER_MAX] = {
 		"resolve",
 };
 
-int header_read(sp_rtrace_header_t* header, const char* text)
-{
-	char key[256], value[256];
-	const char* ptr = text;
-	int i;
-	
-	memset(header, 0, sizeof(sp_rtrace_header_t));
-	
-	while (sscanf(ptr, "%[^=]=%[^,]", key, value) == 2) {
-		for (i = 0; i < SP_RTRACE_HEADER_MAX; i++) {
-			if (!strcmp(key, header_fields[i])) { 
-				if (header->fields[i]) free(header->fields[i]);
-				header->fields[i] = strdup_a(value);
-				break;
-			}
-		}
-		/* advance pointer to the next field */
-		ptr = strchr(ptr, ',');
-		if (!ptr++) break;
-		while (*ptr == ' ') ptr++;
-	}
-	return 0;
-}
-
-void header_free(sp_rtrace_header_t* header)
-{
-	int i;
-	for (i = 0; i < SP_RTRACE_HEADER_MAX; i++) {
-		if (header->fields[i]) free(header->fields[i]);
-	}
-}
 
 unsigned int header_get_filter(sp_rtrace_header_t* header)
 {

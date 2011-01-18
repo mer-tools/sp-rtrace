@@ -45,7 +45,10 @@ enum sp_rtrace_resource_flags_t {
 	SP_RTRACE_RESOURCE_LAST_FLAG = SP_RTRACE_RESOURCE_REFCOUNT, 
 			
 	/* Default resource behavior flags */
-	SP_RTRACE_RESOURCE_DEFAULT = 0 
+	SP_RTRACE_RESOURCE_DEFAULT = 0,
+
+	/* the number of resource flags */
+	SP_RTRACE_RESOURCE_FLAGS_MAX = 1,
  };
 
 /**
@@ -210,5 +213,17 @@ typedef struct sp_rtrace_attachment_t {
 	/* name of the attached file */
 	char* path;
 } sp_rtrace_attachment_t;
+
+
+/**
+ * Single backtrace step frame data.
+ */
+typedef struct {
+	/* the call address */
+	pointer_t addr;
+	/* resolved caller function name */
+	char* name;
+} sp_rtrace_btframe_t;
+
 
 #endif

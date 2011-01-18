@@ -49,14 +49,14 @@ sp-rtrace-postproc -lci $1 > $leaks
 
 if [ $# -eq 3 ]; then
 	# first get topmost addresses and then show their context
-	filter='s/^[^(]\+(\([0-9]\+\)) = \(0x[0-9a-f]\+\)/\2/'
+	filter='s/^.\+(\([0-9]\+\)) = \(0x[0-9a-f]\+\)/\2/'
 	list=$(egrep "^[0-9]+\. " $leaks|sed "$filter"|sort -n|tail -$2)
 	pattern=$(echo $list | sed 's/ /|/g')
 	egrep -A$3 "($pattern)" $leaks
 else
 	# show just topmost addresses with their allocation size
 	echo "address:   size:"
-	filter='s/^[^(]\+(\([0-9]\+\)) = \(0x[0-9a-f]\+\)/\2 \1/'
+	filter='s/^.\+(\([0-9]\+\)) = \(0x[0-9a-f]\+\)/\2 \1/'
 	egrep "^[0-9]+\. " $leaks|sed "$filter"|sort -n|tail -$2
 fi
 

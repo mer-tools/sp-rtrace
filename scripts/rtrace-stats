@@ -47,7 +47,7 @@ if [ -z $(which join) ]; then
 	echo
 	for file in $*; do
 		echo " count: size: (file: $file)"
-		egrep '^[0-9]+\. ' $file|sed 's/^[^(]\+(\([0-9]\+\))/\1/'|sort -n|uniq -c|sort -n
+		egrep '^[0-9]+\. ' $file|sed 's/^.\+(\([0-9]\+\))/\1/'|sort -n|uniq -c|sort -n
 	done
 	exit
 fi
@@ -74,7 +74,7 @@ tmp2=$(tempfile -s $suffix)
 
 count_allocs ()
 {	
-	sp-rtrace-postproc -lc -i $1 | egrep '^[0-9]+\. ' | sed 's/^[^(]\+(\([0-9]\+\)).*/\1/' | sed -e 's/^ *//' | sort -n | uniq -c   
+	sp-rtrace-postproc -lc -i $1 | egrep '^[0-9]+\. ' | sed 's/^.\+(\([0-9]\+\)).*/\1/' | sed -e 's/^ *//' | sort -n | uniq -c   
 }
 
 count_allocs $1 > $tmp1

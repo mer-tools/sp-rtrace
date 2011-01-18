@@ -2,6 +2,7 @@ debian/tmp/usr/include/sp_rtrace_context.h
 debian/tmp/usr/include/sp_rtrace_formatter.h
 debian/tmp/usr/include/sp_rtrace_defs.h
 debian/tmp/usr/include/sp_rtrace_tracker.h
+debian/tmp/usr/include/sp_rtrace_parser.h
 debian/tmp/usr/share/man/man3/sp_rtrace_context*.3
 debian/tmp/usr/share/man/man3/sp_rtrace_formatter*.3
 debian/tmp/usr/share/man/man3/sp_rtrace_print*.3

@@ -55,7 +55,7 @@ void sp_rtrace_tracker_free(sp_rtrace_tracker_t* tracker);
  * @return             The tracked symbol (demangled) or NULL.
  *
  */
-const char* sp_rtrace_tracker_query_symbol(sp_rtrace_tracker_t* tracker, const char* name);
+char* sp_rtrace_tracker_query_symbol(sp_rtrace_tracker_t* tracker, const char* name);
 
 
 

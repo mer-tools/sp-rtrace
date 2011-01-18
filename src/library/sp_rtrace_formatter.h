@@ -41,7 +41,10 @@ struct sp_rtrace_resource_t;
 struct sp_rtrace_farg_t;
 struct sp_rtrace_attachment_t;
 
-char* sp_rtrace_resource_flags_text[2];
+extern const char* sp_rtrace_resource_flags_text[SP_RTRACE_RESOURCE_FLAGS_MAX];
+
+extern const char* header_fields[SP_RTRACE_HEADER_MAX];
+
 
 /**
  * Prints report header.

@@ -223,7 +223,7 @@ pltenter(
 	)
 {
 	if (is_tracking_enabled) {
-		const char* symbol = sp_rtrace_tracker_query_symbol(&tracker, symname);
+		char* symbol = sp_rtrace_tracker_query_symbol(&tracker, symname);
 		if (symbol) {
 			sp_rtrace_fcall_t call = {
 					.type = SP_RTRACE_FTYPE_ALLOC,

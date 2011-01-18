@@ -370,7 +370,7 @@ static void enable_tracing(bool value)
 				.name = "zeropages",
 				.path = filename,
 		};
-		sp_rtrace_write_attachment(&file_pagemap);
+		sp_rtrace_write_attachment(&file_zeropages);
 	}
 	trace_enabled = value;
 }

@@ -488,9 +488,9 @@ class Graph:
 class Rtrace:
     def __init__(self, tracefile):
         # format: <index>. [@<context id>] [\[<timestamp>\]] <function name>\<<resource type>\>(<resource size>) = <hex ID>
-        self.alloc_pattern = re.compile("^[0-9]+\.( @[0-9a-fA-F]+|)( \[[^]]+\]|) ([a-zA-Z_][^(]+)\(([0-9]+)\) = (0x[a-fA-F0-9]+)")
+        self.alloc_pattern = re.compile("^[0-9]+\.( @[0-9a-fA-F]+|)( \[[^]]+\]|) ([a-zA-Z_].+)\(([0-9]+)\) = (0x[a-fA-F0-9]+)")
         # format: <index>. [@<context id>] [\[<timestamp>\]] <function name>\<<resource type>\>(<hex ID>)
-        self.free_pattern  = re.compile("^[0-9]+\.( @[0-9a-fA-F]+|)( \[[^]]+\]|) ([a-zA-Z_][^(]+)\((0x[a-fA-F0-9]+)\)")
+        self.free_pattern  = re.compile("^[0-9]+\.( @[0-9a-fA-F]+|)( \[[^]]+\]|) ([a-zA-Z_].+)\((0x[a-fA-F0-9]+)\)")
         # format: at <source file>:<line nro>
         self.gdb_src_pattern = re.compile(".* at ([^:]+):([0-9]+)$")
         self.leaks = open(tracefile)

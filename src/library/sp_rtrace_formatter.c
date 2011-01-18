@@ -30,15 +30,26 @@
 #include <errno.h>
 #include <limits.h>
 
+#include "common/sp_rtrace_defs.h"
 #include "sp_rtrace_formatter.h"
 #include "common/sp_rtrace_proto.h"
-#include "common/sp_rtrace_defs.h"
 #include "common/header.h"
 #include "common/rtrace_data.h"
 
-char* sp_rtrace_resource_flags_text[2] = {
+const char* sp_rtrace_resource_flags_text[SP_RTRACE_RESOURCE_FLAGS_MAX] = {
 		"refcount",
-		NULL,
+};
+
+
+const char* header_fields[SP_RTRACE_HEADER_MAX] = {
+		"version",
+		"arch",
+		"timestamp",
+		"process",
+		"pid",
+		"filter",
+		"backtrace depth",
+		"origin",
 };
 
 int sp_rtrace_print_header(FILE* fp, const struct sp_rtrace_header_t* header)

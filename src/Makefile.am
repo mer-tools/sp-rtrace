@@ -11,7 +11,7 @@ module_LTLIBRARIES = \
 moduledir = $(libdir)/sp-rtrace
 
 libsp_rtrace1_la_SOURCES = library/sp_rtrace_context.c library/sp_rtrace_formatter.c \
-	library/sp_rtrace_tracker.c \
+	library/sp_rtrace_tracker.c library/sp_rtrace_parser.c \
 	common/dlist.c common/htable.c common/utils.c common/rtrace_data.c common/header.c 
 libsp_rtrace1_la_LDFLAGS = $(VERSION_INFO)
 libsp_rtrace1_la_LIBADD = $(LIBS_IBERTY)
@@ -104,6 +104,7 @@ sp_rtrace_timeline_SOURCES = rtrace-timeline/timeline.h rtrace-timeline/timeline
 	rtrace-timeline/options.cpp rtrace-timeline/processor.cpp
 sp_rtrace_timeline_CXXFLAGS = $(AM_CXXFLAGS)
 sp_rtrace_timeline_LDFLAGS = -Wl,-z,defs
+sp_rtrace_timeline_LDADD = -lsp-rtrace1
 
 DISTCLEANFILES = Makefile.in *la 
 CLEANFILES = rtrace-timeline/*.h.gch

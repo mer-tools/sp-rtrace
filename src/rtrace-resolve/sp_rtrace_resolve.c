@@ -61,6 +61,7 @@
 #include "common/sp_rtrace_defs.h"
 #include "common/header.h"
 #include "library/sp_rtrace_formatter.h"
+#include "library/sp_rtrace_parser.h"
 #include "namecache.h"
 #include "resolver.h"
 #include "sp_rtrace_resolve.h"
@@ -362,7 +363,7 @@ static void read_header(FILE* fpin, FILE* fpout)
 		exit (-1);
 	}
 	sp_rtrace_header_t header;
-	header_read(&header, line);
+	sp_rtrace_parser_parse_header(line, &header);
 	
 	/* check source stream architecture */
 	if (header.fields[SP_RTRACE_HEADER_ARCH] && strcmp(header.fields[SP_RTRACE_HEADER_ARCH], BUILD_ARCH)) {
@@ -374,7 +375,7 @@ static void read_header(FILE* fpin, FILE* fpout)
 	header_set_filter(&header, header_get_filter(&header) | FILTER_MASK_RESOLVE);
 	/* write the header into output file */
 	sp_rtrace_print_header(fpout, &header);
-	header_free(&header);
+	sp_rtrace_parser_free_header(&header);
 }
 
 /**

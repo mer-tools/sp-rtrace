@@ -825,6 +825,10 @@ bool sp_rtrace_initialize()
 {
 	static volatile int initialize_lock = 0;
 	if (sync_bool_compare_and_swap(&initialize_lock, 0, 1)) {
+
+		/* cache the heap bottom address */
+		heap_bottom = (pointer_t)sbrk(0);
+
 		/* first check if the environment is ready */
 		const char* env_ready = getenv(SP_RTRACE_READY);
 		if (!env_ready) {
@@ -964,7 +968,7 @@ int sp_rtrace_copy_file(const char* source, const char* dest)
 	}
 	char buffer[0x8000];
 	int n_in;
-	while (n_in = read(fd_in, buffer, sizeof(buffer))) {
+	while ( (n_in = read(fd_in, buffer, sizeof(buffer))) ) {
 		int n_out = write(fd_out, buffer, n_in);
 		if (n_in != n_out) {
 			rc = -errno;
@@ -985,11 +989,7 @@ static void trace_main_fini(void) __attribute__((destructor));
  */
 static void trace_main_init(void)
 {
-
 	sp_rtrace_initialize();
-
-	/* cache the heap bottom address */
-	heap_bottom = (pointer_t)sbrk(0);
 
 	int toggle_signal = SIGUSR1;
 

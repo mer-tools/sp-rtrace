@@ -39,7 +39,7 @@ allocs = 0  # total amount of allocations so far
 trace = []  # stacktrace for current allocation
 stack = 1   # current stacktrace line number
 sizes = 0   # number of allocations for current stacktrace
-pattern = re.compile("^[0-9]+\. [^(]+\(([0-9]+)\)")
+pattern = re.compile("^[0-9]+\. .+\(([0-9]+)\) = 0x[a-fA-F0-9]+")
 for line in sys.stdin:
     # new stacktrace?
     res = pattern.match(line)

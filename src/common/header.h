@@ -29,8 +29,6 @@
 #ifndef HEADER_H_
 #define HEADER_H_
 
-#include "sp_rtrace_defs.h"
-
 /* header filter field tag index */
 enum filter_index_t {
 	FILTER_LEAKS,
@@ -49,24 +47,6 @@ enum filter_mask_t {
 	FILTER_MASK_RESET = ~(FILTER_MASK_COMPRESS),
 };
 
-extern const char* header_fields[SP_RTRACE_HEADER_MAX];
-
-
-/**
- * Parses text into header fields.
- * 
- * @param[in] header   the header data.
- * @param[in] text     the text to parse
- * @return             0 - success.
- */
-int header_read(sp_rtrace_header_t* header, const char* text);
-
-/**
- * Frees the header resources.
- * 
- * @param[in] header   the header to free.
- */
-void header_free(sp_rtrace_header_t* header);
 
 /**
  * Retrieves filter mask from the header filter field.

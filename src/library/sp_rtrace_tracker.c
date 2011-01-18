@@ -136,7 +136,7 @@ void sp_rtrace_tracker_free(sp_rtrace_tracker_t* tracker)
 }
 
 
-const char* sp_rtrace_tracker_query_symbol(sp_rtrace_tracker_t* tracker, const char* name)
+char* sp_rtrace_tracker_query_symbol(sp_rtrace_tracker_t* tracker, const char* name)
 {
 	char* demangled_name = (char*)cplus_demangle(name, DMGL_ANSI | DMGL_PARAMS);
 	if (!tfind(demangled_name ? demangled_name : name, &tracker->symbols, (int (*)(const void *, const void *))_strcmpp)) {
