@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010,2011 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -342,6 +342,13 @@ typedef struct {
  */
 void rd_hinfo_free(rd_hinfo_t* hinfo);
 
+
+typedef struct {
+	dlist_node_t node;
+	sp_rtrace_attachment_t data;
+} rd_attachment_t;
+
+void rd_attachment_free(rd_attachment_t* attachment);
 /*
  *
  */
@@ -375,6 +382,8 @@ typedef struct rd_t {
 	dlist_t resources;
 	/* mask of applied filters */
 	unsigned int filter;
+	/* list of attached files */
+	dlist_t files;
 } rd_t;
 
 

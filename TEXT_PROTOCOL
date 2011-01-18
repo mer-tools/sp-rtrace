@@ -149,3 +149,11 @@ during post-processing and resolving.
           <flag1>, <flag2> .. - the resource behaviour flags.
               refcount - speecifies that the resource allocs/frees uses reference 
                          counting.
+
+10. File attachment 
+    Contains information about custom data files attached to the report.
+	  & <name> : <path>
+	Where:
+	  <name>  - the attachment name. Used to identify different attachments.
+	  <path>  - name of the attached file.
+	  

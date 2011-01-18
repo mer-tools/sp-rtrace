@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010,2011 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -52,10 +52,11 @@
 #define SP_RTRACE_PROTO_HEAP_INFO          SP_RTRACE_PROTO_PACKET_TYPE('H', 'I', 'N', 'F')
 #define SP_RTRACE_PROTO_OUTPUT_SETTINGS    SP_RTRACE_PROTO_PACKET_TYPE('O', 'C', 'F', 'G')
 #define SP_RTRACE_PROTO_RESOURCE_REGISTRY  SP_RTRACE_PROTO_PACKET_TYPE('R', 'E', 'S', 'R')
+#define SP_RTRACE_PROTO_ATTACHMENT         SP_RTRACE_PROTO_PACKET_TYPE('F', 'I', 'L', 'E')
 
 /* protocol version */
 #define SP_RTRACE_PROTO_VERSION_MAJOR     1
-#define SP_RTRACE_PROTO_VERSION_MINOR     3
+#define SP_RTRACE_PROTO_VERSION_MINOR     4
 
 /* endianness flags (used in HS packet) */
 #define SP_RTRACE_PROTO_HS_LITTLE_ENDIAN  0
