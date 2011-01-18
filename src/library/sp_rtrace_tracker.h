@@ -12,6 +12,8 @@
  * or configuration file name in format @<filename>.
  * The @ symbols is used to distinguish symbol name form
  * configuration file name.
+ *
+ * If an item ends with '*' then partial match is performed.
  */
 #ifndef _SP_RTRACE_TRACKER_H_
 #define _SP_RTRACE_TRACKER_H_

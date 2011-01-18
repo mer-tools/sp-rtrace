@@ -21,6 +21,33 @@
  * 02r10-1301 USA
  */
 
+/**
+ * @file sp_rtrace_parser.h
+ *
+ * Parser API provides functionality to parse sp-rtrace text format files.
+ *
+ * Usage:
+ * 1) Use sp_rtrace_parser_set_mask() function to choose the records
+ *    to parse. By default all records are parsed, however user can
+ *    select only the record types he is interested in, slightly
+ *    increasing the parsing speed.
+ *
+ * 2) Use sp_rtrace_parser_parse_header() function to parse the report
+ *    header, which always is the first line in the report.
+ *    This function allocates resources for header field value storage
+ *    so the caller is responsible for freeing them later.
+ *
+ * 3) Use sp_rtrace_parser_parse_record() function to parse the rest of
+ *    the report lines. This function returns the parsed record type.
+ *    SP_RTRACE_RECORD_NONE is returned if the line contains record that
+ *    is set to be ignored (with sp_rtrace_parser_set_mask()). This function
+ *    might allocate data for record specific resource storage (comment
+ *    record is an exception, as the line itself is the comment data).
+ *    User is responsible for handling the allocated resources manually
+ *    or by freeing them with sp_rtrace_parser_free_record() function.
+ *
+ */
+
 #ifndef _SP_RTRACE_PARSER_H_
 #define _SP_RTRACE_PARSER_H_
 
@@ -88,6 +115,11 @@ void sp_rtrace_parser_set_mask(int mask);
 /**
  * Parses text into header fields.
  *
+ * The header fields are stored in the sp_rtrace_header_t structure accordingly
+ * to their index (see the sp_rtrace_header_index_t enum). The caller is responsible
+ * for managing the memory allocated for field values (either copy contents and
+ * release the header with sp_rtrace_parser_free_header() function or store the
+ * field references and release them separately).
  * @param[in] text     the text to parse
  * @param[in] header   the header data.
  * @return             0 - success.
