@@ -10,7 +10,7 @@
 #include "sp_rtrace_module.h"
 #include "sp_rtrace_main.h"
 #include "common/sp_rtrace_proto.h"
-#include "common/sp_rtrace_defs.h"
+#include "library/sp_rtrace_defs.h"
 #include "library/sp_rtrace_tracker.h"
 #include "rtrace/rtrace_env.h"
 

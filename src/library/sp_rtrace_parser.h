@@ -51,6 +51,12 @@
 #ifndef _SP_RTRACE_PARSER_H_
 #define _SP_RTRACE_PARSER_H_
 
+#include "sp_rtrace_defs.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 
 /**
  * Record types returned by sp_rtrace_parse_record() function.
@@ -134,6 +140,8 @@ void sp_rtrace_parser_parse_header(const char* text, sp_rtrace_header_t* header)
  */
 void sp_rtrace_parser_free_header(sp_rtrace_header_t* header);
 
-
+#ifdef  __cplusplus
+}
+#endif
 
 #endif

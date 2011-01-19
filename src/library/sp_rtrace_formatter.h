@@ -32,14 +32,12 @@
 #include <sys/time.h>
 #include <stdio.h>
 
-struct sp_rtrace_fcall_t;
-struct sp_rtrace_header_t;
-struct sp_rtrace_mmap_t;
-struct sp_rtrace_ftrace_t;
-struct sp_rtrace_context_t;
-struct sp_rtrace_resource_t;
-struct sp_rtrace_farg_t;
-struct sp_rtrace_attachment_t;
+#include "sp_rtrace_defs.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 
 extern const char* sp_rtrace_resource_flags_text[SP_RTRACE_RESOURCE_FLAGS_MAX];
 
@@ -140,5 +138,9 @@ int sp_rtrace_print_args(FILE* fp, const struct sp_rtrace_farg_t* args);
  * @return           0 - success, -errno - failure
  */
 int sp_rtrace_print_attachment(FILE* fp, const struct sp_rtrace_attachment_t* file);
+
+#ifdef  __cplusplus
+}
+#endif
 
 #endif

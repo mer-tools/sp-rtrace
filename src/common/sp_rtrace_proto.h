@@ -36,7 +36,7 @@
 #include <stdio.h>
 
 #include "common/debug_log.h"
-#include "common/sp_rtrace_defs.h"
+#include "library/sp_rtrace_defs.h"
 
 #define SP_RTRACE_PROTO_PACKET_TYPE(b1, b2, b3, b4) (b1 | (b2 << 8) | (b3 << 16) | (b4 << 24))
 

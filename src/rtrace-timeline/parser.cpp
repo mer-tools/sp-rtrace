@@ -6,7 +6,7 @@
 #include "processor.h"
 
 extern "C" {
-#include "common/sp_rtrace_defs.h"
+#include "library/sp_rtrace_defs.h"
 #include "library/sp_rtrace_parser.h"
 }
 

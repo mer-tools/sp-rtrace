@@ -30,7 +30,7 @@
 #include <errno.h>
 #include <limits.h>
 
-#include "common/sp_rtrace_defs.h"
+#include "sp_rtrace_defs.h"
 #include "sp_rtrace_formatter.h"
 #include "common/sp_rtrace_proto.h"
 #include "common/header.h"

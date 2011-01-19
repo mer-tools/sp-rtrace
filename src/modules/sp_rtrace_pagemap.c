@@ -40,7 +40,7 @@
 #include "sp_rtrace_main.h"
 #include "sp_rtrace_module.h"
 #include "common/sp_rtrace_proto.h"
-#include "common/sp_rtrace_defs.h"
+#include "library/sp_rtrace_defs.h"
 #include "common/debug_log.h"
 #include "common/utils.h"
 

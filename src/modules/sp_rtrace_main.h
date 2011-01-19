@@ -30,7 +30,7 @@
 #include <limits.h>
 
 #include "common/sp_rtrace_proto.h"
-#include "common/sp_rtrace_defs.h"
+#include "library/sp_rtrace_defs.h"
 
 /**
  * @file sp_rtrace_main.h

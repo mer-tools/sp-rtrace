@@ -32,7 +32,7 @@
 
 #include "sp_rtrace_postproc.h"
 #include "common/sp_rtrace_proto.h"
-#include "common/sp_rtrace_defs.h"
+#include "library/sp_rtrace_defs.h"
 
 #include "parse_binary.h"
 #include "common/utils.h"

@@ -22,6 +22,11 @@
 
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 /**
  * The function/library tracking data.
  */
@@ -59,7 +64,9 @@ void sp_rtrace_tracker_free(sp_rtrace_tracker_t* tracker);
  */
 char* sp_rtrace_tracker_query_symbol(sp_rtrace_tracker_t* tracker, const char* name);
 
-
+#ifdef  __cplusplus
+}
+#endif
 
 
 #endif

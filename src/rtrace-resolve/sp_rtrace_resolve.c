@@ -58,7 +58,7 @@
 
 #include "common/utils.h"
 #include "common/rtrace_data.h"
-#include "common/sp_rtrace_defs.h"
+#include "library/sp_rtrace_defs.h"
 #include "common/header.h"
 #include "library/sp_rtrace_formatter.h"
 #include "library/sp_rtrace_parser.h"

@@ -25,7 +25,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "common/sp_rtrace_defs.h"
+#include "sp_rtrace_defs.h"
 
 #include "sp_rtrace_parser.h"
 

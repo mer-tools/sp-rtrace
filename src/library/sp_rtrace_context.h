@@ -29,6 +29,10 @@
  * Resource tracing client side API for call context implementation.
  */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* the size of the call context name */
 #define SP_CONTEXT_NAME_SIZE      32
 
@@ -81,6 +85,10 @@ unsigned int sp_context_get_mask();
  * @return  the number of registered contexts.
  */
 unsigned int sp_context_get_count();
+
+#ifdef  __cplusplus
+}
+#endif
 
 #endif
 

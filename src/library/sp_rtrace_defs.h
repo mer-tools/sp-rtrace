@@ -30,6 +30,10 @@
  * Common definitions used by sp-strace protocols.
  */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Resource behavior flags
  */
@@ -225,5 +229,8 @@ typedef struct {
 	char* name;
 } sp_rtrace_btframe_t;
 
+#ifdef  __cplusplus
+}
+#endif
 
 #endif

@@ -34,7 +34,7 @@ static int _strcmpp(const char* str1, const char* str2)
 	while (true) {
 		if (*str1 == '*' && *(str1 + 1) == '\0') return 0;
 		if (*str2 == '*' && *(str2 + 1) == '\0') return 0;
-		if (!*str1 || *str1++ != *str2++) break;
+		if (!*str1 || *str1 != *str2) break;
 		str1++;
 		str2++;
 	}
