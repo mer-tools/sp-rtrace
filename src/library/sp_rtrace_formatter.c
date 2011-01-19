@@ -104,9 +104,16 @@ int sp_rtrace_print_call(FILE* fp, const struct sp_rtrace_fcall_t* call)
 	if (call->context) {
 		ptr += sprintf(ptr, "@%x ", (int)call->context);
 	}
-	if (call->timestamp) {
-		int hours = call->timestamp / (1000 * 60 * 60);
-		int usecs = call->timestamp % (1000 * 60 * 60);
+	unsigned int timestamp = call->timestamp;
+	if (timestamp == (unsigned int)-1) {
+		struct timespec ts;
+		if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0) {
+			timestamp = ts.tv_nsec / 1000000 + ts.tv_sec % (60 * 60 * 24) * 1000;
+		}
+	}
+	if (timestamp) {
+		int hours = timestamp / (1000 * 60 * 60);
+		int usecs = timestamp % (1000 * 60 * 60);
 		int minutes = usecs / (1000 * 60);
 		usecs %= 1000 * 60;
 		int seconds = usecs / 1000;
