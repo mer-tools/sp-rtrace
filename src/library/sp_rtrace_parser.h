@@ -80,12 +80,19 @@ typedef enum {
  * The data structure used to store sp_rtrace_parse_record() output.
  */
 typedef union {
+	/* data of SP_RTRACE_RECORD_MMAP record type */
 	sp_rtrace_mmap_t mmap;
+	/* data of SP_RTRACE_RECORD_CALL record type */
 	sp_rtrace_fcall_t call;
+	/* data of SP_RTRACE_RECORD_TRACE record type */
 	sp_rtrace_btframe_t frame;
+	/* data of SP_RTRACE_RECORD_ARG record type */
 	sp_rtrace_farg_t arg;
+	/* data of SP_RTRACE_RECORD_CONTEXT record type */
 	sp_rtrace_context_t context;
+	/* data of SP_RTRACE_RECORD_RESOURCE record type */
 	sp_rtrace_resource_t resource;
+	/* data of SP_RTRACE_RECORD_ATTACHMENT record type */
 	sp_rtrace_attachment_t attachment;
 } sp_rtrace_record_t;
 
@@ -93,6 +100,9 @@ typedef union {
 /**
  * Parses the text containing sp-rtrace text format record.
  *
+ * The data is stored in the sp_rtrace_record_t union depending on
+ * the record type (see the sp_rtrace_record_t union for record type-
+ * union member relations).
  * This function might allocate record type specific data, which must
  * be freed with sp_rtrace_free_record() function if not stored anywhere.
  * @param[in] text      the text to parse.
