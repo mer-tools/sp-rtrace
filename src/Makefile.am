@@ -7,7 +7,7 @@ lib_LTLIBRARIES = libsp-rtrace1.la  libsp-rtrace-main.la
 module_LTLIBRARIES = \
 	libsp-rtrace-memory.la libsp-rtrace-memtransfer.la \
 	libsp-rtrace-shmsysv.la libsp-rtrace-file.la libsp-rtrace-gobject.la libsp-rtrace-qobject.la \
-	libsp-rtrace-audit.la libsp-rtrace-shmposix.la libsp-rtrace-pagemap.la
+	libsp-rtrace-audit.la libsp-rtrace-shmposix.la 
 moduledir = $(libdir)/sp-rtrace
 
 libsp_rtrace1_la_SOURCES = library/sp_rtrace_context.c library/sp_rtrace_formatter.c \
@@ -62,7 +62,8 @@ libsp_rtrace_shmposix_la_CFLAGS = -rdynamic $(GLIB_CFLAGS) $(AM_CFLAGS)
 libsp_rtrace_shmposix_la_LDFLAGS = -avoid-version -module
 libsp_rtrace_shmposix_la_LIBADD = -ldl 
 
-libsp_rtrace_pagemap_la_SOURCES = modules/sp_rtrace_pagemap.c 
+module_LTLIBRARIES += libsp-rtrace-pagemap.la
+libsp_rtrace_pagemap_la_SOURCES = pagemap/sp_rtrace_pagemap.c 
 libsp_rtrace_pagemap_la_CFLAGS = -rdynamic $(GLIB_CFLAGS) $(AM_CFLAGS)
 libsp_rtrace_pagemap_la_LDFLAGS = -avoid-version -module
 

@@ -39,12 +39,14 @@
 #include <time.h>
 #include <stdint.h>
 
-#include "sp_rtrace_main.h"
-#include "sp_rtrace_module.h"
+#include "modules/sp_rtrace_main.h"
+#include "modules/sp_rtrace_module.h"
 #include "common/sp_rtrace_proto.h"
 #include "library/sp_rtrace_defs.h"
 #include "common/debug_log.h"
 #include "common/utils.h"
+
+#include "pagemap.h"
 
 
 //#define MSG(text) {	char buffer[] = ">>>" text "\n"; if(write(STDERR_FILENO, buffer, sizeof(buffer))){}; }
@@ -61,21 +63,6 @@ static sp_rtrace_module_info_t module_info = {
 };
 
 static bool trace_enabled = false;
-
-
-/**
- * The memory page data.
- *
- * This structure is used to store data about memory pages containing
- * only zeroes. It holds starting page address and the number of
- * consequent pages containing only zero bytes.
- */
-typedef struct {
-	/* starting area */
-	unsigned long addr;
-	/* number of pages */
-	unsigned long npages;
-} pagescan_t;
 
 
 static unsigned long page_size;
