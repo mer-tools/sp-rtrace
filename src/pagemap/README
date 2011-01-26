@@ -2,9 +2,9 @@
 
 The pagemap module stores the following memory page mapping data when tracing
 is stopped:
-  1) The kernel page flags for the mapped memory pages.
-  2) List of the r/w pages containing only zero bytes.
-  3) Copy of the /proc/<pid>/maps file.
+  1) Information about the mapped memory pages, including kpageflags data and 
+     a flag if the page contains only zero bytes.
+  3) Copy of the /proc/<pid>/maps file (pagemap-maps-*).
 
 The pagemap post-processor generates the following reports:
   1) Addresses of pages that are both dirty and zeroed, listed per mapped 
@@ -15,24 +15,10 @@ The pagemap post-processor generates the following reports:
 
 2. Implementation
 
-2.1 Zero page data file structure
-  
-Zero page data is stored in binary format:
-<zero page data>,[<zero page data>,...]
-Where <zero page data> is:
-  [address][count]
-    [address] - the memory address where on (or more) zero page is located.
-                (4 bytes on 32 bit systems).
-    [count]   - the number of zero pages located at the specified address.
-                (4 bytes on 32 bit systems).
+2.1 Memory page data storage file (pagemap-kpageflags-*)
 
-See the pagescan_t data structure in pagemap.h header.
-
-
-2.2 Kernel page flags data
-
-The kernel page flags for the mapped memory pages are stored in binary format:
-<area data><area page flags>,[<area data><area page flags>,...]
+The memory page data are stored in binary format:
+<area data><area page data>,[<area data><area page data>,...]
 Where <area data> contains information about mapped memory area:
   [from][to][size]
     [from]  - the memory mapping start address.
@@ -42,10 +28,12 @@ Where <area data> contains information about mapped memory area:
     [size]  - the size of the following <area page flags> data
               (4 bytes on 32 bit systems).
     
-And <area page flags> contains information about the mapped pages:
+And <area page data> contains information about the mapped pages:
   [info][kflags]
-    [info]    - general information about the page (currently 0 for swapped
-	            pages and 1 for pages in memory).
-                (4 bytes on 32 bit systems).
+    [info]    - general information about the page: 
+                  1 - page swapped
+		  2 - page is located in memory
+		  4 - page contains only zero bytes
     [kflags]  - the flags value from /proc/kpageflags file for pages in memory.
+                This value is 0 for swapped pages.
 

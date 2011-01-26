@@ -943,7 +943,7 @@ bool sp_rtrace_initialize()
 void sp_rtrace_get_out_filename(const char* pattern, char* buffer, size_t size)
 {
 	char* ptr = buffer;
-	if (*sp_rtrace_options->output_dir) _stpncpy(buffer, sp_rtrace_options->output_dir, size);
+	if (*sp_rtrace_options->output_dir) ptr = _stpncpy(buffer, sp_rtrace_options->output_dir, size);
 	else *ptr++ = '.';
 	*ptr++ = '/';
 	ptr = _stpncpy(ptr, pattern, size - (ptr - buffer));
