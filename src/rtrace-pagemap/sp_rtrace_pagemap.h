@@ -21,36 +21,46 @@
  * 02110-1301 USA
  */
 
-#ifndef _PARSER_H_
-#define _PARSER_H_
+#ifndef _SP_RTRACE_PAGEMAP_H_
+#define _SP_RTRACE_PAGEMAP_H_
 
-#include "timeline.h"
-
-class Processor;
+#include <stdint.h>
 
 /**
- * Parses sp-rtrace text log.
- * 
- * This class parses sp-rtrace text log and reports
- * registered resources/contexts and resource allocations/frees.
+ * Additional page information flags.
  */
-class Parser {
-private:
-
-
-	// the processor
-	Processor* processor;
-public:
-
-	/**
-	 * Parses the sp-rtrace log file.
-	 * 
-	 * @param[in] filename   the file to parse.
-	 * @param[in] processor  the event processing processor.
-	 */
-	void parseFile(const std::string& filename, Processor* processor);
-
+enum pageinfo_t {
+	PAGE_SWAP = 1 << 0,  //!< PAGE_SWAP
+	PAGE_MEMORY = 1 << 1,//!< PAGE_MEMORY
+	PAGE_ZERO = 1 << 2,  //!< PAGE_ZERO
 };
+
+/**
+ * Memory page data.
+ */
+typedef struct {
+	/* page information (pageinfo_t enum) */
+	unsigned int info;
+	/* page flags (from /proc/kpageflags */
+	uint64_t kflags;
+} pageflags_data_t;
+
+/**
+ * Memory page data header.
+ *
+ * This structure contains information about the memory area
+ * described by the following page data.
+ */
+typedef struct {
+	/* the memory are start address */
+	unsigned long from;
+	/* the memory area end address */
+	unsigned long to;
+	/* size of the following page data */
+	unsigned int size;
+} pageflags_header_t;
 
 
 #endif
+
+

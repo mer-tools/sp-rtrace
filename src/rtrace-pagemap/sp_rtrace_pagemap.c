@@ -47,8 +47,7 @@
 #include "common/debug_log.h"
 #include "common/utils.h"
 
-#include "pagemap.h"
-
+#include "sp_rtrace_pagemap.h"
 
 //#define MSG(text) {	char buffer[] = ">>>" text "\n"; if(write(STDERR_FILENO, buffer, sizeof(buffer))){}; }
 
@@ -171,17 +170,6 @@ static bool is_zero_page(unsigned long from)
 	return true;
 }
 
-/*
-static void print_pdata(pagescan_t* pdata, int npages)
-{
-	int i;
-	for (i = 0; i < npages; i++) {
-		printf("[map] 0x%lx, %lu\n", pdata->addr, pdata->npages);
-		pdata++;
-	}
-}
-*/
-
 /**
  * Scans address range for memory pages containing zeroes.
  *
@@ -265,8 +253,6 @@ static int scan_address_range(unsigned long from, unsigned long to, const char* 
  */
 static int cut_kpageflags_range(unsigned long from, unsigned long to, const char* module, const char* rights, pfcut_data_t* data)
 {
-	if (rights[3] != 'p') return EINVAL;
-
 	/* store the memory area header data */
 	pageflags_header_t header = {
 		.from = from,
@@ -477,6 +463,7 @@ static void enable_tracing(bool value)
 	if (!value && trace_enabled) {
 		page_size = getpagesize();
 
+		/* TODO: remove timing code before release */
 		struct timespec ts1, ts2;
 		clock_gettime(CLOCK_MONOTONIC, &ts1);
 
@@ -491,7 +478,7 @@ static void enable_tracing(bool value)
 		sp_rtrace_write_attachment(&file_maps);
 
 		/* copy data from /proc/kpageflags file */
-		sp_rtrace_get_out_filename("pagemap-kpageflags", filename, sizeof(filename));
+		sp_rtrace_get_out_filename("pagemap-pageflags", filename, sizeof(filename));
 		sp_rtrace_attachment_t file_kpageflags = {
 				.name = "kpageflags",
 				.path = filename,
@@ -504,6 +491,27 @@ static void enable_tracing(bool value)
 
 		find_zero_memory_pages(filename);
 
+		/* Copy /proc/self/pagemap, /proc/kpageflags files for debugging purposes
+
+		sp_rtrace_get_out_filename("pagemap-pagemap", filename, sizeof(filename));
+		sp_rtrace_attachment_t file_pagemap = {
+				.name = "pagemap",
+				.path = filename,
+		};
+		sp_rtrace_copy_file("/proc/self/pagemap", filename);
+		sp_rtrace_write_attachment(&file_pagemap);
+
+		sp_rtrace_get_out_filename("pagemap-kpageflags", filename, sizeof(filename));
+		sp_rtrace_attachment_t file_kpageflags = {
+				.name = "kpageflags",
+				.path = filename,
+		};
+		sp_rtrace_copy_file("/proc/kpageflags", filename);
+		sp_rtrace_write_attachment(&file_kpageflags);
+		*/
+
+
+		/* TODO: remove timing code before release */
 		clock_gettime(CLOCK_MONOTONIC, &ts2);
 
 		int diff = ts2.tv_sec - ts1.tv_sec;
