@@ -20,37 +20,15 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA
  */
+#include "config.h"
 
-#ifndef _PARSER_H_
-#define _PARSER_H_
+#include "memory_area.h"
 
-#include "timeline.h"
+MemoryArea::MemoryArea(unsigned long from, unsigned long to, pageflags_data_t* flags, const std::string& info) :
+	from(from),
+	to(to),
+	flags(flags),
+	info(info)
+{
+}
 
-class Processor;
-
-/**
- * Parses sp-rtrace text log.
- * 
- * This class parses sp-rtrace text log and reports
- * registered resources/contexts and resource allocations/frees.
- */
-class Parser {
-private:
-
-
-	// the processor
-	Processor* processor;
-public:
-
-	/**
-	 * Parses the sp-rtrace log file.
-	 * 
-	 * @param[in] filename   the file to parse.
-	 * @param[in] processor  the event processing processor.
-	 */
-	void parseFile(const std::string& filename, Processor* processor);
-
-};
-
-
-#endif

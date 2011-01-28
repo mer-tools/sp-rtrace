@@ -21,36 +21,29 @@
  * 02110-1301 USA
  */
 
-#ifndef _PARSER_H_
-#define _PARSER_H_
+#ifndef _MEMORY_AREA_H_
+#define _MEMORY_AREA_H_
 
-#include "timeline.h"
+#include "pagemap.h"
 
-class Processor;
+#include "sp_rtrace_pagemap.h"
 
-/**
- * Parses sp-rtrace text log.
- * 
- * This class parses sp-rtrace text log and reports
- * registered resources/contexts and resource allocations/frees.
- */
-class Parser {
-private:
-
-
-	// the processor
-	Processor* processor;
+class MemoryArea {
 public:
+	typedef std::tr1::shared_ptr<MemoryArea> ptr_t;
 
-	/**
-	 * Parses the sp-rtrace log file.
-	 * 
-	 * @param[in] filename   the file to parse.
-	 * @param[in] processor  the event processing processor.
-	 */
-	void parseFile(const std::string& filename, Processor* processor);
+	typedef std::vector<ptr_t> vector_t;
 
+	// the memory area start address
+	unsigned long from;
+	// the memory area end address
+	unsigned long to;
+	// address of the memory
+	pageflags_data_t* flags;
+	// the memory are information (taken from maps file)
+	std::string info;
+
+	MemoryArea(unsigned long from, unsigned long to, pageflags_data_t* flags, const std::string& info);
 };
-
 
 #endif

@@ -21,36 +21,39 @@
  * 02110-1301 USA
  */
 
-#ifndef _PARSER_H_
-#define _PARSER_H_
+#ifndef _ADDRESS_SPACE_H_
+#define _ADDRESS_SPACE_H_
 
-#include "timeline.h"
+#include "pagemap.h"
+#include "sp_rtrace_pagemap.h"
 
-class Processor;
+#include "memory_area.h"
 
-/**
- * Parses sp-rtrace text log.
- * 
- * This class parses sp-rtrace text log and reports
- * registered resources/contexts and resource allocations/frees.
- */
-class Parser {
-private:
-
-
-	// the processor
-	Processor* processor;
+class AddressSpace {
 public:
+	// array of the mapped rw memory areas
+	MemoryArea::vector_t memory_areas;
 
 	/**
-	 * Parses the sp-rtrace log file.
-	 * 
-	 * @param[in] filename   the file to parse.
-	 * @param[in] processor  the event processing processor.
+	 * Creates a new class instance.
 	 */
-	void parseFile(const std::string& filename, Processor* processor);
+	AddressSpace();
 
+	/**
+	 * Adds memory area.
+	 *
+	 * @param[in] from    the memory area start address.
+	 * @param[in] to      the memory area end address.
+	 * @param[in] data    the memory area data from maps file.
+	 */
+	void addMemoryArea(unsigned long from, unsigned long to, pageflags_data_t* page_data, const std::string& data);
+
+	/**
+	 * Dumps the address space contents.
+	 *
+	 * For debugging purpuses only.
+	 */
+	void dump();
 };
-
 
 #endif

@@ -21,36 +21,34 @@
  * 02110-1301 USA
  */
 
-#ifndef _PARSER_H_
-#define _PARSER_H_
+#ifndef _PAGEMAP_H_
+#define _PAGEMAP_H_
 
-#include "timeline.h"
+#include <stdbool.h>
 
-class Processor;
+#include <stdexcept>
+#include <tr1/memory>
+#include <string>
+#include <list>
+#include <vector>
+#include <map>
+#include <ctype.h>
+#include <iostream>
+#include <sstream>
+#include <fstream>
+#include <algorithm>
+#include <iomanip>
 
-/**
- * Parses sp-rtrace text log.
- * 
- * This class parses sp-rtrace text log and reports
- * registered resources/contexts and resource allocations/frees.
- */
-class Parser {
-private:
-
-
-	// the processor
-	Processor* processor;
-public:
-
-	/**
-	 * Parses the sp-rtrace log file.
-	 * 
-	 * @param[in] filename   the file to parse.
-	 * @param[in] processor  the event processing processor.
-	 */
-	void parseFile(const std::string& filename, Processor* processor);
-
-};
-
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <getopt.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <limits.h>
 
 #endif

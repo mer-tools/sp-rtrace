@@ -20,35 +20,27 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA
  */
+#include "config.h"
 
-#include "timeline.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <getopt.h>
+#include <errno.h>
+#include <limits.h>
+#include <stdbool.h>
+#include <string.h>
 
+#include "pagemap.h"
 #include "options.h"
-
-#include "report_data.h"
-#include "processor.h"
-#include "resource_registry.h"
-#include "parser.h"
-#include "timestamp.h"
-
+#include "trace_data.h"
 
 int main(int argc, char* const argv[])
 {
 	try {
-		Processor processor;
-		Options::getInstance()->parseCommandLine(argc, argv, &processor);
+		Options::getInstance()->parseCommandLine(argc, argv);
 
-		if (processor.getGeneratorCount() == 0) {
-			throw std::runtime_error("No report type specified");
-		}
-		processor.initialize();
-
-		Parser parser;
-		parser.parseFile(Options::getInstance()->getInFilename(), &processor);
-		// flush the unfreed allocation events stored in processor resource registry caches.
-		processor.flushEventCache();
-		// generate the reports
-		processor.finalize();
+		TraceData trace_data;
+		trace_data.parseReport(Options::getInstance()->getInFilename());
 	}
 	catch (std::ifstream::failure e) {
 		std::cerr << "File error: " << e.what() << "\n";
@@ -58,3 +50,4 @@ int main(int argc, char* const argv[])
 	}
 	return 0;
 }
+
