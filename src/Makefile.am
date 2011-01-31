@@ -114,7 +114,7 @@ rtrace-pagemap/pagemap.h.gch: rtrace-pagemap/pagemap.h
 	$(CXX) -c $< $(CXXFLAGS)
 
 sp_rtrace_pagemap_SOURCES = rtrace-pagemap/pagemap.h rtrace-pagemap/pagemap.cpp rtrace-pagemap/options.cpp \
-	rtrace-pagemap/trace_data.cpp rtrace-pagemap/address_space.cpp rtrace-pagemap/memory_area.cpp
+	rtrace-pagemap/trace_data.cpp rtrace-pagemap/memory_area.cpp rtrace-pagemap/address_space_report.cpp
 sp_rtrace_pagemap_CXXFLAGS = $(AM_CXXFLAGS)
 sp_rtrace_pagemap_LDFLAGS = -Wl,-z,defs
 sp_rtrace_pagemap_LDADD = -lsp-rtrace1

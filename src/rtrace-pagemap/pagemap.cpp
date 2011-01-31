@@ -33,6 +33,7 @@
 #include "pagemap.h"
 #include "options.h"
 #include "trace_data.h"
+#include "address_space_report.h"
 
 int main(int argc, char* const argv[])
 {
@@ -41,6 +42,11 @@ int main(int argc, char* const argv[])
 
 		TraceData trace_data;
 		trace_data.parseReport(Options::getInstance()->getInFilename());
+
+		if (Options::getInstance()->getReportAddressSpace()) {
+			AddressSpaceReport report(trace_data);
+			report.write(Options::getInstance()->getOutFilename());
+		}
 	}
 	catch (std::ifstream::failure e) {
 		std::cerr << "File error: " << e.what() << "\n";

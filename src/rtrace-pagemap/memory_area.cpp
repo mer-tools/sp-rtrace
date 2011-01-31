@@ -28,7 +28,15 @@ MemoryArea::MemoryArea(unsigned long from, unsigned long to, pageflags_data_t* f
 	from(from),
 	to(to),
 	flags(flags),
-	info(info)
+	info(info),
+	permissions(0)
 {
+	int npos = info.find(' ');
+	if (npos != -1) {
+		if (info[npos + 1] == 'r') permissions |= READ;
+		if (info[npos + 2] == 'w') permissions |= WRITE;
+		if (info[npos + 3] == 'x') permissions |= EXECUTE;
+		if (info[npos + 4] == 's') permissions |= SHARED;
+	}
 }
 
