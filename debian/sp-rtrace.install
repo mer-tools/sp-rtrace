@@ -1,6 +1,7 @@
 debian/tmp/usr/bin/sp-rtrace-postproc
 debian/tmp/usr/bin/sp-rtrace
 debian/tmp/usr/bin/sp-rtrace-resolve
+debian/tmp/usr/bin/sp-rtrace-pagemap
 debian/tmp/usr/lib/libsp-rtrace-main.so*
 debian/tmp/usr/lib/sp-rtrace/*so
 debian/tmp/usr/bin/rtrace-rename

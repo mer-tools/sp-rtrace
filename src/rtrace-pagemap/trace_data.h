@@ -26,11 +26,12 @@
 
 #include "pagemap.h"
 
-#include "address_space.h"
+#include "library/sp_rtrace_defs.h"
+
+#include "memory_area.h"
 
 class TraceData {
 private:
-
 	// the pageflags file descriptor
 	int pageflags_fd;
 
@@ -61,7 +62,20 @@ private:
 	 */
 	void* getPageflagsData(unsigned long from, unsigned long to);
 
+	/**
+	 * Adds memory area.
+	 *
+	 * @param[in] from    the memory area start address.
+	 * @param[in] to      the memory area end address.
+	 * @param[in] data    the memory area data from maps file.
+	 */
+	void addMemoryArea(unsigned long from, unsigned long to, pageflags_data_t* page_data, const std::string& data);
+
+
 public:
+
+	// report header
+	sp_rtrace_header_t header;
 
 	// name of the maps file
 	std::string filename_maps;
@@ -69,8 +83,8 @@ public:
 	// name of the page flags file
 	std::string filename_pageflags;
 
-	// the mapped address space data
-	AddressSpace address_space;
+	// array of the mapped rw memory areas
+	MemoryArea::vector_t memory_areas;
 
 	/**
 	 * Creates a new class instance.

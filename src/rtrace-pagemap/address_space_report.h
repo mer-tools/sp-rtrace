@@ -20,43 +20,53 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA
  */
+#ifndef _ADDRESS_SPACE_REPORT_H_
+#define _ADDRESS_SPACE_REPORT_H_
 
-#ifndef _MEMORY_AREA_H_
-#define _MEMORY_AREA_H_
+#include "trace_data.h"
 
-#include "pagemap.h"
+class AddressSpaceReport
+{
+private:
+	// the current memory area index
+	int index;
 
-#include "sp_rtrace_pagemap.h"
+	// the total number of pages mapped
+	size_t total_pages;
 
-class MemoryArea {
+	TraceData& trace_data;
+
+	/**
+	 * Writes memory area report.
+	 *
+	 * @param[in] area  the memory area.
+	 */
+	void writeMemoryArea(std::ostream& out, MemoryArea* area);
+
+	/**
+	 * Writes page markings legend.
+	 *
+	 * The page markings are single characters, used to display
+	 * the page properties (dirty, swap etc) in address space
+	 * statistics ascii representation.
+	 */
+	void writeLegend(std::ostream& out);
+
 public:
-	enum {
-		READ = 1 << 0,
-		WRITE = 1 << 1,
-		EXECUTE = 1 << 2,
-		SHARED = 1 << 3,
-	};
-
-	typedef std::tr1::shared_ptr<MemoryArea> ptr_t;
-
-	typedef std::vector<ptr_t> vector_t;
-
-	// the memory area start address
-	unsigned long from;
-	// the memory area end address
-	unsigned long to;
-	// address of the memory
-	pageflags_data_t* flags;
-	// the memory are information (taken from maps file)
-	std::string info;
-	// the access permissions, parsed from info strings
-	unsigned int permissions;
 
 	/**
 	 * Creates a new class instance.
 	 */
-	MemoryArea(unsigned long from, unsigned long to, pageflags_data_t* flags, const std::string& info);
+	AddressSpaceReport(TraceData& trace_data);
 
+	/**
+	 * Writes address space statistics report to the specified file.
+	 *
+	 * @param[in] filename   the report file name. The standard output
+	 *                       is used if the filename is empty.
+	 */
+	void write(const std::string& filename);
 };
+
 
 #endif

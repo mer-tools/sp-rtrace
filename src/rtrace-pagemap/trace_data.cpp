@@ -26,6 +26,7 @@
 #include "pagemap.h"
 #include "common/formatter.h"
 #include "library/sp_rtrace_parser.h"
+#include "library/sp_rtrace_defs.h"
 
 #include "sp_rtrace_pagemap.h"
 #include "trace_data.h"
@@ -37,6 +38,7 @@ TraceData::TraceData() :
 	pageflags_fd(0),
 	pageflags_addr(NULL)
 {
+	memset(&header, 0, sizeof(sp_rtrace_header_t));
 }
 
 TraceData::~TraceData()
@@ -49,6 +51,13 @@ void TraceData::release()
 	if (pageflags_addr && pageflags_addr != MAP_FAILED) munmap(pageflags_addr, pageflags_size);
 	if (pageflags_fd > 0) close(pageflags_fd);
 	pageflags_fd = 0;
+
+	sp_rtrace_parser_free_header(&header);
+}
+
+void TraceData::addMemoryArea(unsigned long from, unsigned long to, pageflags_data_t* page_data, const std::string& data)
+{
+	memory_areas.push_back(MemoryArea::ptr_t(new MemoryArea(from, to, page_data, data)));
 }
 
 void* TraceData::getPageflagsData(unsigned long from, unsigned long to)
@@ -76,7 +85,7 @@ void TraceData::scanMemoryAreas()
 		char rights[16];
 		if (sscanf(buffer, "%lx-%lx %[^ ]", &from, &to, rights) == 3) {
 			void* ptr = getPageflagsData(from, to);
-			address_space.addMemoryArea(from, to, static_cast<pageflags_data_t*>(ptr), buffer);
+			addMemoryArea(from, to, static_cast<pageflags_data_t*>(ptr), buffer);
 		}
 	}
 }
@@ -94,6 +103,11 @@ void TraceData::parseReport(const std::string& filename)
 		}
 	}
 	char buffer[4096];
+
+	in.getline(buffer, sizeof(buffer));
+	if (in.eof()) throw std::runtime_error(Formatter() << "Empty input file: " << filename);
+
+	sp_rtrace_parser_parse_header(buffer, &header);
 
 	while (true) {
 		in.getline(buffer, sizeof(buffer));
@@ -127,8 +141,6 @@ void TraceData::parseReport(const std::string& filename)
 
 	// scan the mapped areas from maps/pageflagus files
 	scanMemoryAreas();
-
-	address_space.dump();
 }
 
 

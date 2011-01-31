@@ -480,7 +480,7 @@ static void enable_tracing(bool value)
 		/* copy data from /proc/kpageflags file */
 		sp_rtrace_get_out_filename("pagemap-pageflags", filename, sizeof(filename));
 		sp_rtrace_attachment_t file_kpageflags = {
-				.name = "kpageflags",
+				.name = "pageflags",
 				.path = filename,
 		};
 		int err = cut_kpageflags(filename);
