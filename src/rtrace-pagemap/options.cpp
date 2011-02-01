@@ -28,7 +28,7 @@
 #include "options.h"
 
 Options::Options() :
-	report_address_space(false),
+	report_legend(false),
 	page_size(getpagesize())
 
 {
@@ -43,8 +43,12 @@ void Options::displayUsage()
 		"Where <options> are:\n"
 		"  -i <path>    - the input file path. Standard input used by default.\n"
 		"  -o <path>    - the output directory. Standard output is used by default.\n"
-		"  -a           - address space statistics. Displays information about memory\n"
+		"  -l           - memory area mapping legend. Displays information about memory\n"
 	    "                 pages contained in the mapped areas.\n"
+		"  -d           - allocation per page statistics. Displays percentage of\n"
+		"                 active allocations for each page.\n"
+		"  --highest NN - the number of highest allocations per area to print.\n"
+		"  --lowest NN  - the number of lowest allocations per area to print.\n"
 		"  -h           - this help page.\n"
 			;
 }
@@ -55,14 +59,17 @@ void Options::parseCommandLine(int argc, char* const argv[])
 	struct option long_options[] = {
 			 {"in", 1, 0, 'i'},
 			 {"out", 1, 0, 'o'},
-			 {"address-space", 0, 0, 'a'},
+			 {"legend", 0, 0, 'l'},
+			 {"density", 0, 0, 'd'},
+			 {"lowest", 1, 0, 'L'},
+			 {"highest", 1, 0, 'H'},
 			 {"help", 0, 0, 'h'},
 			 {0, 0, 0, 0},
 	};
 
 	int opt;
 	opterr = 0;
-	while ( (opt = getopt_long(argc, argv, "i:o:ha", long_options, NULL)) != -1) {
+	while ( (opt = getopt_long(argc, argv, "i:o:hld", long_options, NULL)) != -1) {
 		switch (opt) {
 			case 'h': {
 				displayUsage();
@@ -79,8 +86,23 @@ void Options::parseCommandLine(int argc, char* const argv[])
 				break;
 			}
 
-			case 'a': {
-				report_address_space = true;
+			case 'l': {
+				report_legend = true;
+				break;
+			}
+
+			case 'L': {
+				lowest = atoi(optarg);
+				break;
+			}
+
+			case 'H': {
+				highest = atoi(optarg);
+				break;
+			}
+
+			case 'd': {
+				report_density = true;
 				break;
 			}
 

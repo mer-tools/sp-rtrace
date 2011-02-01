@@ -72,6 +72,18 @@ private:
 	void addMemoryArea(unsigned long from, unsigned long to, pageflags_data_t* page_data, const std::string& data);
 
 
+	/**
+	 * Finds memory area covering the specified address.
+	 *
+	 * @param[in] address
+	 * @return              the memory area or NULL if not found.
+	 */
+	MemoryArea* findMemoryArea(pointer_t address);
+
+
+	void storeTrace(std::list<CallEvent*>& events, sp_rtrace_btframe_t* frames, int nframes);
+
+
 public:
 
 	// report header

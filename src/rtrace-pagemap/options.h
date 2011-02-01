@@ -34,10 +34,19 @@ private:
 	std::string in_filename;
 
 	// address space statistics report request
-	bool report_address_space;
+	bool report_legend;
+
+	// density of allocations per page report
+	bool report_density;
 
 	// memory page size
-	int page_size;
+	size_t page_size;
+
+	// number of highest allocations to print
+	int highest;
+
+	// number of lowest allocations to print
+	int lowest;
 
 	/**
 	 * Displays application usage instructions.
@@ -93,8 +102,8 @@ public:
 	 *
 	 * @return   true if address space report is requested.
 	 */
-	bool getReportAddressSpace() {
-		return report_address_space;
+	bool getReportLegend() {
+		return report_legend;
 	}
 
 	/**
@@ -102,8 +111,29 @@ public:
 	 *
 	 * @return
 	 */
-	int getPageSize() {
+	size_t getPageSize() {
 		return page_size;
+	}
+
+	/**
+	 * Retrieves the number of lowest allocations per area to print.
+	 */
+	int getLowestAllocCount() {
+		return lowest;
+	}
+
+	/**
+	 * Retrieves the number of highest allocations per area to print.
+	 */
+	int getHighestAllocCount() {
+		return highest;
+	}
+
+	/**
+	 * Retrieves page allocation density report setting
+	 */
+	int getReportDensity() {
+		return report_density;
 	}
 };
 

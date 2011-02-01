@@ -28,6 +28,10 @@
 
 #include "sp_rtrace_pagemap.h"
 
+#include "library/sp_rtrace_defs.h"
+
+#include "call_event.h"
+
 class MemoryArea {
 public:
 	enum {
@@ -41,6 +45,7 @@ public:
 
 	typedef std::vector<ptr_t> vector_t;
 
+
 	// the memory area start address
 	unsigned long from;
 	// the memory area end address
@@ -52,10 +57,27 @@ public:
 	// the access permissions, parsed from info strings
 	unsigned int permissions;
 
+	// list of allocation events inside area
+	std::list<CallEvent::ptr_t> events;
+
 	/**
 	 * Creates a new class instance.
 	 */
 	MemoryArea(unsigned long from, unsigned long to, pageflags_data_t* flags, const std::string& info);
+
+	/**
+	 * Adds allocation event to area allocation list.
+	 *
+	 * @param[in] call  the allocation event to add.
+	 * @return          reference to the added event.
+	 */
+	CallEvent* addEvent(sp_rtrace_fcall_t& call);
+
+
+	/**
+	 * Sorts the call events by they allocation addresses
+	 */
+	void sortEvents();
 
 };
 

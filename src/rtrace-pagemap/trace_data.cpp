@@ -90,6 +90,41 @@ void TraceData::scanMemoryAreas()
 	}
 }
 
+MemoryArea* TraceData::findMemoryArea(pointer_t address)
+{
+	for (MemoryArea::vector_t::iterator iter = memory_areas.begin(); iter != memory_areas.end(); iter++) {
+		MemoryArea* area = iter->get();
+		if (area->from <= address && area->to > address) return area;
+	}
+	return NULL;
+}
+
+/**
+ * Stores trace data for the list of events.
+ *
+ * @param[in] events
+ * @param[in] frames
+ * @param[in] nframes
+ */
+void TraceData::storeTrace(std::list<CallEvent*>& events, sp_rtrace_btframe_t* frames, int nframes)
+{
+	sp_rtrace_ftrace_t trace = {nframes, NULL, NULL};
+	if (nframes) {
+		trace.frames = new pointer_t[nframes];
+		trace.resolved_names = new char*[nframes];
+
+		for (int i = 0; i < nframes; i++) {
+			trace.frames[i] = frames[i].addr;
+			trace.resolved_names[i] = frames[i].name;
+		}
+	}
+
+	CallTrace::ptr_t call_trace(new CallTrace(trace));
+	for (std::list<CallEvent*>::iterator iter = events.begin(); iter != events.end(); iter++) {
+		(*iter)->setTrace(call_trace);
+	}
+}
+
 void TraceData::parseReport(const std::string& filename)
 {
 	release();
@@ -109,7 +144,7 @@ void TraceData::parseReport(const std::string& filename)
 
 	sp_rtrace_parser_parse_header(buffer, &header);
 
-	while (true) {
+	while (true && (filename_maps.empty() || filename_pageflags.empty()) ) {
 		in.getline(buffer, sizeof(buffer));
 		if (in.eof()) break;
 
@@ -120,7 +155,6 @@ void TraceData::parseReport(const std::string& filename)
 				if (!strcmp(rec.attachment.name, ATTACHMENT_MAPS)) filename_maps = rec.attachment.path;
 				else if (!strcmp(rec.attachment.name, ATTACHMENT_PAGEFLAGS)) filename_pageflags = rec.attachment.path;
 				break;
-
 		}
 		sp_rtrace_parser_free_record(rec_type, &rec);
 	}
@@ -141,6 +175,48 @@ void TraceData::parseReport(const std::string& filename)
 
 	// scan the mapped areas from maps/pageflagus files
 	scanMemoryAreas();
+
+	// scan the allocation events
+	in.seekg(0);
+	std::list<CallEvent*> last_events;
+
+	sp_rtrace_btframe_t frames[512];
+	sp_rtrace_btframe_t* pframe = frames;
+
+	while (true) {
+		in.getline(buffer, sizeof(buffer));
+		if (in.eof()) break;
+
+		sp_rtrace_record_t rec;
+		int rec_type = sp_rtrace_parser_parse_record(buffer, &rec);
+		if (rec_type == SP_RTRACE_RECORD_TRACE) {
+			*pframe++ = rec.frame;
+			continue;
+		}
+		// Store backtrace record for last cached events
+		if ((pframe > frames || !*buffer) && !last_events.empty()) {
+			storeTrace(last_events, frames, pframe - frames);
+			pframe = frames;
+			last_events.clear();
+		}
+
+		if (rec_type == SP_RTRACE_RECORD_CALL) {
+			if (rec.call.type == SP_RTRACE_FTYPE_ALLOC) {
+				MemoryArea* area = findMemoryArea(rec.call.res_id);
+				if (area) {
+					last_events.push_back(area->addEvent(rec.call));
+					continue;
+				}
+			}
+			break;
+		}
+		sp_rtrace_parser_free_record(rec_type, &rec);
+	}
+
+	// sort the allocation events inside areas
+	for (MemoryArea::vector_t::iterator iter = memory_areas.begin(); iter != memory_areas.end(); iter++) {
+		iter->get()->sortEvents();
+	}
 }
 
 

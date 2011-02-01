@@ -30,30 +30,6 @@
 #include "address_space_report.h"
 #include "options.h"
 
-#define PAGES_PER_LINE	(16 * 3)
-
-enum {
-	PAGE_LEGEND_NONDIRTY = 0,
-	PAGE_LEGEND_DIRTY,
-	PAGE_LEGEND_DIRTYZ,
-	PAGE_LEGEND_SWAP,
-	PAGE_LEGEND_SWAPZ,
-
-	PAGE_LEGEND_LAST,
-};
-
-typedef struct {
-	unsigned char mark;
-	const char* desc;
-} report_legend_t;
-
-static report_legend_t report_legend[] = {
-	{' ', "non-dirty page"},
-	{'#', "dirty page in RAM"},
-	{'0', "zeroed dirty page in RAM"},
-	{'S', "swapped page"},
-	{'Z', "swapped zeroed page"},
-};
 
 AddressSpaceReport::AddressSpaceReport(TraceData& trace_data) :
 	total_pages(0),
@@ -65,76 +41,30 @@ void AddressSpaceReport::writeMemoryArea(std::ostream& out, MemoryArea* area)
 {
 	out << index++ << ". " << area->info << "\n\n";
 
-	size_t pages_all = (area->to - area->from) / Options::getInstance()->getPageSize();
-	size_t pages_dirty = 0;
-	size_t pages_dirtyZ = 0;
-	size_t pages_swap = 0;
-	size_t pages_swapZ = 0;
+	writeMemoryMap(out, area);
 
-	// write mapping graph
-	out << std::hex << std::setfill('0');
-	out << "          " << std::string( PAGES_PER_LINE, '-' ) << "\n";
-	for (unsigned int page = 0; page < pages_all; page++) {
-		if ( !(page % PAGES_PER_LINE) ) {
-			if (page) out << "|\n";
-			out << std::setw(8) << page * Options::getInstance()->getPageSize() + area->from << " |";
+	if (Options::getInstance()->getLowestAllocCount() && !area->events.empty()) {
+		out << "Lowest " << Options::getInstance()->getLowestAllocCount() << " allocations:\n";
+		std::list<CallEvent::ptr_t>::iterator iter = area->events.begin();
+		for (int i = 0; i < Options::getInstance()->getLowestAllocCount(); i++) {
+			iter->get()->write(out);
+			iter++;
 		}
-		unsigned int page_mark = PAGE_LEGEND_NONDIRTY;
-		pageflags_data_t* page_data = area->flags + page;
-		if (page_data->info & PAGE_SWAP) {
-			if (page_data->info & PAGE_ZERO) {
-				page_mark = PAGE_LEGEND_SWAPZ;
-				pages_swapZ++;
-			}
-			else {
-				page_mark = PAGE_LEGEND_SWAP;
-				pages_swap++;
-			}
-		}
-		else if (page_data->kflags & BIT(DIRTY)) {
-			if (page_data->info & PAGE_ZERO) {
-				page_mark = PAGE_LEGEND_DIRTYZ;
-				pages_dirtyZ++;
-			}
-			else {
-				page_mark = PAGE_LEGEND_DIRTY;
-				pages_dirty++;
-			}
-		}
-		out << report_legend[page_mark].mark;
+		out << "\n";
 	}
-	out << "|\n" << std::setfill(' ') << std::dec;
-	out << "          " << std::string( PAGES_PER_LINE, '-' ) << "\n\n";
-
-	// write statistics
-	size_t page_sizeKB = Options::getInstance()->getPageSize() / 1024;
-	out << "type:       pages:     kB:  of area:  of all writable:\n";
-
-	out << "all      " << std::setw(8) << pages_all << std::setw(8) << pages_all * page_sizeKB << std::setw(8);
-	out<< 100 << '%' << std::setw(8) << pages_all * 100 / total_pages << "%\n";
-
-	out << "dirty RAM" << std::setw(8) << pages_dirty << std::setw(8) << pages_dirty * page_sizeKB << std::setw(8);
-	out << pages_dirty * 100 / pages_all << '%' << std::setw(8) << pages_dirty * 100 / total_pages << "%\n";
-
-	out << " + zeroed" << std::setw(8) << pages_dirtyZ << std::setw(8) << pages_dirtyZ * page_sizeKB << std::setw(8);
-	out << pages_dirtyZ * 100 / pages_all << '%' << std::setw(8) << pages_dirtyZ * 100 / total_pages << "%\n";
-
-	out << "swapped  " << std::setw(8) << pages_swap << std::setw(8) << pages_swap * page_sizeKB << std::setw(8);
-	out << pages_swap * 100 / pages_all << '%' << std::setw(8) << pages_swap * 100 / total_pages << "%\n";
-
-	out << " + zeroed" << std::setw(8) << pages_swapZ << std::setw(8) << pages_swapZ * page_sizeKB << std::setw(8);
-	out << pages_swapZ * 100 / pages_all << '%' << std::setw(8) << pages_swapZ * 100 / total_pages << "%\n";
+	if (Options::getInstance()->getHighestAllocCount() && !area->events.empty()) {
+		out << "Highest " << Options::getInstance()->getHighestAllocCount() << " allocations:\n";
+		std::list<CallEvent::ptr_t>::iterator iter = area->events.end();
+		for (int i = 0; i < Options::getInstance()->getHighestAllocCount(); i++) {
+			iter--;
+			iter->get()->write(out);
+		}
+		out << "\n";
+	}
 
 	out << "\n";
 }
 
-void AddressSpaceReport::writeLegend(std::ostream& out)
-{
-	out << "\nLegend for the characters used in the memory mapping above:\n";
-	for (int i = 0; i < PAGE_LEGEND_LAST; i++) {
-		out << "  '" << report_legend[i].mark << "' : " << report_legend[i].desc << "\n";
-	}
-}
 
 void AddressSpaceReport::write(const std::string& filename)
 {
@@ -150,7 +80,10 @@ void AddressSpaceReport::write(const std::string& filename)
 	out << "SP-RTRACE PAGEMAP REPORT\n"
 		   "========================\n\n"
 			"Writable memory areas and their pages mapped to process:\n";
-	out << "\t[" << trace_data.header.fields[SP_RTRACE_HEADER_PID] << "] " << trace_data.header.fields[SP_RTRACE_HEADER_PROCESS] << "\n\n\n";
+	out << "\t[" << trace_data.header.fields[SP_RTRACE_HEADER_PID] << "] " << trace_data.header.fields[SP_RTRACE_HEADER_PROCESS] << "\n\n";
+
+	// write the memory area graph legend
+	writeLegend(out);
 
 	// count the total number of mapped pages
 	total_pages = 0;
@@ -170,8 +103,6 @@ void AddressSpaceReport::write(const std::string& filename)
 		}
 	}
 
-	// write the memory area graph legend
-	writeLegend(out);
 }
 
 
