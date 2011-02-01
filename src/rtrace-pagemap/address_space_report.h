@@ -27,7 +27,10 @@
 
 class AddressSpaceReport
 {
-private:
+protected:
+
+	enum {PAGES_PER_LINE = (16 * 3)};
+
 	// the current memory area index
 	int index;
 
@@ -43,6 +46,15 @@ private:
 	 */
 	void writeMemoryArea(std::ostream& out, MemoryArea* area);
 
+
+protected:
+
+
+	/**
+	 * Writes the memory map.
+	 */
+	virtual void writeMemoryMap(std::ostream& out, MemoryArea* area) = 0;
+
 	/**
 	 * Writes page markings legend.
 	 *
@@ -50,7 +62,7 @@ private:
 	 * the page properties (dirty, swap etc) in address space
 	 * statistics ascii representation.
 	 */
-	void writeLegend(std::ostream& out);
+	virtual void writeLegend(std::ostream& out) = 0;
 
 public:
 

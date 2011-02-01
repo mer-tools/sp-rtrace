@@ -33,7 +33,8 @@
 #include "pagemap.h"
 #include "options.h"
 #include "trace_data.h"
-#include "address_space_report.h"
+#include "legend_report.h"
+#include "density_report.h"
 
 int main(int argc, char* const argv[])
 {
@@ -43,9 +44,16 @@ int main(int argc, char* const argv[])
 		TraceData trace_data;
 		trace_data.parseReport(Options::getInstance()->getInFilename());
 
-		if (Options::getInstance()->getReportAddressSpace()) {
-			AddressSpaceReport report(trace_data);
-			report.write(Options::getInstance()->getOutFilename());
+		AddressSpaceReport* report = NULL;
+		if (Options::getInstance()->getReportDensity()) report = new DensityReport(trace_data);
+		else if (Options::getInstance()->getReportLegend()) {
+			report = new LegendReport(trace_data);
+		}
+		if (report) {
+			report->write(Options::getInstance()->getOutFilename());
+		}
+		else {
+			std::cerr << "No report type given\n";
 		}
 	}
 	catch (std::ifstream::failure e) {

@@ -24,6 +24,19 @@
 
 #include "memory_area.h"
 
+/**
+ * Compares call events by the allocation address.
+ *
+ * @param[in] first   the first call event.
+ * @param[in] second  the second call event.
+ * @return            false, if the first event allocation address is less than second.
+ */
+static bool compare_res_id(CallEvent::ptr_t first, CallEvent::ptr_t second)
+{
+	if (first->call.res_id < second->call.res_id) return true;
+	return false;
+}
+
 MemoryArea::MemoryArea(unsigned long from, unsigned long to, pageflags_data_t* flags, const std::string& info) :
 	from(from),
 	to(to),
@@ -39,4 +52,19 @@ MemoryArea::MemoryArea(unsigned long from, unsigned long to, pageflags_data_t* f
 		if (info[npos + 4] == 's') permissions |= SHARED;
 	}
 }
+
+
+CallEvent* MemoryArea::addEvent(sp_rtrace_fcall_t& call)
+{
+	CallEvent::ptr_t event(new CallEvent(call));
+	events.push_back(event);
+	return event.get();
+}
+
+
+void MemoryArea::sortEvents()
+{
+	events.sort(compare_res_id);
+}
+
 

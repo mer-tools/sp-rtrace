@@ -20,48 +20,30 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA
  */
+#ifndef _LEGEND_REPORT_H_
+#define _LEGEND_REPORT_H_
 
-#ifndef _SP_RTRACE_PAGEMAP_H_
-#define _SP_RTRACE_PAGEMAP_H_
+#include "pagemap.h"
+#include "address_space_report.h"
 
-#include <stdint.h>
+class LegendReport : public AddressSpaceReport
+{
+public:
 
-/**
- * Additional page information flags.
- */
-enum pageinfo_t {
-	PAGE_SWAP = 1 << 0,  //!< PAGE_SWAP
-	PAGE_MEMORY = 1 << 1,//!< PAGE_MEMORY
-	PAGE_ZERO = 1 << 2,  //!< PAGE_ZERO
+	/**
+	 * Creates a class instance.
+	 */
+	LegendReport(TraceData& data);
+
+	/**
+	 * @copydoc AddressSpaceReport::writeLegend
+	 */
+	void writeLegend(std::ostream& out);
+
+	/**
+	 * @copydoc AddresssSpaceReport::writeMemoryMap
+	 */
+	void writeMemoryMap(std::ostream& out, MemoryArea* area);
 };
 
-/**
- * Memory page data.
- */
-typedef struct {
-	/* page information (pageinfo_t enum) */
-	unsigned int info;
-	/* page flags (from /proc/kpageflags */
-	uint64_t kflags;
-} pageflags_data_t;
-
-/**
- * Memory page data header.
- *
- * This structure contains information about the memory area
- * described by the following page data.
- */
-// TODO: change addresses to long
-typedef struct {
-	/* the memory are start address */
-	unsigned int from;
-	/* the memory area end address */
-	unsigned int to;
-	/* size of the following page data */
-	unsigned int size;
-} pageflags_header_t;
-
-
 #endif
-
-
