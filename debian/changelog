@@ -1,15 +1,23 @@
 sp-rtrace (1.4) unstable; urgency=low
 
-  * debug package, compiler option, x86 reliability and memory leak fixes
+  * Debug package, compiler option, x86 reliability and memory leak fixes
     Fixes: NB#216303
-  * "origin" field added to text format header (NB#215920)
-  * rtrace-calltree regexps fixed to accept functracer traces
-  * new module for tracing POSIX shared memory mappings
+  * "origin" field added to text format header. Fixes NB#215920
+  * HTML and histogram reports removed from rtrace-calltree. Former isn't
+    really useful and latter functionality is now in sp-rtrace-timeline
+  * Major rtrace-calltree speed improvement for large traces
+  * Post-processing tools updated to accept audit traces where
+    traced functions have C++ signatures
+  * sp-rtrace-timeline --scalex option value is now in percentages
+    and resource life-time timeline Y-axis is logarithmic
+  * New module and post-processing tools to track which of the process.
+    memory pages are dirty and whether they're zeroed.  Added trace file
+    format support for references to additional data files
+  * New module for tracing POSIX shared memory mappings
   * SYSV shared memory module reports "shmctl(...,IPC_RMID,...)" events
-  * resource life-time timeline Y-axis is logarithmic
-  * documentation updates
+  * Documentation updates and MeeGo compatibility fixes
 
- -- Tommi Rantala <ext-tommi.1.rantala@nokia.com>  Fri, 07 Jan 2010 16:56:59 +0200
+ -- Tommi Rantala <ext-tommi.1.rantala@nokia.com>  Mon, 07 Feb 2011 17:46:59 +0200
 
 sp-rtrace (1.3) unstable; urgency=low
 
