@@ -3,7 +3,7 @@
 #
 # This file is part of sp-rtrace.
 #
-# Copyright (C) 2005-2007,2009,2010 by Nokia Corporation
+# Copyright (C) 2005-2007,2009-2011 by Nokia Corporation
 #
 # Contact: Eero Tamminen <eero.tamminen@nokia.com>
 #
@@ -158,6 +158,11 @@
 # 2010-11-01:
 # - Ignore frees completely, don't count them as zero sized allocs
 #   (use -1 for free sizes and ignoring stack with negative sizes)
+# 2011-02-07:
+# - Remove HTML report as useless
+# - Remove histogram reports and median alloc size calculation
+#   as they're now done by sp-rtrace-timeline
+# - Change lists to hashes to speedup parsing of large traces
 #
 # Originally this file (alloc-tree) was a part of libleaks package, but
 # renamed and moved to the sp-rtrace package during libleaks redesign.
@@ -193,7 +198,7 @@ class TotalStats:
     def zero(self):
         "zero/initialize statistics"
         self.sizes = []
-        self.median = 0
+        self.sizeitems = {}
         self.count = 0
         self.size = 0
         self.overhead = 0
@@ -204,22 +209,25 @@ class TotalStats:
         size = 0
         for s in sizes:
             size += s
-        if size >= 0:
-            self.sizes += sizes
+            if s in self.sizeitems:
+                self.sizeitems[s] += 1
+            else:
+                self.sizeitems[s] = 1
         return size
 
     def complete(self):
         "calculate memory allocation count, overhead, total and median"
-        self.sizes.sort()
-        self.count = len(self.sizes)
+        self.count = sum(self.sizeitems.itervalues())
         if not self.count:
+            self.zero()
             return
-        self.median = self.sizes[self.count/2]
+
         self.overhead = self.count * self.alloc_overhead
-        self.size = 0
-        for amount in self.sizes:
-            self.size += amount
+        self.size = sum([int(size)*count for size,count in self.sizeitems.iteritems()])
         self.size_with_overhead = self.size + self.overhead
+
+        self.sizes = self.sizeitems.keys()
+        self.sizes.sort()
 
 # ----------- Single backtrace node in all-items hash ----------
 
@@ -227,12 +235,12 @@ class Node:
     def __init__(self, name, size, count, trace_id):
         "initialize node with name, size & count"
         # updated while nodes are being added to Graph
-        self.traces = [trace_id] # backtrace IDs
+        self.traces = {trace_id: True} # backtrace IDs
         self.count = count      # number of allocations done in this node
         self.size = size        # sum of allocations done in this node
         self.name = name        # node function name / hash ID
-        self.children = []      # child node hash IDs
-        self.parents = []       # parent node hash IDs
+        self.children = {}      # child node hash IDs
+        self.parents = {}       # parent node hash IDs
         # these are filled after all nodes have been added to Graph
         self.nid = 0            # node ID
         self.leafnode = 0       # set if node has no children or no parents
@@ -258,34 +266,48 @@ class Node:
         self.count += count
         self.size += size
 
+    def child_list(self):
+        "return list of node children"
+        return self.children.keys()
+
+    def parent_list(self):
+        "return list of node parents"
+        return self.parents.keys()
+
     def add_child(self, fun_name):
         "add given child to node"
-        if fun_name not in self.children:
-            self.children.append(fun_name)
+        self.children[fun_name] = True
 
     def add_parent(self, fun_name):
         "add given parent to node"
-        if fun_name not in self.parents:
-            self.parents.append(fun_name)
+        self.parents[fun_name] = True
 
     def remove_child(self, fun_name):
         "removes given child from node"
         if fun_name in self.children:
-            self.children.remove(fun_name)
+            del(self.children[fun_name])
         else:
             error_exit("function '%s' not in node children" % fun_name)
 
     def remove_parent(self, fun_name):
         "removes given parent from node"
         if fun_name in self.parents:
-            self.parents.remove(fun_name)
+            del(self.parents[fun_name])
         else:
             error_exit("function '%s' not in node parents" % fun_name)
+
+    def remove_children(self):
+        "remove all node children"
+        self.children = {}
+
+    def remove_parents(self):
+        "remove all node parents"
+        self.parents = {}
 
     def add_trace(self, trace_id):
         "add given trace id to node or return False if it already was in"
         if trace_id not in self.traces:
-            self.traces.append(trace_id)
+            self.traces[trace_id] = True
             return True
         else:
             return False
@@ -406,8 +428,8 @@ class Graph:
         """if node has only one parent and child, add it to remove list
         and relink surrounding nodes"""
         if len(node.parents) == 1 and len(node.children) == 1:
-            parent_name = node.parents[0]
-            child_name = node.children[0]
+            parent_name = node.parent_list()[0]
+            child_name = node.child_list()[0]
             if parent_name == child_name:
                 return
             parent = self.nodes[parent_name]
@@ -418,8 +440,8 @@ class Graph:
             child.remove_parent(name)
             parent.add_child(child_name)
             child.add_parent(parent_name)
-            node.parents = []
-            node.children = []
+            node.remove_parents()
+            node.remove_children()
             #debug("Removing intermediate node: '%s'" % name)
             remove[name] = 1
         
@@ -430,16 +452,16 @@ class Graph:
         # remove reference and leaf node, and check next
         # node in the same direction
         while (not len(node.parents)) and (len(node.children) == 1):
-            child = self.nodes[node.children[0]]
+            child = self.nodes[node.child_list()[0]]
             child.remove_parent(node.name)
-            node.children = []
+            node.remove_children()
             #debug("Removing leaf node without parents: '%s'" % node.name)
             remove[node.name] = 1
             node = child
         while (not len(node.children)) and (len(node.parents) == 1):
-            parent = self.nodes[node.parents[0]]
+            parent = self.nodes[node.parent_list()[0]]
             parent.remove_child(node.name)
-            node.parents = []
+            node.remove_parents()
             #debug("Removing leaf node without children: '%s'" % node.name)
             remove[node.name] = 1
             node = parent
@@ -500,13 +522,15 @@ class Rtrace:
         # format: from <library/binary file>
         pos1 = libname.rfind("/")
         if pos1 >= 0:
-            libname = libname[pos1+1:]
+            pos1 += 1
         elif libname.startswith(" from "):
-            libname = libname[6:]
+            pos1 = 6
+        else:
+            pos1 = 0
         pos2 = libname.rfind(".so")
         if pos2 > 0:
-            return libname[:pos2]
-        return libname.strip()
+            return libname[pos1:pos2]
+        return libname[pos1:].strip()
 
     def trace_strip(self, line, joins):
         "return relevant information from GDB style backtrace line"
@@ -755,9 +779,9 @@ label="%s";
         self.prev = self.next_down
 
     def next_up(self, node):
-        return node.parents
+        return node.parent_list()
     def next_down(self, node):
-        return node.children
+        return node.child_list()
 
     def node_ok(self, node):
         "override in subclass to limit which nodes are output"
