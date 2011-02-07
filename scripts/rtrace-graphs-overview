@@ -5,7 +5,7 @@
 #
 # This file is part of sp-rtrace.
 #
-# Copyright (C) 2006,2007,2010,2011 by Nokia Corporation
+# Copyright (C) 2006-2007,2010-2011 by Nokia Corporation
 #
 # Contact: Eero Tamminen <eero.tamminen@nokia.com>
 #
@@ -55,7 +55,10 @@
 # 2010-12-10
 # - Use the new C++ timeline utility instead of the Python one
 # 2011-01-10
-# - retain rtrace.txt extension for post-processed files
+# - Retain rtrace.txt extension for post-processed files
+# 2011-02-07
+# - Improve helper output and ignore in callgraphs all libs without
+#   function name to avoid recursion in the graphs
 
 usage ()
 {
@@ -419,13 +422,13 @@ for src in $callgraphs; do
 	# Try to reduce overview to reasonable amount of nodes:
 	# - use fairly large node alloc percentage limit
 	# - remove all nodes related to code "book keeping"
-	# - don't show many nodes below limit were called
-	#   (means alloc amounts don't add up though...)
+	# - remove library nodes without functions names as
+	#   these often result in unreadable recursion loops
 	rtrace-calltree \
-		--type=graph --limit=5 --emph-limit=10 \
+		--type=graph --limit=5 --emph-limit=10 --ignore=lib \
 		--ignore-libc-allocs=yes --ignore-glib-internals=yes \
-		--ignore-qt-internals=yes --ignore="libmeegotouch" \
-		--show-below-limit=no $resolved $src > $dst.tmp
+		--ignore-qt-internals=yes --show-below-limit=yes \
+		$resolved $src > $dst.tmp
 	if [ $? -ne 0 ]; then
 		echo "  ERROR: callgraph creation failed!"
 		rm $dst.tmp
@@ -486,10 +489,10 @@ if [ $count -eq 0 ]; then
 	echo "         files needed processing."
 	echo
 	echo "Remove these to get images re-created:"
-	ls $dir/*-timeline-*.png $dir/*-callgraph.svg
+	ls $dir/*-timeline-*.png $dir/*-callgraph.svg 2> /dev/null|sed 's/^/- /'
 	echo
 	echo "Remove these to get them and the data re-post-processed:"
-	ls *-timeline.rtrace.txt *-callgraph.rtrace.txt
+	ls $timelines $callgraphs|sed 's/^/- /'
 	exit 1
 fi
 
@@ -499,13 +502,16 @@ if [ -z "$timelines" ]; then
 else
 	echo "TIMELINE REPORTS:"
 	reports=""
-	for i in $timelines; do
-		name=${i##*/}
-		name=${name%.rtrace.txt}
+	for src in $timelines; do
+		trace_basename $src
 		# '*' wildcard, so need to use ls (not xargs) below
-		reports="$reports $dir/$name-*.png"
+		reports="$reports $dir/${base##*/}-*.png"
 	done
 	ls $reports|sed 's/^/- /'
+	echo
+	echo "Please use the 'sp-rtrace-timeline' tool and its --scalex & --filter-*"
+	echo "options to get more detailed histogram and timeline information for:"
+	ls $timelines|sed 's/^/- /'
 fi
 
 echo
@@ -513,9 +519,9 @@ if [ -z "$callgraphs" ]; then
 	echo "No callgraph reports could be generated."
 else
 	echo "CALLGRAPH REPORTS:"
-	for i in $callgraphs; do
-		name=${i##*/}
-		echo $dir/${name%.rtrace.txt}.svg
+	for src in $callgraphs; do
+		trace_basename $src
+		echo $dir/${base##*/}-callgraph.svg
 	done|xargs ls|sed 's/^/- /'
 	echo
 	echo "Please use the 'rtrace-graphs-function' script to get more detailed"
