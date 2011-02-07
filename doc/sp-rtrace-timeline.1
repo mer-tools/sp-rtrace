@@ -1,14 +1,18 @@
-.TH RTRACE-TIMELINE 1 "2010-08-03" "sp-rtrace"
+.TH SP-RTRACE-TIMELINE 1 "2011-02-07" "sp-rtrace"
 .SH NAME
-rtrace-timeline - create resource usage total, activity, lifetime and histogram reports.
+sp-rtrace-timeline - create resource usage total, activity, lifetime and histogram reports.
 .SH SYNOPSIS
-rtrace-timeline -t|-a|-l|-c|-s <options> [-i <infile>] [-o <outfile>]
+sp-rtrace-timeline -t|-a|-l|-c|-s <options> [-i <infile>] [-o <outfile>]
 .SH DESCRIPTION
-rtrace-timeline script is used to create resource allocation totals, 
+sp-rtrace-timeline tool can be used to create resource allocation totals, 
 activity, lifetime and histogram statistics reports:
 .RS
 .IP -t
-Totals report displays total resource usage during the time period.
+Totals report displays total (non-freed) resource usage during the time period.
+.PP
+If total isn't close to the system reported process heap usage, heap is
+most likely fragmented and needs to be analyzed with the sp-rtrace
+pagemap tool.
 .IP -a
 Activity report displays resource allocation/deallocation activity per time
 slice during the time period. The activity values usually are plotted
@@ -19,16 +23,26 @@ deallocation time.
 .IP -c
 Statistics report displays histogram containing number of allocations per
 allocation size.
+.PP
+Allocation counts are useful for detecting code doing potentially
+redundant allocations, these can be further analyzed with
+.I rtrace-calltree
+script and its
+.I --size-range
+option.
 .IP -s
 Statistics report displays histogram containing total size of allocations per
 allocation size.
 .RE
 
-Note that it's possible to generate multiple reports at the same time by specifying more
-than one report generation option (-t, -a, -l -c, -s). In this mode output file (-o)
-should be always specified and the report filenames will have the follwing format:
-<filename>-<totals|activity|lifetime|histogram-(count|size)>.<eps|png> where <filename>
-is the specified output file.
+Note that it's possible to generate multiple reports at the same time
+by specifying more than one report generation option (-t, -a, -l -c, -s).
+In this mode the output file (-o) should be always specified and the
+report filenames will have the follwing format:
+.br
+<filename>-<totals|activity|lifetime|histogram-(count|size)>.<eps|png>
+.br
+where <filename> is the specified output file.
 
 .SS Options:
 .TP 
@@ -100,9 +114,10 @@ the other filters (for filter end values). Time filter examples:
 .RE
 
 .SH SEE ALSO
-.IR rtrace-calltree
+.IR rtrace-calltree,
+.IR rtrace-graphs-overview
 .SH COPYRIGHT
-Copyright (C) 2010 Nokia Corporation.
+Copyright (C) 2010-2011 Nokia Corporation.
 .PP
 This is free software.  You may redistribute copies of it under the
 terms of the GNU General Public License v2 included with the software.
