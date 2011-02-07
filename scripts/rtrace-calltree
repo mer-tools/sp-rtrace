@@ -167,7 +167,7 @@ CALLTREE
 
 This script reads non-freed resources allocations from sp-rtrace and
 internally accumulates these to functions up in the listed backtraces.
-It can then produce a variety of reports from which you can see which
+It can then produce a variety of callgraphs from which you can see which
 of the functions account for most of the resource usage and how the
 resource allocations are divided between the functions they call.
 """
@@ -697,323 +697,6 @@ class Rtrace:
 
         return (graph, ignored)
 
-# -------------- HTML report output -------------------------
-
-class HtmlReport:
-    def __init__(self, traverse, stats, options):
-        self.traverse = traverse
-        self.limit = options.limit
-        self.stats = stats
-
-    def header(self):
-        "output html header"
-        print """
-<html>
-<head><title>Allocation tree for rtrace report</title></head>
-<body>
-<h1>Allocation tree for rtrace report</h1>
-        """
-
-    def footer(self):
-        "output html footer"
-        print "</html>"
-
-        
-    def overview(self):
-        "output html overview section"
-        count = self.stats.count
-        size = self.stats.size
-        overhead = self.stats.overhead
-        total_size = self.stats.size_with_overhead
-        alloc_overhead = self.stats.alloc_overhead
-        median = self.stats.median
-        print """
-<h2>Overview</h2>
-
-<p>Total counts for the rtrace use-case report:
-<table border="1" cellpadding="2">
-<tr><td>Number of allocations:</td><td align="right">%d</td></tr>
-<tr><td>Sum of all allocations:</td><td align="right">%d bytes</td></tr>
-<tr><td>Calculated allocation overhead*:</td><td align="right">%d bytes</td></tr>
-<tr><td>Total memory usage:</td><td align="right"><b>%d</b> bytes</td></tr>
-</table>
-
-<p>*Allocation overhead is calculated with an estimated single
-allocation overhead of %d bytes.  Median allocation size is %d bytes.
-
-<h3>Notes</h3>
-
-<p>Percentages below show how much each function (and whatever it
-calls within the use-case) contributes to the total size of all
-allocations, including the estimated allocation overhead, whereas
-the sizes shown do not include the allocation overhead (but you
-can count it yourself with the size+count*overhead).
-
-<p>Note that if backtraces do not extend to main(), the total of
-all "top-level" function allocation might not match the total
-allocations in the use-case.  Also, if some backtraces go through
-same functions, you may notice that the amount of allocations suddenly
-increases when you go down from the main().
-        """ % (count, size, overhead, total_size, alloc_overhead, median)
-
-
-    def recurse_tree(self, root_keys, trace, root_name, root_id):
-        "outputs the given allocation tree as hyperlinked HTML"
-        # get the subtree information
-        showlist = []
-        for key in root_keys:
-            # returns None if this doesn't belong to right trace
-            node, next = self.traverse.get_node_next(trace, key)
-            if not node:
-                continue
-            # tuples are sorted according to first item
-            showlist.append((node.percentage, node, next))
-        # sort according to size percentage, descending
-        showlist.sort()
-        showlist.reverse()
-        # no nodes in tree or even largest item's percentage is too small
-        if not showlist or showlist[0][0] < self.limit:
-            return
-
-        print "<hr>"
-        if trace:
-            if len(trace) > 1:
-                parent_id = self.traverse.get_node_id(trace[-1])
-            else:
-                parent_id = 0
-            print "<a name=\"N%d-%d\"></a>" % (root_id, parent_id)
-        # print the backtrace leading to this
-        print "<p><i>This backtrace:</i><br>"
-        for line in trace:
-            print "%s<br>" % line
-        print "<b>%s</b><br>" % root_name
-        # need to copy the backtrace, it's a reference
-        trace = trace[:] + [root_name]
-        
-        # print the allocating functions
-        print "<p><i>%s:</i>" % self.traverse.funlist_header
-        print "<table border=\"1\" cellpadding=\"2\">"
-        print "<tr><th>Percentage:</th><th>Size:</th><th>Count:</th><th>Funtion:</th></tr>"
-        last = 0
-        recursed = []
-        for percentage,node,next in showlist:
-            if percentage >= self.limit:
-                print "<tr align=\"right\">"
-                print "<td>%.1f%%</td>" % percentage
-                print "<td>%dB</td>" % node.size
-                print "<td>%d</td>" % node.count
-                # no next item(s)?
-                if not next:
-                    print "<td align=left>%s</td>" % node.name
-                # do not recurse i.e. is this function is in preceding trace?
-                elif node.name in trace:
-                    print "<td align=left>%s (recursed)</td>" % node.name
-                    recursed.append(last)
-                else:
-                    print "<td align=left><a href=\"#N%d-%d\">%s</a></td>" % (node.nid, root_id, node.name)
-                last += 1
-                print "</tr>"
-            else:
-                # FIXME: only if options.show_below_limit is set
-                funs = 0
-                size = 0
-                count = 0
-                percentage = 0
-                for percent,node,next in showlist[last:]:
-                    percentage += percent
-                    size += node.size
-                    count += node.count
-                    funs += 1
-                print "<tr align=\"right\">"
-                print "<td>%.1f%%</td>" % percentage
-                print "<td>%dB</td>" % size
-                print "<td>%d</td>" % count
-                print "<td align=left>%d other insignificant functions</td>" % funs
-                print "</tr>"
-                # rip insignificant functions out of showlist
-                showlist = showlist[:last]
-                break
-        print "</table>"
-
-        # you cannot remove items while iterating, so do it now
-        recursed.reverse()
-        for i in recursed:
-            del(showlist[i])
-
-        prev_keys = self.traverse.prev_keys(root_name)
-        if len(prev_keys) > 1:
-            print "<p>You can get here through:<ul>"
-            for key in prev_keys:
-                nid = self.traverse.get_node_id(key)
-                print "<li><a href=\"#N%d\">%s</a>" % (nid, key)
-            print "</ul>"
-
-        # print the 'children'
-        for percentage,node,next in showlist:
-            self.recurse_tree(next, trace, node.name, node.nid)
-
-    def output(self):
-        "outputs the given allocation tree as HTML page"
-        self.header()
-        self.overview()
-        self.recurse_tree(self.traverse.root_keys(), [], self.traverse.root_name, 0)
-        self.footer()
-
-# ------------- Graph access for HTML Reports ------------------
-
-class Traverse:
-    def __init__(self):
-        self.graph = None # override in subclasses to do anything
-    
-    def root_keys(self):
-        "override in subclasses to specify what nodes to traverse"
-        return None
-    
-    def get_node_id(self, key):
-        return self.graph.nodes[key].nid
-    
-    def get_node(self, trace, key):
-        "return node corresponding to key if it is valid for this trace"
-        if key not in self.graph.nodes:
-            error_exit("key '%s' not in nodes" % key)
-        node = self.graph.nodes[key]
-        tracelen = len(trace)
-        if tracelen > 1:
-            found = 0
-            pnode = self.graph.nodes[trace[tracelen-1]]
-            for trace in pnode.traces:
-                if trace in node.traces:
-                    found = 1
-                    break
-            # ignore nodes which don't belong to same trace with parent
-            if not found:
-                #debug("DEBUG: key '%s' not under parent '%s'" % (key, parent))
-                return None
-        return node
-
-class TraverseUp(Traverse):
-    def __init__(self, graph):
-        self.graph = graph
-        self.funlist_header = "Called from the following functions"
-        self.root_name = "BOTTOM-ROOT"
-
-    def root_keys(self):
-        return self.graph.get_bottom_nodes()
-    
-    def prev_keys(self, key):
-        if key == self.root_name:
-            return []
-        return self.graph.nodes[key].children
-    
-    def get_node_next(self, trace, key):
-        node = self.get_node(trace, key)
-        if node:
-            return (node, node.parents)
-        else:
-            return (None, 0)
-
-class TraverseDown(Traverse):
-    def __init__(self, graph):
-        self.graph = graph
-        self.funlist_header = "Calls the following functions"
-        self.root_name = "TOP-ROOT"
-
-    def root_keys(self):
-        return self.graph.get_top_nodes()
-    
-    def prev_keys(self, key):
-        if key == self.root_name:
-            return []
-        return self.graph.nodes[key].parents
-    
-    def get_node_next(self, trace, key):
-        node = self.get_node(trace, key)
-        if node:
-            return (node, node.children)
-        else:
-            return (None, 0)
-
-# --------------- Statistics output --------------------
-
-class AsciiReport:
-    "shows the size histogram and some statistics"
-    def __init__(self, stats, options):
-        self.stats = stats
-        self.stype = options.stats  # statistics type
-        self.width = 60             # columns reserved for histogram
-    
-    def header(self):
-        "output histogram header"
-        if self.stype == "count":
-            s = "Number of allocations"
-        else:
-            s = "Total of: number of allocs * (size + alloc overhead)"
-        print """
-Statistics about the allocations
-================================
-
- size:  | %s:
---------|------------------------------------------------------------------""" % s
-    
-    def histogram(self):
-        "calculate histogram info and output histogram"
-        sizelist = []
-        sizecount_max = count_max = count = 0
-        overhead = self.stats.alloc_overhead
-        size = self.stats.sizes[0]      # sizes are sorted
-        for amount in self.stats.sizes:
-            if amount == size:
-                count += 1
-                continue
-            if count > count_max:
-                count_max = count
-            sizecount = (size + overhead) * count
-            if sizecount > sizecount_max:
-                sizecount_max = sizecount
-            sizelist.append((size, count, sizecount))
-            size = amount
-            count = 1
-        if count > count_max:
-            count_max = count
-        sizecount = (size + overhead) * count
-        if sizecount > sizecount_max:
-            sizecount_max = sizecount
-        sizelist.append((size, count, sizecount))
-        if self.stype == "count":
-            for size, count, sizecount in sizelist:
-                bar = (self.width*count/count_max) + 1
-                print "%7d | %s (%d)" % (size, '#'*bar, count)
-        else:
-            for size, count, sizecount in sizelist:
-                bar = (self.width*sizecount/sizecount_max) + 1
-                print "%7d | %s (%d)" % (size, '#'*bar, sizecount)
-
-    def footer(self):
-        "output histogram footer/statistics"
-        median = self.stats.median
-        count = self.stats.count
-        overhead = self.stats.overhead
-        size = self.stats.size
-        total_size = self.stats.size_with_overhead
-        alloc_overhead = self.stats.alloc_overhead
-        print """
-Median allocation size is %d.
-
-Number of allocations  = %6d
-Allocations overhead   = %6d bytes*
-Sum of all allocations = %6d bytes
--------------------------------------
-Allocations + overhead = %6d bytes
-
-*allocation overhead is calculated as %d bytes per allocation.
-""" % (median, count, overhead, size, total_size, alloc_overhead)
-    
-    def output(self):
-        "call the output methods"
-        self.header()
-        self.histogram()
-        self.footer()
-
 # --------------- GraphViz output reports -----------------
 
 class GraphvizReport:
@@ -1222,8 +905,7 @@ class Options:
     size_max = 0xEFFF	# maximum alloc size to include
     emph_limit = 60     # maximum percentage of total to emphasize
     own_allocs = 1.2    # factor by how much own allocs can exceed child allocs
-    stats = "count"     # statistics report histogram type
-    report = "stats"    # report type
+    report = "graph"    # report type
     direction = "tb"    # traversal direction
     leafs = True            # leave out leaf nodes with only 1 parent?
     intermediate = True     # leave out intermediate nodes?
@@ -1368,13 +1050,8 @@ class Options:
                 self.progress = self.get_bool(name, arg, value)
             elif option == "verbose":
                 self.verbose = self.get_bool(name, arg, value)
-            elif option == "stats":
-                if value in ["count", "total"]:
-                    self.stats = value
-                else:
-                    self.help(name, "unknown 'stats' report type", arg)
             elif option == "type":
-                if value in ["stats", "graph", "html", "topmost"]:
+                if value in ["graph", "topmost"]:
                     self.report = value
                 else:
                     self.help(name, "unknown report type", arg)
@@ -1446,15 +1123,8 @@ class Options:
 Options for report output type and looks:
 
     --type=value, value is one of following report types:
-        stats -- outputs ASCII allocation histogram and statistics (default)
-        graph -- outputs a graph of largest allocations
-        html  -- outputs hyperlinked backtraces sorted according to
-                 allocation sizes (as percentage of total allocs)
+        graph -- outputs a graph of largest allocations (default)
         topmost -- outputs a graph of topmost allocations backtraces
-
-    --stats=value, value is either "count" or "total" depending on whether
-        you want the histogram to show graphically the number of the given
-        sized allocations or how much they take memory (with alloc overhead).
 
     --direction=value, value is one of:
         tb -- top to bottom i.e. from main() towards malloc()  (default)
@@ -1620,22 +1290,12 @@ if __name__ == "__main__":
     graph.trim(options)
     
     debug("Writing report...")
-    if options.report == "stats":
-        report = AsciiReport(stats, options)
-    elif options.report in ["topmost", "graph"]:
-        if options.report == "graph":
-            report = AllocGraphReport(graph, options)
-        else:
-            report = TopmostGraphReport(graph, options)
-        if options.direction == "tb":
-            report.set_direction_tb()
-        else:
-            report.set_direction_bt()
-    elif options.report == "html":
-        if options.direction == "tb":
-            traverse = TraverseDown(graph)
-        else:
-            traverse = TraverseUp(graph)
-        report = HtmlReport(traverse, stats, options)
-    
+    if options.report == "graph":
+        report = AllocGraphReport(graph, options)
+    else:
+        report = TopmostGraphReport(graph, options)
+    if options.direction == "tb":
+        report.set_direction_tb()
+    else:
+        report.set_direction_bt()
     report.output()
