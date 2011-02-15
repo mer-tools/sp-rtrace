@@ -41,7 +41,7 @@
 #include "htable.h"
 #include "dlist.h"
 #include "sp_rtrace_proto.h"
-#include "sp_rtrace_defs.h"
+#include "library/sp_rtrace_defs.h"
 
 
 /**
