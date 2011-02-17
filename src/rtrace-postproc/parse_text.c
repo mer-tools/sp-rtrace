@@ -234,7 +234,6 @@ static void read_text_data(rd_t* rd, FILE* fp)
 		if (rec_type == SP_RTRACE_RECORD_ARG) {
 			if (dlist_first(&last_calls)) {
 				args[args_index++] = rec.arg;
-				args_index++;
 				if (args_index == args_limit) {
 					args_limit *= 2;
 					args = realloc_a(args, sizeof(sp_rtrace_farg_t) * args_limit);
@@ -279,7 +278,7 @@ static void read_text_data(rd_t* rd, FILE* fp)
 			 * Lookup the resource record and correctly assign to it.
 			 * The resource type name is stored in a static buffer, so it must be left unfreed */
 			if (call->data.res_type_flag == SP_RTRACE_FCALL_RFIELD_NAME) {
-				rd_resource_t resource = {.data = {.type = (char*)call->data.res_type} };
+				sp_rtrace_resource_t resource = {.type = (char*)call->data.res_type};
 				call->data.res_type = dlist_find(&rd->resources, (void*)&resource, (op_binary_t)compare_resource);
 			}
 			else {
