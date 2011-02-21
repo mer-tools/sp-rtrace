@@ -335,7 +335,7 @@ proc check_print_resource { id type desc } {
 #
 
 proc test_print_header { args } {
-	if { [check_print_header "1.0" "test-arch" "12.09.2010 12:34:56" "789" "test_process"] == -1 } {return -1}
+	if { [check_print_header "1.4" "test-arch" "12.09.2010 12:34:56" "789" "test_process"] == -1 } {return -1}
 	pass "sp_rtrace_print_header"
 }
 

@@ -744,7 +744,7 @@ static void* trace_mmap2(void *addr, size_t length, int prot, int flags, int fd,
 		.type = SP_RTRACE_FTYPE_ALLOC,
 		.res_type = (void*)(pfd ? (pfd->type == FD_POSIX ? res_pshmmap.id : res_fshmmap.id) : res_shmmap.id),
 		.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
-		.name = "mmap",
+		.name = "mmap2",
 		.res_id = (pointer_t)rc,
 		.res_size = (size_t)length,
 	};
@@ -788,7 +788,7 @@ static void* trace_mmap64(void *addr, size_t length, int prot, int flags, int fd
 		.type = SP_RTRACE_FTYPE_ALLOC,
 		.res_type = (void*)(pfd ? (pfd->type == FD_POSIX ? res_pshmmap.id : res_fshmmap.id) : res_shmmap.id),
 		.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
-		.name = "mmap",
+		.name = "mmap64",
 		.res_id = (pointer_t)rc,
 		.res_size = (size_t)length,
 	};

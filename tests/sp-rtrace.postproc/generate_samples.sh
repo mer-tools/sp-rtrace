@@ -31,14 +31,14 @@
 # Sample output
 #
 
-TARGET=../bin/alloc_test
+TARGET=../bin/shmseg_test
 
 if [ ! -f $TARGET ]; then
 	echo "The test application $TARGET is not present"
 	exit 1
 fi
 
-sp-rtrace -s -p memory -x $TARGET
+sp-rtrace -s -p shmsysv -x $TARGET
 
 LOG_RAW=$(ls *.rtrace)
 if [ -z "$LOG_RAW" ]; then

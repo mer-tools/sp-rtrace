@@ -771,7 +771,7 @@ void list_modules()
 		return;
 	}
 	/* preload the main module, as it exports symbols for submodules */
-	void* mainlib = dlopen(SP_RTRACE_LIB_PATH SP_RTRACE_MAIN_MODULE, RTLD_LAZY | RTLD_GLOBAL);
+	void* mainlib = dlopen("/usr/lib/" SP_RTRACE_MAIN_MODULE, RTLD_LAZY | RTLD_GLOBAL);
 	if (mainlib == NULL) {
         fprintf (stderr, "ERROR: %s\n", dlerror());
         closedir(libdir);

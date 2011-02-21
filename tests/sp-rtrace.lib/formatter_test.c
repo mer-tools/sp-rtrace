@@ -35,7 +35,7 @@
 
 #include "library/sp_rtrace_formatter.h"
 #include "common/utils.h"
-#include "common/sp_rtrace_defs.h"
+#include "library/sp_rtrace_defs.h"
 
 #define PRINT_HEADER 		"header"
 #define PRINT_MMAP			"mmap"
