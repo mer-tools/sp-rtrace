@@ -27,6 +27,7 @@
 
 enum {
 	PAGE_LEGEND_NONDIRTY = 0,
+	PAGE_LEGEND_ZERO,
 	PAGE_LEGEND_DIRTY,
 	PAGE_LEGEND_DIRTYZ,
 	PAGE_LEGEND_SWAP,
@@ -42,8 +43,9 @@ typedef struct {
 
 static report_legend_t report_legend[] = {
 	{' ', "non-dirty page"},
+	{'0', "non-dirty zero page"},
 	{'#', "dirty page in RAM"},
-	{'0', "zeroed dirty page in RAM"},
+	{'N', "zeroed dirty page in RAM"},
 	{'S', "swapped page"},
 	{'Z', "swapped zeroed page"},
 };
@@ -101,6 +103,9 @@ void LegendReport::writeMemoryMap(std::ostream& out, MemoryArea* area)
 				pages_dirty++;
 			}
 		}
+		else if (page_data->info & PAGE_ZERO) {
+			page_mark = PAGE_LEGEND_ZERO;
+		}
 		out << report_legend[page_mark].mark;
 	}
 	out << "|\n" << std::setfill(' ') << std::dec;
@@ -108,25 +113,25 @@ void LegendReport::writeMemoryMap(std::ostream& out, MemoryArea* area)
 
 	// write statistics
 	size_t page_sizeKB = Options::getInstance()->getPageSize() / 1024;
-	out << "type:       pages:     kB:  of area:  of all writable:\n";
+	out << "type:           pages:     kB:  of area:  of all writable:\n";
 
-	out << "all      " << std::setw(8) << pages_all << std::setw(8) << pages_all * page_sizeKB << std::setw(8);
+	out << "all          " << std::setw(8) << pages_all << std::setw(8) << pages_all * page_sizeKB << std::setw(8);
 	out<< 100 << '%' << std::setw(8) << pages_all * 100 / total_pages << "%\n";
 
 	if (pages_dirty) {
-		out << "dirty RAM" << std::setw(8) << pages_dirty << std::setw(8) << pages_dirty * page_sizeKB << std::setw(8);
+		out << "dirty RAM    " << std::setw(8) << pages_dirty << std::setw(8) << pages_dirty * page_sizeKB << std::setw(8);
 		out << pages_dirty * 100 / pages_all << '%' << std::setw(8) << pages_dirty * 100 / total_pages << "%\n";
 	}
 	if (pages_dirtyZ) {
-		out << " + zeroed" << std::setw(8) << pages_dirtyZ << std::setw(8) << pages_dirtyZ * page_sizeKB << std::setw(8);
+		out << "dirty RAM + Z" << std::setw(8) << pages_dirtyZ << std::setw(8) << pages_dirtyZ * page_sizeKB << std::setw(8);
 		out << pages_dirtyZ * 100 / pages_all << '%' << std::setw(8) << pages_dirtyZ * 100 / total_pages << "%\n";
 	}
 	if (pages_swap) {
-		out << "swapped  " << std::setw(8) << pages_swap << std::setw(8) << pages_swap * page_sizeKB << std::setw(8);
+		out << "swapped      " << std::setw(8) << pages_swap << std::setw(8) << pages_swap * page_sizeKB << std::setw(8);
 		out << pages_swap * 100 / pages_all << '%' << std::setw(8) << pages_swap * 100 / total_pages << "%\n";
 	}
 	if (pages_swapZ) {
-		out << " + zeroed" << std::setw(8) << pages_swapZ << std::setw(8) << pages_swapZ * page_sizeKB << std::setw(8);
+		out << "swapped + Z  " << std::setw(8) << pages_swapZ << std::setw(8) << pages_swapZ * page_sizeKB << std::setw(8);
 		out << pages_swapZ * 100 / pages_all << '%' << std::setw(8) << pages_swapZ * 100 / total_pages << "%\n";
 	}
 	out << "\n";
