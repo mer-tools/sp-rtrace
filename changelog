@@ -1,5 +1,12 @@
+sp-rtrace (1.4.1), ???:
+  * Fix sp-rtrace-postproc crash with traces containing multiple
+    resource types
+  * Fix/update rtrace-calltree --trace-args option and rename it
+    to --show-args.  Add --include-only-args option to do the same
+    thing for callgraph arg nodes as --include-only does for
+    function nodes
 
-sp-rtrace (1.4), Wed, 16 Feb 2011:
+sp-rtrace (1.4), 16 Feb 2011:
   * "origin" field added to text format header. 
   * HTML and histogram reports removed from rtrace-calltree. Former isn't
     really useful and latter functionality is now in sp-rtrace-timeline
@@ -15,7 +22,7 @@ sp-rtrace (1.4), Wed, 16 Feb 2011:
   * SYSV shared memory module reports "shmctl(...,IPC_RMID,...)" events
   * Documentation updates and MeeGo compatibility fixes
 
-sp-rtrace (1.3), Fri, 10 Dec 2010:
+sp-rtrace (1.3), 10 Dec 2010:
   * C++ rewrite of rtrace-timeline to make it faster
   * Improved support for resource reference counting
   * Binary and ASCII trace file format changes for above
@@ -28,7 +35,7 @@ sp-rtrace (1.3), Fri, 10 Dec 2010:
     and better error handling in rtrace-allocmap
   * Support new Linux pipe2() function in sp-rtrace file module
 
-sp-rtrace (1.2), Thu, 11 Nov 2010:
+sp-rtrace (1.2), 11 Nov 2010:
   * rtrace-timeline script rewrite:
     - total non-freed allocations timeline chart
     - allocation activity timeline chart
@@ -56,7 +63,7 @@ sp-rtrace (1.2), Thu, 11 Nov 2010:
     (GCC version specific atomic ops issue)
   * Automake&libtool added to build-deps. 
 
-sp-rtrace (1.1), Thu, 23 Sep 2010:
+sp-rtrace (1.1), 23 Sep 2010:
   * Function name resolving verifies libbfd provide information from
     the ELF symbol table to get rid of bogus information provided
     by BFD for inline/template methods.  This may also remove useful
@@ -73,5 +80,5 @@ sp-rtrace (1.1), Thu, 23 Sep 2010:
     - option for seeing first function arguments (e.g. filename) as nodes
   * Preliminary unfreed allocs & allocation activity timeline charts
 
-sp-rtrace (1.0), Thu, 29 Jun 2010:
+sp-rtrace (1.0), 29 Jun 2010:
   * Initial Release.
