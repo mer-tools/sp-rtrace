@@ -1107,7 +1107,7 @@ class Options:
                 self.show_below_limit = self.get_bool(name, arg, value)
             elif option == "show-references":
                 self.references = self.get_bool(name, arg, value)
-            elif option == "trace-args":
+            elif option == "show-args":
                 self.show_args = self.get_bool(name, arg, value)
             elif option == "intermediate":
                 self.intermediate = self.get_bool(name, arg, value)
