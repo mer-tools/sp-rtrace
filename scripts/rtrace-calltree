@@ -163,6 +163,11 @@
 # - Remove histogram reports and median alloc size calculation
 #   as they're now done by sp-rtrace-timeline
 # - Change lists to hashes to speedup parsing of large traces
+# 2011-02-24:
+# - Rename --trace-args to --show-args
+# - Support arbitrary function argument names (used by newer sp-rtrace)
+#   and different sized allocs for each argument instance
+# - Add --include-only-args option to complement --include-only option
 #
 # Originally this file (alloc-tree) was a part of libleaks package, but
 # renamed and moved to the sp-rtrace package during libleaks redesign.
@@ -621,13 +626,28 @@ class Rtrace:
                 return True
         return False
 
+    def update_args(self, trace, argsfun, argvalues, argsizes):
+        if argsfun[-1] == '>':
+            # remove traced function type
+            argsfun = argsfun[:argsfun.find('<')]
+        idx = 0
+        # '*' needed for zip to remove list surrounding value lists
+        for arglist in zip(*argvalues):
+            fun = "%s<%s>" % (argsfun, ", ".join(arglist))
+            #sys.stderr.write(fun+"\n")
+            graph.update([fun]+trace, argsizes[idx], 0)
+            idx += 1
+
     def parse(self, graph, options):
         "return parsed graph out of the given rtrace report"
         top = 0     # highest allocation address/ID for current backtrace
         ignored = 0 # ignored backtrace lines
         trace = []  # current backtrace
         sizes = []  # sizes for each alloc/free for current backtrace
-        args = []   # different arguments merged for same backtrace
+        argsfunc = ""  # name for function with args
+        argsizes = []  # list of resource sizes for each argument group
+        argvalues = [] # list of values for each named argument
+        argkeys = {}   # argument { name : valuelist index }
         name = ""
         skip = False    # whether to skip rest of the current backtrace
         stack = False   # whether current alloc/free includes stack frames
@@ -649,24 +669,31 @@ class Rtrace:
                         debug(line[:line.find('.')])
                     # there are included alloc lines for this backtrace and
                     # it's marked for inclusion or all BTs are included?
-                    if sizes and (include or not options.include):
-                        if args:
-                            for arg,size in args:
-                                graph.update([arg]+trace, [size], top)
+                    if (sizes or argsizes) and (include or (not options.include_funs and not options.include_args)):
+                        if argkeys:
+                            argsizes.append(sizes)
+                            self.update_args(trace, argsfun, argvalues, argsizes)
                         else:
                             graph.update(trace, sizes, top)
                     # initialize new backtrace
+                    argsfun = name
+                    argsizes = []
+                    argvalues = []
+                    argkeys = {}
                     if self.ignore(name, options):
                         trace = []
                         ignored += 1
                     else:
                         trace = [name]
                     sizes = []
-                    args = []
                     top = 0
                     skip = False
                     stack = False
                     include = False
+                elif argkeys:
+                    # add sizes for previous args from this backtrace
+                    argsizes.append(sizes)
+                    sizes = []
                 # get alloc size
                 if size >= options.size_min and size <= options.size_max:
                     sizes.append(size)
@@ -694,28 +721,41 @@ class Rtrace:
                         skip = True
                         break
                 # flag this trace for node inclusion?
-                for fun in options.include:
+                for fun in options.include_funs:
                     if line.startswith(fun):
                         include = True
                         break
                 trace.append(line)
                 stack = True
                 continue
-            elif options.trace_args and line.startswith("\t$1 = "):
-                arg = line[6:].strip()
-                if arg:
-                    # TODO: can same arg have multiple allocs/sizes?
-                    args.append((arg, sizes[0]))
+            elif options.show_args and line.startswith("\t$"):
+                pos = line.find(' = ')
+                if pos < 4:
+                    error_exit("line doesn't match traced function argument pattern:\n%s" % line)
+                key = line[2:pos].strip()
+                val = line[pos+3:].strip()
+                if val:
+                    if key in argkeys:
+                        argvalues[argkeys[key]].append(val)
+                    else:
+                        # index to this argument type (e.g. path vs. flags)
+                        argkeys[key] = len(argvalues)
+                        # list of values for this argument type
+                        argvalues.append([val])
+                    for arg in options.include_args:
+                        if arg in val:
+                            include = True
+                            break
                     if trace and not stack:
+                        # no separate node for traced function name
                         trace = []
-                    sizes = []
 
         # add previous backtrace to Graph
         if stack:
-            if include or not options.include:
-                if args:
-                    for arg,size in args:
-                        graph.update([arg]+trace, [size], top)
+            if include or (not options.include_funs and not options.include_args):
+                if argkeys:
+                    argsizes.append(sizes)
+                    self.update_args(trace, argsfun, argvalues, argsizes)
                 else:
                     graph.update(trace, sizes, top)
 
@@ -916,7 +956,8 @@ class AllocGraphReport(GraphvizReport):
 class Options:
     "command line option help, parsing and storage"
     cluster = []        # which libraries should be clustered
-    include = []        # include only backtraces having these functions
+    include_funs = []   # include only backtraces matching these functions
+    include_args = []   # include only backtraces with functions matching these args
     ignore = []         # prefixes of functions to ignore in the backtraces
     ignore_middle = []  # substrings of function to ignore in the backtraces
     noignore = []       # prefixes of functions not to ignore
@@ -934,7 +975,7 @@ class Options:
     leafs = True            # leave out leaf nodes with only 1 parent?
     intermediate = True     # leave out intermediate nodes?
     show_below_limit = True # show how many nodes were below limit
-    trace_args = False      # replace trace function names with arg values?
+    show_args = False      # replace trace function names with arg values?
     references = False      # whether to show what references --node=<node>
     progress = False        # whether to show number of each read record
     verbose = False         # whether to have some extra output
@@ -1059,13 +1100,15 @@ class Options:
             elif option == "cluster":
                 self.cluster.append(value)
             elif option == "include-only":
-                self.include.append(value)
+                self.include_funs.append(value)
+            elif option == "include-only-args":
+                self.include_args.append(value)
             elif option == "show-below-limit":
                 self.show_below_limit = self.get_bool(name, arg, value)
             elif option == "show-references":
                 self.references = self.get_bool(name, arg, value)
             elif option == "trace-args":
-                self.trace_args = self.get_bool(name, arg, value)
+                self.show_args = self.get_bool(name, arg, value)
             elif option == "intermediate":
                 self.intermediate = self.get_bool(name, arg, value)
             elif option == "leafs":
@@ -1101,10 +1144,11 @@ class Options:
         debug("size-range = %d-%d (which sizes allocs to incluce)" % (self.size_min, self.size_max))
         debug("leafs = %s (include leaf nodes?)" % self.bool_str(self.leafs))
         debug("intermediate = %s (include intermediate nodes?)" % self.bool_str(self.intermediate))
-        debug("trace_args = %s (replace trace function names with args?)" % self.bool_str(self.trace_args))
+        debug("show_args = %s (show also trace function args?)" % self.bool_str(self.show_args))
         debug("show_below_limit = %s (show how many nodes were below limit?)" % self.bool_str(self.show_below_limit))
         self.show_list(self.cluster, "Cluster functions within given sources/libs together")
-        self.show_list(self.include, "Include only backtraces having node(s) which names start with these prefixes")
+        self.show_list(self.include_funs, "Include only backtraces having node(s) which names start with these prefixes")
+        self.show_list(self.include_args, "Include only backtraces which traced functions args match these")
         self.show_list(self.ignore, "Ignore in backtraces nodes which names have these prefixes")
         self.show_list(self.ignore_middle, "Ignore in backtraces nodes which names have these substrings")
         self.show_list(self.noignore, "However, do not ignore nodes which names have these prefixes")
@@ -1208,6 +1252,12 @@ to the output data:
        for backtraces that should be included into report.  All backtraces
        NOT containing a node name starting with this substring are ignored.
 
+    --include-only-args=value, value is a substring for traced function
+      argument values for which backtraces should be included into report.
+      All backtraces NOT having an argument value that contains this
+      substring are ignored. NOTE: this needs also --show-args=yes option
+      and it cannot work properly for merged backtraces.
+
     --ignore=value, value is a string prefix for node names which should be
         ignored in the backtraces.  Useful for making graphs more readable.
         Use --verbose to see what is ignored by the shortcut options below
@@ -1258,8 +1308,10 @@ to the output data:
         - one parent and no children, or
         - one child and no parents
 
-    --trace-args=yes, show trace function (1st) argument instead of its name.
-        This can be used e.g. to see file names in file descriptor traces.
+    --show-args=yes, show trace functions arguments in addition to trace
+        functions.  This can be used e.g. to get callgraphs to individual
+        file names in file descriptor traces.  To limit this set, use
+        --include-only-args option.
 
 
 Debug options:
