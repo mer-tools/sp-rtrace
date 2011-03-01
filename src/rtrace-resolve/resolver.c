@@ -97,6 +97,10 @@ typedef struct {
  		bfd_close(rec->file);
  		rec->file = NULL;
  	}
+ 	if (rec->dbg_name) {
+ 		free(rec->dbg_name);
+ 		rec->dbg_name = NULL;
+ 	}
  	if (rec->fd) {
  		munmap(rec->image, rec->image_size);
  		close(rec->fd);
@@ -408,7 +412,7 @@ static int rs_open_file(rs_cache_record_t* rec, const char* filename)
 	if (!bfd_check_format (rec->file, bfd_object)) {
 		bfd_close(rec->file);
 		rec->file = NULL;
-		fprintf(stderr, "error: file %s not in executable format\n", filename);
+		fprintf(stderr, "ERROR: file %s not in executable format\n", filename);
 		return -EINVAL;
 	}
 	return 0;
@@ -435,11 +439,10 @@ static int rs_load_symbols(rs_cache_record_t* rec, const char* filename)
 
 		int index = 0;
 		while (places[index]) {
-			char* dbg_name = bfd_follow_gnu_debuglink (rec->file, places[index]);
-			if (dbg_name) {
+			rec->dbg_name = bfd_follow_gnu_debuglink (rec->file, places[index]);
+			if (rec->dbg_name) {
 				bfd_close(rec->file);
-				int rc = rs_open_file(rec, dbg_name);
-				free(dbg_name);
+				int rc = rs_open_file(rec, rec->dbg_name);
 				if (rc < 0) return -EINVAL;
 				break;
 			}

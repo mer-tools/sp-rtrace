@@ -44,6 +44,7 @@ typedef struct rs_cache_record_t {
 	bfd* file;
 	asymbol** symbols;
 	long symcount;
+	char* dbg_name;
 
 	/* elf resolving data */
 	int fd;
