@@ -50,7 +50,7 @@ Description: Debug symbols for resource consumption tracing and post-processing 
 Package: sp-rtrace-visualize
 Section: utils
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, sp-rtrace, python, graphviz, gnuplot-nox
+Depends: ${shlibs:Depends}, ${misc:Depends}, sp-rtrace, python, graphviz, gnuplot-nox, xdg-utils
 Description: Visualization utilities for rtrace format files.
  This package contains various visualization (alloc addressmap,
  histogram, timeline, callgraph) utilities for rtrace text format

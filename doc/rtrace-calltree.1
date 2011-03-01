@@ -119,6 +119,13 @@ Value is a string prefix for node names for backtraces that should be
 included into reports.  All backtraces \fBnot\fP containing a node
 name starting with this substring are ignored.
 .TP
+\fB--include-only-args\fP=\fIvalue\fP
+Value is a substring for traced function argument values for which
+backtraces should be included into report.  All backtraces NOT having
+an argument value that contains this substring are ignored. NOTE: this
+needs also --show-args=yes option and it cannot work properly for
+merged backtraces.
+.TP
 \fB--ignore\fP=\fIvalue\fP
 Value is a string prefix for node names which should be ignored in the
 backtraces.  Useful for making graphs more readable. Use --verbose to
@@ -186,9 +193,10 @@ Leave out nodes with only one parent and child.
 Leave out nodes which have either one parent and no children, or
 one child and no parents.
 .TP
-\fB--trace-args\fP=\fIyes\fP
-Show trace function (1st) argument instead of its name. This can be
-used e.g. to see file names in file descriptor traces.
+\fB--show-args\fP=\fIyes\fP
+Show trace functions arguments in addition to trace functions.  This
+can be used e.g. to get callgraphs to individual file names in file
+descriptor traces.  To limit this set, use --include-only-args option.
 .PP
 Options --stop, --ignore, --include-only, --join and --cluster
 can be given as many times as you wish and they apply to all
@@ -203,7 +211,7 @@ To remove also source file names and line numbers, add:
 .nf
 		-e 's/ at [^ \\\\]*//'
 .fi
-To remove also paths from the --trace-args file names, add:
+To remove also paths from the --show-args file names, add:
 .nf
 		-e 's%/.*[^ ]/%%'
 .fi
@@ -213,6 +221,10 @@ the information, just split the source code file name and
 line number to a separate line:
 .nf
 		sed -e 's/ at /\\\\nat /' -e 's/ in /\\\\nin /'
+.fi
+And to split --show-args file paths and names to separate rows, use:
+.nf
+		-e 's%/\\([^/]*>\\)%/\\\\n\\1%'
 .fi
 .SH DEBUG OPTIONS
 .TP
