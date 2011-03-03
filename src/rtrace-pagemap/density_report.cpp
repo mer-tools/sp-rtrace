@@ -24,6 +24,8 @@
 
 #include "density_report.h"
 #include "options.h"
+#include "common/header.h"
+
 
 DensityReport::DensityReport(TraceData& data) :
 		AddressSpaceReport(data)
@@ -96,3 +98,11 @@ void DensityReport::writeMemoryMap(std::ostream& out, MemoryArea* area)
 	out << "          " << std::string( PAGES_PER_LINE, '-' ) << "\n\n";
 }
 
+
+bool DensityReport::validate()
+{
+	if (! (header_get_filter(&trace_data.header) & FILTER_MASK_LEAKS) ) {
+		throw std::runtime_error("Density report requires input data to be processed with --leaks post-processor filter");
+	}
+	return true;
+}

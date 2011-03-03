@@ -44,6 +44,11 @@ public:
 	 * @copydoc AddresssSpaceReport::writeMemoryMap
 	 */
 	void writeMemoryMap(std::ostream& out, MemoryArea* area);
+
+	/**
+	 * @copydoc AddressSpaceReport::validate
+	 */
+	bool validate();
 };
 
 #endif
