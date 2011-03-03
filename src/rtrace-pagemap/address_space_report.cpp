@@ -68,6 +68,10 @@ void AddressSpaceReport::writeMemoryArea(std::ostream& out, MemoryArea* area)
 
 void AddressSpaceReport::write(const std::string& filename)
 {
+	if (!validate()) {
+		throw std::runtime_error("Input data validation failed");
+	}
+
 	std::ofstream file;
 	std::ostream& out = filename.empty() ? std::cout : file;
 	if (!filename.empty()) {
@@ -106,3 +110,7 @@ void AddressSpaceReport::write(const std::string& filename)
 }
 
 
+bool AddressSpaceReport::validate()
+{
+	return true;
+}

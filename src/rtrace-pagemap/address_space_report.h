@@ -64,6 +64,17 @@ protected:
 	 */
 	virtual void writeLegend(std::ostream& out) = 0;
 
+
+	/**
+	 * Validates the input data.
+	 *
+	 * This function is called before the report is generated to check
+	 * if input file contains all necessary data and is in the right
+	 * format.
+	 * @return   true if the input data is complete.
+	 */
+	virtual bool validate();
+
 public:
 
 	/**
