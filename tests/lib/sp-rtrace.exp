@@ -140,16 +140,19 @@ proc pidof { name } {
 	}
 }
 
+
+
 #
 # Checks if the all required functions are tracked by the specified
 # module
 #
 # Arguments:
-#   module - the module to check.
+#   key    - the module type key - '-p' (preload) or '-a' (audit)
+#   module - the module to check (or in the case of audit module the tracked items)
 #   args   - list of functions that should be tracked by the module.
 #
-proc test_module { module args } {
-	eval spawn sp-rtrace -p $module -P-t -s -x $::bin_dir/$::out_file "bin"
+proc test_generic_module { key module items } {
+	eval spawn sp-rtrace $key $module -P-t -s -x $::bin_dir/$::out_file "bin"
 	expect {
 		-re {(?n)^[0-9]+\. \[[^\]]+\] ([^\(<]+)(?:<[^>]+>)?\([0-9a-fA-Fx]+\)} {
 			if { [info exists tracked($expect_out(1,string))] } {
@@ -163,13 +166,40 @@ proc test_module { module args } {
 	}
 	exp_wait
 	
-	foreach pattern $args {
+	foreach pattern $items {
 		set count ""
 		regexp {^([^:]+)(?:\:(.*)|)$} $pattern match name count
 		if { [info exists tracked($name)] } {
+			if { $count != "" && $tracked($name) < $count } {
+				fail "$module module: function $name ($tracked($name) hits from expected $count)"
+				return
+			}
 			pass "$module module: function $name"
 		} else {
 			fail "$module module: function $name"
 		}
 	}
+}
+
+#
+# Checks if the all required functions are tracked by the specified
+# module
+#
+# Arguments:
+#   module - the module to check.
+#   args   - list of functions that should be tracked by the module.
+#
+proc test_module { module args } {
+	test_generic_module "-p" $module $args
+}
+
+#
+# Checks if the all required functions are tracked by audit moule
+#
+# Arguments:
+#   items  - the functions to track.
+#   args   - list of functions that should be tracked by the module.
+#
+proc test_audit_module { items args } {
+	test_generic_module "-a" $items $args
 }
