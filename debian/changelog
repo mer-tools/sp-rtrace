@@ -1,3 +1,10 @@
+sp-rtrace (1.4.1-1) unstable; urgency=low
+
+  * Fixes: NB#231732 - sp-rtrace-postproc crash with file traces +
+    rtrace-calltree issues with function argument parsing
+
+ -- Tommi Rantala <ext-tommi.1.rantala@nokia.com>  Fri, 04 Mar 2011 13:17:23 +0200
+
 sp-rtrace (1.4) unstable; urgency=low
 
   * Debug package, compiler option, x86 reliability and memory leak fixes
