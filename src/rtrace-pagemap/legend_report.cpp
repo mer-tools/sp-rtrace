@@ -90,8 +90,8 @@ void LegendReport::writeMemoryMap(std::ostream& out, MemoryArea* area)
 			}
 			else {
 				page_mark = PAGE_LEGEND_SWAP;
-				pages_swap++;
 			}
+			pages_swap++;
 		}
 		else if (page_data->kflags & BIT(DIRTY)) {
 			if (page_data->info & PAGE_ZERO) {
@@ -100,8 +100,8 @@ void LegendReport::writeMemoryMap(std::ostream& out, MemoryArea* area)
 			}
 			else {
 				page_mark = PAGE_LEGEND_DIRTY;
-				pages_dirty++;
 			}
+			pages_dirty++;
 		}
 		else if (page_data->info & PAGE_ZERO) {
 			page_mark = PAGE_LEGEND_ZERO;
@@ -134,6 +134,9 @@ void LegendReport::writeMemoryMap(std::ostream& out, MemoryArea* area)
 		out << "swapped + Z  " << std::setw(8) << pages_swapZ << std::setw(8) << pages_swapZ * page_sizeKB << std::setw(8);
 		out << pages_swapZ * 100 / pages_all << '%' << std::setw(8) << pages_swapZ * 100 / total_pages << "%\n";
 	}
+	int pages_ram = pages_all - pages_swap;
+	out << "in RAM       "  << std::setw(8) << pages_ram << std::setw(8) << pages_ram * page_sizeKB << std::setw(8);
+	out << pages_ram * 100 / pages_all << '%' << std::setw(8) << pages_ram * 100 / total_pages << "%\n";
 	out << "\n";
 }
 
