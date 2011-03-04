@@ -1,10 +1,13 @@
 sp-rtrace (1.4.1), ???:
+  * Fix BFD resolving segfault (data freed too early)
   * Fix sp-rtrace-postproc crash with traces containing multiple
     resource types
   * Fix/update rtrace-calltree --trace-args option and rename it
     to --show-args.  Add --include-only-args option to do the same
     thing for callgraph arg nodes as --include-only does for
     function nodes
+  * Fix shmposix trace function names (mmap2 & mmap64 instead of mmap)
+  * Test suite has now tests for all modules
 
 sp-rtrace (1.4), 16 Feb 2011:
   * Debug package, compiler option, x86 reliability and memory leak fixes
