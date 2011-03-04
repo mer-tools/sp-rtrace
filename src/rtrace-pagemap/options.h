@@ -39,6 +39,9 @@ private:
 	// density of allocations per page report
 	bool report_density;
 
+	// summary of page types from all areas
+	bool report_summary;
+
 	// memory page size
 	size_t page_size;
 
@@ -98,7 +101,7 @@ public:
 	}
 
 	/**
-	 * Retrieves address space report setting.
+	 * Checks address space report flag.
 	 *
 	 * @return   true if address space report is requested.
 	 */
@@ -130,11 +133,21 @@ public:
 	}
 
 	/**
-	 * Retrieves page allocation density report setting
+	 * Checks page allocation density report flag.
 	 */
-	int getReportDensity() {
+	bool getReportDensity() {
 		return report_density;
 	}
+
+	/**
+	 * Checks page summary report flag.
+	 * @return
+	 */
+	bool getReportSummary() {
+		return report_summary;
+	}
+
+
 };
 
 

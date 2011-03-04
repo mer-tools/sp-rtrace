@@ -29,8 +29,11 @@
 
 Options::Options() :
 	report_legend(false),
-	page_size(getpagesize())
-
+	report_density(false),
+	report_summary(false),
+	page_size(getpagesize()),
+	highest(0),
+	lowest(0)
 {
 }
 
@@ -49,6 +52,7 @@ void Options::displayUsage()
 		"                 active allocations for each page.\n"
 		"  --highest NN - the number of highest allocations per area to print.\n"
 		"  --lowest NN  - the number of lowest allocations per area to print.\n"
+		"  -s           - summary about page types from all memory areas.\n"
 		"  -h           - this help page.\n"
 			;
 }
@@ -63,13 +67,14 @@ void Options::parseCommandLine(int argc, char* const argv[])
 			 {"density", 0, 0, 'd'},
 			 {"lowest", 1, 0, 'L'},
 			 {"highest", 1, 0, 'H'},
+			 {"summary", 0, 0, 's'},
 			 {"help", 0, 0, 'h'},
 			 {0, 0, 0, 0},
 	};
 
 	int opt;
 	opterr = 0;
-	while ( (opt = getopt_long(argc, argv, "i:o:hld", long_options, NULL)) != -1) {
+	while ( (opt = getopt_long(argc, argv, "i:o:hlds", long_options, NULL)) != -1) {
 		switch (opt) {
 			case 'h': {
 				displayUsage();
@@ -103,6 +108,11 @@ void Options::parseCommandLine(int argc, char* const argv[])
 
 			case 'd': {
 				report_density = true;
+				break;
+			}
+
+			case 's': {
+				report_summary = true;
 				break;
 			}
 
