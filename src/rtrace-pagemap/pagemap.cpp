@@ -35,6 +35,7 @@
 #include "trace_data.h"
 #include "legend_report.h"
 #include "density_report.h"
+#include "summary_report.h"
 
 int main(int argc, char* const argv[])
 {
@@ -51,6 +52,11 @@ int main(int argc, char* const argv[])
 		}
 		if (report) {
 			report->write(Options::getInstance()->getOutFilename());
+
+			if (Options::getInstance()->getReportSummary()) {
+				SummaryReport summary(trace_data);
+				summary.append(Options::getInstance()->getOutFilename());
+			}
 		}
 		else {
 			std::cerr << "No report type given\n";

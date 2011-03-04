@@ -21,36 +21,46 @@
  * 02110-1301 USA
  */
 
-#ifndef _PAGEMAP_H_
-#define _PAGEMAP_H_
+#ifndef _SUMMARY_REPORT_H_
+#define _SUMMARY_REPORT_H_
 
-#include <stdbool.h>
 
-#include <stdexcept>
-#include <tr1/memory>
-#include <string>
-#include <list>
-#include <vector>
-#include <map>
-#include <ctype.h>
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <algorithm>
-#include <iomanip>
+#include "trace_data.h"
+#include "pagemap.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
-#include <getopt.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <limits.h>
+class SummaryReport {
+private:
+	typedef std::map<uint64_t, unsigned int> pagetype_map_t;
 
-#include "page_types.h"
+	TraceData& trace_data;
+
+	/**
+	 * Filters the required flags.
+     *
+	 * @param[in] flags   the raw page flags.
+	 * @return            the filtered page flags value.
+	 */
+	uint64_t filterFlags(uint64_t flags);
+
+public:
+
+	/**
+	 * Creates a class instance.
+	 */
+	SummaryReport(TraceData& data);
+
+
+	/**
+	 * Appends page summary report to the existing pagemap report.
+	 *
+	 * @param[in] filename   the pagemap report file name.
+	 */
+	void append(const std::string& filename);
+
+
+
+};
+
 
 #endif
+
