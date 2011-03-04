@@ -1,0 +1,98 @@
+sp-rtrace (1.4) unstable; urgency=low
+
+  * Debug package, compiler option, x86 reliability and memory leak fixes
+    Fixes: NB#216303
+  * "origin" field added to text format header. Fixes NB#215920
+  * HTML and histogram reports removed from rtrace-calltree. Former isn't
+    really useful and latter functionality is now in sp-rtrace-timeline
+  * Major rtrace-calltree speed improvement for large traces
+  * Post-processing tools updated to accept audit traces where
+    traced functions have C++ signatures
+  * sp-rtrace-timeline --scalex option value is now in percentages
+    and resource life-time timeline Y-axis is logarithmic
+  * New module and post-processing tools to track which of the process.
+    memory pages are dirty and whether they're zeroed.  Added trace file
+    format support for references to additional data files
+  * New module for tracing POSIX shared memory mappings
+  * SYSV shared memory module reports "shmctl(...,IPC_RMID,...)" events
+  * Documentation updates and MeeGo compatibility fixes
+
+ -- Tommi Rantala <ext-tommi.1.rantala@nokia.com>  Wed, 16 Feb 2011 11:44:54 +0200
+
+sp-rtrace (1.3) unstable; urgency=low
+
+  * C++ rewrite of rtrace-timeline to make it faster
+  * Improved support for resource reference counting
+  * Binary and ASCII trace file format changes for above
+  * Added module generator script, module code template & examples
+  * New modules for tracing QObject and Gobject create/reference/free
+  * Renamed shmseg module to shmsysv (as it's in functracer)
+  * Experimental user specified function tracing support and module
+    based on dynamic linker LD_AUDIT framework
+    Fixes: NB#164143
+  * Put allocmap temp files to current dir, use faster options
+    and better error handling in rtrace-allocmap
+    Fixes: NB#207896
+  * Support new Linux pipe2() function in sp-rtrace file module
+    Fixes: NB#210523
+
+ -- Tommi Rantala <ext-tommi.1.rantala@nokia.com>  Fri, 10 Dec 2010 16:06:59 +0200
+
+sp-rtrace (1.2) unstable; urgency=low
+
+  * rtrace-timeline script rewrite:
+    - total non-freed allocations timeline chart
+    - allocation activity timeline chart
+    - allocation life-time timeline chart
+    - allocation count & size per alloc size histograms
+    - possible to generate all charts at the same time
+    - huge memory usage reduction
+    - options for filtering allocations & deallocations based on
+      allocation record, timestamp or size range and scaling chart
+    Fixes: NB#153186
+  * rtrace-graphs-overview script rewrite:
+    - resource file includes information about filtering done on it
+    - handle both binary and ascii files
+    - input files need now to be specified
+    - generate also (all) timeline charts
+    - show the generated charts with xdg-open
+  * rtrace-callgree updates:
+    - ignore deallocation backtraces
+    - option to filter allocations based on size range
+    - updates to glib/qt function/method ignore shortcuts
+  * Experimental support for using libunwind to collect backtraces
+  * Binary and ASCII trace file format changes for above
+  * Context API library changes needed by functracer
+  * Post-processing speed and memory usage improvements
+  * Force i486 architecture for x86 (Sbox). Fixes: NB#201366
+    (GCC version specific atomic ops issue)
+  * Automake&libtool added to build-deps. Fixes: NB#194298
+
+ -- Tommi Rantala <ext-tommi.1.rantala@nokia.com>  Thu, 11 Nov 2010 15:06:59 +0200
+
+sp-rtrace (1.1) unstable; urgency=low
+
+  * Function name resolving verifies libbfd provide information from
+    the ELF symbol table to get rid of bogus information provided
+    by BFD for inline/template methods.  This may also remove useful
+    information, for that case one can ask resolving to use just BFD.
+    Fixes: NB#192289
+  * Fixes to tracing toggling and backtrace generation
+  * Modules can trace activity done before process enters main()
+  * New file module for tracing file descriptor increase & decrease
+  * Backtraces for freed resources are optional (improves performance)
+  * Backtrace is output in similar format to one used by Gdb
+  * rtrace-calltree:
+    - HTML report generation & pylint errors fixed
+    - callgraphs handle resource freeing backtraces properly
+    - more & updated --ignore-* convenience functions
+    - option for seeing first function arguments (e.g. filename) as nodes
+  * Preliminary unfreed allocs & allocation activity timeline charts
+
+ -- Tommi Rantala <ext-tommi.1.rantala@nokia.com>  Thu, 23 Sep 2010 12:41:36 +0300
+
+sp-rtrace (1.0) unstable; urgency=low
+
+  * Initial Release.
+
+ -- Kiryl Shutsemau <kiryl.shutsemau@nokia.com>  Thu, 29 Jun 2010 09:50:07 +0200
