@@ -89,21 +89,30 @@ void SummaryReport::append(const std::string& filename)
 		}
 	}
 
+	uint64_t page_types_used = 0;
 	out << "Memory page type summary\n"
 		   "========================\n\n";
-
+	out << std::setiosflags(std::ios_base::left) << std::setw(9) << "Count" << std::setw(65) << "Flags" << "Description\n";
+	out << std::setiosflags(std::ios_base::right);
 	for (pagetype_map_t::iterator iter = page_types.begin(); iter != page_types.end(); iter++) {
-		out << std::hex << std::setw(16) << (long long unsigned int)iter->first << " : " << std::dec << std::setw(8) << iter->second;
+		out << std::setw(8) << iter->second << " ";
 		std::string desc;
-		for (int i = 0; i < sizeof(iter->first) * 8; i++) {
+		for (unsigned int i = 0; i < sizeof(iter->first) * 8; i++) {
 			if (iter->first & (1ull << i)) {
+				page_types_used |= (1ull << i);
 				out << page_flag_names[i].mark;
 				desc += ",";
 				desc += page_flag_names[i].desc;
 			}
-			else out << ' ';
+			else out << '.';
 		}
 		out << ' ' << desc << "\n";
+	}
+	out << "\nLegend:\n";
+	for (unsigned i = 0; i < sizeof(uint64_t) * 8; i++) {
+		if (page_types_used & (1ull << i)) {
+			out << "\t" << page_flag_names[i].mark << " : " << page_flag_names[i].desc << "\n";
+		}
 	}
 }
 
