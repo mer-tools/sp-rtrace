@@ -111,4 +111,21 @@ void filter_update_resource_visibility(rd_t* rd);
  */
 void filter_trim_backtraces(rd_t* rd);
 
+
+/**
+ * Performs include filter, removing call events not listed in the include file.
+ *
+ * @param[in] rd  the resource trace data storage.
+ */
+void filter_include(rd_t* rd);
+
+
+/**
+ * Performs exclude filter, removing call events listed in the exclude file.
+ *
+ * @param[in] rd  the resource trace data storage.
+ */
+void filter_exclude(rd_t* rd);
+
+
 #endif /* FILTER_H*/

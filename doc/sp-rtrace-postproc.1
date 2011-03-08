@@ -79,6 +79,14 @@ in descending order.
 Sets maximum backtrace depth. Any function stack traces larger
 than \fImax_depth\fP value will be trimmed to the \fImax_depth\fP
 value.
+.TP
+\fI--include\fP=<file>
+Removes events that aren't listed in the \fIfile\fP. The include file
+is in text format and contains one event index per line.
+.TP
+\fI--exclude\fP=<file>
+Removes events that are listed in the \fIfile\fP. The exclude file
+is in text format and contains one event index per line.
 
 .SH EXAMPLES
 .TP

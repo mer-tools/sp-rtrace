@@ -50,6 +50,8 @@ typedef struct postproc_options_t {
 	op_binary_t compare_leaks;
 	int pid_resolve;
 	int backtrace_depth;
+	char* include_file;
+	char* exclude_file;
 } postproc_options_t;
 
 extern postproc_options_t postproc_options;
