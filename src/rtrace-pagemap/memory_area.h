@@ -56,6 +56,8 @@ public:
 	std::string info;
 	// the access permissions, parsed from info strings
 	unsigned int permissions;
+	// the mapped area path
+	std::string path;
 
 	// list of allocation events inside area
 	std::list<CallEvent::ptr_t> events;
@@ -63,7 +65,7 @@ public:
 	/**
 	 * Creates a new class instance.
 	 */
-	MemoryArea(unsigned long from, unsigned long to, pageflags_data_t* flags, const std::string& info);
+	MemoryArea(unsigned long from, unsigned long to, pageflags_data_t* flags, const std::string& path, const std::string& info);
 
 	/**
 	 * Adds allocation event to area allocation list.

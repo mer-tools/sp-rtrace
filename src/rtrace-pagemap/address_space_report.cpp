@@ -43,19 +43,19 @@ void AddressSpaceReport::writeMemoryArea(std::ostream& out, MemoryArea* area)
 
 	writeMemoryMap(out, area);
 
-	if (Options::getInstance()->getLowestAllocCount() && !area->events.empty()) {
-		out << "Lowest " << Options::getInstance()->getLowestAllocCount() << " allocations:\n";
+	if (Options::getInstance()->getBottomAllocCount() && !area->events.empty()) {
+		out << "Lowest " << Options::getInstance()->getBottomAllocCount() << " allocations:\n";
 		std::list<CallEvent::ptr_t>::iterator iter = area->events.begin();
-		for (int i = 0; i < Options::getInstance()->getLowestAllocCount(); i++) {
+		for (int i = 0; i < Options::getInstance()->getBottomAllocCount(); i++) {
 			iter->get()->write(out);
 			iter++;
 		}
 		out << "\n";
 	}
-	if (Options::getInstance()->getHighestAllocCount() && !area->events.empty()) {
-		out << "Highest " << Options::getInstance()->getHighestAllocCount() << " allocations:\n";
+	if (Options::getInstance()->getTopAllocCount() && !area->events.empty()) {
+		out << "Highest " << Options::getInstance()->getTopAllocCount() << " allocations:\n";
 		std::list<CallEvent::ptr_t>::iterator iter = area->events.end();
-		for (int i = 0; i < Options::getInstance()->getHighestAllocCount(); i++) {
+		for (int i = 0; i < Options::getInstance()->getTopAllocCount(); i++) {
 			iter--;
 			iter->get()->write(out);
 		}

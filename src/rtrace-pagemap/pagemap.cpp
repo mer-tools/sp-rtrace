@@ -36,6 +36,7 @@
 #include "legend_report.h"
 #include "density_report.h"
 #include "summary_report.h"
+#include "filter.h"
 
 int main(int argc, char* const argv[])
 {
@@ -58,8 +59,12 @@ int main(int argc, char* const argv[])
 				summary.append(Options::getInstance()->getOutFilename());
 			}
 		}
+		else if (Options::getInstance()->getFilter()) {
+			Filter filter(trace_data);
+			filter.write(Options::getInstance()->getOutFilename());
+		}
 		else {
-			std::cerr << "No report type given\n";
+			std::cerr << "No report type or filter option given\n";
 		}
 	}
 	catch (std::ifstream::failure e) {

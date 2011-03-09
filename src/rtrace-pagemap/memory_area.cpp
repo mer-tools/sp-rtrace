@@ -37,12 +37,13 @@ static bool compare_res_id(CallEvent::ptr_t first, CallEvent::ptr_t second)
 	return false;
 }
 
-MemoryArea::MemoryArea(unsigned long from, unsigned long to, pageflags_data_t* flags, const std::string& info) :
+MemoryArea::MemoryArea(unsigned long from, unsigned long to, pageflags_data_t* flags, const std::string& path, const std::string& info) :
 	from(from),
 	to(to),
 	flags(flags),
 	info(info),
-	permissions(0)
+	permissions(0),
+	path(path)
 {
 	int npos = info.find(' ');
 	if (npos != -1) {

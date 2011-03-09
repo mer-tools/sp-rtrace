@@ -34,7 +34,7 @@ private:
 	std::string in_filename;
 
 	// address space statistics report request
-	bool report_legend;
+	bool report_pages;
 
 	// density of allocations per page report
 	bool report_density;
@@ -46,15 +46,34 @@ private:
 	size_t page_size;
 
 	// number of highest allocations to print
-	int highest;
+	int top;
 
 	// number of lowest allocations to print
-	int lowest;
+	int bottom;
+
+	// name of the area to filter
+	std::string filter_name;
+
+	// address of resource in the area to filter
+	unsigned long filter_address;
+
+	// page types to filter
+	std::string filter_pagetype;
+
+	// filter mode flag
+	bool filter;
+
 
 	/**
 	 * Displays application usage instructions.
 	 */
 	void displayUsage();
+
+
+	/**
+	 * Displays filter usage instructions.
+	 */
+	void displayFilterUsage();
 
 public:
 
@@ -106,7 +125,7 @@ public:
 	 * @return   true if address space report is requested.
 	 */
 	bool getReportLegend() {
-		return report_legend;
+		return report_pages;
 	}
 
 	/**
@@ -121,15 +140,15 @@ public:
 	/**
 	 * Retrieves the number of lowest allocations per area to print.
 	 */
-	int getLowestAllocCount() {
-		return lowest;
+	int getBottomAllocCount() {
+		return bottom;
 	}
 
 	/**
 	 * Retrieves the number of highest allocations per area to print.
 	 */
-	int getHighestAllocCount() {
-		return highest;
+	int getTopAllocCount() {
+		return top;
 	}
 
 	/**
@@ -141,13 +160,38 @@ public:
 
 	/**
 	 * Checks page summary report flag.
-	 * @return
 	 */
 	bool getReportSummary() {
 		return report_summary;
 	}
 
+	/**
+	 * Retrieves the filtered area name
+	 */
+	const std::string getFilterName() {
+		return filter_name;
+	}
 
+	/**
+	 * Retrieves the filtered area ddress
+	 */
+	unsigned long getFilterAddress() {
+		return filter_address;
+	}
+
+	/**
+	 * Retrieves the filter page types.
+	 */
+	const std::string getFilterPagetype() {
+		return filter_pagetype;
+	}
+
+	/**
+	 * Retrieves filter mode flag.
+	 */
+	bool getFilter() {
+		return filter;
+	}
 };
 
 

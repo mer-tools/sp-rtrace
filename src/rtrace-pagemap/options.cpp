@@ -22,18 +22,22 @@
  */
 #include "config.h"
 
+#include <sstream>
+
 #include "pagemap.h"
 #include "common/formatter.h"
 
 #include "options.h"
 
 Options::Options() :
-	report_legend(false),
+	report_pages(false),
 	report_density(false),
 	report_summary(false),
 	page_size(getpagesize()),
-	highest(0),
-	lowest(0)
+	top(0),
+	bottom(0),
+	filter_address(0),
+	filter(false)
 {
 }
 
@@ -46,15 +50,24 @@ void Options::displayUsage()
 		"Where <options> are:\n"
 		"  -i <path>    - the input file path. Standard input used by default.\n"
 		"  -o <path>    - the output directory. Standard output is used by default.\n"
-		"  -l           - memory area mapping legend. Displays information about memory\n"
+		"  -p           - page type statistics. Displays information about memory\n"
 	    "                 pages contained in the mapped areas.\n"
 		"  -d           - allocation per page statistics. Displays percentage of\n"
 		"                 active allocations for each page.\n"
 		"  --highest NN - the number of highest allocations per area to print.\n"
 		"  --lowest NN  - the number of lowest allocations per area to print.\n"
 		"  -s           - summary about page types from all memory areas.\n"
+		"  -N <name>    - filter report by area name.\n"
+		"  -A <addr>    - filter report by an address inside memory area.\n"
+	    "  -P <type>    - filter by the page type.\n"
 		"  -h           - this help page.\n"
 			;
+}
+
+void Options::displayFilterUsage()
+{
+	std::cout <<
+		"TODO: filter usage help page\n";
 }
 
 void Options::parseCommandLine(int argc, char* const argv[])
@@ -63,18 +76,22 @@ void Options::parseCommandLine(int argc, char* const argv[])
 	struct option long_options[] = {
 			 {"in", 1, 0, 'i'},
 			 {"out", 1, 0, 'o'},
-			 {"legend", 0, 0, 'l'},
+			 {"pages", 0, 0, 'p'},
 			 {"density", 0, 0, 'd'},
-			 {"lowest", 1, 0, 'L'},
-			 {"highest", 1, 0, 'H'},
+			 {"bottom", 1, 0, 'B'},
+			 {"TOP", 1, 0, 'T'},
 			 {"summary", 0, 0, 's'},
+			 {"filter-name", 1, 0, 'N'},
+			 {"filter-address", 1, 0, 'A'},
+			 {"filter-page", 1, 0, 'P'},
 			 {"help", 0, 0, 'h'},
+			 {"help-filter", 0, 0, 'H'},
 			 {0, 0, 0, 0},
 	};
 
 	int opt;
 	opterr = 0;
-	while ( (opt = getopt_long(argc, argv, "i:o:hlds", long_options, NULL)) != -1) {
+	while ( (opt = getopt_long(argc, argv, "i:o:hpdsHA:P:N:", long_options, NULL)) != -1) {
 		switch (opt) {
 			case 'h': {
 				displayUsage();
@@ -91,28 +108,77 @@ void Options::parseCommandLine(int argc, char* const argv[])
 				break;
 			}
 
-			case 'l': {
-				report_legend = true;
+			case 'p': {
+				if (filter) {
+					std::cerr << "ERROR: filter option can't be used together with report options\n";
+					exit (-1);
+				}
+				if (report_density) {
+					std::cerr << "WARNING: density report option overrides pages option\n";
+				}
+				report_pages = true;
 				break;
 			}
 
-			case 'L': {
-				lowest = atoi(optarg);
+			case 'B': {
+				bottom = atoi(optarg);
 				break;
 			}
 
-			case 'H': {
-				highest = atoi(optarg);
+			case 'T': {
+				top = atoi(optarg);
 				break;
 			}
 
 			case 'd': {
+				if (filter) {
+					std::cerr << "ERROR: filter option can't be used together with report options\n";
+					exit (-1);
+				}
+				if (report_density) {
+					std::cerr << "WARNING: density report option overrides pages option\n";
+				}
 				report_density = true;
 				break;
 			}
 
 			case 's': {
 				report_summary = true;
+				break;
+			}
+
+			case 'H': {
+				displayFilterUsage();
+				exit(0);
+			}
+
+			case 'A': {
+				if (report_pages || report_density || report_summary) {
+					std::cerr << "ERROR: filter option can't be used together with report options\n";
+					exit (-1);
+				}
+				filter = true;
+				std::stringstream(optarg) >> filter_address;
+				break;
+			}
+
+			case 'P': {
+				if (report_pages || report_density || report_summary) {
+					std::cerr << "ERROR: filter option can't be used together with report options\n";
+					exit (-1);
+				}
+				filter = true;
+				filter_pagetype = optarg;
+				break;
+			}
+
+			case 'N': {
+				if (report_pages || report_density || report_summary) {
+					std::cerr << "ERROR: filter option can't be used together with report options\n";
+					exit (-1);
+				}
+				filter = true;
+				filter_name = optarg;
 				break;
 			}
 

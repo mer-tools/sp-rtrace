@@ -69,7 +69,7 @@ private:
 	 * @param[in] to      the memory area end address.
 	 * @param[in] data    the memory area data from maps file.
 	 */
-	void addMemoryArea(unsigned long from, unsigned long to, pageflags_data_t* page_data, const std::string& data);
+	void addMemoryArea(unsigned long from, unsigned long to, pageflags_data_t* page_data, const std::string& path, const std::string& data);
 
 
 	/**

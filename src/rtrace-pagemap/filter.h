@@ -20,77 +20,35 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA
  */
-#ifndef _ADDRESS_SPACE_REPORT_H_
-#define _ADDRESS_SPACE_REPORT_H_
 
 #include "trace_data.h"
 
-class AddressSpaceReport
-{
-protected:
-
-	enum {PAGES_PER_LINE = (16 * 3)};
-
-	// the current memory area index
-	int index;
-
-	// the total number of pages mapped
-	size_t total_pages;
+/**
+ * Filters input report by leaving only allocations of the specified
+ * memory area and done only in pages with the specified types.
+ *
+ * The filtering is done by preparing index file and passing this
+ * file to sp-rtrace-postproc to generate the filtered report.
+ */
+class Filter {
+private:
 
 	// the input trace data
 	TraceData& trace_data;
-
-	/**
-	 * Writes memory area report.
-	 *
-	 * @param[in] area  the memory area.
-	 */
-	void writeMemoryArea(std::ostream& out, MemoryArea* area);
-
-
-protected:
-
-
-	/**
-	 * Writes the memory map.
-	 */
-	virtual void writeMemoryMap(std::ostream& out, MemoryArea* area) = 0;
-
-	/**
-	 * Writes page markings legend.
-	 *
-	 * The page markings are single characters, used to display
-	 * the page properties (dirty, swap etc) in address space
-	 * statistics ascii representation.
-	 */
-	virtual void writeLegend(std::ostream& out) = 0;
-
-
-	/**
-	 * Validates the input data.
-	 *
-	 * This function is called before the report is generated to check
-	 * if input file contains all necessary data and is in the right
-	 * format.
-	 * @return   true if the input data is complete.
-	 */
-	virtual bool validate();
 
 public:
 
 	/**
 	 * Creates a new class instance.
 	 */
-	AddressSpaceReport(TraceData& trace_data);
+	Filter(TraceData& trace_data);
 
 	/**
-	 * Writes address space statistics report to the specified file.
+	 * Writes filtered input report into file.
 	 *
 	 * @param[in] filename   the report file name. The standard output
 	 *                       is used if the filename is empty.
 	 */
 	void write(const std::string& filename);
+
 };
-
-
-#endif

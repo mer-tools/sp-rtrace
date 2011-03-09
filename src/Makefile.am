@@ -116,7 +116,7 @@ rtrace-pagemap/pagemap.h.gch: rtrace-pagemap/pagemap.h
 sp_rtrace_pagemap_SOURCES = rtrace-pagemap/pagemap.h rtrace-pagemap/pagemap.cpp rtrace-pagemap/options.cpp \
 	rtrace-pagemap/trace_data.cpp rtrace-pagemap/memory_area.cpp rtrace-pagemap/address_space_report.cpp \
 	rtrace-pagemap/legend_report.cpp rtrace-pagemap/density_report.cpp common/header.c \
-	rtrace-pagemap/summary_report.cpp rtrace-pagemap/page_types.c
+	rtrace-pagemap/summary_report.cpp rtrace-pagemap/page_types.c rtrace-pagemap/filter.cpp
 sp_rtrace_pagemap_CFLAGS = $(AM_CFLAGS)
 sp_rtrace_pagemap_CXXFLAGS = $(AM_CXXFLAGS)
 sp_rtrace_pagemap_LDFLAGS = -Wl,-z,defs

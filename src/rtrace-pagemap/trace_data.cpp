@@ -22,6 +22,7 @@
  */
 #include "config.h"
 #include <sys/mman.h>
+#include <limits.h>
 
 #include "pagemap.h"
 #include "common/formatter.h"
@@ -55,9 +56,9 @@ void TraceData::release()
 	sp_rtrace_parser_free_header(&header);
 }
 
-void TraceData::addMemoryArea(unsigned long from, unsigned long to, pageflags_data_t* page_data, const std::string& data)
+void TraceData::addMemoryArea(unsigned long from, unsigned long to, pageflags_data_t* page_data, const std::string& path, const std::string& data)
 {
-	memory_areas.push_back(MemoryArea::ptr_t(new MemoryArea(from, to, page_data, data)));
+	memory_areas.push_back(MemoryArea::ptr_t(new MemoryArea(from, to, page_data, path, data)));
 }
 
 void* TraceData::getPageflagsData(unsigned long from, unsigned long to)
@@ -83,9 +84,10 @@ void TraceData::scanMemoryAreas()
 		if (file_maps.eof()) break;
 		unsigned long from, to;
 		char rights[16];
-		if (sscanf(buffer, "%lx-%lx %[^ ]", &from, &to, rights) == 3) {
+		char path[PATH_MAX];
+		if (sscanf(buffer, "%lx-%lx %[^ ] %[^ ] %[^ ] %[^ ] %[^ ]", &from, &to, rights, path, path, path, path) == 7) {
 			void* ptr = getPageflagsData(from, to);
-			addMemoryArea(from, to, static_cast<pageflags_data_t*>(ptr), buffer);
+			addMemoryArea(from, to, static_cast<pageflags_data_t*>(ptr), path, buffer);
 		}
 	}
 }
