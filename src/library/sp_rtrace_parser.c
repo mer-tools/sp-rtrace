@@ -142,7 +142,7 @@ static int parse_function_call(const char* line, sp_rtrace_fcall_t* data)
 	 * from this function the correct resource type structure will be found and
 	 * assigned instead. */
 	data->res_type_flag = res_type_flag;
-	data->res_type = res_type_flag == SP_RTRACE_FCALL_RFIELD_NAME ? res_type_name : NULL;
+	data->res_type = res_type_flag == SP_RTRACE_FCALL_RFIELD_NAME ? strdup_a(res_type_name) : NULL;
 	data->type = function_type;
 	data->context = context;
 	data->name = strdup_a(name);

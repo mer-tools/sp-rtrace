@@ -280,6 +280,7 @@ static void read_text_data(rd_t* rd, FILE* fp)
 			if (call->data.res_type_flag == SP_RTRACE_FCALL_RFIELD_NAME) {
 				sp_rtrace_resource_t resource = {.type = (char*)call->data.res_type};
 				call->data.res_type = dlist_find(&rd->resources, (void*)&resource, (op_binary_t)compare_resource);
+				free(resource.type);
 			}
 			else {
 				/* If resource type was not set in text log, it means only one resource type is present.
