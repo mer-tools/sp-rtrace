@@ -168,6 +168,9 @@
 # - Support arbitrary function argument names (used by newer sp-rtrace)
 #   and different sized allocs for each argument instance
 # - Add --include-only-args option to complement --include-only option
+# 2011-03-09:
+# - Correct statistics how many backtraces lines are ignored on
+#   request and how many because they lack required info
 #
 # Originally this file (alloc-tree) was a part of libleaks package, but
 # renamed and moved to the sp-rtrace package during libleaks redesign.
@@ -641,7 +644,9 @@ class Rtrace:
     def parse(self, graph, options):
         "return parsed graph out of the given rtrace report"
         top = 0     # highest allocation address/ID for current backtrace
-        ignored = 0 # ignored backtrace lines
+        nonames = 0 # backtrace lines without function name
+        ignores = 0 # otherwise ignored backtrace lines
+        ignored = 0 # count for single backtrace
         trace = []  # current backtrace
         sizes = []  # sizes for each alloc/free for current backtrace
         argsfunc = ""  # name for function with args
@@ -669,21 +674,28 @@ class Rtrace:
                         debug(line[:line.find('.')])
                     # there are included alloc lines for this backtrace and
                     # it's marked for inclusion or all BTs are included?
-                    if (sizes or argsizes) and (include or (not options.include_funs and not options.include_args)):
+                    if (sizes or argsizes) and (include or not (options.include_funs or options.include_args)):
                         if argkeys:
                             argsizes.append(sizes)
                             self.update_args(trace, argsfun, argvalues, argsizes)
                         else:
                             graph.update(trace, sizes, top)
+                        ignores += ignored
+                    else:
+                        if ignored:
+                            ignores += ignored
+                        else:
+                            ignores += len(sizes)
                     # initialize new backtrace
                     argsfun = name
                     argsizes = []
                     argvalues = []
                     argkeys = {}
                     if self.ignore(name, options):
+                        ignored = 1
                         trace = []
-                        ignored += 1
                     else:
+                        ignored = 0
                         trace = [name]
                     sizes = []
                     top = 0
@@ -702,14 +714,15 @@ class Rtrace:
                     # this is highest address for this trace
                     top = addr
             elif line.startswith("\t0x"):
-                # ignore this backtrace?
+                # ignore rest of this backtrace?
                 if skip:
+                    ignored += 1
                     continue
                 # parse backtrace line
                 line = self.trace_strip(line, options.joins)
                 # ignore lines without function names
                 if not line:
-                    ignored += 1
+                    nonames += 1
                     continue
                 # ignore lines specified in options
                 if self.ignore(line, options):
@@ -718,6 +731,7 @@ class Rtrace:
                 # skip rest of the trace?
                 for fun in options.stop:
                     if line.startswith(fun):
+                        ignored += 1
                         skip = True
                         break
                 # flag this trace for node inclusion?
@@ -759,7 +773,7 @@ class Rtrace:
                 else:
                     graph.update(trace, sizes, top)
 
-        return (graph, ignored)
+        return (graph, ignores, nonames)
 
 # --------------- GraphViz output reports -----------------
 
@@ -1352,10 +1366,11 @@ if __name__ == "__main__":
     
     debug("\nParsing...")
     leaks = Rtrace(options.tracefile)
-    (graph, ignored) = leaks.parse(graph, options)
+    (graph, ignores, nonames) = leaks.parse(graph, options)
     debug(graph.stats_oneliner())
-    debug("Ignored %d backtrace lines without function names." % ignored)
-    
+    debug("Ignored %d backtrace lines with just hex addresses." % nonames)
+    debug("Ignored %d other backtrace lines, as requested." % ignores)
+
     debug("Finalizing backtrace graph and stats...")
     stats = graph.complete()
     
