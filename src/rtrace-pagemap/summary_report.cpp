@@ -97,7 +97,7 @@ void SummaryReport::append(const std::string& filename)
 	for (pagetype_map_t::iterator iter = page_types.begin(); iter != page_types.end(); iter++) {
 		out << std::setw(8) << iter->second << " ";
 		std::string desc;
-		for (unsigned int i = 0; i < sizeof(iter->first) * 8; i++) {
+		for (unsigned int i = 0; i < 32; i++) {
 			if (iter->first & (1ull << i)) {
 				page_types_used |= (1ull << i);
 				out << page_flag_names[i].mark;

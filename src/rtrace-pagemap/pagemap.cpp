@@ -60,6 +60,9 @@ int main(int argc, char* const argv[])
 			}
 		}
 		else if (Options::getInstance()->getFilter()) {
+			if (Options::getInstance()->getInFilename().empty()) {
+				throw std::runtime_error("ERROR: filter can't be applied to reports processed from standard input\n");
+			}
 			Filter filter(trace_data);
 			filter.write(Options::getInstance()->getOutFilename());
 		}
