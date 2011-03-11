@@ -36,7 +36,6 @@
 #include <dlfcn.h>
 #include <stdarg.h>
 #include <unistd.h>
-#include <pthread.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <search.h>

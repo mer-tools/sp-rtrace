@@ -35,7 +35,6 @@
 #include <dlfcn.h>
 #include <stdarg.h>
 #include <unistd.h>
-#include <pthread.h>
 #include <glib-object.h>
 
 #include "sp_rtrace_main.h"

@@ -39,7 +39,6 @@
 #include <fcntl.h>
 #include <dlfcn.h>
 #include <malloc.h>
-#include <pthread.h>
 
 #include "rtrace/rtrace_env.h"
 #include "rtrace_common.h"
@@ -71,7 +70,7 @@ static int fd_proc = 0;
 static char pipe_path[sizeof(SP_RTRACE_PIPE_PATTERN) + 16];
 
 /* backtrace lock for thread synchronization */
-volatile sync_entity_t backtrace_lock = 0;
+__thread volatile sync_entity_t backtrace_lock = 0;
 
 /* heap statistics */
 static struct mallinfo heap_info;
@@ -688,12 +687,11 @@ int sp_rtrace_write_function_call(sp_rtrace_fcall_t* call, sp_rtrace_ftrace_t* t
 		/* backtrace() function could trigger tracked function calls.
 		 * lock those functions for other threads while using the standard
 		 * functions for the current thread  */
-		int tid = pthread_self();
-		if (tid == backtrace_lock) {
+		if (backtrace_lock) {
 			fprintf(stderr, "ERROR: infinite recursion detected backtrace() calling %s()\n", call->name);
 			exit (-1);
 		}
-		while (!sync_bool_compare_and_swap(&backtrace_lock, 0, tid));
+		while (!sync_bool_compare_and_swap(&backtrace_lock, 0, 1));
 		trace_data.nframes = backtrace_impl((void**)bt_frames, bt_depth);
 		backtrace_lock = 0;
 

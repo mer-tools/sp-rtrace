@@ -35,7 +35,6 @@
 #include <string.h>
 #include <wchar.h>
 #include <unistd.h>
-#include <pthread.h>
 #include <execinfo.h>
 
 #include "sp_rtrace_main.h"
