@@ -691,7 +691,7 @@ int sp_rtrace_write_function_call(sp_rtrace_fcall_t* call, sp_rtrace_ftrace_t* t
 			fprintf(stderr, "ERROR: infinite recursion detected backtrace() calling %s()\n", call->name);
 			exit (-1);
 		}
-		while (!sync_bool_compare_and_swap(&backtrace_lock, 0, 1));
+		backtrace_lock = 1;
 		trace_data.nframes = backtrace_impl((void**)bt_frames, bt_depth);
 		backtrace_lock = 0;
 

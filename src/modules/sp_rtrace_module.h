@@ -65,9 +65,7 @@ extern __thread volatile sync_entity_t backtrace_lock;
  * This macro is used to execute the traced function.
  */
 #define BT_LOCK_AND_EXECUTE(expression)   \
-	while (!sync_bool_compare_and_swap(&backtrace_lock, 0, 1)); \
-	expression; \
-	backtrace_lock = 0;
+	expression;
 
 /**
  * Attempt to acquire backtrace lock on current thread.
