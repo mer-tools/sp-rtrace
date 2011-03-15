@@ -77,6 +77,7 @@ void SummaryReport::append(const std::string& filename)
 		}
 	}
 
+	uint64_t page_types_used = 0;
 	for (MemoryArea::vector_t::iterator iter = trace_data.memory_areas.begin(); iter != trace_data.memory_areas.end(); iter++) {
 		MemoryArea* area = iter->get();
 		if (area->permissions & MemoryArea::WRITE) {
@@ -85,28 +86,32 @@ void SummaryReport::append(const std::string& filename)
 				pageflags_data_t* page_data = area->flags + page;
 				uint64_t kflags = filterFlags(page_data->kflags);
 				page_types[kflags]++;
+				page_types_used |= kflags;
 			}
 		}
 	}
 
-	uint64_t page_types_used = 0;
 	out << "Memory page type summary\n"
 		   "========================\n\n";
-	out << std::setiosflags(std::ios_base::left) << std::setw(9) << "Count" << std::setw(65) << "Flags" << "Description\n";
+	out << std::setiosflags(std::ios_base::left) << std::setw(9) << "Count" << "Flags\n";
+	//std::setw(__builtin_popcountll(page_types_used) << "Flags" << "Description\n";
 	out << std::setiosflags(std::ios_base::right);
 	for (pagetype_map_t::iterator iter = page_types.begin(); iter != page_types.end(); iter++) {
 		out << std::setw(8) << iter->second << " ";
-		std::string desc;
+		//std::string desc;
 		for (unsigned int i = 0; i < 32; i++) {
-			if (iter->first & (1ull << i)) {
-				page_types_used |= (1ull << i);
-				out << page_flag_names[i].mark;
-				desc += ",";
-				desc += page_flag_names[i].desc;
+			if (page_types_used & (1ull << i)) {
+				if (iter->first & (1ull << i)) {
+					page_types_used |= (1ull << i);
+					out << page_flag_names[i].mark;
+					//desc += ",";
+					// desc += page_flag_names[i].desc;
+				}
+				else out << '.';
 			}
-			else out << '.';
 		}
-		out << ' ' << desc << "\n";
+		//out << ' ' << desc << "\n";
+		out << "\n";
 	}
 	out << "\nLegend:\n";
 	for (unsigned i = 0; i < sizeof(uint64_t) * 8; i++) {

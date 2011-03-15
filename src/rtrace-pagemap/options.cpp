@@ -23,6 +23,8 @@
 #include "config.h"
 
 #include <sstream>
+#include <stdlib.h>
+#include <stdint.h>
 
 #include "pagemap.h"
 #include "common/formatter.h"
@@ -60,14 +62,46 @@ void Options::displayUsage()
 		"  -N <name>    - filter report by area name.\n"
 		"  -A <addr>    - filter report by an address inside memory area.\n"
 	    "  -P <type>    - filter by the page type.\n"
-		"  -h           - this help page.\n"
+		"  -h           - this help page. More information is available at\n"
+		"                 --help-filter, --help-pages commands.\n"
 			;
 }
 
 void Options::displayFilterUsage()
 {
 	std::cout <<
-		"TODO: filter usage help page\n";
+		"Report filters are used to strip events from sp-rtrace report based on\n"
+		"allocated/freed resource page types/memory areas. The filters can be\n"
+		"invoked only if no pagemap reports are requested. Otherwise filters are\n"
+		"ignored. To generate filtered pagemap report first apply the necessary\n"
+		"filter and then generate report from the filtered output.\n\n"
+		"The filters leave only events with resource identifiers (addresses):\n"
+		"-N <name> (--filter-name <name>) - belonging to the specified memory area.\n"
+		"-A <addr> (--filter-address <addr>) - belonging to the same memory area\n"
+		"   as the specified address.\n"
+		"-P <type> (--filter-page <type>) - allocated on the memory pages matching\n"
+		"   the requested page type. See --help-pages for description of memory\n"
+		"   page types.\n"
+		"The name filter overrides address filter while the page type filter can be\n"
+		"used at the same time.\n"
+		;
+}
+
+
+void Options::displayPageInfo()
+{
+	std::cout <<
+		"Page type flags and description:\n\n";
+
+	for (unsigned i = 0; i < sizeof(uint64_t) * 8; i++) {
+		page_flag_name_t& page = page_flag_names[i];
+		if (page.mark) {
+			std::cout << (char)page.mark << ") " << page.desc << "\n";
+			std::cout << page.info << "\n\n";
+		}
+	}
+
+
 }
 
 void Options::parseCommandLine(int argc, char* const argv[])
@@ -79,13 +113,14 @@ void Options::parseCommandLine(int argc, char* const argv[])
 			 {"pages", 0, 0, 'p'},
 			 {"density", 0, 0, 'd'},
 			 {"bottom", 1, 0, 'B'},
-			 {"TOP", 1, 0, 'T'},
+			 {"top", 1, 0, 'T'},
 			 {"summary", 0, 0, 's'},
 			 {"filter-name", 1, 0, 'N'},
 			 {"filter-address", 1, 0, 'A'},
 			 {"filter-page", 1, 0, 'P'},
 			 {"help", 0, 0, 'h'},
 			 {"help-filter", 0, 0, 'H'},
+			 {"help-pages", 0, 0, 'E'},
 			 {0, 0, 0, 0},
 	};
 
@@ -149,6 +184,11 @@ void Options::parseCommandLine(int argc, char* const argv[])
 
 			case 'H': {
 				displayFilterUsage();
+				exit(0);
+			}
+
+			case 'E': {
+				displayPageInfo();
 				exit(0);
 			}
 

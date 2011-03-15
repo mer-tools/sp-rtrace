@@ -75,6 +75,13 @@ private:
 	 */
 	void displayFilterUsage();
 
+
+	/**
+	 * Displays information about page types and symbols used
+	 * to identify them.
+	 */
+	void displayPageInfo();
+
 public:
 
 	/**
