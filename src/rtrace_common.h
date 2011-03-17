@@ -24,6 +24,8 @@
 #ifndef RTRACE_COMMON_H
 #define RTRACE_COMMON_H
 
+#include "config.h"
+
 /**
  * @file rtrace_common.h
  *
@@ -32,7 +34,7 @@
 
 /* the tracing module installation directory and path*/
 #define SP_RTRACE_LIB_DIR          "sp-rtrace"
-#define SP_RTRACE_LIB_PATH         "/usr/lib/" SP_RTRACE_LIB_DIR "/"
+#define SP_RTRACE_LIB_PATH         INSTALL_DIR "/lib/" SP_RTRACE_LIB_DIR "/"
 
 /* the main tracing module */
 #define SP_RTRACE_MAIN_MODULE      "libsp-rtrace-main.so"
@@ -57,14 +59,5 @@
 
 /* the binary file pattern,  %d-%d - <pid>-<index> */
 #define SP_RTRACE_BINARY_FILE_PATTERN   "%d-%d.rtrace"
-
-#ifndef INSTALL_DIR
- #define INSTALL_DIR "/usr"
-#endif
-
-#ifndef BUILD_ARCH
- #define BUILD_ARCH "undefined"
-#endif
-
 
 #endif /* RTRACE_COMMON_H */

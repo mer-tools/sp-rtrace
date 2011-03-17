@@ -1,6 +1,54 @@
+/*
+ * This file is part of sp-rtrace package.
+ *
+ * Copyright (C) 2010,2011 by Nokia Corporation
+ *
+ * Contact: Eero Tamminen <eero.tamminen@nokia.com>
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA
+ */
 #include "totals_generator.h"
 
 #include "timestamp.h"
+#include "i_tic_writer.h"
+
+
+class TicWriter : public ITicWriter {
+private:
+	timestamp_t start;
+	std::vector<timestamp_t>& allocs;
+	std::vector<timestamp_t>::iterator iter;
+	unsigned int total_count;
+public:
+	TicWriter(std::vector<timestamp_t>& allocs) :
+		start(0),
+		allocs(allocs),
+		total_count(0) {
+		iter = allocs.begin();
+	}
+
+	 void write(std::string& output, timestamp_t tic) {
+		 if (!start) start = tic;
+		 while (iter != allocs.end() && *iter <= tic) {
+			 total_count++;
+			 iter++;
+		 }
+		output = Formatter() << "+" << Timestamp::offsetToString(tic - start) << "s\\n" << total_count;
+	 }
+};
 
 int TotalsGenerator::reportAlloc(const Resource* resource, event_ptr_t& event) {
 	if (event->timestamp == 0) {
@@ -28,6 +76,7 @@ int TotalsGenerator::reportAlloc(const Resource* resource, event_ptr_t& event) {
 		rd->file_overhead->write(event->timestamp, rd->overhead);
 		if (rd->overhead > yrange_max) yrange_max = rd->overhead;
 	}
+	alloc_timestamps.push_back(event->timestamp);
 	return OK;
 }
 
@@ -111,7 +160,8 @@ void TotalsGenerator::finalize() {
 	}
 	plotter.setTitle("Amount of non-freed allocations");
 
-	plotter.setAxisX("time (secs)", xrange_min, xrange_max);
+	TicWriter tic_writer(alloc_timestamps);
+	plotter.setAxisX("time (secs) / allocation count", xrange_min, xrange_max, -1, &tic_writer);
 	plotter.setAxisY("size", yrange_min, yrange_max, "%.1s%c");
 	plotter.setStyle("data lines");
 
