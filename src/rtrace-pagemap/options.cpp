@@ -126,7 +126,7 @@ void Options::parseCommandLine(int argc, char* const argv[])
 
 	int opt;
 	opterr = 0;
-	while ( (opt = getopt_long(argc, argv, "i:o:hpdsHA:P:N:", long_options, NULL)) != -1) {
+	while ( (opt = getopt_long(argc, argv, "i:o:hpdsHA:P:N:T:B:", long_options, NULL)) != -1) {
 		switch (opt) {
 			case 'h': {
 				displayUsage();
