@@ -198,6 +198,9 @@ void Options::parseCommandLine(int argc, char* const argv[], Processor* processo
 			}
 
 			case 'i': {
+				if (access(optarg, R_OK) == -1) {
+					throw std::ios_base::failure(Formatter() << "No read access to file: " << optarg << " (" << strerror(errno) << ")");
+				}
 				in_filename = optarg;
 				break;
 			}
