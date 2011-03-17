@@ -23,7 +23,7 @@
 #include "totals_generator.h"
 
 #include "timestamp.h"
-#include "i_tic_writer.h"
+#include "tic_writer.h"
 
 
 class TicWriter : public ITicWriter {
@@ -40,14 +40,14 @@ public:
 		iter = allocs.begin();
 	}
 
-	 void write(std::string& output, timestamp_t tic) {
-		 if (!start) start = tic;
-		 while (iter != allocs.end() && *iter <= tic) {
-			 total_count++;
-			 iter++;
-		 }
+	 void write(std::string& output, timestamp_t tic, Plotter::Tic& step) {
+		if (!start) start = tic;
+		while (iter != allocs.end() && *iter <= tic) {
+			total_count++;
+			iter++;
+		}
 		output = Formatter() << "+" << Timestamp::offsetToString(tic - start) << "s\\n" << total_count;
-	 }
+	}
 };
 
 int TotalsGenerator::reportAlloc(const Resource* resource, event_ptr_t& event) {

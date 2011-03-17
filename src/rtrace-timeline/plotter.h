@@ -24,7 +24,8 @@
 #define _PLOTTER_H_
 
 #include "timeline.h"
-#include "i_tic_writer.h"
+
+class ITicWriter;
 
 /**
  * Helper class for gnuplot configuration file setup.

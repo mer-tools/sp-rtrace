@@ -20,14 +20,32 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA
  */
-#ifndef _I_TIC_WRITER_H_
-#define _I_TIC_WRITER_H_
+#ifndef _TIC_WRITER_H_
+#define _TIC_WRITER_H_
 
 #include "timeline.h"
+#include "plotter.h"
 
 class ITicWriter {
 public:
-	virtual void write(std::string& output, timestamp_t tic) = 0;
+	virtual void write(std::string& output, timestamp_t tic, Plotter::Tic& step) = 0;
+};
+
+
+class DefaultTicWriter : public ITicWriter {
+private:
+	timestamp_t start;
+
+public:
+	DefaultTicWriter() : start(0) {
+	}
+
+	void write(std::string& output, timestamp_t tic, Plotter::Tic& step) {
+		if (!start) start = tic;
+		output = Timestamp::toString(tic, step.decimal);
+		output += "\\n+";
+		output += Timestamp::offsetToString(tic - start);
+	}
 };
 
 

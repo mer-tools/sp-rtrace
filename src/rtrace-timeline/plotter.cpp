@@ -26,6 +26,7 @@
 #include "formatter.h"
 #include "terminal.h"
 #include "timestamp.h"
+#include "tic_writer.h"
 
 unsigned int Plotter::DataFile::index = 0;
 
@@ -160,6 +161,12 @@ void Plotter::setAxisX(const std::string& label, int min, int max, int scale, IT
 	}
 
 	if (min != -1) {
+		std::auto_ptr<ITicWriter> default_writer;
+		if (!tic_writer) {
+			default_writer = std::auto_ptr<ITicWriter>(new DefaultTicWriter());
+			tic_writer = default_writer.get();
+		}
+
 		if (min == max) max++;
 		int range = max - min;
 		Tic step((double)range / 10 + 0.5);
@@ -176,22 +183,12 @@ void Plotter::setAxisX(const std::string& label, int min, int max, int scale, IT
 		// write tics
 		std::string stic;
 		while (tic <= max - step.value) {
-			if (tic_writer) tic_writer->write(stic, tic);
-			else {
-				stic = Timestamp::toString(tic, step.decimal);
-				stic += "\\n+";
-				stic += Timestamp::offsetToString(tic - min);
-			}
+			tic_writer->write(stic, tic, step);
 			config << "set xtics add (\"" << stic << "\" " << tic << ")\n";
 			tic += step.value;
 		}
 		// write the ending tic
-		if (tic_writer) tic_writer->write(stic, max);
-		else {
-			stic = Timestamp::toString(max);
-			stic += "\\n+";
-			stic += Timestamp::offsetToString(range);
-		}
+		tic_writer->write(stic, max, step);
 		config << "set xtics add (\"" << stic << "\" " << max << ")\n";
 	}
 
