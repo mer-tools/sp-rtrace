@@ -174,6 +174,7 @@
 # 2011-03-18:
 # - Fix help/usage text (only dot callgraph is output now)
 # - Add options for reducing text in callgraph nodes
+# - Add "count" callgraph report
 #
 # Originally this file (alloc-tree) was a part of libleaks package, but
 # renamed and moved to the sp-rtrace package during libleaks redesign.
@@ -646,6 +647,7 @@ class Rtrace:
 
     def parse(self, graph, options):
         "return parsed graph out of the given rtrace report"
+        only_counts = options.report == "count"
         top = 0     # highest allocation address/ID for current backtrace
         nonames = 0 # backtrace lines without function name
         ignores = 0 # otherwise ignored backtrace lines
@@ -665,6 +667,8 @@ class Rtrace:
             if line[0] in "0123456789":
                 oldname = name
                 (name,size,addr) = self.get_name_size_addr(line)
+                if only_counts:
+                    size = 1
                 if name != oldname:
                     # backtrace can be missing for previous alloc
                     # or free but it still needs to be handled and
@@ -1169,12 +1173,12 @@ class Options:
             elif option == "verbose":
                 self.verbose = self.get_bool(name, arg, value)
             elif option == "type":
-                if value in ["graph", "topmost"]:
+                if value in ("count", "graph", "topmost"):
                     self.report = value
                 else:
                     self.help(name, "unknown report type", arg)
             elif option == "direction":
-                if value in ["tb", "bt"]:
+                if value in ("tb", "bt"):
                     self.direction = value
                 else:
                     self.help(name, "unknown direction", arg)
@@ -1246,6 +1250,7 @@ Options for callgraph output type and looks:
 
     --type=value, value is one of following report types:
         graph -- output a callgraph for largest allocation amounts (default)
+        count -- output a callgraph for largest allocation counts
         topmost -- output a callgraph for allocations with highest addresses
 
     --direction=value, value is one of:
@@ -1434,10 +1439,10 @@ if __name__ == "__main__":
     graph.trim(options)
     
     debug("Writing report...")
-    if options.report == "graph":
-        report = AllocGraphReport(graph, options)
-    else:
+    if options.report == "topmost":
         report = TopmostGraphReport(graph, options)
+    else:
+        report = AllocGraphReport(graph, options)
     if options.direction == "tb":
         report.set_direction_tb()
     else:

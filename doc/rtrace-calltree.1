@@ -1,4 +1,4 @@
-.TH RTRACE-CALLTREE 1 "2010-11-01" "sp-rtrace"
+.TH RTRACE-CALLTREE 1 "2011-03-18" "sp-rtrace"
 .SH NAME
 rtrace-calltree - generate callgraphs from rtrace trace data
 .SH SYNOPSIS
@@ -9,40 +9,50 @@ resource allocation/deallocation reports.
 From these reports you can see for example which of the functions
 account for most of the resource usage and how
 the resource allocations are divided between the functions they call.
-Rtrace report is sp-rtrace report post-processed with -c[l]r
-option.
+Rtrace report is sp-rtrace report post-processed with
+\fIsp-rtrace-postproc\fP \fI-c[l]r\fP options.
 .PP
 \fIrtrace-calltree\fP works by accumulating the allocations upwards in
 the backtrace calltrees.  Each function is a node in the allocation
 graph. Once all allocations are propagated to the functions from
 which the calls to the allocation function originated, the information
-is output in the requested format.  Bactrace items which have just
-addresses instead of function/method names are ignored.
+is output into the requested callgraph type.  Bactrace items which have
+just addresses instead of function/method names are ignored.
 .SH OUTPUT REPORT TYPES
-\fIrtrace-calltree\fP supports couple of different output report types:
+\fIrtrace-calltree\fP supports couple of different callgraph types:
 .TP
 \fBgraph\fP
-A callgraph of backtraces through which most of the allocations are
-done. This is probably the most interesting report, but you normally
-need to specify quite a lot of additional options to get exactly what
-you want.  Using this will be explained more in detail with the (PDF)
-analysis document coming with the \fIsp-rtrace\fP package.
+A callgraph of through which functions largest \fIamounts\fP of allocations
+are done in total.  This is the default.  Typically you want this for
+a trace of non-freed allocations to see where the process memory goes.
+.TP
+\fBcount\fP
+A callgraph of through which functions largest \fInumber\fP of allocations
+are done.  Typically you would want this for trace that contains also
+freed allocations.  Huge number of allocations can indicate performance
+bottlenecks (not necessarily due to allocs, but due to what higher level
+operations caused them) and if they're mostly freed, those operations
+may actually be redundant.
+.TP
+\fBtopmost\fP
+A callgraph of allocations having the highest (memory) addresses.
+This is useful for finding out allocations that fragment the heap and
+prevent freed memory from being returned back to the system. The count
+and total size of allocations listed in this graph is for all
+the backtraces in the trace file, not just for the ones
+included into \fItopmost\fP graph.
 .PP
 Note that number of called functions and amount of allocations do not
 always match exactly between caller and called functions.  This can be
-for several reasons, either the backtraces were not deep enough to go
-up to main, there were debug symbols missing to get proper backtraces
-or --show-below-limit=no option was used.
+for several related reasons; the backtraces were not deep enough to go
+up to main() or unwinding there failed, there were debug symbols missing
+to get the function/method names, --show-below-limit=no was used or there
+were disjoint calltrees which sum of allocations were below the used --limit
+option.
 .PP
-Graphs are output in \fIdot\fP format.  You will need GraphViz package
+Graphs are output in \fIdot\fP format.  You will need either a program
+that can view them directly, like xdot.py, or GraphViz package
 to generate PostScript, SVG, PNG etc. formats out of them.
-.TP
-\fBtopmost\fP
-Output a graph of topmost allocations backtraces.
-.PP
-Note that the count and total size of allocations listed in this graph
-is for all the backtraces in the trace file, not just for the ones
-included into \fItopmost\fP graph.
 .SH REPORT OUTPUT OPTIONS
 .TP
 \fB--type\fP=\fIvalue\fP
@@ -228,14 +238,8 @@ To remove also paths from the --show-args file names, add:
 .nf
 		-e 's%/.*[^ ]/%%'
 .fi
-.PP
-If you want to reduce node width without removing any of
-the information, just split the source code file name and
-line number to a separate line:
-.nf
-		sed -e 's/ at /\\\\nat /' -e 's/ in /\\\\nin /'
-.fi
-And to split --show-args file paths and names to separate rows, use:
+To split --show-args file paths and names just to separate rows,
+use instead:
 .nf
 		-e 's%/\\([^/]*>\\)%/\\\\n\\1%'
 .fi
