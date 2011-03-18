@@ -59,6 +59,9 @@
 # 2011-02-07
 # - Improve helper output and ignore in callgraphs all libs without
 #   function name to avoid recursion in the graphs
+# 2011-03-18
+# - 'sed'ing dot file isn't anymore needed, rtrace-calltree
+#    does it by itself
 
 usage ()
 {
@@ -428,23 +431,15 @@ for src in $callgraphs; do
 		--type=graph --limit=5 --emph-limit=10 --ignore=lib \
 		--ignore-libc-allocs=yes --ignore-glib-internals=yes \
 		--ignore-qt-internals=yes --show-below-limit=yes \
-		$resolved $src > $dst.tmp
+		$resolved $src > $dst
 	if [ $? -ne 0 ]; then
 		echo "  ERROR: callgraph creation failed!"
-		rm $dst.tmp
+		rm $dst
 		exit 1
 	fi
-	# Try to reduce node widths to reasonable sizes
-	# by using sed to:
-	# - remove method signature arguments
-	# - split file & libnames to their own row
-	sed 	-e 's/([^0-9)][^)]*)/()/' -e 's/)(.[^)]*)//' \
-		-e 's/ at /\\nat /' -e 's/ in /\\nin /' \
-		$dst.tmp > $dst
-	rm $dst.tmp
 done
 
-# generate postscript files from .dot files
+# generate SVG files from .dot files
 if [ \! -z "$callgraphs" ]; then
 	echo
 	echo "Converting callgraphs to SVG:"

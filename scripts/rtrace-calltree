@@ -171,6 +171,9 @@
 # 2011-03-09:
 # - Correct statistics how many backtraces lines are ignored on
 #   request and how many because they lack required info
+# 2011-03-18:
+# - Fix help/usage text (only dot callgraph is output now)
+# - Add options for reducing text in callgraph nodes
 #
 # Originally this file (alloc-tree) was a part of libleaks package, but
 # renamed and moved to the sp-rtrace package during libleaks redesign.
@@ -178,11 +181,11 @@
 """
 CALLTREE
 
-This script reads non-freed resources allocations from sp-rtrace and
-internally accumulates these to functions up in the listed backtraces.
-It can then produce a variety of callgraphs from which you can see which
-of the functions account for most of the resource usage and how the
-resource allocations are divided between the functions they call.
+This script reads non-freed resource allocations from sp-rtrace trace
+file and accumulates these to functions up in the listed backtraces.
+It can then produce a variety of callgraphs from which you can see what
+functions account for most of the resource usage and how the resource
+allocations are divided between the functions causing them.
 """
 
 import os, sys, re
@@ -787,6 +790,15 @@ class GraphvizReport:
         self.limit = options.limit
         self.counter = 0
         self.cluster_nodes = options.cluster
+        self.strip_filenames = not options.keep_filenames
+        if options.keep_paths:
+            self.strip_paths = None
+        else:
+            self.strip_paths = re.compile("/.*[^ ]/")
+        if options.keep_types:
+            self.strip_args = None
+        else:
+            self.strip_args = re.compile("\(.*\)")
         # these need to be overridden in subclasses
         self.heading = ""
     
@@ -879,7 +891,20 @@ label="%s";
         for node in nodes.values():
             #if self.node_ok(node):
             self.output_node(node)
-        
+
+    def reduce_name(self, name):
+        "reduce node names as requested"
+        if self.strip_args:
+            name = self.strip_args.sub("()", name)
+        if self.strip_paths:
+            name = self.strip_paths.sub("/", name)
+        if self.strip_filenames:
+            offset = name.find(" at ")
+            if offset > 0:
+                name = name[:offset]
+        # wrap filenames
+        return name.replace(" at ", "\\nat ", 1).replace(" in ", "\\nin ", 1)
+
     def output_node(self, node):
         "output node name and links to its children"
         # this node
@@ -892,11 +917,14 @@ label="%s";
                 style = " style=bold color=red"
         if node.leafnode:
             style += " shape=diamond style=filled fillcolor=lightgray"
-        nid, name, size, count = node.nid, node.name, node.size, node.count
+
+        nid, size, count = node.nid, node.size, node.count
+        name = self.reduce_name(node.name)
         if options.refs:
             detail_str = "refcount: %d" % count
         else:
             detail_str = "%d%% (%dKB / %d)" % (percentage, (size + 512) / 1024, count)
+
         print "N%d [label=\"%s\\n%s\"%s];" % (nid, name, detail_str, style)
         # child nodes
         self.output_child_nodes(node)
@@ -989,7 +1017,10 @@ class Options:
     leafs = True            # leave out leaf nodes with only 1 parent?
     intermediate = True     # leave out intermediate nodes?
     show_below_limit = True # show how many nodes were below limit
-    show_args = False      # replace trace function names with arg values?
+    keep_filenames = True   # keep filenames in nodes
+    keep_paths = False      # keep full paths in nodes
+    keep_types = False      # keep C++ signature types in nodes
+    show_args = False       # replace trace function names with arg values?
     references = False      # whether to show what references --node=<node>
     progress = False        # whether to show number of each read record
     verbose = False         # whether to have some extra output
@@ -1119,6 +1150,12 @@ class Options:
                 self.include_args.append(value)
             elif option == "show-below-limit":
                 self.show_below_limit = self.get_bool(name, arg, value)
+            elif option == "keep-filenames":
+                self.keep_filenames = self.get_bool(name, arg, value)
+            elif option == "keep-paths":
+                self.keep_paths = self.get_bool(name, arg, value)
+            elif option == "keep-types":
+                self.keep_types = self.get_bool(name, arg, value)
             elif option == "show-references":
                 self.references = self.get_bool(name, arg, value)
             elif option == "show-args":
@@ -1160,6 +1197,9 @@ class Options:
         debug("intermediate = %s (include intermediate nodes?)" % self.bool_str(self.intermediate))
         debug("show_args = %s (show also trace function args?)" % self.bool_str(self.show_args))
         debug("show_below_limit = %s (show how many nodes were below limit?)" % self.bool_str(self.show_below_limit))
+        debug("keep_filenames = %s (show filenames in graphs?)" % self.bool_str(self.keep_filenames))
+        debug("keep_paths = %s (show full file paths in graphs?)" % self.bool_str(self.keep_paths))
+        debug("keep_types = %s (show C++ method signature args?)" % self.bool_str(self.keep_types))
         self.show_list(self.cluster, "Cluster functions within given sources/libs together")
         self.show_list(self.include_funs, "Include only backtraces having node(s) which names start with these prefixes")
         self.show_list(self.include_args, "Include only backtraces which traced functions args match these")
@@ -1200,17 +1240,17 @@ class Options:
     def help(self, name, errstr, arg=None):
         "show command line help and exit"
         debug(__doc__)
-        debug("usage: %s [options] <rtrace-report>  >  report.[txt|dot|html]" % name)
+        debug("usage: %s [options] <rtrace-report>  >  report.dot" % name)
         debug("""
-Options for report output type and looks:
+Options for callgraph output type and looks:
 
     --type=value, value is one of following report types:
-        graph -- outputs a graph of largest allocations (default)
-        topmost -- outputs a graph of topmost allocations backtraces
+        graph -- output a callgraph for largest allocation amounts (default)
+        topmost -- output a callgraph for allocations with highest addresses
 
     --direction=value, value is one of:
-        tb -- top to bottom i.e. from main() towards malloc()  (default)
-        bt -- bottom to top i.e. from malloc() towards main()
+        tb -- top to bottom i.e. from main() towards allocs  (default)
+        bt -- bottom to top i.e. from allocs towards main()
         Default is "tb".
 
     --depth=value, value is an integer (1-99) used in following reports:
@@ -1234,25 +1274,20 @@ Options for report output type and looks:
         should use also --ignore-glib/gtk/qt-internals=yes.
 
 
-Additional options for filtering which allocations information is
-included to the output data:
+Additional options for filtering which kind of allocation information
+is included to the callgraph:
 
     --size-range=[smallest]-[largest], values are sizes of the smallest
-        and largest allocations that will be included to the report.
+        and largest allocations that will be included to the graph.
 
 
-Additional options for reducing the number of backtrace items included
-to the output data:
+Additional options for reducing the number of nodes (backtrace items)
+included to the callgraph:
 
     --limit=value,  value (0.1-100) is used with "graph" and
         "html" report types to limit the number of functions included
         into the output.  The given value is a percentage of how much
         of the allocation come through that function.  Default is 10.0.
-        If you decrease this with 'html' report, --stop use is
-        recommended as the generated HTML output can be very large
-        (even gigabytes if rtrace report was megabytes).  For
-        "graph" report, there are additional options for reducing
-        the amount of output, see below.
 
     --show-below-limit=no, do not show nodes telling how many called
         nodes were below the specified limit.
@@ -1264,7 +1299,7 @@ to the output data:
 
     --include-only=value, value is a string prefix for node names
        for backtraces that should be included into report.  All backtraces
-       NOT containing a node name starting with this substring are ignored.
+       NOT containing a node name starting with these substrings are ignored.
 
     --include-only-args=value, value is a substring for traced function
       argument values for which backtraces should be included into report.
@@ -1274,11 +1309,11 @@ to the output data:
 
     --ignore=value, value is a string prefix for node names which should be
         ignored in the backtraces.  Useful for making graphs more readable.
-        Use --verbose to see what is ignored by the shortcut options below
-        after enabling them.
+        After enabling the shortcut options below, use --verbose to see what
+        actually is ignored by them.
 
     --ignore-middle=value, like --ignore, but given substring is for any
-        part of the function names(slower, but useful e.g. with template
+        part of the function names (slower, but useful e.g. with template
         functions as their names are prefixed with a changing return type).
 
     --no-ignore=value, value is a string prefix for node names that should
@@ -1311,7 +1346,6 @@ to the output data:
         marshalling/recursed functions called by Qt applications.
         You might want to try also these options:
           --ignore-glib-internals=yes
-          --stop=qt_format_text
 
     --join=value, value is the name for the function, library or source
         code file which nodes should be represented as a single node.
@@ -1326,6 +1360,18 @@ to the output data:
         functions.  This can be used e.g. to get callgraphs to individual
         file names in file descriptor traces.  To limit this set, use
         --include-only-args option.
+
+
+Options affecting what information is shown in graph nodes:
+
+    --keep-types=yes, whether to show overloaded C++ method signature
+        arguments. These are removed by default as they can be very long.
+
+    --keep-paths=yes, whether to show full paths in file names.
+        By default path is stripped out.
+
+    --keep-filenames=no, whether to show source filenames (+ line numbers).
+       Shown by default.
 
 
 Debug options:
@@ -1346,12 +1392,19 @@ to all values you gave (of other options, only the last value applies):
     --stop
     --ignore
     --include-only
+    --include-only-args
     --cluster
     --join
     --node
 
+
+Typical first usage looks like this:
+	rtrace-calltree --limit=4 app.rtrace.txt > app.dot
+
+
 Graphs are output in 'dot' format.  You will need GraphViz package to
-generate PostScript, SVG, PNG etc. formats out of them.""")
+generate PostScript, SVG, PNG etc. formats out of them, or use e.g.
+"xdot.py" tool to view them.""")
         if errstr:
             if arg:
                 errstr += " (for '%s')" % arg

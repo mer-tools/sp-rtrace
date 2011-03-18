@@ -55,8 +55,8 @@ is 3.
 .TP
 \fB--direction\fP=\fIvalue\fP (graph and html reports)
 The report direction value is either \'tb' for top to bottom
-(i.e. from main() towards malloc()) or 'bt' for bottom to top
-(i.e. from malloc() towards main()).  Default is 'tb'.
+(i.e. from main() towards allocs) or 'bt' for bottom to top
+(i.e. from allocs towards main()).  Default is 'tb'.
 .TP
 \fB--emph-limit\fP=\fIvalue\fP (graph report)
 Value (1.0-100) is used to indicate that function nodes responsible for
@@ -86,18 +86,15 @@ be included to the report.
 .SH OPTIONS FOR FILTERING BACKTRACE CONTENT
 Programs doing a lot of allocations with complex backtraces produce
 so much data that you really cannot analyse it without reducing the
-amount of data.  Options for doing that are:
+amount of nodes in the graph.  Options for doing that are:
 .TP
-\fB--limit\fP=\fIvalue\fP (graph and html reports)
+\fB--limit\fP=\fIvalue\fP
 The given value (0.1-100) is a minimum percentage of how much
 of the allocations need to go through the given function for it
 to get included.  Default is 10.0.
 .PP
-Note: If you decrease this with the 'html' report, --stop use
-is recommended as the generated HTML output can be very large
-(even gigabytes although rtrace report was megabytes).  For
-"graph" report, there are additional options for reducing
-the amount of output, see the filtering options.
+Note: If you make this very small, either --include-only or --stop
+option usage is recommended to limit the graph only to a subset.
 .TP
 \fB--show-below-limit\fP=\fIno\fP
 Do not show nodes summarizing how many called nodes were below
@@ -108,9 +105,9 @@ means that the values shown in the callgraph won't add up
 .TP
 \fB--stop\fP=\fIvalue\fP
 Value is a string prefix of node name where each backtrace parsing
-stops.  Using something like following could make Gtk memory
-allocation graphs more readable (or you could use
-just --ignore-gtk-internals=yes):
+stops (when going from allocation towards main()).  For example using
+something like following could make Gtk memory allocation graphs more
+readable (or you could use just --ignore-gtk-internals=yes):
 .br
 		--stop=g_cclosure_marshal --stop=_gtk_marshal
 .TP
@@ -124,17 +121,18 @@ Value is a substring for traced function argument values for which
 backtraces should be included into report.  All backtraces NOT having
 an argument value that contains this substring are ignored. NOTE: this
 needs also --show-args=yes option and it cannot work properly for
-merged backtraces.
+merged backtraces ("-c" option for \fIsp-rtrace-postproc\fP).
 .TP
 \fB--ignore\fP=\fIvalue\fP
 Value is a string prefix for node names which should be ignored in the
-backtraces.  Useful for making graphs more readable. Use --verbose to
-see what is ignored by the shortcut options below after enabling them.
+backtraces.  Useful for making graphs more readable.  Instead of this,
+one can also use the shortcut options below. Use --verbose to see what
+is ignored by them.
 .TP
 \fB--ignore-middle\fP=\fIvalue\fP
 Like --ignore, but given substring is for any part of the function names
-(slower, but useful e.g. with template functions as their names are
-prefixed with a changing return type).
+This is useful e.g. with template functions as their names are prefixed
+with a changing return type.
 .TP
 \fB--no-ignore\fP=\fIvalue\fP
 Value is a string prefix for node names that should be kept in the
@@ -203,6 +201,21 @@ can be given as many times as you wish and they apply to all
 values you gave. For all the other options, only the last value
 applies.
 .SH REDUCING GRAPH SIZE BY MINIMIZING THE NODE SIZES
+.TP
+\fB--keep-types\fP=\fIyes\fP
+Whether to show overloaded C++ method signature arguments.
+These are removed by default as they can be very long.
+.TP
+\fB--keep-paths\fP=\fIyes\fP
+Whether to show full paths in file names. By default path is stripped out.
+.TP
+\fB--keep-filenames\fP=\fIno\fP
+Whether to show source filenames (+ line numbers). Shown by default.
+.SH MINIMIZING THE NODE SIZES AFTERWARDS
+If you haven't used above options for reducing graph node sizes,
+you can post-process the resulting dot file to achieve the same thing,
+which is faster than re-generating the .dot file.
+.PP
 To remove function and method arguments, pipe output through:
 .nf
 		sed -e 's/([^0-9)][^)]*)/()/' -e 's/)(.[^)]*)//'
@@ -240,9 +253,17 @@ Show what other nodes refer nodes specified with the --node option.
 .TP
 \fB--verbose\fP=\fIyes\fP
 Show more information about rtrace-calltree internal working.
+.SH USAGE EXAMPLES
+Typical first usage looks like this:
+.nf
+	rtrace-calltree --limit=4 app.rtrace.txt > app.dot
+.fi
 .SH LIMITATIONS / TODOS
-Currently user needs to generate each report type separately,
+Currently user needs to generate each graph type separately,
 \fIrtrace-calltree\fP cannot create multiple reports in the same run.
+.PP
+\fIrtrace-calltree\fP doesn't have as extensive options for filtering
+the included allocations as \fIsp-rtrace-timeline\fP has.
 .SH SEE ALSO
 .IR sp-rtrace (1),
 .IR sp-rtrace-timeline (1),
@@ -251,7 +272,7 @@ Currently user needs to generate each report type separately,
 .IR valgrind (1),
 .IR dot (1)
 .SH COPYRIGHT
-Copyright (C) 2007,2010 Nokia Corporation.
+Copyright (C) 2007-2011 Nokia Corporation.
 .PP
 This is free software.  You may redistribute copies of it under the
 terms of the GNU General Public License v2 included with the software.
