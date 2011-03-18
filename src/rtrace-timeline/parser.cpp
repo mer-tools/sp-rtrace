@@ -24,7 +24,7 @@
 #include "timeline.h"
 
 #include "parser.h"
-#include "formatter.h"
+#include "common/formatter.h"
 #include "processor.h"
 
 extern "C" {

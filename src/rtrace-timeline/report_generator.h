@@ -28,7 +28,7 @@
 #include "event.h"
 #include "plotter.h"
 #include "options.h"
-#include "formatter.h"
+#include "common/formatter.h"
 
 /**
  * Base class for report generators.

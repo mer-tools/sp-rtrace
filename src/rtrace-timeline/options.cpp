@@ -23,7 +23,7 @@
 #include "timeline.h"
 
 #include "options.h"
-#include "formatter.h"
+#include "common/formatter.h"
 #include "terminal.h"
 #include "processor.h"
 #include "filter_manager.h"

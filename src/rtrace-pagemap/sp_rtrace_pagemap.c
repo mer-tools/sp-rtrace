@@ -36,14 +36,18 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <fcntl.h>
+#include <time.h>
+#include <stdint.h>
+#include <string.h>
 
-#include "sp_rtrace_main.h"
-#include "sp_rtrace_module.h"
+#include "modules/sp_rtrace_main.h"
+#include "modules/sp_rtrace_module.h"
 #include "common/sp_rtrace_proto.h"
 #include "library/sp_rtrace_defs.h"
 #include "common/debug_log.h"
 #include "common/utils.h"
 
+#include "sp_rtrace_pagemap.h"
 
 //#define MSG(text) {	char buffer[] = ">>>" text "\n"; if(write(STDERR_FILENO, buffer, sizeof(buffer))){}; }
 
@@ -61,22 +65,40 @@ static sp_rtrace_module_info_t module_info = {
 static bool trace_enabled = false;
 
 
+static unsigned long page_size;
+
+/* the parser memory map registration callback */
+typedef int (*parser_callback_t)(unsigned long from, unsigned long to, const char* module, const char* access, void* data);
+
 /**
- * The memory page data.
- *
- * This structure is used to store data about memory pages containing
- * only zeroes. It holds starting page address and the number of
- * consequent pages containing only zero bytes.
+ * The parser data structure.
  */
 typedef struct {
-	/* starting area */
-	unsigned long addr;
-	/* number of pages */
-	unsigned long npages;
-} pagescan_t;
+	/* the user data */
+	void* data;
+	/* the registration callback function called for each maps record */
+	parser_callback_t process;
+} parser_data_t;
 
 
-static unsigned long page_size;
+/**
+ * The data structure used as user data for pagemap file cutting.
+ */
+typedef struct {
+	int fd_in;
+	int fd_out;
+} pmcut_data_t;
+
+
+
+/**
+ * The data structure used as user data for kpageflags file cutting.
+ */
+typedef struct {
+	int fd_pf;
+	int fd_pm;
+	int fd_out;
+} pfcut_data_t;
 
 /**
  * Locates character in string.
@@ -131,6 +153,7 @@ static unsigned long str2hex(const char* str)
 	return value;
 }
 
+
 /**
  * Checks if the memory page is filled with zeroes.
  *
@@ -147,60 +170,125 @@ static bool is_zero_page(unsigned long from)
 	return true;
 }
 
-/*
-static void print_pdata(pagescan_t* pdata, int npages)
-{
-	int i;
-	for (i = 0; i < npages; i++) {
-		printf("[map] 0x%lx, %lu\n", pdata->addr, pdata->npages);
-		pdata++;
-	}
-}
-*/
-
 /**
  * Scans address range for memory pages containing zeroes.
  *
  * The data is stored in pagescan_t structure array and written
  * in the specified file.
- * @param[in] fd_out  the output file descriptor.
  * @param[in] from    the memory area start address.
  * @param[in] to      the memory area end address.
  * @param[in] module  the module(file) mapped to the specified address range.
+ * @param[in] rights  the memory are access rights (in the same format as in maps file).
+ * @param[in] fd_out  the output file descriptor.
+ *
  * @return             0 - success.
  *                    <0 - -errno error code.
  */
-static int scan_address_range(int fd_out, unsigned long from, unsigned long to, const char* module)
+static int scan_address_range(unsigned long from, unsigned long to, const char* module, const char* rights, int fd_out)
 {
-	pagescan_t data[512], *pdata = data;
+	if (rights[0] != 'r' || rights[1] != 'w' || rights[3] != 'p') return EINVAL;
 
-	pdata->npages = 0;
-	pdata->addr = 0;
+	/* find the memory area data in output file */
+	lseek(fd_out, 0, SEEK_SET);
+	while (true) {
+		pageflags_header_t header;
+		int header_size = read(fd_out, &header, sizeof(pageflags_header_t));
+		if (header_size != sizeof(pageflags_header_t)) return (header_size == -1) ? -errno : -EINVAL;
+		if (header.from == from && header.to == to) break;
+		lseek(fd_out, header.size, SEEK_CUR);
+	}
+	/* scan the area for zero pages */
+	size_t offset = 0;
 	while (from < to) {
 		if (is_zero_page(from)) {
-			pdata->addr = from;
-			pdata->npages++;
+			/* zero page found, update it's info field and write it back into the kpageflags file */
+			pageflags_data_t data;
+			lseek(fd_out, offset, SEEK_CUR);
+			int n = read(fd_out, &data, sizeof(pageflags_data_t));
+			if (n != sizeof(pageflags_data_t)) return (n == -1) ? -errno : -EINVAL;
+
+			data.info |= PAGE_ZERO;
+			lseek(fd_out, -sizeof(pageflags_data_t), SEEK_CUR);
+			n = write(fd_out, &data, sizeof(pageflags_data_t));
+			if (n != sizeof(pageflags_data_t)) return (n == -1) ? -errno : -EINVAL;
+			offset = 0;
 		}
 		else {
-			if (pdata->npages) {
-				pdata++;
-				if ((unsigned long)(pdata - data) >= sizeof(data) / sizeof(data[0])) {
-					long size = (pdata - data) * sizeof(data[0]);
-					if (write(fd_out, data, size) != size) return -errno;
-					pdata = data;
-				}
-				pdata->npages = 0;
-			}
+			/* skip the page */
+			offset += sizeof(pageflags_data_t);
 		}
 		from += page_size;
 	}
-	if (pdata->npages) pdata++;
-	if (pdata > data) {
-		long size = (pdata - data) * sizeof(data[0]);
-		if (write(fd_out, data, size) != size) return -errno;
+	return 0;
+}
+
+/*
+ * pagemap kernel ABI bits
+ */
+#define PM_ENTRY_BYTES      sizeof(uint64_t)
+#define PM_STATUS_BITS      3
+#define PM_STATUS_OFFSET    (64 - PM_STATUS_BITS)
+#define PM_STATUS_MASK      (((1LL << PM_STATUS_BITS) - 1) << PM_STATUS_OFFSET)
+#define PM_STATUS(nr)       (((nr) << PM_STATUS_OFFSET) & PM_STATUS_MASK)
+#define PM_PSHIFT_BITS      6
+#define PM_PSHIFT_OFFSET    (PM_STATUS_OFFSET - PM_PSHIFT_BITS)
+#define PM_PSHIFT_MASK      (((1LL << PM_PSHIFT_BITS) - 1) << PM_PSHIFT_OFFSET)
+#define PM_PSHIFT(x)        (((u64) (x) << PM_PSHIFT_OFFSET) & PM_PSHIFT_MASK)
+#define PM_PFRAME_MASK      ((1LL << PM_PSHIFT_OFFSET) - 1)
+#define PM_PFRAME(x)        ((x) & PM_PFRAME_MASK)
+
+#define PM_PRESENT          PM_STATUS(4LL)
+#define PM_SWAP             PM_STATUS(2LL)
+
+/**
+ * Copies pagemap data of the specified memory range into output file.
+ *
+ * @param[in] from    the memory area start address.
+ * @param[in] to      the memory area end address.
+ * @param[in] module  the module(file) mapped to the specified address range.
+ * @param[in] rights  the memory are access rights (in the same format as in maps file).
+ * @param[in] data    the pageflags cutting data.
+ * @return             0 - success.
+ *                    <0 - -errno error code.
+ */
+static int cut_kpageflags_range(unsigned long from, unsigned long to, const char* module, const char* rights, pfcut_data_t* data)
+{
+	/* store the memory area header data */
+	pageflags_header_t header = {
+		.from = from,
+		.to = to,
+		.size = (to - from) / page_size * sizeof(pageflags_data_t),
+	};
+	size_t n = write(data->fd_out, &header, sizeof(pageflags_header_t));
+	if (n != sizeof(pageflags_header_t)) return (n == (size_t)-1) ? -errno : -EINVAL;
+
+	unsigned long index = from / page_size * 8;
+	unsigned long end = to / page_size * 8;
+
+	lseek(data->fd_pm, index, SEEK_SET);
+
+	while (index < end) {
+		uint64_t page_index;
+		size_t n = read(data->fd_pm, &page_index, sizeof(uint64_t));
+		if (n != sizeof(uint64_t)) return (n == (size_t)-1) ? -errno : -EINVAL;
+
+		pageflags_data_t page_data = {
+			.info = PAGE_SWAP,
+			.kflags = 0,
+		};
+		if (page_index & PM_PRESENT) {
+			lseek(data->fd_pf, PM_PFRAME(page_index) * 8, SEEK_SET);
+			n = read(data->fd_pf, &page_data.kflags, sizeof(uint64_t));
+			if (n != sizeof(uint64_t)) return (n == (size_t)-1) ? -errno : -EINVAL;
+			page_data.info = PAGE_MEMORY;
+		}
+		n = write(data->fd_out, &page_data, sizeof(pageflags_data_t));
+		if (n != sizeof(pageflags_data_t)) return (n == (size_t)-1) ? -errno : -EINVAL;
+		index += 8;
 	}
 	return 0;
 }
+
 
 /**
  * Parses /proc/pid/maps file record (line).
@@ -214,7 +302,7 @@ static int scan_address_range(int fd_out, unsigned long from, unsigned long to, 
  * @return             0 - success.
  *                    <0 - -errno error code.
  */
-static int parse_record(int fd_out, char* buffer, size_t size)
+static int parse_record(parser_data_t* data, char* buffer, size_t size)
 {
 	char* from_s = buffer;
 	char *ptr = _strnchr(buffer, '-', size);
@@ -229,7 +317,6 @@ static int parse_record(int fd_out, char* buffer, size_t size)
 	char* rights_s = ptr;
 	ptr = _strnchr(rights_s, ' ', size - (rights_s - buffer));
 	if (!ptr) return -EINVAL;
-	if (rights_s[0] != 'r' || rights_s[1] != 'w') return -EINVAL;
 	*ptr++ = '\0';
 
 	ptr = _strnchr(ptr, ' ', size - (ptr - buffer));
@@ -247,11 +334,10 @@ static int parse_record(int fd_out, char* buffer, size_t size)
 	else {
 		name_s = buffer + size - 1;
 	}
-
 	unsigned long from = str2hex(from_s);
 	unsigned long to = str2hex(to_s);
 
-	return scan_address_range(fd_out, from, to, name_s);
+	return data->process(from, to, name_s, rights_s, data->data);
 }
 
 /**
@@ -260,13 +346,13 @@ static int parse_record(int fd_out, char* buffer, size_t size)
  * The buffer might contain several lines from /proc/pid/maps.
  * This function separates them and call parse_record() function
  * for each line.
- * @param[in] fd_out      the output file descriptor.
+ * @param[in] data        the parser data.
  * @param[in] buffer      the buffer to parse.
  * @param[in] total_size  the number of bytes in buffer.
  * @return                 0 - success.
  *                        <0 - -errno error code.
  */
-static int parse_buffer(int fd_out, char* buffer, size_t total_size)
+static int parse_buffer(parser_data_t* data, char* buffer, size_t total_size)
 {
 	buffer[total_size] = '\0';;
 	char* end = buffer;
@@ -274,7 +360,7 @@ static int parse_buffer(int fd_out, char* buffer, size_t total_size)
 		char* ptr = _strnchr(end, '\n', total_size - (end - buffer));
 		if (!ptr) break;
 		*ptr++ = '\0';
-		parse_record(fd_out, end, ptr - end);
+		parse_record(data, end, ptr - end);
 		end = ptr;
 	}
 	return end - buffer;
@@ -283,11 +369,11 @@ static int parse_buffer(int fd_out, char* buffer, size_t total_size)
 /**
  * Parses /proc/self/maps file.
  *
- * @param[in] fd_out   the output file descriptor.
+ * @param[in] data   the parser data.
  * @return              0 - success.
  *                     <0 - -errno error code.
  */
-static int parse_maps(int fd_out)
+static int parse_maps(parser_data_t* data)
 {
 	int fd = open("/proc/self/maps", O_RDONLY);
 	if (fd == -1) return -errno;
@@ -296,7 +382,7 @@ static int parse_maps(int fd_out)
 	int n, offset = 0;
 	while ( (n = read(fd, buffer + offset, sizeof(buffer) - offset)) ) {
 		size_t total_size = n + offset;
-		int nparsed = parse_buffer(fd_out, buffer, total_size);
+		int nparsed = parse_buffer(data, buffer, total_size);
 		_strmove(buffer, buffer + nparsed, total_size - nparsed);
 	}
 	close(fd);
@@ -316,14 +402,54 @@ static int parse_maps(int fd_out)
  */
 static int find_zero_memory_pages(const char* out_filename)
 {
-	page_size = getpagesize();
+	int fd_out = open(out_filename, O_RDWR);
+	if (fd_out == -1) return -errno;
 
+	parser_data_t data = {
+			.data = (void*) fd_out,
+			.process = (parser_callback_t)scan_address_range,
+	};
+
+	int rc = parse_maps(&data);
+	close(fd_out);
+	return rc;
+}
+
+
+static int cut_kpageflags(const char* out_filename)
+{
 	int fd_out = creat(out_filename, 0644);
 	if (fd_out == -1) return -errno;
 
-	int rc = parse_maps(fd_out);
+	int fd_pm = open("/proc/self/pagemap", O_RDONLY);
+	if (fd_pm == -1) {
+		close(fd_out);
+		return -errno;
+	}
+
+	int fd_pf = open("/proc/kpageflags", O_RDONLY);
+	if (fd_pf == -1) {
+		close(fd_out);
+		close(fd_pm);
+		return -errno;
+	}
+	pfcut_data_t pf_data = {
+			.fd_out = fd_out,
+			.fd_pf = fd_pf,
+			.fd_pm = fd_pm,
+	};
+
+	parser_data_t data = {
+			.data = (void*) &pf_data,
+			.process = (parser_callback_t)cut_kpageflags_range,
+	};
+
+	int rc = parse_maps(&data);
 	close(fd_out);
+	close(fd_pm);
+	close(fd_pf);
 	return rc;
+
 }
 
 /**
@@ -335,6 +461,12 @@ static int find_zero_memory_pages(const char* out_filename)
 static void enable_tracing(bool value)
 {
 	if (!value && trace_enabled) {
+		page_size = getpagesize();
+
+		/* TODO: remove timing code before release */
+		struct timespec ts1, ts2;
+		clock_gettime(CLOCK_MONOTONIC, &ts1);
+
 		char filename[PATH_MAX];
 		/* copy /proc/self/maps file */
 		sp_rtrace_get_out_filename("pagemap-maps", filename, sizeof(filename));
@@ -345,7 +477,22 @@ static void enable_tracing(bool value)
 		sp_rtrace_copy_file("/proc/self/maps", filename);
 		sp_rtrace_write_attachment(&file_maps);
 
-		/* copy /proc/self/pagemap file */
+		/* copy data from /proc/kpageflags file */
+		sp_rtrace_get_out_filename("pagemap-pageflags", filename, sizeof(filename));
+		sp_rtrace_attachment_t file_kpageflags = {
+				.name = "pageflags",
+				.path = filename,
+		};
+		int err = cut_kpageflags(filename);
+		if (err < 0) {
+			fprintf(stderr, "ERROR: %s\n", strerror(-err));
+		}
+		sp_rtrace_write_attachment(&file_kpageflags);
+
+		find_zero_memory_pages(filename);
+
+		/* Copy /proc/self/pagemap, /proc/kpageflags files for debugging purposes
+
 		sp_rtrace_get_out_filename("pagemap-pagemap", filename, sizeof(filename));
 		sp_rtrace_attachment_t file_pagemap = {
 				.name = "pagemap",
@@ -354,7 +501,6 @@ static void enable_tracing(bool value)
 		sp_rtrace_copy_file("/proc/self/pagemap", filename);
 		sp_rtrace_write_attachment(&file_pagemap);
 
-		/* copy /proc/kpageflags file */
 		sp_rtrace_get_out_filename("pagemap-kpageflags", filename, sizeof(filename));
 		sp_rtrace_attachment_t file_kpageflags = {
 				.name = "kpageflags",
@@ -362,15 +508,21 @@ static void enable_tracing(bool value)
 		};
 		sp_rtrace_copy_file("/proc/kpageflags", filename);
 		sp_rtrace_write_attachment(&file_kpageflags);
+		*/
 
-		/* scan for zero pages */
-		sp_rtrace_get_out_filename("pagemap-zeropages", filename, sizeof(filename));
-		find_zero_memory_pages(filename);
-		sp_rtrace_attachment_t file_zeropages = {
-				.name = "zeropages",
-				.path = filename,
-		};
-		sp_rtrace_write_attachment(&file_zeropages);
+
+		/* TODO: remove timing code before release */
+		clock_gettime(CLOCK_MONOTONIC, &ts2);
+
+		int diff = ts2.tv_sec - ts1.tv_sec;
+		if (ts2.tv_nsec < ts1.tv_nsec) {
+			diff--;
+			ts2.tv_nsec += 1000000000;
+		}
+		diff = diff * 1000 + (ts2.tv_nsec - ts1.tv_nsec) / 1000000;
+
+
+		fprintf(stderr, "time: %.3f\n", (double)diff / 1000);
 	}
 	trace_enabled = value;
 }

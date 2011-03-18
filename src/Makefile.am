@@ -7,7 +7,7 @@ lib_LTLIBRARIES = libsp-rtrace1.la  libsp-rtrace-main.la
 module_LTLIBRARIES = \
 	libsp-rtrace-memory.la libsp-rtrace-memtransfer.la \
 	libsp-rtrace-shmsysv.la libsp-rtrace-file.la libsp-rtrace-gobject.la libsp-rtrace-qobject.la \
-	libsp-rtrace-audit.la libsp-rtrace-shmposix.la libsp-rtrace-pagemap.la
+	libsp-rtrace-audit.la libsp-rtrace-shmposix.la 
 moduledir = $(libdir)/sp-rtrace
 
 libsp_rtrace1_la_SOURCES = library/sp_rtrace_context.c library/sp_rtrace_formatter.c \
@@ -62,7 +62,8 @@ libsp_rtrace_shmposix_la_CFLAGS = -rdynamic $(GLIB_CFLAGS) $(AM_CFLAGS)
 libsp_rtrace_shmposix_la_LDFLAGS = -avoid-version -module
 libsp_rtrace_shmposix_la_LIBADD = -ldl -lpthread 
 
-libsp_rtrace_pagemap_la_SOURCES = modules/sp_rtrace_pagemap.c 
+module_LTLIBRARIES += libsp-rtrace-pagemap.la
+libsp_rtrace_pagemap_la_SOURCES = rtrace-pagemap/sp_rtrace_pagemap.c 
 libsp_rtrace_pagemap_la_CFLAGS = -rdynamic $(GLIB_CFLAGS) $(AM_CFLAGS)
 libsp_rtrace_pagemap_la_LDFLAGS = -avoid-version -module 
 libsp_rtrace_pagemap_la_LIBADD =  -lpthread 
@@ -107,5 +108,21 @@ sp_rtrace_timeline_CXXFLAGS = $(AM_CXXFLAGS)
 sp_rtrace_timeline_LDFLAGS = -Wl,-z,defs
 sp_rtrace_timeline_LDADD = -lsp-rtrace1
 
+
+bin_PROGRAMS += sp-rtrace-pagemap
+
+rtrace-pagemap/pagemap.h.gch: rtrace-pagemap/pagemap.h
+	$(CXX) -c $< $(CXXFLAGS)
+
+sp_rtrace_pagemap_SOURCES = rtrace-pagemap/pagemap.h rtrace-pagemap/pagemap.cpp rtrace-pagemap/options.cpp \
+	rtrace-pagemap/trace_data.cpp rtrace-pagemap/memory_area.cpp rtrace-pagemap/address_space_report.cpp \
+	rtrace-pagemap/legend_report.cpp rtrace-pagemap/density_report.cpp common/header.c \
+	rtrace-pagemap/summary_report.cpp rtrace-pagemap/page_types.c rtrace-pagemap/filter.cpp
+sp_rtrace_pagemap_CFLAGS = $(AM_CFLAGS)
+sp_rtrace_pagemap_CXXFLAGS = $(AM_CXXFLAGS)
+sp_rtrace_pagemap_LDFLAGS = -Wl,-z,defs
+sp_rtrace_pagemap_LDADD = -lsp-rtrace1
+
+
 DISTCLEANFILES = Makefile.in *la 
-CLEANFILES = rtrace-timeline/*.h.gch
+CLEANFILES = rtrace-timeline/*.h.gch rtrace-pagemap/*.h.gch

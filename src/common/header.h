@@ -29,6 +29,11 @@
 #ifndef HEADER_H_
 #define HEADER_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 /* header filter field tag index */
 enum filter_index_t {
 	FILTER_LEAKS,
@@ -63,6 +68,9 @@ unsigned int header_get_filter(sp_rtrace_header_t* header);
  */
 void header_set_filter(sp_rtrace_header_t* header, unsigned int filter_mask);
 
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif /* HEADER_H_ */

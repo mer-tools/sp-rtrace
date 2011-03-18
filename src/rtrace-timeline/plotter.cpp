@@ -23,7 +23,7 @@
 #include "plotter.h"
 
 #include "options.h"
-#include "formatter.h"
+#include "common/formatter.h"
 #include "terminal.h"
 #include "timestamp.h"
 #include "tic_writer.h"

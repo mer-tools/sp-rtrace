@@ -22,7 +22,7 @@
  */
 #include "processor.h"
 
-#include "formatter.h"
+#include "common/formatter.h"
 #include "filter_manager.h"
 #include "event.h"
 

@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010,2011 by Nokia Corporation
+ * Copyright (C) 2011 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -20,26 +20,37 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA
  */
-#ifndef _FORMATTER_H_
-#define _FORMATTER_H_
 
-#include "timeline.h"
+#ifndef _PAGEMAP_H_
+#define _PAGEMAP_H_
 
-/**
- * Helper class for easier string formatting.
- *
- * Usage example (of course /proc/self/maps could be used, but that's not the point):
- * std::ifstream maps_file(Formatter() << "/proc/" << getpid() << "/maps");
- */
-class Formatter {
-private:
-    std::stringstream stream;
+#include <stdbool.h>
 
-public:
-    operator std::string() const { return stream.str(); }
+#include <stdexcept>
+#include <tr1/memory>
+#include <string>
+#include <list>
+#include <vector>
+#include <map>
+#include <ctype.h>
+#include <iostream>
+#include <sstream>
+#include <fstream>
+#include <algorithm>
+#include <iomanip>
 
-    template<class T>
-    Formatter& operator<<(T const& value) { stream << value; return *this; }
-};
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <getopt.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <limits.h>
+
+#include "page_types.h"
 
 #endif

@@ -1,0 +1,16 @@
+debian/tmp/usr/bin/sp-rtrace-postproc
+debian/tmp/usr/bin/sp-rtrace
+debian/tmp/usr/bin/sp-rtrace-resolve
+debian/tmp/usr/bin/sp-rtrace-pagemap
+debian/tmp/usr/lib/libsp-rtrace-main.so*
+debian/tmp/usr/lib/sp-rtrace/*so
+debian/tmp/usr/bin/rtrace-rename
+debian/tmp/usr/bin/rtrace-sort
+debian/tmp/usr/bin/rtrace-stats
+debian/tmp/usr/share/man/man1/sp-rtrace.1
+debian/tmp/usr/share/man/man1/sp-rtrace-postproc.1
+debian/tmp/usr/share/man/man1/sp-rtrace-resolve.1
+debian/tmp/usr/share/man/man1/sp-rtrace-pagemap.1
+debian/tmp/usr/share/man/man1/rtrace-rename.1
+debian/tmp/usr/share/man/man1/rtrace-sort.1
+debian/tmp/usr/share/man/man1/rtrace-stats.1
