@@ -46,12 +46,12 @@ int main(int argc, char* const argv[])
 		TraceData trace_data;
 		trace_data.parseReport(Options::getInstance()->getInFilename());
 
-		AddressSpaceReport* report = NULL;
-		if (Options::getInstance()->getReportDensity()) report = new DensityReport(trace_data);
+		std::auto_ptr<AddressSpaceReport> report;
+		if (Options::getInstance()->getReportDensity()) report = std::auto_ptr<AddressSpaceReport>(new DensityReport(trace_data));
 		else if (Options::getInstance()->getReportLegend()) {
-			report = new LegendReport(trace_data);
+			report = std::auto_ptr<AddressSpaceReport>(new LegendReport(trace_data));
 		}
-		if (report) {
+		if (report.get()) {
 			report->write(Options::getInstance()->getOutFilename());
 
 			if (Options::getInstance()->getReportSummary()) {
