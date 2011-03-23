@@ -1,3 +1,13 @@
+sp-rtrace (1.5), ???:
+  * Pagemap post-processing utility for memory fragmentation analysis
+  * New --include/--exclude options to sp-rtrace-postproc (for pagemap)
+  * Improvements to rtrace-calltree:
+    - new "allocation count" callgraph type
+    - new options for reducing node (text) sizes, enabled by default
+  * sp-rtrace-timeline charts X-axis shows both alloc count & time
+  * Speedup for memory allocation tracking for programs doing
+    simultenous allocations from many threads
+
 sp-rtrace (1.4.1), 4 Mar 2011:
   * Fix BFD resolving segfault (data freed too early)
   * Fix sp-rtrace-postproc crash with traces containing multiple
