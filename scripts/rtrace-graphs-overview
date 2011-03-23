@@ -62,6 +62,10 @@
 # 2011-03-18
 # - 'sed'ing dot file isn't anymore needed, rtrace-calltree
 #    does it by itself
+# 2011-03-23
+# - Leave only totals timeline & alloc count histogram as
+#   they're most relevant for users and generate the histogram
+#   separately so that it can be scaled horizontally
 
 usage ()
 {
@@ -290,10 +294,16 @@ for src in $timelines; do
 		ls $dst-*.png
 		continue
 	fi
-	echo "  sp-rtrace-timeline -t -l -c -s -i $src -o $dst"
-	sp-rtrace-timeline -t -l -c -s -i $src -o $dst
+	echo "  sp-rtrace-timeline -t -i $src -o $dst"
+	sp-rtrace-timeline -t -i $src -o $dst
 	if [ $? -ne 0 ]; then
-		echo "  ERROR: timelines creation failed!"
+		echo "  ERROR: total allocs timeline creation failed!"
+		exit 1
+	fi
+	echo "  sp-rtrace-timeline -c --scalex=500 -i $src -o $dst"
+	sp-rtrace-timeline -c --scalex=500 -i $src -o $dst
+	if [ $? -ne 0 ]; then
+		echo "  ERROR: alloc count histogram creation failed!"
 		exit 1
 	fi
 	for png in $dst-*.png; do
