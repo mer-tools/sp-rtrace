@@ -175,6 +175,8 @@
 # - Fix help/usage text (only dot callgraph is output now)
 # - Add options for reducing text in callgraph nodes
 # - Add "count" callgraph report
+# 2011-03-24:
+# - Rename&reuse refs to only_counts to indicate kBs aren't needed
 #
 # Originally this file (alloc-tree) was a part of libleaks package, but
 # renamed and moved to the sp-rtrace package during libleaks redesign.
@@ -647,7 +649,7 @@ class Rtrace:
 
     def parse(self, graph, options):
         "return parsed graph out of the given rtrace report"
-        only_counts = options.report == "count"
+        only_counts = options.only_counts
         top = 0     # highest allocation address/ID for current backtrace
         nonames = 0 # backtrace lines without function name
         ignores = 0 # otherwise ignored backtrace lines
@@ -794,6 +796,7 @@ class GraphvizReport:
         self.limit = options.limit
         self.counter = 0
         self.cluster_nodes = options.cluster
+        self.only_counts = options.only_counts
         self.strip_filenames = not options.keep_filenames
         if options.keep_paths:
             self.strip_paths = None
@@ -924,8 +927,8 @@ label="%s";
 
         nid, size, count = node.nid, node.size, node.count
         name = self.reduce_name(node.name)
-        if options.refs:
-            detail_str = "refcount: %d" % count
+        if self.only_counts:
+            detail_str = "%d%% (%d)" % (percentage, count)
         else:
             detail_str = "%d%% (%dKB / %d)" % (percentage, (size + 512) / 1024, count)
 
@@ -949,8 +952,8 @@ label="%s";
                 size += next.size
                 funs += 1
         if funs:
-            if options.refs:
-                detail_str = "refcount: %d" % count
+            if self.only_counts:
+                detail_str = "%d%% (%d)" % (percentage, count)
             else:
                 detail_str = "%d%% (%dKB / %d)" % (percentage, (size + 512)/1024, count)
             if funs > 1:
@@ -986,10 +989,10 @@ class AllocGraphReport(GraphvizReport):
     def __init__(self, graph, options):
         "init GraphViz graph limits"
         GraphvizReport.__init__(self, graph, options)
-        if options.refs:
-            self.heading = "Functions through which the references were done"
+        if options.only_counts:
+            self.heading = "Allocation counts callgraph\\nFunctions which did or caused >=%.1f%% of all allocations" % self.limit
         else:
-            self.heading = "Functions through which >=%.1f%% of the total allocations were done" % self.limit
+            self.heading = "Allocation size totals callgraph\\nFunctions through which >=%.1f%% amount of the allocations total were done" % self.limit
     
     def node_ok(self, node):
         # called by superclass output_child_nodes()
@@ -1028,7 +1031,7 @@ class Options:
     references = False      # whether to show what references --node=<node>
     progress = False        # whether to show number of each read record
     verbose = False         # whether to have some extra output
-    refs = False            # whether to talk in output about KBs or references
+    only_counts = False     # whether to talk in output about KBs or count
     tracefile = None        # resource trace file
     
     def __init__(self, argv):
@@ -1174,6 +1177,10 @@ class Options:
                 self.verbose = self.get_bool(name, arg, value)
             elif option == "type":
                 if value in ("count", "graph", "topmost"):
+                    if value == "count":
+                        self.only_counts = True
+                    else:
+                        self.only_counts = False
                     self.report = value
                 else:
                     self.help(name, "unknown report type", arg)
