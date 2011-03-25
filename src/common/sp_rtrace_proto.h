@@ -90,6 +90,10 @@
  #define SP_RTRACE_PROTO_CHECK_ALIGNMENT(value)
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Reads byte from binary stream.
  *
@@ -185,7 +189,7 @@ static inline int read_stringa(const char* ptr, char** value)
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(ptr);
 	unsigned short len = 0;
 	ptr += read_word(ptr, &len);
-	*value = malloc(len + 1);
+	*value = (char*)malloc(len + 1);
 	if (!*value) {
 		fprintf(stderr, "ERROR: read_stringa: failed to allocate %d bytes of memory\n", len + 1);
 		exit (-1);
@@ -315,6 +319,9 @@ typedef struct {
  * must be implemented by all tracing submodules */
 typedef sp_rtrace_module_info_t* (*sp_rtrace_get_module_info_t)();
 
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif

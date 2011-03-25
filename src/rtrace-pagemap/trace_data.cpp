@@ -26,6 +26,7 @@
 
 #include "pagemap.h"
 #include "common/formatter.h"
+#include "common/sp_rtrace_proto.h"
 #include "library/sp_rtrace_parser.h"
 #include "library/sp_rtrace_defs.h"
 
@@ -143,6 +144,11 @@ void TraceData::parseReport(const std::string& filename)
 
 	in.getline(buffer, sizeof(buffer));
 	if (in.eof()) throw std::runtime_error(Formatter() << "Empty input file: " << filename);
+
+	if (buffer[0] == (char)SP_RTRACE_PROTO_HS_ID) {
+		throw std::runtime_error("Can't process sp-rtrace binary files. "
+				                 "Convert to text format with sp-rtrace-postproc and try again.");
+	}
 
 	sp_rtrace_parser_parse_header(buffer, &header);
 
