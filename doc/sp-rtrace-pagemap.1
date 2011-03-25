@@ -5,7 +5,7 @@ sp-rtrace-pagemap - memory page usage/type statistics generator.
 sp-rtrace-pagemap \fI<options>\fP
 .SH DESCRIPTION
 This utility generates memory page usage/type statistics from sp-rtrace
-reports. The reports must have page map data attached, which is done
+text reports. The reports must have page map data attached, which is done
 by specifying also pagemap module to preload module list for sp-rtrace.
 
 Report filters are used to strip events from sp-rtrace report based on
@@ -68,6 +68,27 @@ area identified by an <address> belonging to it.
 Filters input file by removing allocations/frees not done in the pages of
 specified <type>. This filter makes sense only when done on reports with
 freed allocations removed(sp-rtrace-postproc --leaks option).
+
+.SH USAGE NOTES
+To successfully obtain pagemap data all modules must be stopped before
+the data pipe from main tracking module is closed. To do that the tracing
+must be stopped with sp-rtrace -t <pid> command rather then just aborted
+with ^C (in the last case trace log would be produced without pagemap attachments).
+
+
+
+
+.SH EXAMPLES
+.TP
+sp-rtrace -s -p pagemap:memory -P-o$(pwd) -x sample
+Starts sample process with pagemap and memory modules and invoke post-processor
+to produce text file required for pagemap post-processor (sp-rtrace-pagemap).
+.TP
+sp-rtrace -t $(pidof sample)
+Stops tracing to produce sp-rtrace report and pagemap attachments.
+.TP
+sp-rtrace-pagemap -i <sp-rtrace text report> -p -s > pagemap.txt
+Processes the obtained sp-rtrace log with pagemap page types and summary options.
 
 
 .SH SEE ALSO
