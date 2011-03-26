@@ -124,10 +124,14 @@ private:
 		// the allocation overhead data file
 		Plotter::DataFile* file_overhead;
 
+		// total number of allocations
+		unsigned int total_allocs;
+		// data file for the total number of allocations
+		Plotter::DataFile* file_total_allocs;
 		/**
 		 * Creates a new class instance.
 		 */
-		ResourceData() : overhead(0), file_overhead(NULL) {
+		ResourceData() : overhead(0), file_overhead(NULL), total_allocs(0), file_total_allocs(NULL) {
 		}
 	};
 
@@ -141,6 +145,7 @@ public:
 	// Y axis range
 	unsigned int yrange_min;
 	unsigned int yrange_max;
+	unsigned int y2range_max;
 
 	// total allocation count over all resources
 	std::vector<timestamp_t> alloc_timestamps;
@@ -149,7 +154,7 @@ public:
 	 * Creates a new class instance.
 	 */
 	TotalsGenerator()
-		: ReportGenerator("totals"), xrange_min(-1), xrange_max(0), yrange_min(0), yrange_max(0) {
+		: ReportGenerator("totals"), xrange_min(-1), xrange_max(0), yrange_min(0), yrange_max(0), y2range_max(0) {
 	}
 
 	/**

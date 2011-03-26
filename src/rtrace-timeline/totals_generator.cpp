@@ -60,6 +60,9 @@ int TotalsGenerator::reportAlloc(const Resource* resource, event_ptr_t& event) {
 		// new resource found, create a new overhead data file
 		rd->file_overhead = plotter.createFile(Formatter() << resource->name << " overhead");
 	}
+	if (!rd->file_total_allocs) {
+		rd->file_total_allocs = plotter.createFile(Formatter() << resource->name << ": total allocs");
+	}
 	reportAllocInContext(resource, &context_all, event);
 
 	// update statistics
@@ -76,6 +79,10 @@ int TotalsGenerator::reportAlloc(const Resource* resource, event_ptr_t& event) {
 		rd->file_overhead->write(event->timestamp, rd->overhead);
 		if (rd->overhead > yrange_max) yrange_max = rd->overhead;
 	}
+	rd->total_allocs++;
+	rd->file_total_allocs->write(event->timestamp, rd->total_allocs);
+	if (rd->total_allocs > y2range_max) y2range_max = rd->total_allocs;
+
 	alloc_timestamps.push_back(event->timestamp);
 	return OK;
 }
@@ -139,6 +146,7 @@ void TotalsGenerator::finalize() {
 	}
 	// increase Y range, so top graph isn't hidden beyond the axis
 	yrange_max = yrange_max * 105 / 100;
+	y2range_max = y2range_max * 105 / 100;
 	// number of graphs not counting overhead data
 	unsigned int ngraphs = 0;
 
@@ -150,6 +158,11 @@ void TotalsGenerator::finalize() {
 		}
 		if (rd->file_overhead) {
 			plotter.addGraph(rd->file_overhead, "1", "2", "column(2)");
+			ngraphs++;
+		}
+		if (rd->file_total_allocs) {
+			plotter.addGraph(rd->file_total_allocs, "1", "2", "column(2)", "x1y2");
+			ngraphs++;
 		}
 		// draw the peak marker
 		timestamp_t timestamp = rd->stats.peak_timestamp;
@@ -163,6 +176,7 @@ void TotalsGenerator::finalize() {
 	TicWriter tic_writer(alloc_timestamps);
 	plotter.setAxisX("time (secs) / allocation count", xrange_min, xrange_max, -1, &tic_writer);
 	plotter.setAxisY("size", yrange_min, yrange_max, "%.1s%c");
+	plotter.setAxisY2("total allocations", yrange_min, y2range_max);
 	plotter.setStyle("data lines");
 
 	// Write summary report

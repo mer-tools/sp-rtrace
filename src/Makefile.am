@@ -94,12 +94,15 @@ sp_rtrace_allocmap_SOURCES = rtrace-allocmap/sp_rtrace_allocmap.c
 sp_rtrace_allocmap_CFLAGS = $(AM_CFLAGS)
 sp_rtrace_allocmap_LDFLAGS = -Wl,-z,defs
 
-BUILT_SOURCES = rtrace-timeline/timeline.h.gch
+BUILT_SOURCES =
 
+if PRECOMP
+BUILT_SOURCES += rtrace-timeline/timeline.h.gch
 rtrace-timeline/timeline.h.gch: rtrace-timeline/timeline.h
 	$(CXX) -c $< $(CXXFLAGS)
+endif
 
-sp_rtrace_timeline_SOURCES = rtrace-timeline/timeline.h rtrace-timeline/timeline.cpp rtrace-timeline/activity_generator.cpp \
+sp_rtrace_timeline_SOURCES = /timeline.h rtrace-timeline/timeline.cpp rtrace-timeline/activity_generator.cpp \
 	rtrace-timeline/histogram_generator.cpp rtrace-timeline/parser.cpp rtrace-timeline/resource_registry.cpp \
 	rtrace-timeline/totals_generator.cpp rtrace-timeline/filter.cpp rtrace-timeline/lifetime_generator.cpp \
 	rtrace-timeline/plotter.cpp rtrace-timeline/terminal.cpp rtrace-timeline/filter_manager.cpp \
@@ -111,8 +114,11 @@ sp_rtrace_timeline_LDADD = -lsp-rtrace1
 
 bin_PROGRAMS += sp-rtrace-pagemap
 
+if PRECOMP
+BUILT_SOURCES += rtrace-pagemap/pagemap.h.gch
 rtrace-pagemap/pagemap.h.gch: rtrace-pagemap/pagemap.h
 	$(CXX) -c $< $(CXXFLAGS)
+endif
 
 sp_rtrace_pagemap_SOURCES = rtrace-pagemap/pagemap.h rtrace-pagemap/pagemap.cpp rtrace-pagemap/options.cpp \
 	rtrace-pagemap/trace_data.cpp rtrace-pagemap/memory_area.cpp rtrace-pagemap/address_space_report.cpp \
