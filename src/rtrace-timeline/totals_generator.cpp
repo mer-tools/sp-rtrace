@@ -46,7 +46,7 @@ public:
 			total_count++;
 			iter++;
 		}
-		output = Formatter() << "+" << Timestamp::offsetToString(tic - start) << "s\\n" << total_count;
+		output = Formatter() << total_count << " allocs\\n+" << Timestamp::offsetToString(tic - start);
 	}
 };
 
