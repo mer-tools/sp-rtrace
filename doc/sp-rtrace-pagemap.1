@@ -75,7 +75,10 @@ the data pipe from main tracking module is closed. To do that the tracing
 must be stopped with sp-rtrace -t <pid> command rather then just aborted
 with ^C (in the last case trace log would be produced without pagemap attachments).
 
-
+Note that by default only root has read access to /proc/kpageflags file needed
+by pagemap module. Therefore to sucessfully gather pagemap data user needs
+either to launch the target process as root or grant read access to 
+/proc/kpageflags for users.
 
 
 .SH EXAMPLES
