@@ -274,6 +274,21 @@ static int process_packet(const char* data, size_t size)
 		scan_mmap_data();
 		return len;
 	}
+	else if (type == SP_RTRACE_PROTO_ATTACHMENT) {
+		/* check for zero size attachments */
+		char path[PATH_MAX];
+		offset += read_string(data + offset, path, sizeof(path));
+		read_string(data + offset, path, sizeof(path));
+		struct stat file_stat;
+		if (stat(path, &file_stat) == -1) {
+			fprintf(stderr, "WARNING: Failed to stat attached file %s: %s\n", path, strerror(errno));
+		}
+		else {
+			if (file_stat.st_size == 0) {
+				fprintf(stderr, "WARNING: The attached file %s has zero size\n", path);
+			}
+		}
+	}
 	write_data(data, len);
 	return len;
 }

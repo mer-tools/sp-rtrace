@@ -78,7 +78,9 @@ with ^C (in the last case trace log would be produced without pagemap attachment
 Note that by default only root has read access to /proc/kpageflags file needed
 by pagemap module. Therefore to sucessfully gather pagemap data user needs
 either to launch the target process as root or grant read access to 
-/proc/kpageflags for users.
+/proc/kpageflags for users. Usually if pagemap module has no accecss to
+kpageflags file it will create zero size attachment and sp-rtrace will
+generate warning message about attachment size being zero.
 
 
 .SH EXAMPLES
