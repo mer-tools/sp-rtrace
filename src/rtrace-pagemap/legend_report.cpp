@@ -93,7 +93,9 @@ void LegendReport::writeMemoryMap(std::ostream& out, MemoryArea* area)
 			}
 			pages_swap++;
 		}
-		else if (page_data->kflags & BIT(DIRTY)) {
+		/* while swap backed pages are not technically dirty (from the kernel pov), they are written to
+		 * and counted as dirty from application pov */
+		else if (page_data->kflags & (BIT(DIRTY) | BIT(SWAPBACKED) | BIT(SWAPCACHE)) ) {
 			if (page_data->info & PAGE_ZERO) {
 				page_mark = PAGE_LEGEND_DIRTYZ;
 				pages_dirtyZ++;
