@@ -56,8 +56,8 @@ void Options::displayUsage()
 	    "                 pages contained in the mapped areas.\n"
 		"  -d           - allocation per page statistics. Displays percentage of\n"
 		"                 active allocations for each page.\n"
-		"  --highest NN - the number of highest allocations per area to print.\n"
-		"  --lowest NN  - the number of lowest allocations per area to print.\n"
+		"  -T <number>  - the number of top allocations per area to print.\n"
+		"  -B <number>  - the number of bottom allocations per area to print.\n"
 		"  -s           - summary about page types from all memory areas.\n"
 		"  -N <name>    - filter report by area name.\n"
 		"  -A <addr>    - filter report by an address inside memory area.\n"
@@ -144,10 +144,6 @@ void Options::parseCommandLine(int argc, char* const argv[])
 			}
 
 			case 'p': {
-				if (filter) {
-					std::cerr << "ERROR: filter option can't be used together with report options\n";
-					exit (-1);
-				}
 				if (report_density) {
 					std::cerr << "WARNING: density report option overrides pages option\n";
 				}
@@ -166,10 +162,6 @@ void Options::parseCommandLine(int argc, char* const argv[])
 			}
 
 			case 'd': {
-				if (filter) {
-					std::cerr << "ERROR: filter option can't be used together with report options\n";
-					exit (-1);
-				}
 				if (report_density) {
 					std::cerr << "WARNING: density report option overrides pages option\n";
 				}
@@ -193,10 +185,6 @@ void Options::parseCommandLine(int argc, char* const argv[])
 			}
 
 			case 'A': {
-				if (report_pages || report_density || report_summary) {
-					std::cerr << "ERROR: filter option can't be used together with report options\n";
-					exit (-1);
-				}
 				filter = true;
 				std::stringstream(optarg) >> filter_address;
 				break;
@@ -204,7 +192,7 @@ void Options::parseCommandLine(int argc, char* const argv[])
 
 			case 'P': {
 				if (report_pages || report_density || report_summary) {
-					std::cerr << "ERROR: filter option can't be used together with report options\n";
+					std::cerr << "ERROR: Page filter option can't be used together with report options\n";
 					exit (-1);
 				}
 				filter = true;
@@ -213,10 +201,6 @@ void Options::parseCommandLine(int argc, char* const argv[])
 			}
 
 			case 'N': {
-				if (report_pages || report_density || report_summary) {
-					std::cerr << "ERROR: filter option can't be used together with report options\n";
-					exit (-1);
-				}
 				filter = true;
 				filter_name = optarg;
 				break;

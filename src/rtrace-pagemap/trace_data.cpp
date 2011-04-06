@@ -111,6 +111,8 @@ MemoryArea* TraceData::findMemoryArea(pointer_t address)
  */
 void TraceData::storeTrace(std::list<CallEvent*>& events, sp_rtrace_btframe_t* frames, int nframes)
 {
+	if (events.empty()) return;
+
 	sp_rtrace_ftrace_t trace = {nframes, NULL, NULL};
 	if (nframes) {
 		trace.frames = new pointer_t[nframes];
@@ -216,7 +218,6 @@ void TraceData::parseReport(const std::string& filename)
 					continue;
 				}
 			}
-			break;
 		}
 		sp_rtrace_parser_free_record(rec_type, &rec);
 	}

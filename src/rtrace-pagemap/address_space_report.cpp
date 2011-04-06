@@ -29,6 +29,7 @@
 
 #include "address_space_report.h"
 #include "options.h"
+#include "area_filter.h"
 
 
 AddressSpaceReport::AddressSpaceReport(TraceData& trace_data) :
@@ -44,18 +45,18 @@ void AddressSpaceReport::writeMemoryArea(std::ostream& out, MemoryArea* area)
 	writeMemoryMap(out, area);
 
 	if (Options::getInstance()->getBottomAllocCount() && !area->events.empty()) {
-		out << "Lowest " << Options::getInstance()->getBottomAllocCount() << " allocations:\n";
+		out << "Bottom " << Options::getInstance()->getBottomAllocCount() << " allocations:\n";
 		std::list<CallEvent::ptr_t>::iterator iter = area->events.begin();
-		for (int i = 0; i < Options::getInstance()->getBottomAllocCount(); i++) {
+		for (int i = 0; i < Options::getInstance()->getBottomAllocCount() && iter != area->events.end(); i++) {
 			iter->get()->write(out);
 			iter++;
 		}
 		out << "\n";
 	}
 	if (Options::getInstance()->getTopAllocCount() && !area->events.empty()) {
-		out << "Highest " << Options::getInstance()->getTopAllocCount() << " allocations:\n";
+		out << "Top " << Options::getInstance()->getTopAllocCount() << " allocations:\n";
 		std::list<CallEvent::ptr_t>::iterator iter = area->events.end();
-		for (int i = 0; i < Options::getInstance()->getTopAllocCount(); i++) {
+		for (int i = 0; i < Options::getInstance()->getTopAllocCount() && iter != area->events.begin(); i++) {
 			iter--;
 			iter->get()->write(out);
 		}
@@ -80,6 +81,17 @@ void AddressSpaceReport::write(const std::string& filename)
 			throw std::ios_base::failure(Formatter() << "Failed to create file: " << filename);
 		}
 	}
+	/* prepare area filter */
+	std::auto_ptr<AreaFilter> filter;
+	if (!Options::getInstance()->getFilterName().empty()) {
+		filter = std::auto_ptr<AreaFilter>(dynamic_cast<AreaFilter*>(new PathFilter(Options::getInstance()->getFilterName())));
+	}
+	else if (Options::getInstance()->getFilterAddress() != 0) {
+		filter = std::auto_ptr<AreaFilter>(dynamic_cast<AreaFilter*>(new AddressFilter(Options::getInstance()->getFilterAddress())));
+	}
+	else {
+		filter = std::auto_ptr<AreaFilter>(new AreaFilter());
+	}
 
 	out << "SP-RTRACE PAGEMAP REPORT\n"
 		   "========================\n\n"
@@ -91,11 +103,16 @@ void AddressSpaceReport::write(const std::string& filename)
 
 	// count the total number of mapped pages
 	total_pages = 0;
-	for (MemoryArea::vector_t::iterator iter = trace_data.memory_areas.begin(); iter != trace_data.memory_areas.end(); iter++) {
+	for (MemoryArea::vector_t::iterator iter = trace_data.memory_areas.begin(); iter != trace_data.memory_areas.end();) {
 		MemoryArea* area = iter->get();
+		if (!filter->validate(area)) {
+			iter = trace_data.memory_areas.erase(iter);
+			continue;
+		}
 		if (area->permissions & MemoryArea::WRITE) {
 			total_pages += (area->to - area->from) / Options::getInstance()->getPageSize();
 		}
+		iter++;
 	}
 
 	// write the memory area statistics

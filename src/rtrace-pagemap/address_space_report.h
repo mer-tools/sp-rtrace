@@ -86,6 +86,9 @@ public:
 	/**
 	 * Writes address space statistics report to the specified file.
 	 *
+	 * The specified name or address filters are applied during this
+	 * stage and not validated memory areas are discarded from trace
+	 * data.
 	 * @param[in] filename   the report file name. The standard output
 	 *                       is used if the filename is empty.
 	 */

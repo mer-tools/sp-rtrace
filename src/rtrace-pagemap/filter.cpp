@@ -36,86 +36,7 @@
 #include "common/header.h"
 #include "common/formatter.h"
 #include "rtrace_common.h"
-
-/**
- * Basic memory area filter.
- *
- * This is the default filter (when no area filtering options are specified).
- * It validates any area and is used as base class for area filters.
- */
-class BaseFilter {
-public:
-
-	/**
-	 * Performs area validation.
-	 *
-	 * @param[in] area  the area to validate.
-	 * @return          true if the area passes the filter settings.
-	 */
-	virtual bool validate(MemoryArea::ptr_t& area) {
-		return true;
-	}
-};
-
-/**
- * The path based area filter implementation.
- *
- * This filter validates areas with modules matching the specified path.
- */
-class PathFilter : public BaseFilter {
-private:
-	std::string path;
-public:
-	/**
-	 * Creates a new class instance.
-	 *
-	 * @param[in] path  the path validation string.
-	 */
-	PathFilter(const std::string& path) : path(path) {
-	}
-
-	/**
-	 * Performs area validation.
-	 *
-	 * This function returns true if the area path contains the path substring
-	 * specified in filter constructor.
-	 * @param[in] area  the area to validate.
-	 * @return          true if the area passes the filter settings.
-	 */
-	bool validate(MemoryArea::ptr_t& area) {
-		return area->path.find(path) != std::string::npos;
-	}
-};
-
-
-/**
- * The address based area filter implementation
- *
- * This filter validates area to which the specified address belongs.
- */
-class AddressFilter : public BaseFilter {
-private:
-	unsigned long address;
-public:
-
-	/**
-	 * Creates a new class instance.
-	 */
-	AddressFilter(unsigned long address) : address(address) {
-	}
-
-	/**
-	 * Performs area validation.
-	 *
-	 * This function returns true if the area contains the address
-	 * specified in filter constructor.
-	 * @param[in] area  the area to validate.
-	 * @return          true if the area passes the filter settings.
-	 */
-	bool validate(MemoryArea::ptr_t& area) {
-		return area->from <= address && address < area->to;
-	}
-};
+#include "area_filter.h"
 
 /**
  * The page type filter.
@@ -180,21 +101,21 @@ Filter::Filter(TraceData& trace_data) :
 void Filter::write(const std::string& filename)
 {
 	// create area filter to make a list of target areas.
-	std::auto_ptr<BaseFilter> filter;
+	std::auto_ptr<AreaFilter> filter;
 	if (!Options::getInstance()->getFilterName().empty()) {
-		filter = std::auto_ptr<BaseFilter>(dynamic_cast<BaseFilter*>(new PathFilter(Options::getInstance()->getFilterName())));
+		filter = std::auto_ptr<AreaFilter>(dynamic_cast<AreaFilter*>(new PathFilter(Options::getInstance()->getFilterName())));
 	}
 	else if (Options::getInstance()->getFilterAddress() != 0) {
-		filter = std::auto_ptr<BaseFilter>(dynamic_cast<BaseFilter*>(new AddressFilter(Options::getInstance()->getFilterAddress())));
+		filter = std::auto_ptr<AreaFilter>(dynamic_cast<AreaFilter*>(new AddressFilter(Options::getInstance()->getFilterAddress())));
 	}
 	else {
-		filter = std::auto_ptr<BaseFilter>(new BaseFilter());
+		filter = std::auto_ptr<AreaFilter>(new AreaFilter());
 	}
 
 	// construct a list of the target memory areas
 	MemoryArea::vector_t areas;
 	for(MemoryArea::vector_t::iterator iter = trace_data.memory_areas.begin(); iter != trace_data.memory_areas.end(); iter++) {
-		if (filter.get()->validate(*iter)) {
+		if (filter.get()->validate(iter->get())) {
 			areas.push_back(*iter);
 		}
 	}
