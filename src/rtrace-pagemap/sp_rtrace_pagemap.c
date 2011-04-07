@@ -273,7 +273,7 @@ static int cut_kpageflags_range(unsigned long from, unsigned long to, const char
 		if (n != sizeof(uint64_t)) return (n == (size_t)-1) ? -errno : -EINVAL;
 
 		pageflags_data_t page_data = {
-			.info = PAGE_SWAP,
+			.info = 0,
 			.kflags = 0,
 		};
 		if (page_index & PM_PRESENT) {
@@ -281,6 +281,9 @@ static int cut_kpageflags_range(unsigned long from, unsigned long to, const char
 			n = read(data->fd_pf, &page_data.kflags, sizeof(uint64_t));
 			if (n != sizeof(uint64_t)) return (n == (size_t)-1) ? -errno : -EINVAL;
 			page_data.info = PAGE_MEMORY;
+		}
+		if (page_index & PM_SWAP) {
+			page_data.info = PAGE_SWAP;
 		}
 		n = write(data->fd_out, &page_data, sizeof(pageflags_data_t));
 		if (n != sizeof(pageflags_data_t)) return (n == (size_t)-1) ? -errno : -EINVAL;

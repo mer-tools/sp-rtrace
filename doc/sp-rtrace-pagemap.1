@@ -8,11 +8,10 @@ This utility generates memory page usage/type statistics from sp-rtrace
 text reports. The reports must have page map data attached, which is done
 by specifying also pagemap module to preload module list for sp-rtrace.
 
-Report filters are used to strip events from sp-rtrace report based on
-allocated/freed resource page types/memory areas. The filters can be
-invoked only if no pagemap reports are requested. Otherwise filters are
-ignored. To generate filtered pagemap report first apply the necessary
-filter and then generate report from the filtered output.
+Report filters can be used either to generate filtered sp-rtrace text 
+report (if no pagemap reports are requested) or to filter the target
+areas for pagemap reports.
+
 .SS Options:
 .TP 
  \fI--help\fP (\fI-h\fP)
