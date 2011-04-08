@@ -41,7 +41,8 @@ void DensityReport::writeLegend(std::ostream& out)
 	out << "\t...\n";
 	out << "\t'9' - 90% < allocation % of page < 100%\n";
 	out << "\t'#' - 100% of page allocated.\n";
-	out << "\t'?' - more than 100% of page allocated - calculation error.\n";
+	out << "\t'*' - more than 100% of page allocated. Either calculation error\n";
+	out << "\t      the input report was not processed with freed allocations removal filter.\n";
 	out << "\n  " << PAGES_PER_LINE * Options::getInstance()->getPageSize() / 1024 << " KB per map line.\n";
 	out << "\n\n";
 }
@@ -85,13 +86,10 @@ void DensityReport::writeMemoryMap(std::ostream& out, MemoryArea* area)
 			size = Options::getInstance()->getPageSize();
 			overflow -= Options::getInstance()->getPageSize();
 		}
-		char mark = '?';
+		char mark = '*';
 		if (size == 0) mark = ' ';
 		else if (size == Options::getInstance()->getPageSize()) mark = '#';
 		else if (size < Options::getInstance()->getPageSize()) mark = size * 10 / Options::getInstance()->getPageSize() + '0';
-		else {
-			std::cerr << "Warning, incorrect page allocation size calculated\n";
-		}
 		out << mark;
 	}
 	out << "|\n" << std::setfill(' ') << std::dec;
@@ -102,7 +100,8 @@ void DensityReport::writeMemoryMap(std::ostream& out, MemoryArea* area)
 bool DensityReport::validate()
 {
 	if (! (header_get_filter(&trace_data.header) & FILTER_MASK_LEAKS) ) {
-		throw std::runtime_error("Density report requires input data to be processed with --leaks post-processor filter");
+		std::cerr << "WARNING: Density report requires input data to be processed with --leaks post-processor "
+				"or the allocation percentage values might be bloated.";
 	}
 	return true;
 }
