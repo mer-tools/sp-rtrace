@@ -26,12 +26,12 @@
 #include "options.h"
 
 enum {
-	PAGE_LEGEND_NONDIRTY = 0,
-	PAGE_LEGEND_ZERO,
-	PAGE_LEGEND_DIRTY,
+	PAGE_LEGEND_ZERO = 0,
+	PAGE_LEGEND_NONDIRTY,
 	PAGE_LEGEND_DIRTYZ,
-	PAGE_LEGEND_SWAP,
+	PAGE_LEGEND_DIRTY,
 	PAGE_LEGEND_SWAPZ,
+	PAGE_LEGEND_SWAP,
 
 	PAGE_LEGEND_LAST,
 };
@@ -42,12 +42,12 @@ typedef struct {
 } report_legend_t;
 
 static report_legend_t report_legend[] = {
-	{' ', "non-dirty page"},
-	{'0', "non-dirty zero page"},
+	{' ', "non-dirty zero page"},
+	{'.', "non-dirty page"},
+	{'0', "zeroed dirty page in RAM"},
 	{'#', "dirty page in RAM"},
-	{'N', "zeroed dirty page in RAM"},
-	{'S', "swapped page"},
 	{'Z', "swapped zeroed page"},
+	{'S', "swapped page"},
 };
 
 LegendReport::LegendReport(TraceData& data) :
