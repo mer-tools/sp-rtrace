@@ -130,6 +130,12 @@ Toggles tracing also for all the child processes of the target process. By defau
 the toggle signal is sent only to the target process, but by using this option
 it will be sent also to all child processes.
 
+.SH USAGE NOTES
+The trace data from the target process to data pre-processor (sp-rtrace) is 
+transferred over pipe managed by the main tracing module. In rare cases the
+target process can try to close opened file descriptors (for example lsoff
+utility) resulting in trace failure. In such case either re-enable tracing
+with sp-rtrace -t <pid> or use functracer tool which produces similar output.
 .SH EXAMPLES
 .TP
 sp-rtrace -s -p memory -x sample

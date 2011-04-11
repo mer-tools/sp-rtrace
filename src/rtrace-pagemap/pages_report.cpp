@@ -22,7 +22,7 @@
  */
 #include "config.h"
 
-#include "legend_report.h"
+#include "pages_report.h"
 #include "options.h"
 
 enum {
@@ -50,12 +50,12 @@ static report_legend_t report_legend[] = {
 	{'S', "swapped page"},
 };
 
-LegendReport::LegendReport(TraceData& data) :
+PagesReport::PagesReport(TraceData& data) :
 		AddressSpaceReport(data)
 {
 }
 
-void LegendReport::writeLegend(std::ostream& out)
+void PagesReport::writeLegend(std::ostream& out)
 {
 	out << "\nLegend for the characters used in the memory mappings below:\n";
 	for (int i = 0; i < PAGE_LEGEND_LAST; i++) {
@@ -65,7 +65,7 @@ void LegendReport::writeLegend(std::ostream& out)
 	out << "\n\n";
 }
 
-void LegendReport::writeMemoryMap(std::ostream& out, MemoryArea* area)
+void PagesReport::writeMemoryMap(std::ostream& out, MemoryArea* area)
 {
 	size_t pages_all = (area->to - area->from) / Options::getInstance()->getPageSize();
 	size_t pages_dirty = 0;

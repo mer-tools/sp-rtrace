@@ -51,6 +51,25 @@
 
 //#define MSG(text) {	char buffer[] = ">>>" text "\n"; if(write(STDERR_FILENO, buffer, sizeof(buffer))){}; }
 
+/*
+ * pagemap kernel ABI bits
+ */
+#define PM_ENTRY_BYTES      sizeof(uint64_t)
+#define PM_STATUS_BITS      3
+#define PM_STATUS_OFFSET    (64 - PM_STATUS_BITS)
+#define PM_STATUS_MASK      (((1LL << PM_STATUS_BITS) - 1) << PM_STATUS_OFFSET)
+#define PM_STATUS(nr)       (((nr) << PM_STATUS_OFFSET) & PM_STATUS_MASK)
+#define PM_PSHIFT_BITS      6
+#define PM_PSHIFT_OFFSET    (PM_STATUS_OFFSET - PM_PSHIFT_BITS)
+#define PM_PSHIFT_MASK      (((1LL << PM_PSHIFT_BITS) - 1) << PM_PSHIFT_OFFSET)
+#define PM_PSHIFT(x)        (((u64) (x) << PM_PSHIFT_OFFSET) & PM_PSHIFT_MASK)
+#define PM_PFRAME_MASK      ((1LL << PM_PSHIFT_OFFSET) - 1)
+#define PM_PFRAME(x)        ((x) & PM_PFRAME_MASK)
+
+#define PM_PRESENT          PM_STATUS(4LL)
+#define PM_SWAP             PM_STATUS(2LL)
+
+
 /* Module information */
 static sp_rtrace_module_info_t module_info = {
 		.type = MODULE_TYPE_PRELOAD,
@@ -92,13 +111,13 @@ typedef struct {
 
 
 /**
- * The data structure used as user data for kpageflags file cutting.
+ * The data structure used as user data for kpageflags/kpagecount file lookups.
  */
 typedef struct {
-	int fd_pf;
-	int fd_pm;
+	int fd_data;
+	int fd_map;
 	int fd_out;
-} pfcut_data_t;
+} pfile_data_t;
 
 /**
  * Locates character in string.
@@ -170,75 +189,80 @@ static bool is_zero_page(unsigned long from)
 	return true;
 }
 
+
+/**
+ * Retrieves number of mappings for page at the specified address.
+ *
+ * @param[in] addr         the page address.
+ * @param[in] page_data    a structure containing input/output file descriptors.
+ * @return                 the number of page mappings.
+ */
+static unsigned int read_page_mapping_count(unsigned long addr, pfile_data_t* data)
+{
+	uint64_t count = 0;
+	unsigned long index = addr / page_size * 8;
+	lseek(data->fd_map, index, SEEK_SET);
+
+	uint64_t page_index;
+	size_t n = read(data->fd_map, &page_index, sizeof(uint64_t));
+	if (n != sizeof(uint64_t)) return 0;
+
+	if (page_index & PM_PRESENT) {
+		lseek(data->fd_data, PM_PFRAME(page_index) * 8, SEEK_SET);
+		n = read(data->fd_data, &count, sizeof(uint64_t));
+		if (n != sizeof(uint64_t)) return 0;
+	}
+	if (count > 1) {
+		fprintf(stderr, "count=%d\n", count);
+	}
+	return count;
+}
+
 /**
  * Scans address range for memory pages containing zeroes.
  *
  * The data is stored in pagescan_t structure array and written
  * in the specified file.
- * @param[in] from    the memory area start address.
- * @param[in] to      the memory area end address.
- * @param[in] module  the module(file) mapped to the specified address range.
- * @param[in] rights  the memory are access rights (in the same format as in maps file).
- * @param[in] fd_out  the output file descriptor.
+ * @param[in] from     the memory area start address.
+ * @param[in] to       the memory area end address.
+ * @param[in] module   the module(file) mapped to the specified address range.
+ * @param[in] rights   the memory are access rights (in the same format as in maps file).
+ * @param[in] data     a structure containing input/output file descriptors.
  *
  * @return             0 - success.
  *                    <0 - -errno error code.
  */
-static int scan_address_range(unsigned long from, unsigned long to, const char* module, const char* rights, int fd_out)
+static int scan_address_range(unsigned long from, unsigned long to, const char* module, const char* rights, pfile_data_t* data)
 {
 	if (rights[0] != 'r' || rights[1] != 'w' || rights[3] != 'p') return EINVAL;
 
 	/* find the memory area data in output file */
-	lseek(fd_out, 0, SEEK_SET);
+	lseek(data->fd_out, 0, SEEK_SET);
 	while (true) {
 		pageflags_header_t header;
-		int header_size = read(fd_out, &header, sizeof(pageflags_header_t));
+		int header_size = read(data->fd_out, &header, sizeof(pageflags_header_t));
 		if (header_size != sizeof(pageflags_header_t)) return (header_size == -1) ? -errno : -EINVAL;
 		if (header.from == from && header.to == to) break;
-		lseek(fd_out, header.size, SEEK_CUR);
+		lseek(data->fd_out, header.size, SEEK_CUR);
 	}
-	/* scan the area for zero pages */
-	size_t offset = 0;
+	/* scan the area for zero pages and page mapping count */
 	while (from < to) {
+		pageflags_data_t page_data;
+		int n = read(data->fd_out, &page_data, sizeof(pageflags_data_t));
+		if (n != sizeof(pageflags_data_t)) return (n == -1) ? -errno : -EINVAL;
+
 		if (is_zero_page(from)) {
 			/* zero page found, update it's info field and write it back into the kpageflags file */
-			pageflags_data_t data;
-			lseek(fd_out, offset, SEEK_CUR);
-			int n = read(fd_out, &data, sizeof(pageflags_data_t));
-			if (n != sizeof(pageflags_data_t)) return (n == -1) ? -errno : -EINVAL;
-
-			data.info |= PAGE_ZERO;
-			lseek(fd_out, -sizeof(pageflags_data_t), SEEK_CUR);
-			n = write(fd_out, &data, sizeof(pageflags_data_t));
-			if (n != sizeof(pageflags_data_t)) return (n == -1) ? -errno : -EINVAL;
-			offset = 0;
+			page_data.info |= PAGE_ZERO;
 		}
-		else {
-			/* skip the page */
-			offset += sizeof(pageflags_data_t);
-		}
+		page_data.kcount = read_page_mapping_count(from, data);
+		lseek(data->fd_out, -sizeof(pageflags_data_t), SEEK_CUR);
+		n = write(data->fd_out, &page_data, sizeof(pageflags_data_t));
+		if (n != sizeof(pageflags_data_t)) return (n == -1) ? -errno : -EINVAL;
 		from += page_size;
 	}
 	return 0;
 }
-
-/*
- * pagemap kernel ABI bits
- */
-#define PM_ENTRY_BYTES      sizeof(uint64_t)
-#define PM_STATUS_BITS      3
-#define PM_STATUS_OFFSET    (64 - PM_STATUS_BITS)
-#define PM_STATUS_MASK      (((1LL << PM_STATUS_BITS) - 1) << PM_STATUS_OFFSET)
-#define PM_STATUS(nr)       (((nr) << PM_STATUS_OFFSET) & PM_STATUS_MASK)
-#define PM_PSHIFT_BITS      6
-#define PM_PSHIFT_OFFSET    (PM_STATUS_OFFSET - PM_PSHIFT_BITS)
-#define PM_PSHIFT_MASK      (((1LL << PM_PSHIFT_BITS) - 1) << PM_PSHIFT_OFFSET)
-#define PM_PSHIFT(x)        (((u64) (x) << PM_PSHIFT_OFFSET) & PM_PSHIFT_MASK)
-#define PM_PFRAME_MASK      ((1LL << PM_PSHIFT_OFFSET) - 1)
-#define PM_PFRAME(x)        ((x) & PM_PFRAME_MASK)
-
-#define PM_PRESENT          PM_STATUS(4LL)
-#define PM_SWAP             PM_STATUS(2LL)
 
 /**
  * Copies pagemap data of the specified memory range into output file.
@@ -247,11 +271,11 @@ static int scan_address_range(unsigned long from, unsigned long to, const char* 
  * @param[in] to      the memory area end address.
  * @param[in] module  the module(file) mapped to the specified address range.
  * @param[in] rights  the memory are access rights (in the same format as in maps file).
- * @param[in] data    the pageflags cutting data.
+ * @param[in] data    a structure containing input/output file descriptors.
  * @return             0 - success.
  *                    <0 - -errno error code.
  */
-static int cut_kpageflags_range(unsigned long from, unsigned long to, const char* module, const char* rights, pfcut_data_t* data)
+static int cut_kpageflags_range(unsigned long from, unsigned long to, const char* module, const char* rights, pfile_data_t* data)
 {
 	/* store the memory area header data */
 	pageflags_header_t header = {
@@ -265,20 +289,21 @@ static int cut_kpageflags_range(unsigned long from, unsigned long to, const char
 	unsigned long index = from / page_size * 8;
 	unsigned long end = to / page_size * 8;
 
-	lseek(data->fd_pm, index, SEEK_SET);
+	lseek(data->fd_map, index, SEEK_SET);
 
 	while (index < end) {
 		uint64_t page_index;
-		size_t n = read(data->fd_pm, &page_index, sizeof(uint64_t));
+		size_t n = read(data->fd_map, &page_index, sizeof(uint64_t));
 		if (n != sizeof(uint64_t)) return (n == (size_t)-1) ? -errno : -EINVAL;
 
 		pageflags_data_t page_data = {
 			.info = 0,
 			.kflags = 0,
+			.kcount = 0,
 		};
 		if (page_index & PM_PRESENT) {
-			lseek(data->fd_pf, PM_PFRAME(page_index) * 8, SEEK_SET);
-			n = read(data->fd_pf, &page_data.kflags, sizeof(uint64_t));
+			lseek(data->fd_data, PM_PFRAME(page_index) * 8, SEEK_SET);
+			n = read(data->fd_data, &page_data.kflags, sizeof(uint64_t));
 			if (n != sizeof(uint64_t)) return (n == (size_t)-1) ? -errno : -EINVAL;
 			page_data.info = PAGE_MEMORY;
 		}
@@ -408,8 +433,26 @@ static int find_zero_memory_pages(const char* out_filename)
 	int fd_out = open(out_filename, O_RDWR);
 	if (fd_out == -1) return -errno;
 
+	int fd_pm = open("/proc/self/pagemap", O_RDONLY);
+	if (fd_pm == -1) {
+		close(fd_out);
+		return -errno;
+	}
+
+	int fd_pc = open("/proc/kpagecount", O_RDONLY);
+	if (fd_pc == -1) {
+		close(fd_out);
+		close(fd_pm);
+		return -errno;
+	}
+	pfile_data_t pf_data = {
+			.fd_out = fd_out,
+			.fd_data = fd_pc,
+			.fd_map = fd_pm,
+	};
+
 	parser_data_t data = {
-			.data = (void*) fd_out,
+			.data = (void*) &pf_data,
 			.process = (parser_callback_t)scan_address_range,
 	};
 
@@ -436,10 +479,10 @@ static int cut_kpageflags(const char* out_filename)
 		close(fd_pm);
 		return -errno;
 	}
-	pfcut_data_t pf_data = {
+	pfile_data_t pf_data = {
 			.fd_out = fd_out,
-			.fd_pf = fd_pf,
-			.fd_pm = fd_pm,
+			.fd_data = fd_pf,
+			.fd_map = fd_pm,
 	};
 
 	parser_data_t data = {
@@ -467,8 +510,10 @@ static void enable_tracing(bool value)
 		page_size = getpagesize();
 
 		/* TODO: remove timing code before release */
+		/*
 		struct timespec ts1, ts2;
 		clock_gettime(CLOCK_MONOTONIC, &ts1);
+		*/
 
 		char filename[PATH_MAX];
 		/* copy /proc/self/maps file */
@@ -515,7 +560,7 @@ static void enable_tracing(bool value)
 
 
 		/* TODO: remove timing code before release */
-		clock_gettime(CLOCK_MONOTONIC, &ts2);
+		/* clock_gettime(CLOCK_MONOTONIC, &ts2);
 
 		int diff = ts2.tv_sec - ts1.tv_sec;
 		if (ts2.tv_nsec < ts1.tv_nsec) {
@@ -523,9 +568,8 @@ static void enable_tracing(bool value)
 			ts2.tv_nsec += 1000000000;
 		}
 		diff = diff * 1000 + (ts2.tv_nsec - ts1.tv_nsec) / 1000000;
-
-
 		fprintf(stderr, "time: %.3f\n", (double)diff / 1000);
+		*/
 	}
 	trace_enabled = value;
 }

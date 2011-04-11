@@ -26,6 +26,15 @@
 #define _OPTIONS_H_
 
 class Options {
+public:
+
+	enum {
+		REPORT_NONE = 0,
+		REPORT_PAGES,
+		REPORT_DENSITY,
+		REPORT_SHARED_PAGES,
+	};
+
 private:
 	// the output file name
 	std::string out_filename;
@@ -33,11 +42,8 @@ private:
 	// the input file name
 	std::string in_filename;
 
-	// address space statistics report request
-	bool report_pages;
-
-	// density of allocations per page report
-	bool report_density;
+	// the requested report type
+	unsigned int report_type;
 
 	// summary of page types from all areas
 	bool report_summary;
@@ -126,14 +132,6 @@ public:
 		return in_filename;
 	}
 
-	/**
-	 * Checks address space report flag.
-	 *
-	 * @return   true if address space report is requested.
-	 */
-	bool getReportLegend() {
-		return report_pages;
-	}
 
 	/**
 	 * Retrieves the memory page size.
@@ -159,10 +157,10 @@ public:
 	}
 
 	/**
-	 * Checks page allocation density report flag.
+	 * Retrieve the selected report type.
 	 */
-	bool getReportDensity() {
-		return report_density;
+	unsigned int getReportType() {
+		return report_type;
 	}
 
 	/**

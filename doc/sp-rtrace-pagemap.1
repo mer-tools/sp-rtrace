@@ -43,6 +43,10 @@ mapped memory areas by percentage of allocated memory per each page.
 The input must be processed with sp-rtrace-postproc --leaks
 (freed allocations removal) filter beforehand.
 .TP
+\fI--count\fP (\fI-c\fP)
+Generates page mapping count report. This report visualizes the number
+of memory mappings per page.
+.TP
 \fI--summary\fP (\fI-s\fP)
 Appends page type summary at the end of the report. This summary lists
 statistics about number of pages for each page type combination.

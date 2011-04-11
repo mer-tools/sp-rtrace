@@ -201,12 +201,12 @@ void TraceData::parseReport(const std::string& filename)
 		int rec_type = sp_rtrace_parser_parse_record(buffer, &rec);
 		if (rec_type == SP_RTRACE_RECORD_TRACE) {
 			*pframe++ = rec.frame;
+			sp_rtrace_parser_free_record(rec_type, &rec);
 			continue;
 		}
 		// Store backtrace record for last cached events
 		if ((pframe > frames || !*buffer) && !last_events.empty()) {
 			storeTrace(last_events, frames, pframe - frames);
-			pframe = frames;
 			last_events.clear();
 		}
 
@@ -219,6 +219,7 @@ void TraceData::parseReport(const std::string& filename)
 				}
 			}
 		}
+		pframe = frames;
 		sp_rtrace_parser_free_record(rec_type, &rec);
 	}
 

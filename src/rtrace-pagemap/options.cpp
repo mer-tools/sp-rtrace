@@ -32,8 +32,7 @@
 #include "options.h"
 
 Options::Options() :
-	report_pages(false),
-	report_density(false),
+	report_type(REPORT_NONE),
 	report_summary(false),
 	page_size(getpagesize()),
 	top(0),
@@ -56,6 +55,7 @@ void Options::displayUsage()
 	    "                 pages contained in the mapped areas.\n"
 		"  -d           - allocation per page statistics. Displays percentage of\n"
 		"                 active allocations for each page.\n"
+		"  -c           - page mapping report. Displays numbers of mappings per page.\n"
 		"  -T <number>  - the number of top allocations per area to print.\n"
 		"  -B <number>  - the number of bottom allocations per area to print.\n"
 		"  -s           - summary about page types from all memory areas.\n"
@@ -112,6 +112,7 @@ void Options::parseCommandLine(int argc, char* const argv[])
 			 {"out", 1, 0, 'o'},
 			 {"pages", 0, 0, 'p'},
 			 {"density", 0, 0, 'd'},
+			 {"count", 0, 0, 'c'},
 			 {"bottom", 1, 0, 'B'},
 			 {"top", 1, 0, 'T'},
 			 {"summary", 0, 0, 's'},
@@ -126,7 +127,7 @@ void Options::parseCommandLine(int argc, char* const argv[])
 
 	int opt;
 	opterr = 0;
-	while ( (opt = getopt_long(argc, argv, "i:o:hpdsHA:P:N:T:B:", long_options, NULL)) != -1) {
+	while ( (opt = getopt_long(argc, argv, "i:o:hpdsHA:P:N:T:B:c", long_options, NULL)) != -1) {
 		switch (opt) {
 			case 'h': {
 				displayUsage();
@@ -144,10 +145,11 @@ void Options::parseCommandLine(int argc, char* const argv[])
 			}
 
 			case 'p': {
-				if (report_density) {
-					std::cerr << "WARNING: density report option overrides pages option\n";
+				if (report_type) {
+					std::cerr << "ERROR: Only one report type can be specified!\n";
+					exit(1);
 				}
-				report_pages = true;
+				report_type = REPORT_PAGES;
 				break;
 			}
 
@@ -162,10 +164,20 @@ void Options::parseCommandLine(int argc, char* const argv[])
 			}
 
 			case 'd': {
-				if (report_density) {
-					std::cerr << "WARNING: density report option overrides pages option\n";
+				if (report_type) {
+					std::cerr << "ERROR: Only one report type can be specified!\n";
+					exit(1);
 				}
-				report_density = true;
+				report_type = REPORT_DENSITY;
+				break;
+			}
+
+			case 'c': {
+				if (report_type) {
+					std::cerr << "ERROR: Only one report type can be specified!\n";
+					exit(1);
+				}
+				report_type = REPORT_SHARED_PAGES;
 				break;
 			}
 
@@ -191,7 +203,7 @@ void Options::parseCommandLine(int argc, char* const argv[])
 			}
 
 			case 'P': {
-				if (report_pages || report_density || report_summary) {
+				if (report_type || report_summary) {
 					std::cerr << "ERROR: Page filter option can't be used together with report options\n";
 					exit (-1);
 				}

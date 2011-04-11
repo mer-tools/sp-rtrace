@@ -42,7 +42,7 @@ void DensityReport::writeLegend(std::ostream& out)
 	out << "\t'9' - 90% < allocation % of page < 100%\n";
 	out << "\t'#' - 100% of page allocated.\n";
 	out << "\t'*' - more than 100% of page allocated. Either calculation error\n";
-	out << "\t      the input report was not processed with freed allocations removal filter.\n";
+	out << "\t      or the input report was not processed with freed allocations removal filter.\n";
 	out << "\n  " << PAGES_PER_LINE * Options::getInstance()->getPageSize() / 1024 << " KB per map line.\n";
 	out << "\n\n";
 }

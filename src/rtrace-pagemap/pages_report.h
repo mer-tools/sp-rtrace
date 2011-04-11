@@ -20,20 +20,20 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA
  */
-#ifndef _LEGEND_REPORT_H_
-#define _LEGEND_REPORT_H_
+#ifndef _PAGES_REPORT_H_
+#define _PAGES_REPORT_H_
 
 #include "pagemap.h"
 #include "address_space_report.h"
 
-class LegendReport : public AddressSpaceReport
+class PagesReport : public AddressSpaceReport
 {
 public:
 
 	/**
 	 * Creates a class instance.
 	 */
-	LegendReport(TraceData& data);
+	PagesReport(TraceData& data);
 
 	/**
 	 * @copydoc AddressSpaceReport::writeLegend

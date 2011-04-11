@@ -33,8 +33,9 @@
 #include "pagemap.h"
 #include "options.h"
 #include "trace_data.h"
-#include "legend_report.h"
+#include "pages_report.h"
 #include "density_report.h"
+#include "shared_pages_report.h"
 #include "summary_report.h"
 #include "filter.h"
 
@@ -47,9 +48,18 @@ int main(int argc, char* const argv[])
 		trace_data.parseReport(Options::getInstance()->getInFilename());
 
 		std::auto_ptr<AddressSpaceReport> report;
-		if (Options::getInstance()->getReportDensity()) report = std::auto_ptr<AddressSpaceReport>(new DensityReport(trace_data));
-		else if (Options::getInstance()->getReportLegend()) {
-			report = std::auto_ptr<AddressSpaceReport>(new LegendReport(trace_data));
+		switch (Options::getInstance()->getReportType()) {
+			case Options::REPORT_DENSITY:
+				report = std::auto_ptr<AddressSpaceReport>(new DensityReport(trace_data));
+				break;
+
+			case Options::REPORT_PAGES:
+				report = std::auto_ptr<AddressSpaceReport>(new PagesReport(trace_data));
+				break;
+
+			case Options::REPORT_SHARED_PAGES:
+				report = std::auto_ptr<AddressSpaceReport>(new SharedPagesReport(trace_data));
+				break;
 		}
 		if (report.get()) {
 			report->write(Options::getInstance()->getOutFilename());

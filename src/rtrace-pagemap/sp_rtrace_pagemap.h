@@ -41,8 +41,10 @@ enum pageinfo_t {
 typedef struct {
 	/* page information (pageinfo_t enum) */
 	unsigned int info;
-	/* page flags (from /proc/kpageflags */
+	/* page flags (from /proc/kpageflags) */
 	uint64_t kflags;
+	/* page mapping count (from /proc/kpagecount) */
+	unsigned int kcount;
 } pageflags_data_t;
 
 /**
