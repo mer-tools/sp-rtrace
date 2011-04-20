@@ -200,8 +200,14 @@ void TraceData::parseReport(const std::string& filename)
 		sp_rtrace_record_t rec;
 		int rec_type = sp_rtrace_parser_parse_record(buffer, &rec);
 		if (rec_type == SP_RTRACE_RECORD_TRACE) {
-			*pframe++ = rec.frame;
-			sp_rtrace_parser_free_record(rec_type, &rec);
+			/* don't collect backtrace records if there is no preceeding allocation
+			 * function event */
+			if (last_events.empty()) {
+				sp_rtrace_parser_free_record(rec_type, &rec);
+			}
+			else {
+				*pframe++ = rec.frame;
+			}
 			continue;
 		}
 		// Store backtrace record for last cached events
@@ -221,6 +227,11 @@ void TraceData::parseReport(const std::string& filename)
 		}
 		pframe = frames;
 		sp_rtrace_parser_free_record(rec_type, &rec);
+	}
+	if ((pframe > frames || !*buffer) && !last_events.empty()) {
+		fprintf(stderr, "last parse\n");
+		storeTrace(last_events, frames, pframe - frames);
+		last_events.clear();
 	}
 
 	// sort the allocation events inside areas
