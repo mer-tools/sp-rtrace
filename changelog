@@ -1,4 +1,4 @@
-sp-rtrace (1.5), ???:
+sp-rtrace (1.5), 28 Apr 2011:
   * Pagemap post-processing utility for memory fragmentation analysis
   * New --include/--exclude options to sp-rtrace-postproc (for pagemap)
   * Improvements to rtrace-calltree:
