@@ -1,8 +1,31 @@
+/*
+ * This file is part of sp-rtrace package.
+ *
+ * Copyright (C) 2010,2011 by Nokia Corporation
+ *
+ * Contact: Eero Tamminen <eero.tamminen@nokia.com>
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA
+ */
 
 #include "timeline.h"
 
 #include "parser.h"
-#include "formatter.h"
+#include "common/formatter.h"
+#include "common/sp_rtrace_proto.h"
 #include "processor.h"
 
 extern "C" {
@@ -19,6 +42,11 @@ void Parser::parseFile(const std::string& filename, Processor* processor)
 		throw std::ios_base::failure(Formatter() << "Failed to open file: " << filename);
 	}
 	this->processor = processor;
+
+	if (in.peek() == SP_RTRACE_PROTO_HS_ID) {
+		throw std::runtime_error("Can't process sp-rtrace binary files. "
+				                 "Convert to text format with sp-rtrace-postproc and try again.");
+	}
 
 	sp_rtrace_parser_set_mask(SP_RTRACE_RECORD_CALL | SP_RTRACE_RECORD_RESOURCE | SP_RTRACE_RECORD_CONTEXT);
 

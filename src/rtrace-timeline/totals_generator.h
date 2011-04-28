@@ -1,3 +1,25 @@
+/*
+ * This file is part of sp-rtrace package.
+ *
+ * Copyright (C) 2010,2011 by Nokia Corporation
+ *
+ * Contact: Eero Tamminen <eero.tamminen@nokia.com>
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA
+ */
 #ifndef _TOTALS_GENERATOR_H_
 #define _TOTALS_GENERATOR_H_
 
@@ -102,10 +124,14 @@ private:
 		// the allocation overhead data file
 		Plotter::DataFile* file_overhead;
 
+		// total number of allocations
+		unsigned int total_allocs;
+		// data file for the total number of allocations
+		Plotter::DataFile* file_total_allocs;
 		/**
 		 * Creates a new class instance.
 		 */
-		ResourceData() : overhead(0), file_overhead(NULL) {
+		ResourceData() : overhead(0), file_overhead(NULL), total_allocs(0), file_total_allocs(NULL) {
 		}
 	};
 
@@ -119,12 +145,16 @@ public:
 	// Y axis range
 	unsigned int yrange_min;
 	unsigned int yrange_max;
+	unsigned int y2range_max;
+
+	// total allocation count over all resources
+	std::vector<timestamp_t> alloc_timestamps;
 
 	/**
 	 * Creates a new class instance.
 	 */
 	TotalsGenerator()
-		: ReportGenerator("totals"), xrange_min(-1), xrange_max(0), yrange_min(0), yrange_max(0) {
+		: ReportGenerator("totals"), xrange_min(-1), xrange_max(0), yrange_min(0), yrange_max(0), y2range_max(0) {
 	}
 
 	/**

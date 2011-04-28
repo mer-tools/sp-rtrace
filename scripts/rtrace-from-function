@@ -5,7 +5,7 @@
 #
 # This file is part of sp-rtrace.
 #
-# Copyright (C) 2006,2010 by Nokia Corporation
+# Copyright (C) 2006,2010-2011 by Nokia Corporation
 #
 # Contact: Eero Tamminen <eero.tamminen@nokia.com>
 #
@@ -34,38 +34,36 @@ if len(sys.argv) != 2:
     sys.exit(1)
 func = sys.argv[1]
 
-count = 0   # number of allocations
-allocs = 0  # total amount of allocations so far
-trace = []  # stacktrace for current allocation
-stack = 1   # current stacktrace line number
-sizes = 0   # number of allocations for current stacktrace
 pattern = re.compile("^[0-9]+\. .+\(([0-9]+)\) = 0x[a-fA-F0-9]+")
+
+total = 0     # total size of allocs
+count = 0    # number of allocations
+allocs = []  # allocation sizes for current backtrace
+first = True # is next alloc the first one
+
 for line in sys.stdin:
-    # new stacktrace?
-    res = pattern.match(line)
-    if res:
-        # first alloc in stacktrace?
-        if stack > 0:
-            trace = [res.group(1)]
-            stack = 0
-            sizes = 1
-        else:
-            trace.append(res.group(1))
-            sizes += 1
-    # requested function found from trace?
-    else:
-        stack = 1
+    # new line in backtrace?
+    if line.startswith("\t0x"):
+        first = True
+        # requested function found from trace?
         if line.find(func) >= 0:
-            # go through all allocation sizes for given trace
-            while sizes > 0:
-                sizes -= 1
-                # size + average allocation overhead
-                size = int(trace[sizes])
-                #print sizes, size
-                allocs += size
-                count += 1
+            count += len(allocs)
+            total += sum([int(x) for x in allocs])
+            allocs = []
+    else:
+        # new alloc?
+        res = pattern.match(line)
+        if res:
+            # first alloc in stacktrace?
+            if first:
+                allocs = [res.group(1)]
+                first = False
+            else:
+                allocs.append(res.group(1))
 
 overhead = 8
-print "%d un-freed allocations (estimated overhead %d bytes/alloc)," % (count, overhead)
-print "totaling %d bytes + %d bytes overhead," % (allocs, count*overhead)
-print "originate from: '*%s*'" % func
+print
+print "%d allocations, totaling %d bytes + %d bytes overhead" % (count, total, count*overhead)
+print "originate from: '*%s*'!" % func
+print
+print "(overhead is estimated to be %d bytes/alloc)" % overhead

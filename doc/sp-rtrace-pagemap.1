@@ -1,0 +1,110 @@
+.TH SP-RTRACE-PAGEMAP 1 "2011-03-1" "sp-trace-pagemap"
+.SH NAME
+sp-rtrace-pagemap - memory page usage/type statistics generator.
+.SH SYNOPSIS
+sp-rtrace-pagemap \fI<options>\fP
+.SH DESCRIPTION
+This utility generates memory page usage/type statistics from sp-rtrace
+text reports. The reports must have page map data attached, which is done
+by specifying also pagemap module to preload module list for sp-rtrace.
+
+Report filters can be used either to generate filtered sp-rtrace text 
+report (if no pagemap reports are requested) or to filter the target
+areas for pagemap reports.
+
+.SS Options:
+.TP 
+ \fI--help\fP (\fI-h\fP)
+Displays help information and exits.
+.TP 
+ \fI--help-filter\fP
+Displays report filtering help information and exits.
+.TP 
+ \fI--help-pages\fP (\fI-h\fP)
+Displays information abut page types and symbols used to specify them.
+.TP
+\fI--output-file\fP=<path> (\fI-o\fP <path)
+Specifies the output file name.
+
+By default the data is written to the standard output.
+.TP
+\fI--input-file\fP=<path> (\fI-i\fP <path>)
+Specifies the input file.
+
+By default the data is read from the standard input.
+.TP
+\fI--pages\fP (\fI-p\fP)
+Generates page type statistics report. This report visualizes mapped 
+memory areas by the contained page types.
+.TP
+\fI--density\fP (\fI-d\fP)
+Generates allocation density statistics report. This report visualizes 
+mapped memory areas by percentage of allocated memory per each page.
+The input must be processed with sp-rtrace-postproc --leaks
+(freed allocations removal) filter beforehand.
+.TP
+\fI--count\fP (\fI-c\fP)
+Generates page mapping count report. This report visualizes the number
+of memory mappings per page.
+.TP
+\fI--summary\fP (\fI-s\fP)
+Appends page type summary at the end of the report. This summary lists
+statistics about number of pages for each page type combination.
+.TP
+\fI--top\fP=<number> (\fI-T\fP <number>)
+Number of top allocations per area. This option will append <number>
+of top allocations events occured in the area to each area.
+.TP
+\fI--botton\fP=<number> (\fI-B\fP <number>)
+Number of bottom allocations per area. This option will append <number>
+of bottom allocations events occured in the area to each area.
+.TP
+\fI--filter-name\fP=<name> (\fI-N\fP <name>)
+Filters input file by removing allocations/frees not done in the specified
+area identified by the mapped file <name>.
+.TP
+\fI--filter-address\fP=<address> (\fI-A\fP <address>)
+Filters input file by removing allocations/frees not done in the specified
+area identified by an <address> belonging to it.
+.TP
+\fI--filter-page\fP=<type> (\fI-P\fP <type>)
+Filters input file by removing allocations/frees not done in the pages of
+specified <type>. This filter makes sense only when done on reports with
+freed allocations removed(sp-rtrace-postproc --leaks option).
+
+.SH USAGE NOTES
+To successfully obtain pagemap data all modules must be stopped before
+the data pipe from main tracking module is closed. To do that the tracing
+must be stopped with sp-rtrace -t <pid> command rather then just aborted
+with ^C (in the last case trace log would be produced without pagemap attachments).
+
+Note that by default only root has read access to /proc/kpageflags file needed
+by pagemap module. Therefore to sucessfully gather pagemap data user needs
+either to launch the target process as root or grant read access to 
+/proc/kpageflags for users. Usually if pagemap module has no accecss to
+kpageflags file it will create zero size attachment and sp-rtrace will
+generate warning message about attachment size being zero.
+
+
+.SH EXAMPLES
+.TP
+sp-rtrace -s -p pagemap:memory -P-o$(pwd) -x sample
+Starts sample process with pagemap and memory modules and invoke post-processor
+to produce text file required for pagemap post-processor (sp-rtrace-pagemap).
+.TP
+sp-rtrace -t $(pidof sample)
+Stops tracing to produce sp-rtrace report and pagemap attachments.
+.TP
+sp-rtrace-pagemap -i <sp-rtrace text report> -p -s > pagemap.txt
+Processes the obtained sp-rtrace log with pagemap page types and summary options.
+
+
+.SH SEE ALSO
+.IR sp-rtrace (1),
+.IR sp-rtrace-postproc (1)
+.SH COPYRIGHT
+Copyright (C) 2011 Nokia Corporation.
+.PP
+This is free software. You may redistribute copies of it under the
+terms of the GNU General Public License v2 included with the software.
+There is NO WARRANTY, to the extent permitted by law.

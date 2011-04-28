@@ -1,6 +1,54 @@
+/*
+ * This file is part of sp-rtrace package.
+ *
+ * Copyright (C) 2010,2011 by Nokia Corporation
+ *
+ * Contact: Eero Tamminen <eero.tamminen@nokia.com>
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA
+ */
 #include "totals_generator.h"
 
 #include "timestamp.h"
+#include "tic_writer.h"
+
+
+class TicWriter : public ITicWriter {
+private:
+	timestamp_t start;
+	std::vector<timestamp_t>& allocs;
+	std::vector<timestamp_t>::iterator iter;
+	unsigned int total_count;
+public:
+	TicWriter(std::vector<timestamp_t>& allocs) :
+		start(0),
+		allocs(allocs),
+		total_count(0) {
+		iter = allocs.begin();
+	}
+
+	 void write(std::string& output, timestamp_t tic, Plotter::Tic& step) {
+		if (!start) start = tic;
+		while (iter != allocs.end() && *iter <= tic) {
+			total_count++;
+			iter++;
+		}
+		output = Formatter() << total_count << " allocs\\n+" << Timestamp::offsetToString(tic - start);
+	}
+};
 
 int TotalsGenerator::reportAlloc(const Resource* resource, event_ptr_t& event) {
 	if (event->timestamp == 0) {
@@ -11,6 +59,9 @@ int TotalsGenerator::reportAlloc(const Resource* resource, event_ptr_t& event) {
 	if (resource->overhead && !rd->file_overhead) {
 		// new resource found, create a new overhead data file
 		rd->file_overhead = plotter.createFile(Formatter() << resource->name << " overhead");
+	}
+	if (!rd->file_total_allocs) {
+		rd->file_total_allocs = plotter.createFile(Formatter() << resource->name << ": total allocs");
 	}
 	reportAllocInContext(resource, &context_all, event);
 
@@ -28,6 +79,11 @@ int TotalsGenerator::reportAlloc(const Resource* resource, event_ptr_t& event) {
 		rd->file_overhead->write(event->timestamp, rd->overhead);
 		if (rd->overhead > yrange_max) yrange_max = rd->overhead;
 	}
+	rd->total_allocs++;
+	rd->file_total_allocs->write(event->timestamp, rd->total_allocs);
+	if (rd->total_allocs > y2range_max) y2range_max = rd->total_allocs;
+
+	alloc_timestamps.push_back(event->timestamp);
 	return OK;
 }
 
@@ -90,6 +146,7 @@ void TotalsGenerator::finalize() {
 	}
 	// increase Y range, so top graph isn't hidden beyond the axis
 	yrange_max = yrange_max * 105 / 100;
+	y2range_max = y2range_max * 105 / 100;
 	// number of graphs not counting overhead data
 	unsigned int ngraphs = 0;
 
@@ -101,6 +158,11 @@ void TotalsGenerator::finalize() {
 		}
 		if (rd->file_overhead) {
 			plotter.addGraph(rd->file_overhead, "1", "2", "column(2)");
+			ngraphs++;
+		}
+		if (rd->file_total_allocs) {
+			plotter.addGraph(rd->file_total_allocs, "1", "2", "column(2)", "x1y2");
+			ngraphs++;
 		}
 		// draw the peak marker
 		timestamp_t timestamp = rd->stats.peak_timestamp;
@@ -111,8 +173,10 @@ void TotalsGenerator::finalize() {
 	}
 	plotter.setTitle("Amount of non-freed allocations");
 
-	plotter.setAxisX("time (secs)", xrange_min, xrange_max);
+	TicWriter tic_writer(alloc_timestamps);
+	plotter.setAxisX("time (secs) / allocation count", xrange_min, xrange_max, -1, &tic_writer);
 	plotter.setAxisY("size", yrange_min, yrange_max, "%.1s%c");
+	plotter.setAxisY2("total allocations", yrange_min, y2range_max);
 	plotter.setStyle("data lines");
 
 	// Write summary report

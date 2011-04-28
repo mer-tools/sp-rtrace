@@ -1,7 +1,31 @@
+/*
+ * This file is part of sp-rtrace package.
+ *
+ * Copyright (C) 2010,2011 by Nokia Corporation
+ *
+ * Contact: Eero Tamminen <eero.tamminen@nokia.com>
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA
+ */
 #ifndef _PLOTTER_H_
 #define _PLOTTER_H_
 
 #include "timeline.h"
+
+class ITicWriter;
 
 /**
  * Helper class for gnuplot configuration file setup.
@@ -336,7 +360,7 @@ public:
 	 * @param[in] max     the maximal range.
 	 * @param[in] scale   the tic mark scale.
 	 */
-	void setAxisX(const std::string& label, int min = -1, int max = -1, int scale = -1);
+	void setAxisX(const std::string& label, int min = -1, int max = -1, int scale = -1, ITicWriter* tic_writer = NULL);
 	
 	/**
 	 * Sets Y axis

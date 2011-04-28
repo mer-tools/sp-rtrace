@@ -1,9 +1,32 @@
+/*
+ * This file is part of sp-rtrace package.
+ *
+ * Copyright (C) 2010,2011 by Nokia Corporation
+ *
+ * Contact: Eero Tamminen <eero.tamminen@nokia.com>
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA
+ */
 #include "plotter.h"
 
 #include "options.h"
-#include "formatter.h"
+#include "common/formatter.h"
 #include "terminal.h"
 #include "timestamp.h"
+#include "tic_writer.h"
 
 unsigned int Plotter::DataFile::index = 0;
 
@@ -130,7 +153,7 @@ void Plotter::setStyle(const std::string& style) {
 	config << "set style " << style << "\n";
 }
 
-void Plotter::setAxisX(const std::string& label, int min, int max, int scale) {
+void Plotter::setAxisX(const std::string& label, int min, int max, int scale, ITicWriter* tic_writer) {
 	config << "set xtics rotate nomirror\n";
 
 	if (scale != -1) {
@@ -138,6 +161,12 @@ void Plotter::setAxisX(const std::string& label, int min, int max, int scale) {
 	}
 
 	if (min != -1) {
+		std::auto_ptr<ITicWriter> default_writer;
+		if (!tic_writer) {
+			default_writer = std::auto_ptr<ITicWriter>(new DefaultTicWriter());
+			tic_writer = default_writer.get();
+		}
+
 		if (min == max) max++;
 		int range = max - min;
 		Tic step((double)range / 10 + 0.5);
@@ -151,14 +180,16 @@ void Plotter::setAxisX(const std::string& label, int min, int max, int scale) {
 		config << "set xrange[" << min << ":" << max << "]\n";
 		// place autotics outside range to avoid interference with manual tics
 		config << "set xtics " << max * 2 << "," << max * 2 << "\n";
-		// place tics
+		// write tics
+		std::string stic;
 		while (tic <= max - step.value) {
-			config << "set xtics add (\"" << Timestamp::toString(tic, step.decimal) << "\\n+" <<
-					Timestamp::offsetToString(tic - min) << "\" " << tic << ")\n";
+			tic_writer->write(stic, tic, step);
+			config << "set xtics add (\"" << stic << "\" " << tic << ")\n";
 			tic += step.value;
 		}
-		config << "set xtics add (\"" << Timestamp::toString(max) << "\\n+" <<
-				Timestamp::offsetToString(range) << "\" " << max << ")\n";
+		// write the ending tic
+		tic_writer->write(stic, max, step);
+		config << "set xtics add (\"" << stic << "\" " << max << ")\n";
 	}
 
 }

@@ -67,6 +67,8 @@ postproc_options_t postproc_options = {
 	.pid_resolve = 0,
 	.filter_resource = 0,
 	.backtrace_depth = -1,
+	.include_file = NULL,
+	.exclude_file = NULL,
 };
 
 volatile sig_atomic_t postproc_abort = 0;
@@ -80,6 +82,8 @@ static void free_options()
 {
 	if (postproc_options.input_file) free(postproc_options.input_file);
 	if (postproc_options.output_dir) free(postproc_options.output_dir);
+	if (postproc_options.include_file) free(postproc_options.include_file);
+	if (postproc_options.exclude_file) free(postproc_options.exclude_file);
 }
 
 /**
@@ -94,20 +98,24 @@ static void display_usage()
 			"output as input data.\n"
 			"Usage: sp-rtrace-postproc [<options>]\n"
 			"where <options> are:\n"
-			"  -i <path>    - the input file path. Standard input used by default.\n"
-			"  -o <path>    - the output directory. Standard output is used if\n"
-			"                 not set.\n"
-			"  -t           - convert to the text format (optional, the output is always\n"
-			"                 written in text format).\n"
-			"  -l           - filter out matching allocs & frees i.e. list only 'leaks'.\n"
-			"  -c           - compress trace by joining identical backtraces.\n"
-			"  -r           - resolve function addresses in backtraces.\n"
-			"  -C <mask>    - filter by context id <mask>.\n"
-			"  -R <mask>    - filter by resource type <mask>.\n"
-			"  -s <order>   - sort leaks by the specified order -\n"
-			"                 size, size-asc, count, count-asc.\n"
-			"  -b <depth>   - set maximum backtrace depth.\n"
-			"  -h           - this help page.\n"
+			"  -i <path>        - the input file path. Standard input used by default.\n"
+			"  -o <path>        - the output directory. Standard output is used if\n"
+			"                     not set.\n"
+			"  -t               - convert to the text format (optional, the output is always\n"
+			"                     written in text format).\n"
+			"  -l               - filter out matching allocs & frees i.e. list only 'leaks'.\n"
+			"  -c               - compress trace by joining identical backtraces.\n"
+			"  -r               - resolve function addresses in backtraces.\n"
+			"  -C <mask>        - filter by context id <mask>.\n"
+			"  -R <mask>        - filter by resource type <mask>.\n"
+			"  -s <order>       - sort leaks by the specified order -\n"
+			"                     size, size-asc, count, count-asc.\n"
+			"  -b <depth>       - set maximum backtrace depth.\n"
+			"  --include <file> - specify events to include in report.\n"
+			"  --exclude <file> - specify events to exclude from report.\n"
+			"                     For include/exclude options the events are stored in a\n"
+			"                     text file, each line containing event index.\n"
+			"  -h               - this help page.\n"
 	);
 }
 
@@ -248,6 +256,8 @@ int main(int argc, char* argv[])
 			 {"text", 0, 0, 't'},
 			 {"help", 0, 0, 'h'},
 			 {"backtrace-depth", 1, 0, 'b'},
+			 {"include", 1, 0, 'I'},
+			 {"exclude", 1, 0, 'X'},
 			 {0, 0, 0, 0}
 	};
 	/* parse command line options */
@@ -333,6 +343,24 @@ int main(int argc, char* argv[])
 			}
 			break;
 			
+		case 'I':
+			if (postproc_options.exclude_file) {
+				fprintf(stderr, "WARNING: include option overrides already specified exclude option\n");
+				free(postproc_options.exclude_file);
+				postproc_options.exclude_file = NULL;
+			}
+			postproc_options.include_file = strdup_a(optarg);
+			break;
+
+		case 'X':
+			if (postproc_options.include_file) {
+				fprintf(stderr, "WARNING: exclude option is ignored beacuse of already specified include option\n");
+			}
+			else {
+				postproc_options.exclude_file = strdup_a(optarg);
+			}
+			break;
+
 		case '?':
 			fprintf(stderr, "ERROR: Unknown sp-rtrace-postproc option: %c\n", optopt);
 			display_usage();
@@ -410,6 +438,14 @@ int main(int argc, char* argv[])
 
 	if (postproc_options.filter_leaks) {
 		filter_leaks(rd);
+	}
+
+	if (postproc_options.include_file) {
+		filter_include(rd);
+	}
+
+	if (postproc_options.exclude_file) {
+		filter_exclude(rd);
 	}
 
 	if (postproc_options.filter_context != -1) {

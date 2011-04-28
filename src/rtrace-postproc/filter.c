@@ -21,6 +21,13 @@
  * 02110-1301 USA
  */
 
+#define _GNU_SOURCE
+
+#include <stdbool.h>
+#include <search.h>
+#include <stdlib.h>
+#include <stdio.h>
+
 #include "filter.h"
 
 #include "common/sp_rtrace_proto.h"
@@ -277,6 +284,87 @@ static int trim_backtrace(rd_ftrace_t* trace, unsigned int backtrace_depth)
 	return 0;
 }
 
+
+/**
+ * Compares two event indexes.
+ *
+ * @param[in] index1   the first index.
+ * @param[in] index2   the second index.
+ * @return             -1 - index1 < index2
+ *                     =0 - index1 = index2
+ *                     +1 - index1 > index2
+ */
+static int filter_compare_event_index(const void* index1, const void* index2)
+{
+	return (int)index1 - (int)index2;
+}
+
+/**
+ * Loads event index data from a file.
+ *
+ * The input file contains one event index per line. This function reads the
+ * file and stores the index data into binary tree.
+ * @param[in] filename   the event index file name.
+ * @return                a binary tree containing index data.
+ */
+static void* filter_load_index_data(const char* filename)
+{
+	FILE* fp = fopen(filename, "r");
+	if (fp == NULL) {
+		fprintf(stderr, "ERROR: failed to open event index file: %s (%s)\n", filename, strerror(errno));
+		exit (-1);
+	}
+	char line[128];
+	void* root = NULL;
+	while (fgets(line, sizeof(line), fp)) {
+		int index;
+		if (sscanf(line, "%d", &index) == 1) {
+			tsearch((void*)index, &root, filter_compare_event_index);
+		}
+	}
+	fclose(fp);
+	return root;
+}
+
+/**
+ * Helper data structure containing necessary data for index filter.
+ */
+typedef struct index_filter_t {
+	/* the rtrace data */
+	rd_t* rd;
+	/* true if include filter is applied, false if exclude */
+	bool include;
+	/* the include/exclude index map */
+	void* index_map;
+} index_filter_t;
+
+
+/**
+ * The event filtering function.
+ *
+ * This function performs call index lookup in the index tree and removes
+ * call if:
+ *   1) exclude rule is set and index was found
+ *   2) include rule is set and index was not found
+ * @param[in] call    the call to check.
+ * @param[in] filter  the index filtering data.
+ */
+static void fcall_filter_index(rd_fcall_t* call, index_filter_t* filter)
+{
+	bool found = tfind((void*)call->data.index, &filter->index_map, filter_compare_event_index);
+	if ((found && !filter->include) || (!found && filter->include)) {
+		rd_fcall_remove(filter->rd, call);
+	}
+}
+
+/**
+ * Empty function to pass to tdestroy.
+ * @param
+ */
+static void free_index(void* data __attribute__((unused)))
+{
+}
+
 /*
  * Public API
  */
@@ -350,3 +438,30 @@ void filter_trim_backtraces(rd_t* rd)
 	 * is not reallocated */
 	htable_foreach2(&rd->ftraces, (op_binary_t)trim_backtrace, (void*)rd->pinfo->backtrace_depth);
 }
+
+
+void filter_include(rd_t* rd)
+{
+	index_filter_t filter = {
+			.rd = rd,
+			.include = true,
+			.index_map = filter_load_index_data(postproc_options.include_file),
+	};
+
+	dlist_foreach2(&rd->calls, (op_binary_t)fcall_filter_index, (void*)&filter);
+	if (filter.index_map) tdestroy(filter.index_map, free_index);
+}
+
+
+void filter_exclude(rd_t* rd)
+{
+	index_filter_t filter = {
+			.rd = rd,
+			.include = false,
+			.index_map = filter_load_index_data(postproc_options.exclude_file),
+	};
+
+	dlist_foreach2(&rd->calls, (op_binary_t)fcall_filter_index, (void*)&filter);
+	if (filter.index_map) tdestroy(filter.index_map, free_index);
+}
+

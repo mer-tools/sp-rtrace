@@ -36,7 +36,6 @@
 #include <dlfcn.h>
 #include <stdarg.h>
 #include <unistd.h>
-#include <pthread.h>
 
 #include "sp_rtrace_main.h"
 #include "sp_rtrace_module.h"

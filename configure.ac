@@ -1,5 +1,5 @@
 AC_PREREQ([2.5])
-AC_INIT([sp-rtrace], [1.4], [none])
+AC_INIT([sp-rtrace], [1.5], [none])
 
 AC_CONFIG_AUX_DIR([aux])
 
@@ -83,6 +83,18 @@ AC_ARG_ENABLE(debug-info,
   [  --enable-debug-info Enables debug output], 
   [ AS_IF(test x$enableval = xyes, [AC_DEFINE(DEBUG_INFO, 1, [Enable debug output])]) ],
 )
+
+ 	
+# disable c++ precompiled headers
+AC_ARG_ENABLE(precomp,
+AC_HELP_STRING([--disable-precomp] [Disables precompiled headers]),
+[case "${enableval}" in
+  yes) precomp=true ;;
+  no)  precomp=false ;;
+  *) AC_MSG_ERROR(bad value ${enableval} for --disable-precomp) ;;
+esac],[precomp=true])
+AM_CONDITIONAL(PRECOMP, test x$precomp = xtrue)
+
 
 # Checks for header files.
 AC_CHECK_HEADERS([fcntl.h limits.h memory.h stdlib.h string.h unistd.h])

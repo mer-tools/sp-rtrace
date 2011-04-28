@@ -1,0 +1,39 @@
+1. Introduction
+
+The pagemap module stores the following memory page mapping data when tracing
+is stopped:
+  1) Information about the mapped memory pages, including kpageflags data and 
+     a flag if the page contains only zero bytes.
+  3) Copy of the /proc/<pid>/maps file (pagemap-maps-*).
+
+The pagemap post-processor generates the following reports:
+  1) Addresses of pages that are both dirty and zeroed, listed per mapped 
+     address range (heap, anonymous mapping, file rw areas).
+  2) Total of dirty & zeroed pages and how large percentage they represent
+     from the given rw mapping's total dirty size.
+
+
+2. Implementation
+
+2.1 Memory page data storage file (pagemap-kpageflags-*)
+
+The memory page data are stored in binary format:
+<area data><area page data>,[<area data><area page data>,...]
+Where <area data> contains information about mapped memory area:
+  [from][to][size]
+    [from]  - the memory mapping start address.
+              (4 bytes on 32 bit systems).
+    [to]    - the memory mapping end address.
+              (4 bytes on 32 bit systems).
+    [size]  - the size of the following <area page flags> data
+              (4 bytes on 32 bit systems).
+    
+And <area page data> contains information about the mapped pages:
+  [info][kflags]
+    [info]    - general information about the page: 
+                  1 - page swapped
+		  2 - page is located in memory
+		  4 - page contains only zero bytes
+    [kflags]  - the flags value from /proc/kpageflags file for pages in memory.
+                This value is 0 for swapped pages.
+
