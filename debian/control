@@ -1,6 +1,6 @@
 Source: sp-rtrace
 Priority: extra
-Maintainer: Kiryl Shutsemau <kiryl.shutsemau@nokia.com>
+Maintainer: Eero Tamminen <eero.tamminen@nokia.com>
 Build-Depends: debhelper (>= 5), autoconf, automake, libtool, doxygen, binutils-dev, libglib2.0-dev
 Standards-Version: 3.8.0
 Section: utils
