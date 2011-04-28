@@ -83,6 +83,7 @@ void PagesReport::writeMemoryMap(std::ostream& out, MemoryArea* area)
 		}
 		unsigned int page_mark = PAGE_LEGEND_NONDIRTY;
 		pageflags_data_t* page_data = area->flags + page;
+//		fprintf(stderr, "page_data={.info=%x, .kflags=%llx, .kcount=%x}\n", page_data->info, page_data->kflags, page_data->kcount);
 		if (page_data->info & PAGE_SWAP) {
 			if (page_data->info & PAGE_ZERO) {
 				page_mark = PAGE_LEGEND_SWAPZ;

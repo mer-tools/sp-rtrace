@@ -212,9 +212,6 @@ static unsigned int read_page_mapping_count(unsigned long addr, pfile_data_t* da
 		n = read(data->fd_data, &count, sizeof(uint64_t));
 		if (n != sizeof(uint64_t)) return 0;
 	}
-	if (count > 1) {
-		fprintf(stderr, "count=%d\n", count);
-	}
 	return count;
 }
 
