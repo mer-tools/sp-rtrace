@@ -487,7 +487,7 @@ static void begin_tracing()
  * @param[in] ppid  the parent process to check.
  * @return
  */
-bool is_child_procses_of(int pid, int ppid)
+static bool is_child_processs_of(int pid, int ppid)
 {
 	int rc = false;
 	char buffer[1024];
@@ -512,7 +512,7 @@ bool is_child_procses_of(int pid, int ppid)
  * 
  * @param[in] cpid   the child process id.
  */
-void toggle_child_process(int cpid)
+static void toggle_child_process(int cpid)
 {
 	int pid = fork();
 	if (pid) return;
@@ -551,7 +551,7 @@ static void toggle_child_processes(int pid)
 	while ((de = readdir(dir)) != NULL) {
 		if (de->d_type == DT_DIR) {
 			int cpid = atoi(de->d_name);
-			if (cpid && is_child_procses_of(cpid, pid)) {
+			if (cpid && is_child_processs_of(cpid, pid)) {
 				toggle_child_process(cpid);
 			}
 		}
@@ -560,6 +560,31 @@ static void toggle_child_processes(int pid)
 	
 }
 
+/**
+ * Checks if the specified process is being traced.
+ * 
+ * The check is simply done by verifying if the process
+ * has mapped the main tracing module.
+ * @param[in] pid  the target process identifier.
+ * @return    true if the process is being traced, false otherwise.
+ */
+static bool is_process_traced(int pid)
+{
+	bool rc = false;
+	char buffer[PATH_MAX];
+	sprintf(buffer, "/proc/%d/maps", pid);
+	FILE* fp = fopen(buffer, "r");
+	if (fp) {
+		while (fgets(buffer, PATH_MAX, fp)) {
+			if (strstr(buffer, SP_RTRACE_MAIN_MODULE)) {
+				rc = true;
+				break;
+			}
+		}
+		close(fp);
+	}
+	return rc;
+}
 
 /**
  * Toggles tracing for process rtrace_options.pid.
@@ -568,7 +593,13 @@ static void toggle_child_processes(int pid)
  */
 static void toggle_tracing()
 {
-	if (rtrace_options.follow_forks) {
+  /* first check if the target process is launched in tracing mode*/
+  if (!is_process_traced(rtrace_options.pid)) {
+    fprintf(stderr, "ERROR: the target process %d is not launched in tracing mode.\n", rtrace_options.pid);
+    return;
+  }
+
+  if (rtrace_options.follow_forks) {
 		toggle_child_processes(rtrace_options.pid);
 	}
 	char pipe_path[128];
@@ -696,7 +727,7 @@ static void enter_listen_mode()
  * @param[in] length       the maximum substring length.
  * @param[in] description  the description.
  */
-void print_description(int indent, int length, const char* description)
+static void print_description(int indent, int length, const char* description)
 {
 	char buffer[80];
 	char padding[80];
@@ -740,7 +771,7 @@ void print_description(int indent, int length, const char* description)
  * printed.
  * @param[in] name  the module name.
  */
-void print_module_info(const char* name) {
+static void print_module_info(const char* name) {
 	char path[PATH_MAX];
 	char types[] = {'?', 'P', 'A'};
 
@@ -763,7 +794,7 @@ void print_module_info(const char* name) {
 /**
  * Lists rtrace modules located in /usr/lib/sp-rtrace directory.
  */
-void list_modules()
+static void list_modules()
 {
 	DIR* libdir = opendir("/usr/lib/" SP_RTRACE_LIB_DIR);
 	if (libdir == NULL) {
