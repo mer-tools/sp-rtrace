@@ -8,8 +8,11 @@ sp-rtrace installation instructions
 ----------------
 
 The following packages must be installed before compiling sp-rtrace:
-  autoconf, automake, libtool, doxygen, binutils-dev, libglib2.0-dev
+  autoconf(>=2.67), automake(>=1.11), libtool(>=2.2.6), doxygen(>=1.7.1),
+  binutils-dev(>=2.20.1), libglib2.0-dev(>=2.24.2)
   
+Note that earlier versions might also work.
+
 
 1.2 Compilation & Installation
 ------------------------------
