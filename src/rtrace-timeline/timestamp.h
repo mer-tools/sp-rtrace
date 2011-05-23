@@ -105,6 +105,7 @@ public:
 		timestamp_t timestamp = 0;
 		unsigned int lpos = text.size();
 		unsigned int mpos = text.find('.');
+		unsigned int shift = 1000;
 		if (mpos != std::string::npos) {
 			timestamp = atoi(text.substr(mpos + 1, lpos - mpos - 1).c_str());
 			lpos = mpos - 1;
@@ -113,13 +114,15 @@ public:
 		if (mpos != std::string::npos) {
 			timestamp += 1000 * atoi(text.substr(mpos + 1, lpos - mpos).c_str());
 			lpos = mpos - 1;
+			shift *= 60;
 		}
 		mpos = text.rfind(':', lpos);
 		if (mpos != std::string::npos) {
 			timestamp += 1000 * 60 * atoi(text.substr(mpos + 1, lpos - mpos).c_str());
 			lpos = mpos - 1;
+			shift *= 60;
 		}
-		timestamp += 1000 * 60 * 60 * atoi(text.substr(0, lpos + 1).c_str());
+		timestamp += shift * atoi(text.substr(0, lpos + 1).c_str());
 		return timestamp;
 	}
 };
