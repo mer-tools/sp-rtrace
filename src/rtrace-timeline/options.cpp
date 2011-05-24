@@ -290,7 +290,7 @@ void Options::parseCommandLine(int argc, char* const argv[], Processor* processo
 				if (!max.empty()) {
 					Filter* filter;
 					if (max[0] == '+') filter = dynamic_cast<Filter*>(new MaxTimeOffsetFilter(max));
-					filter = dynamic_cast<Filter*>(new MaxTimeFilter(max));
+					else filter = dynamic_cast<Filter*>(new MaxTimeFilter(max));
 					FilterManager::getInstance()->addFilter(filter);
 				}
 				updateFilterDesc("time", optarg);

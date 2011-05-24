@@ -581,7 +581,7 @@ static bool is_process_traced(int pid)
 				break;
 			}
 		}
-		close(fp);
+		fclose(fp);
 	}
 	return rc;
 }
