@@ -1,4 +1,4 @@
-sp-rtrace (1.5.1), 9 Mar 2011:
+sp-rtrace (1.5.1), 9 May 2011:
   * Do not send toggle signal to a process that is not traced.
 
 sp-rtrace (1.5), 28 Apr 2011:
