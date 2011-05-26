@@ -76,7 +76,14 @@ typedef struct rtrace_options_t {
 
 extern rtrace_options_t rtrace_options;
 
-extern sig_atomic_t rtrace_main_loop;
+
+extern sig_atomic_t rtrace_stop_requests;
+
+/* Number of stop requests before trace is aborted. Until
+ * this limit is reached sp-rtrace will try to stop the tracing
+ * in normal way, waiting for target process to close the data
+ * connection normally */
+#define REQUEST_STOP 	 2
 
 /**
  * Connects output descriptor either to post-processor pipe or

@@ -51,8 +51,10 @@
 #include "common/rtrace_data.h"
 #include "common/debug_log.h"
 
+#define MESSAGE_SIGINT "INFO: Trace was stopped, please wait for data retrieval to be finished.\n"
+
 /* Application exit condition, set by SIGINT */
-sig_atomic_t rtrace_main_loop = 1;
+sig_atomic_t rtrace_stop_requests = 0;
 
 /* rrace working mode, set by command options */
 enum {
@@ -159,15 +161,17 @@ static void display_usage()
 			);
 }
 
+
 /**
  * Stops data processing and exits application.
  * @param sig
  */
 static void sigint_handler(int sig __attribute((unused)))
 {
-	rtrace_main_loop = 0;
+	rtrace_stop_requests++;
 	/* send toggle signal to tracing process if the trace is active */
 	if (fd_in && rtrace_options.pid) {
+		write(STDOUT_FILENO, MESSAGE_SIGINT, sizeof(MESSAGE_SIGINT));
 		kill(rtrace_options.pid, rtrace_options.toggle_signal);
 	}
 }
@@ -179,7 +183,7 @@ static void sigint_handler(int sig __attribute((unused)))
  */
 static void sigchld_handler(int sig __attribute((unused)))
 {
-	rtrace_main_loop = 0;
+	rtrace_stop_requests = REQUEST_STOP;
 }
 
 /**
@@ -304,6 +308,7 @@ static int open_postproc_pipe()
 		}
 		argv[argc] = NULL;
 
+		setpgrp();
 		execvp(SP_RTRACE_POSTPROC, argv);
 		fprintf(stderr, "ERROR: failed to execute post-processor process %s (%s)\n",
 				SP_RTRACE_POSTPROC, strerror(errno));
@@ -418,7 +423,10 @@ static void disconnect_input(const char* pipe_path)
 {
 	if (pipe_path) {
 		close(fd_in);
-		remove(pipe_path);
+		int rc = remove(pipe_path);
+		if (rc == -1) {
+			fprintf(stderr, "ERROR: Failed to removing pipe: %s\n", strerror(errno));
+		}
 	}
 }
 
@@ -452,7 +460,7 @@ static void begin_tracing()
 	}
 	else {
 		fprintf(stderr, "INFO: Tracing started. Trace output will be produced after "
-			   "tracing is stopped. To stop tracing either use toggle option "
+			   "tracing is stopped. To stop tracing either press Ctrl+C, use toggle option "
 			   "again or terminate the target process.\n");
 
 		char pipe_path[128];
@@ -468,13 +476,10 @@ static void begin_tracing()
 
 		/* start data processing */
 		int rc  = process_data();
-
 		/* close data connection */
 		disconnect_output();
 		disconnect_input(pipe_path);
 
-		/* remove pre-processor pipe */
-		remove(pipe_path);
 		exit(rc);
 	}
 }
@@ -648,6 +653,7 @@ static int start_process(char* app, char* args[])
 		}
 		/* either pipe has been created by the main process or tracing is not enabled
 		 * at start. Set environment and execute app */
+		setpgrp();
 		set_environment();
 		execvp(app, args);
 		fprintf(stderr, "ERROR: failed to start process %s (%s)\n", app, strerror(errno));
@@ -667,6 +673,13 @@ static int start_process(char* app, char* args[])
 
 		disconnect_output();
 		disconnect_input(pipe_path);
+
+		/* Finally if the rtrace was aborted by SIGINT, forward it to the
+		 * target process after the trace has been switched off. */
+		if (rtrace_stop_requests) {
+			kill(rtrace_options.pid, SIGINT);
+		}
+
 		return rc;
 	}
 	return 0;
@@ -687,6 +700,7 @@ static void start_process_managed(char* app, char* args[])
 {
 	int pid = fork();
 	if (pid == 0) {
+		setpgrp();
 		set_environment();
 		execvp(app, args);
 		fprintf(stderr, "ERROR: failed to start process %s (%s)\n", app, strerror(errno));
