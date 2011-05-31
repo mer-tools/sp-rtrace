@@ -85,6 +85,8 @@ rtrace_options_t rtrace_options = {
 		.pid_postproc = 0,
 		.output_file = NULL,
 		.libunwind = false,
+		.backtrace_all = false,
+		.monitor_size = NULL,
 };
 
 /**
@@ -123,6 +125,8 @@ static void display_usage()
 			"                    only allocation function backtraces are reported.\n"
 			"  -u              - use libunwind instead of libc backtrace() function\n"
 			"                    for stack trace unwinding.\n"
+			"  -M <size>       - report backtraces only for allocations of specified\n"
+			"                    size.\n"
 			"  Note that options should be always before the execute (-x)\n"
 			"  switch.\n"
 			"\n"
@@ -204,6 +208,7 @@ static void set_environment()
 	if (rtrace_options.start) setenv(rtrace_env_opt[OPT_START], OPT_ENABLE, 1);
 	if (rtrace_options.backtrace_all) setenv(rtrace_env_opt[OPT_BACKTRACE_ALL], OPT_ENABLE, 1);
 	if (rtrace_options.libunwind) setenv(rtrace_env_opt[OPT_LIBUNWIND], OPT_ENABLE, 1);
+	if (rtrace_options.monitor_size) setenv(rtrace_env_opt[OPT_MONITOR_SIZE], rtrace_options.monitor_size, 1);
 
 	if (rtrace_options.audit) {
 		setenv("LD_AUDIT", SP_RTRACE_LIB_PATH SP_RTRACE_AUDIT_MODULE, 1);
@@ -260,6 +265,7 @@ static void free_options()
 	if (rtrace_options.postproc) free(rtrace_options.postproc);
 	if (rtrace_options.toggle_signal_name) free(rtrace_options.toggle_signal_name);
 	if (rtrace_options.output_file) free(rtrace_options.output_file);
+	if (rtrace_options.monitor_size) free(rtrace_options.monitor_size);
 }
 
 /**
@@ -955,6 +961,10 @@ int main(int argc, char* argv[])
 			rtrace_options.libunwind = true;
 			break;
 			
+		case 'M':
+			rtrace_options.monitor_size = strdup_a(optarg);
+			break;
+
 		case 'h':
 			display_usage();
 			exit (0);

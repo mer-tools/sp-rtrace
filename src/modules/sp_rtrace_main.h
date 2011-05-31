@@ -24,6 +24,7 @@
 #ifndef SP_RTRACE_MAIN_H
 #define SP_RTRACE_MAIN_H
 
+#include <stddef.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <signal.h>
@@ -31,6 +32,11 @@
 
 #include "common/sp_rtrace_proto.h"
 #include "library/sp_rtrace_defs.h"
+#include "library/sp_rtrace_filter.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @file sp_rtrace_main.h
@@ -60,7 +66,7 @@ typedef struct sp_rtrace_options_t {
 	bool enable_packet_buffering;
 	char output_dir[PATH_MAX];
 	char postproc[PATH_MAX];
-	bool backtrace_all;
+	sp_rtrace_filter_t* filter;
 } sp_rtrace_options_t;
 
 extern sp_rtrace_options_t* sp_rtrace_options;
@@ -173,5 +179,11 @@ void sp_rtrace_get_out_filename(const char* pattern, char* buffer, size_t size);
  *                    <0 - -errno
  */
 int sp_rtrace_copy_file(const char* source, const char* dest);
+
+
+#ifdef __cplusplus
+extern "C" }
+#endif
+
 
 #endif

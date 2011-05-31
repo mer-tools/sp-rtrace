@@ -68,6 +68,7 @@ enum {
 	OPT_HELP,
 	OPT_BACKTRACE_ALL,
 	OPT_LIBUNWIND,
+	OPT_MONITOR_SIZE,
 	MAX_OPT                      //!< MAX_OPT
 };
 

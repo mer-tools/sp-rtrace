@@ -92,7 +92,7 @@ static sp_rtrace_options_t rtrace_main_options = {
 	.enable_packet_buffering = true,
 	.output_dir = {0},
 	.postproc = {0},
-	.backtrace_all = false,
+	.filter = NULL,
 };
 
 sp_rtrace_options_t* sp_rtrace_options = &rtrace_main_options;
@@ -679,7 +679,7 @@ int sp_rtrace_write_function_call(sp_rtrace_fcall_t* call, sp_rtrace_ftrace_t* t
 			.frames = bt_frames + BT_SKIP_TOP,
 	};
 
-	if (!trace && sp_rtrace_options->backtrace_depth && (call->type == SP_RTRACE_FTYPE_ALLOC || sp_rtrace_options->backtrace_all)) {
+	if (!trace && sp_rtrace_options->backtrace_depth && sp_rtrace_filter_validate(sp_rtrace_options->filter, call)) {
 		unsigned int bt_depth = sp_rtrace_options->backtrace_depth + BT_SKIP_TOP + BT_SKIP_BOTTOM;
 		if (bt_depth > sizeof(bt_frames) / sizeof(bt_frames[0])) {
 			bt_depth = sizeof(bt_frames) / sizeof(bt_frames[0]);
@@ -886,13 +886,6 @@ bool sp_rtrace_initialize()
 			LOG("manage_preproc=%d", sp_rtrace_options->manage_preproc);
 		}
 
-		/* read backtrace-all option */
-		const char* env_backtrace_all = getenv(rtrace_env_opt[OPT_BACKTRACE_ALL]);
-		if (env_backtrace_all && *env_backtrace_all == '1') {
-			sp_rtrace_options->backtrace_all = true;
-			LOG("backtrace_all=%d", sp_rtrace_options->backtrace_all);
-		}
-
 		/* read post-processor options */
 		const char* env_postproc = getenv(rtrace_env_opt[OPT_POSTPROC]);
 		if (env_postproc) {
@@ -924,6 +917,15 @@ bool sp_rtrace_initialize()
 				backtrace_impl = backtrace;
 			}
 		}
+
+		/* Create and initialize backtrace monitoring filter */
+		const char* env_backtrace_all = getenv(rtrace_env_opt[OPT_BACKTRACE_ALL]);
+		LOG("env_backtrace_all=%s", env_backtrace_all);
+		sp_rtrace_options->filter = sp_rtrace_filter_create((env_backtrace_all && *env_backtrace_all == '1') ?
+					SP_RTRACE_FILTER_TYPE_ALL : SP_RTRACE_FILTER_TYPE_ALLOC);
+		const char* env_monitor_size = getenv(rtrace_env_opt[OPT_MONITOR_SIZE]);
+		if (env_monitor_size) LOG("monitor_size=%s", env_monitor_size);
+		sp_rtrace_filter_parse_size_opt(sp_rtrace_options->filter, env_monitor_size);
 
 		/* enable tracing if needed */
 		if (sp_rtrace_options->enable) {

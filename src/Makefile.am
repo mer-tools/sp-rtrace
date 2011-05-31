@@ -12,6 +12,7 @@ moduledir = $(libdir)/sp-rtrace
 
 libsp_rtrace1_la_SOURCES = library/sp_rtrace_context.c library/sp_rtrace_formatter.c \
 	library/sp_rtrace_tracker.c library/sp_rtrace_parser.c \
+	library/sp_rtrace_filter.c \
 	common/dlist.c common/htable.c common/utils.c common/rtrace_data.c common/header.c 
 libsp_rtrace1_la_LDFLAGS = $(VERSION_INFO)
 libsp_rtrace1_la_LIBADD = $(LIBS_IBERTY) -lrt -lpthread 
@@ -20,7 +21,7 @@ libsp_rtrace_main_la_SOURCES = modules/sp_rtrace_main.c rtrace/rtrace_env.c comm
 	modules/libunwind_support.c modules/sp_context_impl.c
 libsp_rtrace_main_la_LDFLAGS = $(VERSION_INFO)
 libsp_rtrace_main_la_CFLAGS = -rdynamic $(AM_CFLAGS)
-libsp_rtrace_main_la_LIBADD = -lrt -ldl -lpthread 
+libsp_rtrace_main_la_LIBADD = -lrt -ldl -lpthread -lsp-rtrace1
 
 libsp_rtrace_memory_la_SOURCES = modules/sp_rtrace_memory.c
 libsp_rtrace_memory_la_CFLAGS = -rdynamic $(AM_CFLAGS)

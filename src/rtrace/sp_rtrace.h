@@ -72,6 +72,8 @@ typedef struct rtrace_options_t {
 	bool backtrace_all;
 	/* true if libunwind must be used for backtrace resolving */
 	bool libunwind;
+	/* size filter for backtrace reporting*/
+	char* monitor_size;
 } rtrace_options_t;
 
 extern rtrace_options_t rtrace_options;
