@@ -924,7 +924,6 @@ bool sp_rtrace_initialize()
 		sp_rtrace_options->filter = sp_rtrace_filter_create((env_backtrace_all && *env_backtrace_all == '1') ?
 					SP_RTRACE_FILTER_TYPE_ALL : SP_RTRACE_FILTER_TYPE_ALLOC);
 		const char* env_monitor_size = getenv(rtrace_env_opt[OPT_MONITOR_SIZE]);
-		if (env_monitor_size) LOG("monitor_size=%s", env_monitor_size);
 		sp_rtrace_filter_parse_size_opt(sp_rtrace_options->filter, env_monitor_size);
 
 		/* enable tracing if needed */

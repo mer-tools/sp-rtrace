@@ -52,8 +52,8 @@ enum sp_rtrace_filter_type_t {
 typedef struct {
 	/* the allocation type to match  */
 	int type;
-	/* the allocation size to match, -1 matches all sizes */
-	int size;
+	/* set of allocation sizes to match. Ends with -1 */
+	int* size_set;
 } sp_rtrace_filter_t;
 
 /**

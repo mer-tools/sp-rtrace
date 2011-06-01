@@ -125,8 +125,8 @@ static void display_usage()
 			"                    only allocation function backtraces are reported.\n"
 			"  -u              - use libunwind instead of libc backtrace() function\n"
 			"                    for stack trace unwinding.\n"
-			"  -M <size>       - report backtraces only for allocations of specified\n"
-			"                    size.\n"
+			"  -M S1[,S2...]   - report backtraces only for allocations of specified\n"
+			"                    size(s) S1, S2....\n"
 			"  Note that options should be always before the execute (-x)\n"
 			"  switch.\n"
 			"\n"
@@ -175,7 +175,7 @@ static void sigint_handler(int sig __attribute((unused)))
 	rtrace_stop_requests++;
 	/* send toggle signal to tracing process if the trace is active */
 	if (fd_in && rtrace_options.pid) {
-		write(STDOUT_FILENO, MESSAGE_SIGINT, sizeof(MESSAGE_SIGINT));
+		int rc __attribute__((unused)) =  write(STDOUT_FILENO, MESSAGE_SIGINT, sizeof(MESSAGE_SIGINT));
 		kill(rtrace_options.pid, rtrace_options.toggle_signal);
 	}
 }
