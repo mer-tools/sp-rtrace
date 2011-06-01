@@ -1,3 +1,11 @@
+sp-rtrace (1.6-1) unstable; urgency=low
+
+  * Fixes: NB#258974 - sp-rtrace save file misses latest (<4kB?) data from
+    application when ^C is used
+  * Fixes: NB#261013 - Get backtraces only for allocations of specified size
+
+ -- Tommi Rantala <ext-tommi.1.rantala@nokia.com>  Wed, 01 Jun 2011 11:44:45 +0300
+
 sp-rtrace (1.5.2-1) unstable; urgency=low
 
   * Fixes: NB#254152 - rtrace/sp_rtrace.c:584: warning: passing argument 1 of
