@@ -1,4 +1,5 @@
 debian/tmp/usr/include/sp_rtrace_context.h
+debian/tmp/usr/include/sp_rtrace_filter.h
 debian/tmp/usr/include/sp_rtrace_formatter.h
 debian/tmp/usr/include/sp_rtrace_defs.h
 debian/tmp/usr/include/sp_rtrace_tracker.h
