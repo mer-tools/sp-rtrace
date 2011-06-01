@@ -1,3 +1,9 @@
+sp-rtrace (1.6-2) unstable; urgency=low
+
+  * Add new header sp_rtrace_filter.h to libsp-rtrace-dev package.
+
+ -- Tommi Rantala <ext-tommi.1.rantala@nokia.com>  Wed, 01 Jun 2011 12:20:49 +0300
+
 sp-rtrace (1.6-1) unstable; urgency=low
 
   * Fixes: NB#258974 - sp-rtrace save file misses latest (<4kB?) data from
