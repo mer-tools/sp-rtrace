@@ -1,3 +1,12 @@
+sp-rtrace (1.6), 1 Jun 2011:
+  * Improve SIGINT handling: tracing can now be stopped simply by aborting
+    sp-rtrace with ctrl+c. If the tracing was enabled from the start (-s
+    option), then the target process will be stopped after the data has been
+    transferred and pipe closed. Otherwise sp-rtrace collects the data, but
+    does not stop the target process.
+  * New sp-rtrace option --monitor: Report backtraces only for allocations
+    having the specified resource size(s).
+
 sp-rtrace (1.5.2), 24 May 2011:
   * sp-rtrace-timeline --filter-time now allows relative time values.
   * Fix incorrect close() in trace toggling path.
