@@ -1,4 +1,4 @@
-.TH SP-RTRACE 1 "2010-07-1" "sp-rtrace"
+.TH SP-RTRACE 1 "2011-05-26" "sp-rtrace"
 .SH NAME
 sp-rtrace - launch target binary in resource consumption tracing mode
 or manage already started process.
@@ -109,6 +109,9 @@ Enables backtrace reporting for all functions. By default only allocation
 function backtraces are reported because de-allocation backtraces are less interesting
 and most often only adds unnecessary overhead.
 .TP
+\fI--monitor\fP=<size1>[,<size2>...] (\fI-M\fP <size>[,<size2>...])
+Report backtraces only for allocations having the specified resource sizes.
+.TP
 \fI--backtrace-depth\fP=<depth>(\fI-b\fP <depth>)
 The maximum number of frame return addresses in stack trace. 0 will disable
 backtracing functionality. Reducing backtrace depth improves performance,
@@ -133,7 +136,7 @@ it will be sent also to all child processes.
 .SH USAGE NOTES
 The trace data from the target process to data pre-processor (sp-rtrace) is 
 transferred over pipe managed by the main tracing module. In rare cases the
-target process can try to close opened file descriptors (for example lsoff
+target process can try to close opened file descriptors (for example "lsof"
 utility) resulting in trace failure. In such case either re-enable tracing
 with sp-rtrace -t <pid> or use functracer tool which produces similar output.
 .SH EXAMPLES
@@ -170,7 +173,7 @@ P memtransfer      1.0  Memory transfer tracing module. Tracks calls of the
 .IR sp-rtrace-postproc (1),
 .IR sp-rtrace-resolve (1)
 .SH COPYRIGHT
-Copyright (C) 2010 Nokia Corporation.
+Copyright (C) 2010-2011 Nokia Corporation.
 .PP
 This is free software. You may redistribute copies of it under the
 terms of the GNU General Public License v2 included with the software.

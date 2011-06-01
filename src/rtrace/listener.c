@@ -331,8 +331,15 @@ int process_data()
 		memmove(buffer, ptr_in, n);
 		/* read new data chunk into buffer */
 		int nbytes = read(fd_in, buffer + n, BUFFER_SIZE);
-		if (nbytes <= 0 || !rtrace_main_loop) {
+		if (nbytes == 0) {
 			break;
+		}
+		if (rtrace_stop_requests >= REQUEST_STOP) {
+			fprintf(stderr, "WARNING: Trace was forced to abort before all of data was retrieved.\n");
+			break;
+		}
+		if (nbytes == -1 && errno == EINTR) {
+			continue;
 		}
 		n += nbytes;
 		ptr_in = buffer;
