@@ -623,6 +623,71 @@ static char* _itoa(char* buffer, int value)
 	return buffer;
 }
 
+
+/**
+ * Calculates relative path from the given directory to specified file.
+ *
+ * If the directory and file don't have common path, absolute path of
+ * the file is returned.
+ * @param[in] from    the source directory path.
+ * @param[in] to      the target file path.
+ * @param[out] out    the resulting path.
+ */
+static void calc_relative_path(const char* from, const char* to, char* out)
+{
+	char path_from[PATH_MAX];
+	char path_to[PATH_MAX];
+	realpath(to, path_to);
+
+	if (!from) {
+		strcpy(out, path_to);
+		return;
+	}
+	realpath(from, path_from);
+
+	char* ptr_from = path_from;
+	char* ptr_to = path_to;
+
+	/* first try to find common part */
+	char* ptr_match = NULL;
+	int depth_match = -1;
+	while (*ptr_from == *ptr_to) {
+		ptr_from++;
+		if (*ptr_to++ == '/') {
+			ptr_match = ptr_to;
+			depth_match++;
+		}
+	}
+	int depth = 0;
+	if (!(*ptr_from) && *ptr_to == '/') {
+		ptr_match = ++ptr_to;
+		depth_match++;
+	}
+	else {
+		depth++;
+	}
+	if (depth_match <= 0) {
+		/* paths don't have common part, return the full path */
+		strcpy(out, path_to);
+		return;
+	}
+	/* calculate how many directories up is the common part from
+	 * the source directory */
+	while (*ptr_from++) {
+		if (*ptr_from == '/') depth++;
+	}
+	if (*(ptr_from - 1) == '/') depth--;
+	/* build the start of relative path by going up from the source
+	 * directory to the common part */
+	while (depth--) {
+		*out++ = '.';
+		*out++ = '.';
+		*out++ = '/';
+	}
+	/* append the rest of target path */
+	strcpy(out, ptr_match);
+}
+
 /*
  * Public API implementation
  */
@@ -640,10 +705,14 @@ int sp_rtrace_write_new_library(const char* library)
 
 int sp_rtrace_write_attachment(const sp_rtrace_attachment_t* file)
 {
+	/* try to relate the attachment to the output directory */
+	char relative_path[PATH_MAX];
+	calc_relative_path(sp_rtrace_options->output_dir, file->path, relative_path);
+
 	char* buffer = pipe_buffer_lock(), *ptr = buffer + SP_RTRACE_PROTO_TYPE_SIZE;
 	ptr += write_dword(ptr, SP_RTRACE_PROTO_ATTACHMENT);
 	ptr += write_string(ptr, file->name);
-	ptr += write_string(ptr, file->path);
+	ptr += write_string(ptr, relative_path);
 	int size = ptr - buffer;
 	write_dword(buffer, size - SP_RTRACE_PROTO_TYPE_SIZE);
 	pipe_buffer_unlock(buffer, size);
@@ -893,12 +962,27 @@ bool sp_rtrace_initialize()
 			LOG("posptproc=%s", sp_rtrace_options->postproc);
 		}
 
+		/* read starting directory option */
+		const char* env_start_dir = getenv(SP_RTRACE_START_DIR);
+		if (env_start_dir) {
+			_stpncpy(sp_rtrace_options->start_dir, env_start_dir, sizeof(sp_rtrace_options->start_dir));
+			LOG("start_dir=%s", sp_rtrace_options->start_dir);
+		}
+
 		/* read output directory option */
 		const char* env_output_dir = getenv(rtrace_env_opt[OPT_OUTPUT_DIR]);
 		if (env_output_dir) {
-			_stpncpy(sp_rtrace_options->output_dir, env_output_dir, sizeof(sp_rtrace_options->output_dir));
-			LOG("output_dir=%s", sp_rtrace_options->output_dir);
+			char* out = sp_rtrace_options->output_dir;
+			if (*env_output_dir != '/') {
+				out = _stpncpy(out, sp_rtrace_options->start_dir, sizeof(sp_rtrace_options->output_dir));
+				*out++ = '/';
+			}
+			_stpncpy(out, env_output_dir, sizeof(sp_rtrace_options->output_dir) - (out - sp_rtrace_options->output_dir + 1));
 		}
+		else {
+			_stpncpy(sp_rtrace_options->output_dir, sp_rtrace_options->start_dir, sizeof(sp_rtrace_options->output_dir));
+		}
+		LOG("output_dir=%s", sp_rtrace_options->output_dir);
 
 		/* read tracing enable option */
 		const char* env_enable = getenv(rtrace_env_opt[OPT_START]);
@@ -926,6 +1010,7 @@ bool sp_rtrace_initialize()
 		const char* env_monitor_size = getenv(rtrace_env_opt[OPT_MONITOR_SIZE]);
 		sp_rtrace_filter_parse_size_opt(sp_rtrace_options->filter, env_monitor_size);
 
+
 		/* enable tracing if needed */
 		if (sp_rtrace_options->enable) {
 			fd_proc = open_pipe();
@@ -943,7 +1028,7 @@ void sp_rtrace_get_out_filename(const char* pattern, char* buffer, size_t size)
 {
 	char* ptr = buffer;
 	if (*sp_rtrace_options->output_dir) ptr = _stpncpy(buffer, sp_rtrace_options->output_dir, size);
-	else *ptr++ = '.';
+	else ptr = _stpncpy(buffer, sp_rtrace_options->start_dir, size);
 	*ptr++ = '/';
 	ptr = _stpncpy(ptr, pattern, size - (ptr - buffer));
 	*ptr++ = '-';

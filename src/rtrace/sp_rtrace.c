@@ -197,6 +197,7 @@ static void sigchld_handler(int sig __attribute((unused)))
  */
 static void set_environment()
 {
+	char path[PATH_MAX];
 	setenv(SP_RTRACE_READY, OPT_ENABLE, 1);
 	if (rtrace_options.output_dir) setenv(rtrace_env_opt[OPT_OUTPUT_DIR], rtrace_options.output_dir, 1);
 	if (rtrace_options.manage_preproc) setenv(rtrace_env_opt[OPT_MANAGE_PREPROC], OPT_ENABLE, 1);
@@ -209,6 +210,7 @@ static void set_environment()
 	if (rtrace_options.backtrace_all) setenv(rtrace_env_opt[OPT_BACKTRACE_ALL], OPT_ENABLE, 1);
 	if (rtrace_options.libunwind) setenv(rtrace_env_opt[OPT_LIBUNWIND], OPT_ENABLE, 1);
 	if (rtrace_options.monitor_size) setenv(rtrace_env_opt[OPT_MONITOR_SIZE], rtrace_options.monitor_size, 1);
+	setenv(SP_RTRACE_START_DIR, getcwd(path, sizeof(path)), 1);
 
 	if (rtrace_options.audit) {
 		setenv("LD_AUDIT", SP_RTRACE_LIB_PATH SP_RTRACE_AUDIT_MODULE, 1);

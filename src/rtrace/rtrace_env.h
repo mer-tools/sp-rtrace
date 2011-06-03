@@ -45,6 +45,9 @@
 /* set by sp-rtrace to indicate that the environment options are set */
 #define SP_RTRACE_READY    "SP_RTRACE_READY"
 
+/* points at the sp-rtrace starting directory */
+#define SP_RTRACE_START_DIR   "SP_RTRACE_START_DIR"
+
 /**
  * pre-processor(sp-rtrace) option index.
  */

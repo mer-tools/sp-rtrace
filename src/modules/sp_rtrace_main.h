@@ -67,6 +67,7 @@ typedef struct sp_rtrace_options_t {
 	char output_dir[PATH_MAX];
 	char postproc[PATH_MAX];
 	sp_rtrace_filter_t* filter;
+	char start_dir[PATH_MAX];
 } sp_rtrace_options_t;
 
 extern sp_rtrace_options_t* sp_rtrace_options;
