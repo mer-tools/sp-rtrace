@@ -618,10 +618,6 @@ static void toggle_tracing()
 	char pipe_path[128];
 	snprintf(pipe_path, sizeof(pipe_path), SP_RTRACE_PIPE_PATTERN "%d", rtrace_options.pid);
 
-	int signum = 0;
-	if (rtrace_options.toggle_signal_name) signum = atoi(rtrace_options.toggle_signal_name);
-	if (signum > 0) rtrace_options.toggle_signal = signum;
-
 	if (access(pipe_path, F_OK) == 0) {
 		stop_tracing();
 	}
@@ -951,10 +947,12 @@ int main(int argc, char* argv[])
 			rtrace_options.postproc = strdup_a(optarg ? optarg : "");
 			break;
 
-		case 'S':
+		case 'S': {
 			rtrace_options.toggle_signal_name = strdup_a(optarg);
+			int signum = atoi(rtrace_options.toggle_signal_name);
+			if (signum > 0) rtrace_options.toggle_signal = signum;
 			break;
-
+		}
 		case 'B':
 			rtrace_options.disable_packet_buffering = true;
 			break;
