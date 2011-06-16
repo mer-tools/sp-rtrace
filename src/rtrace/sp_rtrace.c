@@ -197,6 +197,7 @@ static void sigchld_handler(int sig __attribute((unused)))
  */
 static void set_environment()
 {
+	char path[PATH_MAX];
 	setenv(SP_RTRACE_READY, OPT_ENABLE, 1);
 	if (rtrace_options.output_dir) setenv(rtrace_env_opt[OPT_OUTPUT_DIR], rtrace_options.output_dir, 1);
 	if (rtrace_options.manage_preproc) setenv(rtrace_env_opt[OPT_MANAGE_PREPROC], OPT_ENABLE, 1);
@@ -209,6 +210,7 @@ static void set_environment()
 	if (rtrace_options.backtrace_all) setenv(rtrace_env_opt[OPT_BACKTRACE_ALL], OPT_ENABLE, 1);
 	if (rtrace_options.libunwind) setenv(rtrace_env_opt[OPT_LIBUNWIND], OPT_ENABLE, 1);
 	if (rtrace_options.monitor_size) setenv(rtrace_env_opt[OPT_MONITOR_SIZE], rtrace_options.monitor_size, 1);
+	setenv(SP_RTRACE_START_DIR, getcwd(path, sizeof(path)), 1);
 
 	if (rtrace_options.audit) {
 		setenv("LD_AUDIT", SP_RTRACE_LIB_PATH SP_RTRACE_AUDIT_MODULE, 1);
@@ -616,10 +618,6 @@ static void toggle_tracing()
 	char pipe_path[128];
 	snprintf(pipe_path, sizeof(pipe_path), SP_RTRACE_PIPE_PATTERN "%d", rtrace_options.pid);
 
-	int signum = 0;
-	if (rtrace_options.toggle_signal_name) signum = atoi(rtrace_options.toggle_signal_name);
-	if (signum > 0) rtrace_options.toggle_signal = signum;
-
 	if (access(pipe_path, F_OK) == 0) {
 		stop_tracing();
 	}
@@ -949,10 +947,12 @@ int main(int argc, char* argv[])
 			rtrace_options.postproc = strdup_a(optarg ? optarg : "");
 			break;
 
-		case 'S':
+		case 'S': {
 			rtrace_options.toggle_signal_name = strdup_a(optarg);
+			int signum = atoi(rtrace_options.toggle_signal_name);
+			if (signum > 0) rtrace_options.toggle_signal = signum;
 			break;
-
+		}
 		case 'B':
 			rtrace_options.disable_packet_buffering = true;
 			break;

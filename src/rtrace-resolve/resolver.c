@@ -293,7 +293,10 @@ static int bfd_get_address_info(rs_cache_record_t* rec, pointer_t address, symbo
 	char addr_hex[LINE_MAX];
 	sprintf(addr_hex, "%#lx", (long)abs_address);
 
-	pc = bfd_scan_vma(addr_hex, NULL, 16);
+	/* If frame is not the innermost frame, that normally means that
+	   pc points to *after* the call instruction, and we want to
+	   get the line containing the call, never the next line. */
+	pc = bfd_scan_vma(addr_hex, NULL, 16) - 1;
 
 	for (section = rec->file->sections; section != NULL; section = section->next) {
 

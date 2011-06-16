@@ -277,8 +277,14 @@ static int process_packet(const char* data, size_t size)
 	else if (type == SP_RTRACE_PROTO_ATTACHMENT) {
 		/* check for zero size attachments */
 		char path[PATH_MAX];
+		char* out = path;
 		offset += read_string(data + offset, path, sizeof(path));
 		read_string(data + offset, path, sizeof(path));
+		if (*path != '/' && rtrace_options.output_dir) {
+			out = stpcpy(path, rtrace_options.output_dir);
+			*out++ = '/';
+			read_string(data + offset, out, sizeof(path) - strlen(rtrace_options.output_dir) - 1);
+		}
 		struct stat file_stat;
 		if (stat(path, &file_stat) == -1) {
 			fprintf(stderr, "WARNING: Failed to stat attached file %s: %s\n", path, strerror(errno));

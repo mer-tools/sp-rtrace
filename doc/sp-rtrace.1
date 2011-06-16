@@ -110,7 +110,11 @@ function backtraces are reported because de-allocation backtraces are less inter
 and most often only adds unnecessary overhead.
 .TP
 \fI--monitor\fP=<size1>[,<size2>...] (\fI-M\fP <size>[,<size2>...])
-Report backtraces only for allocations having the specified resource sizes.
+Report backtraces only for allocations having the specified resource sizes. This option
+can be used to monitor a specific (leaking) allocation in environment where monitoring
+long backtraces of all allocations is too slow.
+Note while the size list is unlimited, specifying too many sizes will have negative 
+performance impact.
 .TP
 \fI--backtrace-depth\fP=<depth>(\fI-b\fP <depth>)
 The maximum number of frame return addresses in stack trace. 0 will disable
