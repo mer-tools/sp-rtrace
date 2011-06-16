@@ -26,7 +26,8 @@ type: P - preload module, A - audit module (see examples).
 \fI--output-dir\fP=<path> (\fI-o\fP <path)
 Specifies the output directory for storing trace data. 
 
-By default the home directory is used.
+By default the home directory is used. Specifying stdout will force
+post-processor to use standard output.
 .TP
 \fI--manage-preproc\fP (\fI-m\fP)
 Specifies that the pre-processor (sp-rtrace) is launched internally by

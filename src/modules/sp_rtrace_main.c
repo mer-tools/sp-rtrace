@@ -136,6 +136,41 @@ static unsigned int rtrace_module_index = 0;
 static sp_rtrace_resource_t rtrace_resources[32];
 static unsigned int rtrace_resource_index = 0;
 
+
+/* inserts data at saved position */
+#define PACKET_INSERT(ptr, type, value) \
+	write_##type(ptr, value);
+
+/* reserves place in the packet */
+#define PACKET_RESERVE(size) \
+	(_ptr += size, _ptr - size);
+
+/* starts new packet on already locked buffer */
+#define PACKET_START(packet_type) \
+	_ptr += write_dword(_ptr, packet_type); \
+	_packet_start = PACKET_RESERVE(SP_RTRACE_PROTO_LENGTH_SIZE);
+
+/* locks buffer and starts new packet */
+#define PACKET_INIT(packet_type) \
+	char* _buffer = pipe_buffer_lock(), *_ptr = _buffer, *_packet_start; \
+	PACKET_START(packet_type);
+
+/* writes data into started packet */
+#define PACKET_WRITE(type, value) \
+	_ptr += write_##type(_ptr, value);
+
+
+/* ends started packet */
+#define PACKET_END() \
+		PACKET_INSERT(_packet_start, dword, _ptr - _packet_start - SP_RTRACE_PROTO_LENGTH_SIZE);
+
+/* ends started packet, unlocks buffer and returns */
+#define PACKET_FINISH() \
+		PACKET_END(); \
+		pipe_buffer_unlock(_buffer, _ptr - _buffer); \
+		return _ptr - _buffer;
+
+
 /**
  * Enables/disables tracing.
  * @param[in] value   true to enable tracing, false to disable.
@@ -333,6 +368,7 @@ static void get_proc_name(char* out, size_t size)
 	}
 }
 
+
 /**
  * Writes module info packet into processor pipe.
  *
@@ -345,34 +381,24 @@ static void get_proc_name(char* out, size_t size)
 static int write_module_info(int id, const char* name, unsigned char major, unsigned char minor)
 {
     if (!sp_rtrace_options->enable) return 0;
-    char* buffer = pipe_buffer_lock(), *ptr = buffer + SP_RTRACE_PROTO_TYPE_SIZE;
-    ptr += write_dword(ptr, SP_RTRACE_PROTO_MODULE_INFO);
-    ptr += write_dword(ptr, id);
-    ptr += write_dword(ptr, (major << 16) | minor);
-    ptr += write_string(ptr, name);
-    int size = ptr - buffer;
-    write_dword(buffer, size - SP_RTRACE_PROTO_TYPE_SIZE);
-    pipe_buffer_unlock(buffer, size);
-    return size;
+    PACKET_INIT(SP_RTRACE_PROTO_MODULE_INFO);
+    PACKET_WRITE(dword, id);
+    PACKET_WRITE(dword, (major << 16) | minor);
+    PACKET_WRITE(string, name);
+    PACKET_FINISH();
 }
 
 
 static int write_resource_registry(const sp_rtrace_resource_t* resource)
 {
 	if (!sp_rtrace_options->enable) return 0;
-	char* buffer = pipe_buffer_lock(), *ptr = buffer + SP_RTRACE_PROTO_TYPE_SIZE;
-	ptr += write_dword(ptr, SP_RTRACE_PROTO_RESOURCE_REGISTRY);
-	ptr += write_dword(ptr, resource->id);
-	ptr += write_dword(ptr, resource->flags);
-	ptr += write_string(ptr, resource->type);
-	ptr += write_string(ptr, resource->desc);
-	int size = ptr - buffer;
-	write_dword(buffer, size - SP_RTRACE_PROTO_TYPE_SIZE);
-	pipe_buffer_unlock(buffer, size);
-
-	return size;
+	PACKET_INIT(SP_RTRACE_PROTO_RESOURCE_REGISTRY);
+	PACKET_WRITE(dword, resource->id);
+	PACKET_WRITE(dword, resource->flags);
+	PACKET_WRITE(string, resource->type);
+	PACKET_WRITE(string, resource->desc);
+	PACKET_FINISH();
 }
-
 
 /*
  *
@@ -414,20 +440,16 @@ static int write_handshake(int major, int minor, const char* arch)
  */
 static int write_output_settings(const char* output_dir, const char* postproc)
 {
-	char* buffer = pipe_buffer_lock(), *ptr = buffer + SP_RTRACE_PROTO_TYPE_SIZE;
-	ptr += write_dword(ptr, SP_RTRACE_PROTO_OUTPUT_SETTINGS);
+	PACKET_INIT(SP_RTRACE_PROTO_OUTPUT_SETTINGS);
 	if (sp_rtrace_options->manage_preproc) {
-		ptr += write_string(ptr, NULL);
-		ptr += write_string(ptr, NULL);
+		PACKET_WRITE(string, NULL);
+		PACKET_WRITE(string, NULL);
 	}
 	else {
-		ptr += write_string(ptr, output_dir);
-		ptr += write_string(ptr, postproc);
+		PACKET_WRITE(string, output_dir);
+		PACKET_WRITE(string, postproc);
 	}
-	int size = ptr - buffer;
-	write_dword(buffer, size - SP_RTRACE_PROTO_TYPE_SIZE);
-	pipe_buffer_unlock(buffer, size);
-	return size;
+	PACKET_FINISH();
 }
 
 /**
@@ -437,22 +459,17 @@ static int write_output_settings(const char* output_dir, const char* postproc)
  */
 static int write_process_info()
 {
-	char* buffer = pipe_buffer_lock(), *ptr = buffer + SP_RTRACE_PROTO_TYPE_SIZE;
-	ptr += write_dword(ptr, SP_RTRACE_PROTO_PROCESS_INFO);
-	ptr += write_dword(ptr, getpid());
+	PACKET_INIT(SP_RTRACE_PROTO_PROCESS_INFO);
+	PACKET_WRITE(dword, getpid());
 	/* store empty timestamp, pre-processor must scan
 	 * this packet and update timestamp if its zero */
-	ptr += write_dword(ptr, 0);
-	ptr += write_dword(ptr, 0);
+	PACKET_WRITE(dword, 0);
+	PACKET_WRITE(dword, 0);
 	/* store backtrace depth setting */
-	ptr += write_dword(ptr, sp_rtrace_options->backtrace_depth);
+	PACKET_WRITE(dword, sp_rtrace_options->backtrace_depth);
 	/* store process name */
-	ptr += write_string(ptr, proc_name);
-
-	int size = ptr - buffer;
-	write_dword(buffer, size - SP_RTRACE_PROTO_TYPE_SIZE);
-	pipe_buffer_unlock(buffer, size);
-	return size;
+	PACKET_WRITE(string, proc_name);
+	PACKET_FINISH();
 }
 
 /**
@@ -463,25 +480,20 @@ static int write_process_info()
 static int write_heap_info()
 {
 	if (heap_info.arena) {
-		char* buffer = pipe_buffer_lock(), *ptr = buffer + SP_RTRACE_PROTO_TYPE_SIZE;
-		ptr += write_dword(ptr, SP_RTRACE_PROTO_HEAP_INFO);
-		ptr += write_pointer(ptr, heap_bottom);
-		ptr += write_pointer(ptr, (pointer_t)sbrk(0));
-		ptr += write_dword(ptr, heap_info.arena);
-		ptr += write_dword(ptr, heap_info.ordblks);
-		ptr += write_dword(ptr, heap_info.smblks);
-		ptr += write_dword(ptr, heap_info.hblks);
-		ptr += write_dword(ptr, heap_info.hblkhd);
-		ptr += write_dword(ptr, heap_info.usmblks);
-		ptr += write_dword(ptr, heap_info.fsmblks);
-		ptr += write_dword(ptr, heap_info.uordblks);
-		ptr += write_dword(ptr, heap_info.fordblks);
-		ptr += write_dword(ptr, heap_info.keepcost);
-
-		int size = ptr - buffer;
-		write_dword(buffer, size - SP_RTRACE_PROTO_TYPE_SIZE);
-		pipe_buffer_unlock(buffer, size);
-		return size;
+		PACKET_INIT(SP_RTRACE_PROTO_HEAP_INFO);
+		PACKET_WRITE(dword, heap_bottom);
+		PACKET_WRITE(dword, (pointer_t)sbrk(0));
+		PACKET_WRITE(dword, heap_info.arena);
+		PACKET_WRITE(dword, heap_info.ordblks);
+		PACKET_WRITE(dword, heap_info.smblks);
+		PACKET_WRITE(dword, heap_info.hblks);
+		PACKET_WRITE(dword, heap_info.hblkhd);
+		PACKET_WRITE(dword, heap_info.usmblks);
+		PACKET_WRITE(dword, heap_info.fsmblks);
+		PACKET_WRITE(dword, heap_info.uordblks);
+		PACKET_WRITE(dword, heap_info.fordblks);
+		PACKET_WRITE(dword, heap_info.keepcost);
+		PACKET_FINISH();
 	}
 	return 0;
 }
@@ -637,13 +649,11 @@ static void calc_relative_path(const char* from, const char* to, char* out)
 {
 	char path_from[PATH_MAX];
 	char path_to[PATH_MAX];
-	realpath(to, path_to);
 
-	if (!from) {
+	if (!realpath(to, path_to) || !from || !realpath(from, path_from)) {
 		strcpy(out, path_to);
 		return;
 	}
-	realpath(from, path_from);
 
 	char* ptr_from = path_from;
 	char* ptr_to = path_to;
@@ -694,13 +704,9 @@ static void calc_relative_path(const char* from, const char* to, char* out)
 
 int sp_rtrace_write_new_library(const char* library)
 {
-	char* buffer = pipe_buffer_lock(), *ptr = buffer + SP_RTRACE_PROTO_TYPE_SIZE;
-	ptr += write_dword(ptr, SP_RTRACE_PROTO_NEW_LIBRARY);
-	ptr += write_string(ptr, library);
-	int size = ptr - buffer;
-	write_dword(buffer, size - SP_RTRACE_PROTO_TYPE_SIZE);
-	pipe_buffer_unlock(buffer, size);
-	return size;
+	PACKET_INIT(SP_RTRACE_PROTO_NEW_LIBRARY);
+	PACKET_WRITE(string, library);
+	PACKET_FINISH();
 }
 
 int sp_rtrace_write_attachment(const sp_rtrace_attachment_t* file)
@@ -709,27 +715,19 @@ int sp_rtrace_write_attachment(const sp_rtrace_attachment_t* file)
 	char relative_path[PATH_MAX];
 	calc_relative_path(sp_rtrace_options->output_dir, file->path, relative_path);
 
-	char* buffer = pipe_buffer_lock(), *ptr = buffer + SP_RTRACE_PROTO_TYPE_SIZE;
-	ptr += write_dword(ptr, SP_RTRACE_PROTO_ATTACHMENT);
-	ptr += write_string(ptr, file->name);
-	ptr += write_string(ptr, relative_path);
-	int size = ptr - buffer;
-	write_dword(buffer, size - SP_RTRACE_PROTO_TYPE_SIZE);
-	pipe_buffer_unlock(buffer, size);
-	return size;
+	PACKET_INIT(SP_RTRACE_PROTO_ATTACHMENT);
+	PACKET_WRITE(string, file->name);
+	PACKET_WRITE(string, relative_path);
+	PACKET_FINISH();
 }
 
 int sp_rtrace_write_context_registry(sp_rtrace_context_t* context)
 {
 	if (!sp_rtrace_options->enable) return 0;
-	char* buffer = pipe_buffer_lock(), *ptr = buffer + SP_RTRACE_PROTO_TYPE_SIZE;
-	ptr += write_dword(ptr, SP_RTRACE_PROTO_CONTEXT_REGISTRY);
-	ptr += write_dword(ptr, context->id);
-	ptr += write_string(ptr, context->name);
-	int size = ptr - buffer;
-	write_dword(buffer, size - SP_RTRACE_PROTO_TYPE_SIZE);
-	pipe_buffer_unlock(buffer, size);
-	return size;
+	PACKET_INIT(SP_RTRACE_PROTO_CONTEXT_REGISTRY);
+	PACKET_WRITE(dword, context->id);
+	PACKET_WRITE(string, context->name);
+	PACKET_FINISH();
 }
 
 int sp_rtrace_write_function_call(sp_rtrace_fcall_t* call, sp_rtrace_ftrace_t* trace, sp_rtrace_farg_t* args)
@@ -741,7 +739,6 @@ int sp_rtrace_write_function_call(sp_rtrace_fcall_t* call, sp_rtrace_ftrace_t* t
 		return -EINVAL;
 	}
 
-	int size = 0;
 	pointer_t bt_frames[256];
 	sp_rtrace_ftrace_t trace_data = {
 			.nframes = 0,
@@ -772,14 +769,10 @@ int sp_rtrace_write_function_call(sp_rtrace_fcall_t* call, sp_rtrace_ftrace_t* t
 			trace = &trace_data;
 		}
 	}
-	char* buffer = pipe_buffer_lock(), *ptr = buffer + SP_RTRACE_PROTO_TYPE_SIZE;
 
-	/* write FC packet */
-	ptr += write_dword(ptr, SP_RTRACE_PROTO_FUNCTION_CALL);
-
-	ptr += write_dword(ptr, (unsigned long)call->res_type);
-
-	ptr += write_dword(ptr, sp_rtrace_get_call_context());
+	PACKET_INIT(SP_RTRACE_PROTO_FUNCTION_CALL);
+	PACKET_WRITE(dword, (unsigned long)call->res_type);
+	PACKET_WRITE(dword, sp_rtrace_get_call_context());
 
 	int timestamp = 0;
 	if (sp_rtrace_options->enable_timestamps) {
@@ -788,53 +781,42 @@ int sp_rtrace_write_function_call(sp_rtrace_fcall_t* call, sp_rtrace_ftrace_t* t
 			timestamp = ts.tv_nsec / 1000000 + ts.tv_sec % (60 * 60 * 24) * 1000;
 		}
 	}
-	ptr += write_dword(ptr, timestamp);
-	ptr += write_dword(ptr, call->type);
-	ptr += write_string(ptr, call->name);
-	ptr += write_dword(ptr, call->res_size);
-	ptr += write_pointer(ptr, call->res_id);
-	size = ptr - buffer;
-	write_dword(buffer, size - SP_RTRACE_PROTO_TYPE_SIZE);
+	PACKET_WRITE(dword, timestamp);
+	PACKET_WRITE(dword, call->type);
+	PACKET_WRITE(string, call->name);
+	PACKET_WRITE(dword, call->res_size);
+	PACKET_WRITE(pointer, call->res_id);
+	PACKET_END();
 
 	/* write FA packet */
 	if (args) {
-		char* psize = ptr;
-		ptr += SP_RTRACE_PROTO_TYPE_SIZE;
-		ptr += write_dword(ptr, SP_RTRACE_PROTO_FUNCTION_ARGS);
-		char* pargs = ptr;
-		ptr += sizeof(int);
+		PACKET_START(SP_RTRACE_PROTO_FUNCTION_ARGS);
+		char* psize = PACKET_RESERVE(sizeof(int));
 		const sp_rtrace_farg_t* first_arg = args;
 		while (args->name) {
-			ptr += write_string(ptr, args->name);
-			ptr += write_string(ptr, args->value);
+			PACKET_WRITE(string, args->name);
+			PACKET_WRITE(string, args->value);
 			args++;
 		}
-		write_dword(pargs, args - first_arg);
-		size = ptr - psize;
-		write_dword(psize, size - SP_RTRACE_PROTO_TYPE_SIZE);
+		PACKET_INSERT(psize, dword, args - first_arg);
+		PACKET_END();
 	}
 
 	/* write BT packet */
 	/* strip the unnecessary frames from the top and bottom */
+	PACKET_START(SP_RTRACE_PROTO_BACKTRACE);
 	if (trace && trace->nframes) {
 		unsigned int i;
-		ptr += write_dword(ptr, sizeof(int) * 2 + sizeof(pointer_t) * trace->nframes);
-		ptr += write_dword(ptr, SP_RTRACE_PROTO_BACKTRACE);
-		ptr += write_dword(ptr, trace->nframes);
+		PACKET_WRITE(dword, trace->nframes);
 		for (i = 0; i < trace->nframes; i++) {
-			ptr += write_pointer(ptr, (pointer_t)trace->frames[i]);
+			PACKET_WRITE(pointer, (pointer_t)trace->frames[i]);
 		}
-		size += ptr - buffer - size;
 	}
 	else {
 		/* write empty backtrace packet */
-		ptr += write_dword(ptr, sizeof(int) * 2);
-		ptr += write_dword(ptr, SP_RTRACE_PROTO_BACKTRACE);
-		ptr += write_dword(ptr, 0);
-		size += ptr - buffer - size;
+		PACKET_WRITE(dword, 0);
 	}
-	pipe_buffer_unlock(buffer, size);
-	return size;
+	PACKET_FINISH();
 }
 
 unsigned int sp_rtrace_register_module(const char* name, unsigned char vmajor, unsigned char vminor, sp_rtrace_enable_tracing_t enable_func)
@@ -972,12 +954,14 @@ bool sp_rtrace_initialize()
 		/* read output directory option */
 		const char* env_output_dir = getenv(rtrace_env_opt[OPT_OUTPUT_DIR]);
 		if (env_output_dir) {
-			char* out = sp_rtrace_options->output_dir;
-			if (*env_output_dir != '/') {
-				out = _stpncpy(out, sp_rtrace_options->start_dir, sizeof(sp_rtrace_options->output_dir));
-				*out++ = '/';
+			if (strcmp(env_output_dir, "stdout")) {
+				char* out = sp_rtrace_options->output_dir;
+				if (*env_output_dir != '/') {
+					out = _stpncpy(out, sp_rtrace_options->start_dir, sizeof(sp_rtrace_options->output_dir));
+					*out++ = '/';
+				}
+				_stpncpy(out, env_output_dir, sizeof(sp_rtrace_options->output_dir) - (out - sp_rtrace_options->output_dir + 1));
 			}
-			_stpncpy(out, env_output_dir, sizeof(sp_rtrace_options->output_dir) - (out - sp_rtrace_options->output_dir + 1));
 		}
 		else {
 			_stpncpy(sp_rtrace_options->output_dir, sp_rtrace_options->start_dir, sizeof(sp_rtrace_options->output_dir));

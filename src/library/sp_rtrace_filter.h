@@ -74,7 +74,7 @@ void sp_rtrace_filter_free(sp_rtrace_filter_t* filter);
  * Parses size filter option.
  *
  * The size option can be given in one of following formats:
- *   <size> - where size is the matching resource size.
+ *   \<size\> - where size is the matching resource size.
  * @param[in] filter  the filter.
  * @param[in] opt     string containing size filter option.
  */

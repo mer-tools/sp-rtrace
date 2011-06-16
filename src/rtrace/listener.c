@@ -171,13 +171,13 @@ static int scan_mmap_data()
 				dlist_add(&s_mmaps, mmap);
 
 				/* assemble and write MM packet */
-				char* ptr = name + SP_RTRACE_PROTO_TYPE_SIZE;
-				ptr += write_dword(ptr, SP_RTRACE_PROTO_MEMORY_MAP);
+				char* ptr = name + write_dword(name, SP_RTRACE_PROTO_MEMORY_MAP);
+				ptr += SP_RTRACE_PROTO_TYPE_SIZE;
 				ptr += write_pointer(ptr, from);
 				ptr += write_pointer(ptr, to);
 				ptr += write_string(ptr, buffer);
 				int size = ptr - name;
-				write_dword(name, size - SP_RTRACE_PROTO_TYPE_SIZE);
+				write_dword(name + SP_RTRACE_PROTO_TYPE_SIZE, size - SP_RTRACE_PROTO_TYPE_SIZE - SP_RTRACE_PROTO_LENGTH_SIZE);
 				/* write the assembled packet to the output stream */
 				if (write_data(name, size) < 0) return -1;
 			}
@@ -210,6 +210,7 @@ static int process_handshake(const char* data, int size)
 
 	memcpy(hs_buffer, data, len);
 	hs_size = len;
+
 	return len;
 }
 #include "common/sp_rtrace_proto.h"
@@ -226,17 +227,22 @@ static int process_packet(const char* data, size_t size)
 	unsigned int len, type;
 	unsigned int offset;
 
-	if (size < (int)sizeof(int)) {
+	if (size < SP_RTRACE_PROTO_LENGTH_SIZE + SP_RTRACE_PROTO_TYPE_SIZE) {
 		return -1;
 	}
-	offset = read_dword(data, &len);
+
+	/* read the type packet */
+	offset = read_dword(data, &type);
+	/* check if the buffer has at least one full packet */
+	offset += read_dword(data + offset, &len);
 	len += offset;
+
+	//LOG("type=%c%c, size=%d", *(char*)&type, *((char*)&type + 1), len - offset);
+
 	if (len > size) {
 		return -1;
 	}
-	offset += read_dword(data + offset, &type);
 
-//	LOG("type=%c%c, size=%d", *(char*)&type, *((char*)&type + 1), len - offset);
 	if (type == SP_RTRACE_PROTO_OUTPUT_SETTINGS) {
 		char value[PATH_MAX];
 		offset += read_string(data + offset, value, PATH_MAX);

@@ -1,5 +1,3 @@
-
-
 /**
  * @file sp_rtrace_tracker.h
  *
@@ -7,8 +5,8 @@
  * library/function setup configuration.
  *
  * The configuration string has the following format:
- * <item>[;<item>[;...]]
- * Where <item> is either contains function name to track
+ * \<item\>[;\<item\>[;...]]
+ * Where \<item\> is either contains function name to track
  * or configuration file name in format @<filename>.
  * The @ symbols is used to distinguish symbol name form
  * configuration file name.

@@ -279,11 +279,13 @@ int main(int argc, char* argv[])
 			break;
 
 		case 'o':
-			if (postproc_options.output_dir) {
-				fprintf(stderr, "WARNING: Overriding previously given option: -o %s\n", postproc_options.output_dir);
-				free(postproc_options.output_dir);
+			if (strcmp(optarg, "stdout")) {
+				if (postproc_options.output_dir) {
+					fprintf(stderr, "WARNING: Overriding previously given option: -o %s\n", postproc_options.output_dir);
+					free(postproc_options.output_dir);
+				}
+				postproc_options.output_dir = strdup_a(optarg);
 			}
-			postproc_options.output_dir = strdup_a(optarg);
 			break;
 
 		case 'l':

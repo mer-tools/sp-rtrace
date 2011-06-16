@@ -55,8 +55,8 @@
 #define SP_RTRACE_PROTO_ATTACHMENT         SP_RTRACE_PROTO_PACKET_TYPE('F', 'I', 'L', 'E')
 
 /* protocol version */
-#define SP_RTRACE_PROTO_VERSION_MAJOR     1
-#define SP_RTRACE_PROTO_VERSION_MINOR     4
+#define SP_RTRACE_PROTO_VERSION_MAJOR     2
+#define SP_RTRACE_PROTO_VERSION_MINOR     0
 
 /* endianness flags (used in HS packet) */
 #define SP_RTRACE_PROTO_HS_LITTLE_ENDIAN  0

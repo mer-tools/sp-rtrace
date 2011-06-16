@@ -43,6 +43,13 @@
 /* the current function call index */
 static int call_index = 1;
 
+
+enum {
+	PACKET_OK = 0,
+	PACKET_INCOMPLETE = -1,
+	PACKET_UNKNOWN = -2,
+};
+
 /**
  * Reads handshake packet.
  *
@@ -311,22 +318,47 @@ static int read_generic_packet(rd_t* rd, const char* data, int size)
 {
 	static rd_resource_t* res_index[33];
 	/* first check if the packet contains enough data to read size value */
-	if (size < SP_RTRACE_PROTO_LENGTH_SIZE) return -1;
+	if (size < SP_RTRACE_PROTO_LENGTH_SIZE + SP_RTRACE_PROTO_TYPE_SIZE) return PACKET_INCOMPLETE;
 
 	static rd_fcall_t* fcall_prev = NULL;
 	unsigned int len, type;
+	int offset;
 
-	/* check if the buffer has at least one full packet */
-	int offset = read_dword(data, &len);
-	len += offset;
-	if ((int)len > size) {
-		return -1;
+	/* in version < 2.0 size field was before type field ([size][type]).
+	 * Starting with 2.0 those fields were swapped.  */
+	if (rd->hshake->vmajor < 2) {
+		/* check if the buffer has at least one full packet */
+		offset = read_dword(data, &len);
+		len += offset;
+		/* read packet type */
+		offset += read_dword(data + offset, &type);
 	}
-	/* read packet type */
-	offset += read_dword(data + offset, &type);
+	else {
+		/* read the type packet */
+		offset = read_dword(data, &type);
+
+		/* check if the buffer has at least one full packet */
+		offset += read_dword(data + offset, &len);
+		len += offset;
+
+		if ((unsigned char)data[0] == SP_RTRACE_PROTO_HS_ID) {
+			/* Received handshake packet in the middle of data stream.
+			 * It might be possible that multiple data files are streamed into
+			 * post-processor. In this case simply stop parsing the new packets
+			 * and process the received data  */
+			fprintf(stderr, "WARNING: handshake packet received in the middle of data stream\n");
+			return PACKET_UNKNOWN;
+		}
+		//LOG("type=%c%c%c%c, size=%d", data[0], data[1], data[2], data[3], len);
+
+	}
+	if ((int)len > size) {
+		return PACKET_INCOMPLETE;
+	}
 	data += offset;
 
 	/* process packet depending on its type */
+
 	switch (type) {
 		case SP_RTRACE_PROTO_MEMORY_MAP: {
 			dlist_add(&rd->mmaps, read_packet_MM(rd->hshake, data));
@@ -401,7 +433,7 @@ static int read_generic_packet(rd_t* rd, const char* data, int size)
 		default:
 			fprintf(stderr, "WARNING: Unknown packet: %x (len=%d)\n", type, len);
 		    fcall_prev = NULL;
-			break;
+			return PACKET_UNKNOWN;
 	}
 	return len;
 }
@@ -459,6 +491,10 @@ static void read_binary_data(rd_t* rd, int fd)
 			if (size <= 0) break;
 			ptr_in += size;
 			n -= size;
+		}
+		if (size == PACKET_UNKNOWN) {
+			/* stop parsing when unknown packet is detected and process the parsed data */
+			break;
 		}
 
 		/* move the incomplete packet to the beginning of buffer */
