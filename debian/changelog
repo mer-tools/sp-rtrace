@@ -1,3 +1,13 @@
+sp-rtrace (1.6.1-1) unstable; urgency=low
+
+  * Fixes: NB#265209 - Inlined anonymous object destructor gets resolved to
+    backtraces instead of the method/function call which uses such object in
+    argument creation
+  * Fixes: NB#264328 - sp-rtrace waits forever data from some applications
+    when ^C is used
+
+ -- Tommi Rantala <ext-tommi.1.rantala@nokia.com>  Thu, 16 Jun 2011 09:41:42 +0300
+
 sp-rtrace (1.6-2) unstable; urgency=low
 
   * Add new header sp_rtrace_filter.h to libsp-rtrace-dev package.
