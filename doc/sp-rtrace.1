@@ -78,7 +78,7 @@ modules are named 'libsp-rtrace-<module>.so'. So both - --preload=memory
 and --preload=libsp-rtrace-memory.so will specify the memory tracing 
 module libsp-rtrace-memory.so
 .TP
-\fI--audit\fP=<item1>[,<item2>[...,<itemN>]]\fP (\fI-a\fP <item1>[,<item2>[...,<itemN>]])
+\fI--audit\fP=<item1>[;<item2>[...;<itemN>]]\fP (\fI-a\fP <item1>[;<item2>[...;<itemN>]])
 Specifies symbols for audit module. The <itemX> contains either a symbol to track
 or '@' prefixed filename containing a list of symbols to track. If the symbol <item>
 ends with '*' (<item>*) then it matches all symbols starting with <item>.

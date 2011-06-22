@@ -108,7 +108,7 @@ static void display_usage()
 			"  -p <modules>    - a list of LD_PRELOAD tracing modules\n"
 			"                    separated by ':'\n"
 			"  -a <symbols>    - a list of tracked symbols for audit module:\n"
-			"                    <item>[,<item>[,...]] where <item> is:\n"
+			"                    <item>[;<item>[;...]] where <item> is:\n"
 			"                    <symbol>|@<filename>\n"
 			"                    The filename is configuration file name containing\n"
 			"                    list of symbols to track.\n"

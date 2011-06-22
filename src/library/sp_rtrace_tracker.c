@@ -120,10 +120,10 @@ int sp_rtrace_tracker_init(sp_rtrace_tracker_t* tracker, const char* setup)
 		char* str = strdup(setup);
 		if (str == NULL) return -ENOMEM;
 
-		char* item = strtok(str, ",");
+		char* item = strtok(str, ";");
 		while (item) {
 			tracker_parse_item(tracker, item);
-			item = strtok(NULL, ",");
+			item = strtok(NULL, ";");
 		}
 		free(str);
 	}
