@@ -1,3 +1,6 @@
+sp-rtrace (1.7), 30 Jun 2011:
+  * Swap size and type fields in binary protocol to fix crashes.
+
 sp-rtrace (1.6.1), 16 Jun 2011:
   * Fix bfd symbol resolving issues: If sp-rtrace backtraces go through
     certain kind of method/function calls where the call argument is a
