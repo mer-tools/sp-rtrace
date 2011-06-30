@@ -101,7 +101,7 @@ enum {
  *   $5 - process name
  * @param argv
  */
-static void print_header(char* argv[])
+static void print_header(char* argv[], int argc)
 {
 	sp_rtrace_header_t header = {
 			.fields = {
@@ -126,7 +126,7 @@ static void print_header(char* argv[])
  *   $3 - ending address
  * @param argv
  */
-static void print_mmap(char* argv[])
+static void print_mmap(char* argv[], int argc)
 {
 	void *from = NULL, *to = NULL;
 	sp_rtrace_mmap_t mmap = {
@@ -152,7 +152,7 @@ static void print_mmap(char* argv[])
  *   $7 - resource type name, empty string if the resource type should be omitted.
  * @param argv
  */
-static void print_call(char* argv[])
+static void print_call(char* argv[], int argc)
 {
 	sp_rtrace_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
@@ -188,7 +188,7 @@ static void print_call(char* argv[])
  *
  * @param argv
  */
-static void print_trace(char* argv[])
+static void print_trace(char* argv[], int argc)
 {
 	sp_rtrace_ftrace_t trace = {
 		.nframes = atoi(argv[TRACE_FRAMES])
@@ -225,7 +225,7 @@ static void print_trace(char* argv[])
  *
  * @param argv
  */
-static void print_trace_step(char* argv[])
+static void print_trace_step(char* argv[], int argc)
 {
 	void* addr = NULL;
 	sscanf(argv[TRACE_ADDRESS], "%p", &addr);
@@ -241,7 +241,7 @@ static void print_trace_step(char* argv[])
  *
  * @param argv
  */
-static void print_context(char* argv[])
+static void print_context(char* argv[], int argc)
 {
 	sp_rtrace_context_t context = {
 			.name = argv[CONTEXT_NAME],
@@ -260,7 +260,7 @@ static void print_context(char* argv[])
  *
  * @param argv
  */
-static void print_resource(char* argv[])
+static void print_resource(char* argv[], int argc)
 {
 	sp_rtrace_resource_t resource = {
 			.type = argv[RESOURCE_TYPE],
@@ -279,7 +279,7 @@ static void print_resource(char* argv[])
  *
  * @param argv
  */
-static void print_comment(char* argv[])
+static void print_comment(char* argv[], int argc)
 {
 	sp_rtrace_print_comment(stdout, "%s\n", argv[0]);
 }
@@ -296,10 +296,11 @@ static void print_comment(char* argv[])
  *
  * @param argv
  */
-static void print_args(char* argv[])
+static void print_args(char* argv[], int argc)
 {
 	sp_rtrace_farg_t args[32], *parg = args;
-	while (**argv) {
+	int i;
+	for (i = 2; i < argc; i++) {
 		char* ptr = strchr(*argv, '=');
 		if (ptr) {
 			*ptr++ = '\0';
@@ -325,31 +326,31 @@ int main(int argc, char* argv[])
 	tzset();
 	if (argc > 1) {
 		if (!strcmp(argv[1], PRINT_HEADER)) {
-			print_header(&argv[2]);
+			print_header(&argv[2], argc);
 		}
 		else if (!strcmp(argv[1], PRINT_MMAP)) {
-			print_mmap(&argv[2]);
+			print_mmap(&argv[2], argc);
 		}
 		else if (!strcmp(argv[1], PRINT_CALL)) {
-			print_call(&argv[2]);
+			print_call(&argv[2], argc);
 		}
 		else if (!strcmp(argv[1], PRINT_TRACE)) {
-			print_trace(&argv[2]);
+			print_trace(&argv[2], argc);
 		}
 		else if (!strcmp(argv[1], PRINT_TRACE_STEP)) {
-			print_trace_step(&argv[2]);
+			print_trace_step(&argv[2], argc);
 		}
 		else if (!strcmp(argv[1], PRINT_CONTEXT)) {
-			print_context(&argv[2]);
+			print_context(&argv[2], argc);
 		}
 		else if (!strcmp(argv[1], PRINT_COMMENT)) {
-			print_comment(&argv[2]);
+			print_comment(&argv[2], argc);
 		}
 		else if (!strcmp(argv[1], PRINT_ARGS)) {
-			print_args(&argv[2]);
+			print_args(&argv[2], argc);
 		}
 		else if (!strcmp(argv[1], PRINT_RESOURCE)) {
-			print_resource(&argv[2]);
+			print_resource(&argv[2], argc);
 		}
 	}
 	return 0;

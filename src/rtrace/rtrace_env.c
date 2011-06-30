@@ -36,7 +36,6 @@ struct option rtrace_long_opt[] = {
 		 {"output-dir", 1, 0, 'o'},
 		 {"manage-preproc", 0, 0, 'm'},
 		 {"preload", 1, 0, 'p'},
-		 {"audit", 1, 0, 'a'},
 		 {"start", 0, 0, 's'},
 		 {"toggle", 1, 0, 't'},
 		 {"follow-forks", 0, 0, 'f'},
@@ -84,11 +83,6 @@ char *rtrace_env_opt[] = {
 		 * List of LD_PRELOAD tracing modules, separated by ':'
 		 */
 		"SP_RTRACE_PRELOAD",
-		/**
-		 * --audit
-		 * List of items tracked by audit module
-		 */
-		"SP_RTRACE_AUDIT",
 		/**
 		 * --start
 		 * Defines that trace should be started automatically when the target process is spawned.
@@ -169,7 +163,7 @@ char *rtrace_env_opt[] = {
 };
 
 /* sp_rtrace short option list */
-char* rtrace_short_opt = "+i:o:mp:a:st:fb:TAP:S:Bhx:lLFuM:";
+char* rtrace_short_opt = "+i:o:me:st:fb:TAP:S:Bhx:lLFuM:";
 
 void rtrace_args_add_opt(rtrace_args_t* args, char opt, const char* value)
 {

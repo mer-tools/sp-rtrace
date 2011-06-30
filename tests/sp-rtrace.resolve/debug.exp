@@ -30,7 +30,7 @@ set src_opts "-O0"
 proc check_resolve_debug { args } {
 	set index 0
 	set rc 0
-	spawn sp-rtrace -p memory -P-r -s -x $::bin_dir/$::out_file
+	spawn sp-rtrace -e memory -P-r -s -x $::bin_dir/$::out_file
 	expect {
 		-re {(?n)^\t0x[0-9a-fA-F]+ \(([^\r\n]+)\)[\r\n]$} {
 			if { ![regexp {^in ([^ ]+) at ([^/]+)$} $expect_out(1,string) match name source] } {

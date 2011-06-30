@@ -892,15 +892,8 @@ bool sp_rtrace_initialize()
 			unlink("/etc/ld.so.preload");
 		}
 
-		/* Looks like there are conflicts when calling dlsym (which is done by sp_rtrace_init_context
-		 * from audit libraries. As context is not supported by audit anyway, just skip context
-		 * support initialization.
-		 * TODO: investigate what's exactly happening.
-		 */
-		if (!getenv(rtrace_env_opt[OPT_AUDIT])) {
-			/* Initialize call context support. */
-			sp_rtrace_init_context();
-		}
+		/* Initialize call context support. */
+		sp_rtrace_init_context();
 
 		/* read process name */
 		get_proc_name(proc_name, sizeof(proc_name));

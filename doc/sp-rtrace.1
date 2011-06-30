@@ -21,7 +21,7 @@ Displays help information and exits.
 .TP
 \fI--list\fP (\fI-l\fP)
 Lists all available tracing modules. The first column identifies the module 
-type: P - preload module, A - audit module (see examples).
+type: P - preload module.
 .TP
 \fI--output-dir\fP=<path> (\fI-o\fP <path)
 Specifies the output directory for storing trace data. 
@@ -69,7 +69,7 @@ with the specified options and pipes the data to it. Otherwise sp-rtrace writes
 data to the rtrace-raw-<pid>[-<number>] file in the directory specified
 by the \fI--output-dir\fP option.
 .TP
-\fI--preload\fP=<module1>[:<module2>[...:<moduleN>]]\fP (\fI-p\fP <module1>[:<module2>[...:<moduleN>]])
+\fI--preload\fP=<module1>[:<module2>[...:<moduleN>]]\fP (\fI-e\fP <module1>[:<module2>[...:<moduleN>]])
 Specifies preload tracing modules (the main tracing module is preloaded by
 default). When specifying multiple preload modules be careful to avoid
 modules that interfere with each other.
@@ -77,20 +77,7 @@ Either full name of the module can be specified or its alias. The tracing
 modules are named 'libsp-rtrace-<module>.so'. So both - --preload=memory
 and --preload=libsp-rtrace-memory.so will specify the memory tracing 
 module libsp-rtrace-memory.so
-.TP
-\fI--audit\fP=<item1>[;<item2>[...;<itemN>]]\fP (\fI-a\fP <item1>[;<item2>[...;<itemN>]])
-Specifies symbols for audit module. The <itemX> contains either a symbol to track
-or '@' prefixed filename containing a list of symbols to track. If the symbol <item>
-ends with '*' (<item>*) then it matches all symbols starting with <item>.
 
-.RS
-Because of the way the audit module is implemented, there are some limitations:
-.TP
-1) Audit module can't be used together with preload modules. So when audit option
-is specified the preload modules are ignored.
-.TP
-2) Audit module does not support call contexts.
-.RE
 .TP
 \fI--disable-packet-buffering\fP (\fI-B\fP)
 Disables internal packet buffering. Normally the packets are stored in to

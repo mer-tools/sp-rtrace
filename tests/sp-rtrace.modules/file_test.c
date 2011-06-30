@@ -82,7 +82,7 @@ void test_inotify()
 void test_fp()
 {
 	FILE* fp = fopen(OUTPUT_FILENAME, "r");
-	FILE* fp2 = freopen(OUTPUT_FILENAME, "w+", fp); 
+	FILE* fp2 = freopen(OUTPUT_FILENAME, "w+", fp);
 	fcloseall();
 }
 

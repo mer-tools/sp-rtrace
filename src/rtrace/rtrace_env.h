@@ -56,7 +56,6 @@ enum {
 	OPT_OUTPUT_DIR,              //!< OPT_OUTPUT_DIR
 	OPT_MANAGE_PREPROC,          //!< OPT_MANAGE_PREPROC
 	OPT_PRELOAD,                 //!< OPT_PRELOAD
-	OPT_AUDIT,                   //!< OPT_AUDIT
 	OPT_START,                   //!< OPT_START
 	OPT_TOGGLE,                  //!< OPT_TOGGLE
 	OPT_FOLLOW_FORKS,            //!< OPT_FOLLOW_FORKS
