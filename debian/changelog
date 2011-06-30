@@ -1,3 +1,10 @@
+sp-rtrace (1.7-1) unstable; urgency=low
+
+  * Fixes: NB#265207 - sp-rtrace-postproc crash on giving it multiple rtrace
+    files
+
+ -- Tommi Rantala <ext-tommi.1.rantala@nokia.com>  Thu, 30 Jun 2011 16:34:31 +0300
+
 sp-rtrace (1.6.1-1) unstable; urgency=low
 
   * Fixes: NB#265209 - Inlined anonymous object destructor gets resolved to
