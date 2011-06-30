@@ -33,9 +33,9 @@ following packages.
 The rest of packets are endian dependent and have the following generic
 format:
 
-[size][type][data]
-  [size] - the packet length - 4 + n (4 bytes)
+[type][size][data]
   [type] - the packet type (4 bytes)
+  [size] - the data length n (4 bytes)
   [data] - the packet data (n bytes)
 
 The data members inside packets are aligned by 4 byte boundaries to prevent

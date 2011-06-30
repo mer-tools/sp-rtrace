@@ -1,20 +1,21 @@
-version=1.4, arch=i686, timestamp=2011.2.21 12:20:39, process=../bin/alloc_context_test, pid=16947, filter=leaks|compress, backtrace depth=10, origin=sp-rtrace 1.4, 
+version=2.0, arch=i686, timestamp=2011.6.16 15:49:49, process=../bin/alloc_context_test, pid=17949, filter=leaks|compress, backtrace depth=10, origin=sp-rtrace 1.6, 
 <1> : memory (memory allocation in bytes)
-: /lib/ld-2.12.1.so => 0x1e9000-0x205000
-: /usr/lib/libsp-rtrace1.so.1.0.4 => 0x5b1000-0x5c5000
-: /lib/libdl-2.12.1.so => 0x619000-0x61b000
-: /lib/librt-2.12.1.so => 0x754000-0x75b000
-: /lib/libc-2.12.1.so => 0x8bf000-0xa16000
-: /lib/libm-2.12.1.so => 0xa9b000-0xabf000
-: /usr/lib/sp-rtrace/libsp-rtrace-memory.so => 0xdcc000-0xdce000
-: /lib/libpthread-2.12.1.so => 0xe27000-0xe3c000
-: /usr/lib/libsp-rtrace-main.so.1.0.4 => 0xec9000-0xece000
+: /lib/libc-2.12.1.so => 0x110000-0x267000
+: /lib/librt-2.12.1.so => 0x4ed000-0x4f4000
+: /lib/libdl-2.12.1.so => 0x5fb000-0x5fd000
+: /lib/ld-2.12.1.so => 0x615000-0x631000
+: /lib/libpthread-2.12.1.so => 0x851000-0x866000
+: /usr/lib/libsp-rtrace-main.so.1.0.6 => 0x8ad000-0x8b3000
+: /usr/lib/sp-rtrace/libsp-rtrace-memory.so => 0xb34000-0xb36000
+: /lib/libm-2.12.1.so => 0xef5000-0xf19000
+: /lib/libgcc_s.so.1 => 0xf26000-0xf40000
+: /usr/lib/libsp-rtrace1.so.1.0.6 => 0xf68000-0xf7c000
 : /scratchbox/users/wiper/home/wiper/bugs/rtrace/sp-rtrace/tests/bin/alloc_context_test => 0x8048000-0x8049000
 ## heap status information:
-##   heap bottom 0x84da000
-##   heap top 0x84fb000
-##   lowest block 0x84da008
-##   highest block 0x84e1610
+##   heap bottom 0x84cd000
+##   heap top 0x84ee000
+##   lowest block 0x84cd008
+##   highest block 0x84d4610
 ##   non-mapped space allocated from system 135168
 ##   number of free chunks 1
 ##   number of fastbin blocks 0
@@ -27,16 +28,16 @@ version=1.4, arch=i686, timestamp=2011.2.21 12:20:39, process=../bin/alloc_conte
 ##   top-most, releasable (via malloc_trim) space 104952
 ## tracing module: [0] main (1.0)
 ## tracing module: [1] memory (1.0)
-1. [00:30:48.303] malloc(1003) = 0x84da008
-13. [00:30:48.303] malloc(1003) = 0x84db3a0
-25. [00:30:48.303] malloc(1003) = 0x84dc360
-37. [00:30:48.303] malloc(1003) = 0x84dd320
-49. [00:30:48.303] malloc(1003) = 0x84de2e0
+1. [14:54:27.465] malloc(1003) = 0x84cd008
+13. [14:54:27.465] malloc(1003) = 0x84ce3a0
+25. [14:54:27.465] malloc(1003) = 0x84cf360
+37. [14:54:27.465] malloc(1003) = 0x84d0320
+49. [14:54:27.466] malloc(1003) = 0x84d12e0
 # allocation summary: 5 block(s) with total size 5015
 	0x80486f4
 	0x8048755
 	0x8048797
-	0x8d5ce7
+	0x126ce7
 	0x8048571
 
 # Resource - memory (memory allocation in bytes):
