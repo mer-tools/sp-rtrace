@@ -133,16 +133,16 @@ utility) resulting in trace failure. In such case either re-enable tracing
 with sp-rtrace -t <pid> or use functracer tool which produces similar output.
 .SH EXAMPLES
 .TP
-sp-rtrace -s -p memory -x sample
+sp-rtrace -s -e memory -x sample
 Start sample process with tracing enabled at start. The (binary) output data
 will be stored in current directory.
 .TP
-sp-rtrace -s -p memory -P '-l -c' -o $(pwd) -x sample
+sp-rtrace -s -e memory -P '-l -c' -o $(pwd) -x sample
 Start sample process with tracing enabled at start. Invoke sp-rtrace-postproc
 with options -l -c (filter leaks and compress backtraces - see sp-rtrace-postproc
 manual) and store the resulting file (text) into current directory.
 .TP
-sp-rtrace -s -p memory -P '-r' -x sample
+sp-rtrace -s -e memory -P '-r' -x sample
 Start sample process with tracing enabled at start. Invoke sp-rtrace-postproc
 with options -r (resolve addresses) and write results to the standard output.
 .TP
