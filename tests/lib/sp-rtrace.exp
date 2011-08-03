@@ -147,7 +147,7 @@ proc pidof { name } {
 # module
 #
 # Arguments:
-#   key    - the module type key - '-p' (preload) or '-a' (audit)
+#   key    - the module type key - '-e' (preload) 
 #   module - the module to check (or in the case of audit module the tracked items)
 #   args   - list of functions that should be tracked by the module.
 #
@@ -190,7 +190,7 @@ proc test_generic_module { key module items } {
 #   args   - list of functions that should be tracked by the module.
 #
 proc test_module { module args } {
-	test_generic_module "-p" $module $args
+	test_generic_module "-e" $module $args
 }
 
 #

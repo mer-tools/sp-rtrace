@@ -1,5 +1,5 @@
 AC_PREREQ([2.5])
-AC_INIT([sp-rtrace], [1.7], [none])
+AC_INIT([sp-rtrace], [1.8], [none])
 
 AC_CONFIG_AUX_DIR([aux])
 

@@ -1,3 +1,9 @@
+sp-rtrace (1.8), 3 Aug 2011:
+  * The option `-p' has been changed to `-e' to match functracer option names.
+  * Audit module has been removed (`-a' option). sp-rtrace cannot track (even
+    exported) function calls well enough due to limitations of the linker
+    LD_AUDIT mechanism. Functracer can be used for the same purpose.
+
 sp-rtrace (1.7), 30 Jun 2011:
   * Swap size and type fields in binary protocol to fix crashes.
 

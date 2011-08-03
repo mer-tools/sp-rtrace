@@ -71,7 +71,6 @@ rtrace_options_t rtrace_options = {
 		.output_dir = NULL,
 		.manage_preproc = false,
 		.preload = NULL,
-		.audit = NULL,
 		.start = false,
 		.follow_forks = false,
 		.backtrace_depth = NULL,
@@ -105,13 +104,8 @@ static void display_usage()
 			"  -o <outputdir>  - the directory for output files\n"
 			"  -m              - instructs tracing module to start its\n"
 			"                    own pre-processor process for data handling\n"
-			"  -p <modules>    - a list of LD_PRELOAD tracing modules\n"
+			"  -e <modules>    - a list of LD_PRELOAD tracing modules\n"
 			"                    separated by ':'\n"
-			"  -a <symbols>    - a list of tracked symbols for audit module:\n"
-			"                    <item>[;<item>[;...]] where <item> is:\n"
-			"                    <symbol>|@<filename>\n"
-			"                    The filename is configuration file name containing\n"
-			"                    list of symbols to track.\n"
 			"  -s              - enable tracing from the start\n"
 			"  -b <depth>      - the maximum number of function addresses\n"
 			"                    in stack trace\n"
@@ -138,7 +132,7 @@ static void display_usage()
 			"  -m              - the target process was started in managed\n"
 			"                    mode\n"
 			"  -f              - send the toggle signal to all subprocesses\n"
-			"                    recursively (not implemented)\n"
+			"                    recursively\n"
 			"  -t <pid>        - pid of the process to toggle tracing for.\n"
 			"\n"
 			"3. Common options:\n"
@@ -212,43 +206,36 @@ static void set_environment()
 	if (rtrace_options.monitor_size) setenv(rtrace_env_opt[OPT_MONITOR_SIZE], rtrace_options.monitor_size, 1);
 	setenv(SP_RTRACE_START_DIR, getcwd(path, sizeof(path)), 1);
 
-	if (rtrace_options.audit) {
-		setenv("LD_AUDIT", SP_RTRACE_LIB_PATH SP_RTRACE_AUDIT_MODULE, 1);
-		setenv(rtrace_env_opt[OPT_AUDIT], rtrace_options.audit, 1);
-	}
-	else {
+	char preload[PATH_MAX], *ppreload = preload;
+	ppreload += sprintf(preload, "%s:", SP_RTRACE_MAIN_MODULE);
 
-		char preload[PATH_MAX], *ppreload = preload;
-		ppreload += sprintf(preload, "%s:", SP_RTRACE_MAIN_MODULE);
-
-		if (rtrace_options.preload) {
-			char* module = strtok(rtrace_options.preload, ":");
-			while (module) {
-				int len = strlen(module);
-				if (!strcmp(module + len - 3, ".so")) {
-					ppreload += sprintf(ppreload, "%s:", module);
-				}
-				else {
-					ppreload += sprintf(ppreload, SP_RTRACE_LIB_PATH "libsp-rtrace-%s.so:", module);
-				}
-				module = strtok(NULL, ":");
-			}
-		}
-		if (query_scratchbox()) {
-			LOG("scratchbox environment detected");
-			FILE* fp = fopen("/etc/ld.so.preload", "w");
-			if (fp) {
-				fputs(preload, fp);
-				fclose(fp);
+	if (rtrace_options.preload) {
+		char* module = strtok(rtrace_options.preload, ":");
+		while (module) {
+			int len = strlen(module);
+			if (!strcmp(module + len - 3, ".so")) {
+				ppreload += sprintf(ppreload, "%s:", module);
 			}
 			else {
-				fprintf(stderr, "ERROR: failed to setup scratchbox preloading file /etc/ld.so.preload\n");
-				exit (-1);
+				ppreload += sprintf(ppreload, SP_RTRACE_LIB_PATH "libsp-rtrace-%s.so:", module);
 			}
+			module = strtok(NULL, ":");
+		}
+	}
+	if (query_scratchbox()) {
+		LOG("scratchbox environment detected");
+		FILE* fp = fopen("/etc/ld.so.preload", "w");
+		if (fp) {
+			fputs(preload, fp);
+			fclose(fp);
 		}
 		else {
-			setenv("LD_PRELOAD", preload, 1);
+			fprintf(stderr, "ERROR: failed to setup scratchbox preloading file /etc/ld.so.preload\n");
+			exit (-1);
 		}
+	}
+	else {
+		setenv("LD_PRELOAD", preload, 1);
 	}
 
 }
@@ -262,7 +249,6 @@ static void free_options()
 {
 	if (rtrace_options.output_dir) free(rtrace_options.output_dir);
 	if (rtrace_options.preload) free(rtrace_options.preload);
-	if (rtrace_options.audit) free(rtrace_options.audit);
 	if (rtrace_options.backtrace_depth) free(rtrace_options.backtrace_depth);
 	if (rtrace_options.postproc) free(rtrace_options.postproc);
 	if (rtrace_options.toggle_signal_name) free(rtrace_options.toggle_signal_name);
@@ -890,20 +876,12 @@ int main(int argc, char* argv[])
 			rtrace_options.manage_preproc = true;
 			break;
 
-		case 'p':
+		case 'e':
 			if (rtrace_options.preload) {
 				fprintf(stderr, "WARNING: Overriding previously given option: -p %s\n", rtrace_options.preload);
 				free(rtrace_options.preload);
 			}
 			rtrace_options.preload = strdup_a(optarg);
-			break;
-
-		case 'a':
-			if (rtrace_options.audit) {
-				fprintf(stderr, "WARNING: Overriding previously given option: -a %s\n", rtrace_options.audit);
-				free(rtrace_options.audit);
-			}
-			rtrace_options.audit = strdup_a(optarg);
 			break;
 
 		case 's':

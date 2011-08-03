@@ -28,7 +28,7 @@ set src_deps "$src_dir/resolve_test.c"
 set src_opts "-O -rdynamic"
 
 proc check_resolve_rdynamic { args } {
-	spawn sp-rtrace -p memory -P-r -s -x $::bin_dir/$::out_file
+	spawn sp-rtrace -e memory -P-r -s -x $::bin_dir/$::out_file
 	set index 0
 	set rc 0
 	expect {

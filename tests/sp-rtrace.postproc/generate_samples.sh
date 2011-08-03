@@ -38,7 +38,7 @@ if [ ! -f $TARGET ]; then
 	exit 1
 fi
 
-sp-rtrace -s -p shmsysv -x $TARGET
+sp-rtrace -s -e shmsysv -x $TARGET
 
 LOG_RAW=$(ls *.rtrace)
 if [ -z "$LOG_RAW" ]; then
@@ -88,7 +88,7 @@ if [ ! -f $TARGET ]; then
 	exit 1
 fi
 
-sp-rtrace -s -p memory -x $TARGET
+sp-rtrace -s -e memory -x $TARGET
 
 LOG_RAW=$(ls *.rtrace)
 if [ -z "$LOG_RAW" ]; then
@@ -133,7 +133,7 @@ if [ ! -f $TARGET ]; then
 	exit 1
 fi
 
-sp-rtrace -s -p shmsysv -x $TARGET
+sp-rtrace -s -e shmsysv -x $TARGET
 
 LOG_RAW=$(ls *.rtrace)
 if [ -z "$LOG_RAW" ]; then

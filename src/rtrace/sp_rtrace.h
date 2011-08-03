@@ -43,8 +43,6 @@ typedef struct rtrace_options_t {
 	bool manage_preproc;
 	/* the list of LD_PRELOAD tracing modules */
 	char* preload;
-	/* the list of LD_AUDIT tracing modules */
-	char* audit;
 	/* true if the tracing must be enabled at start */
 	bool start;
 	/* true if toggle signal must be sent also to target's subprocesses */
