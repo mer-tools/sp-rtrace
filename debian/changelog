@@ -1,3 +1,10 @@
+sp-rtrace (1.8-1) unstable; urgency=low
+
+  * Fixes: NB#268470 - Use consistent option names for functracer & sp-rtrace
+    + remove LD_AUDIT from sp-rtrace
+
+ -- Tommi Rantala <ext-tommi.1.rantala@nokia.com>  Wed, 03 Aug 2011 12:41:14 +0300
+
 sp-rtrace (1.7-1) unstable; urgency=low
 
   * Fixes: NB#265207 - sp-rtrace-postproc crash on giving it multiple rtrace
