@@ -1,3 +1,10 @@
+sp-rtrace (1.8-2) unstable; urgency=low
+
+  * Fixes: NB#277216 - [SDK] Use consistent option names for functracer &
+    sp-rtrace + remove LD_AUDIT from sp-rtrace
+
+ -- Tommi Rantala <ext-tommi.1.rantala@nokia.com>  Wed, 17 Aug 2011 10:48:40 +0300
+
 sp-rtrace (1.8-1) unstable; urgency=low
 
   * Fixes: NB#268470 - Use consistent option names for functracer & sp-rtrace
