@@ -50,6 +50,7 @@
 #include "common/utils.h"
 #include "common/rtrace_data.h"
 #include "common/debug_log.h"
+#include "common/msg.h"
 
 #define MESSAGE_SIGINT "INFO: Trace was stopped, please wait for data retrieval to be finished.\n"
 
@@ -139,6 +140,7 @@ static void display_usage()
 			"  -S <signal>     - tracing toggle signal\n"
 			"  -h              - this help page.\n"
 			"  -l              - lists available tracing modules.\n"
+			"  -q              - hide warning messages.\n"
 			"\n"
 			"Usage examples:\n"
 			"  Start sample process with tracing enabled at start. The (binary) output data\n"
@@ -230,7 +232,7 @@ static void set_environment()
 			fclose(fp);
 		}
 		else {
-			fprintf(stderr, "ERROR: failed to setup scratchbox preloading file /etc/ld.so.preload\n");
+			msg_error("failed to setup scratchbox preloading file /etc/ld.so.preload\n");
 			exit (-1);
 		}
 	}
@@ -267,12 +269,12 @@ static int open_postproc_pipe()
 {
 	int fd[2];
 	if (pipe(fd) == -1) {
-		fprintf(stderr, "ERROR: Failed to create pipe for post-processor\n");
+		msg_error("failed to create pipe for post-processor\n");
 		exit (-1);
 	}
 	rtrace_options.pid_postproc = fork();
 	if (rtrace_options.pid_postproc == -1) {
-		fprintf(stderr, "ERROR: Failed to fork post-processor process\n");
+		msg_error("failed to fork post-processor process\n");
 		exit (-1);
 	}
 	if (rtrace_options.pid_postproc == 0) {
@@ -304,7 +306,7 @@ static int open_postproc_pipe()
 
 		setpgrp();
 		execvp(SP_RTRACE_POSTPROC, argv);
-		fprintf(stderr, "ERROR: failed to execute post-processor process %s (%s)\n",
+		msg_error("failed to execute post-processor process %s (%s)\n",
 				SP_RTRACE_POSTPROC, strerror(errno));
 		exit (-1);
 	}
@@ -328,12 +330,12 @@ static int open_output_file()
 	if (dir == NULL || !strcmp(dir, "stdout")) dir = default_dir;
 
 	if (get_log_filename(rtrace_options.pid, dir, SP_RTRACE_BINARY_FILE_PATTERN, path, sizeof(path)) != 0) {
-		fprintf(stderr, "ERROR: failed to make new log file name for directory %s\n", dir);
+		msg_error("failed to make new log file name for directory %s\n", dir);
 		return -1;
 	}
 	int fd =  open(path, O_CREAT | O_WRONLY | O_EXCL, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	if (fd == -1) {
-		fprintf(stderr, "ERROR: failed to create log file %s (%s)\n", path, strerror(errno));
+		msg_error("failed to create log file %s (%s)\n", path, strerror(errno));
 		return -1;
 	}
 	rtrace_options.output_file = strdup_a(path);
@@ -352,7 +354,7 @@ static void create_preproc_pipe(char* pipe_path, size_t size)
 {
 	snprintf(pipe_path, size, SP_RTRACE_PIPE_PATTERN "%d", rtrace_options.pid);
 	if (mkfifo(pipe_path, 0666) != 0) {
-		fprintf(stderr, "ERROR: Failed to create named pipe %s\n", pipe_path);
+		msg_error("failed to create named pipe %s\n", pipe_path);
 		exit (-1);
 	}
 }
@@ -419,7 +421,7 @@ static void disconnect_input(const char* pipe_path)
 		close(fd_in);
 		int rc = remove(pipe_path);
 		if (rc == -1) {
-			fprintf(stderr, "ERROR: Failed to removing pipe: %s\n", strerror(errno));
+			msg_error("failed to removing pipe: %s\n", strerror(errno));
 		}
 	}
 }
@@ -543,7 +545,7 @@ static void toggle_child_processes(int pid)
 {
 	DIR* dir = opendir("/proc");
 	if (dir == NULL) {
-		fprintf(stderr, "ERROR: failed to open /proc/ directory\n");
+		msg_error("failed to open /proc/ directory\n");
 		return;
 	}
 	struct dirent *de;
@@ -594,7 +596,7 @@ static void toggle_tracing()
 {
   /* first check if the target process is launched in tracing mode*/
   if (!is_process_traced(rtrace_options.pid)) {
-    fprintf(stderr, "ERROR: the target process %d is not launched in tracing mode.\n", rtrace_options.pid);
+    msg_error("the target process %d is not launched in tracing mode.\n", rtrace_options.pid);
     return;
   }
 
@@ -625,7 +627,7 @@ static int start_process(char* app, char* args[])
 {
 	rtrace_options.pid = fork();
 	if (rtrace_options.pid == -1) {
-		fprintf(stderr, "ERROR: failed to fork target process\n");
+		msg_error("failed to fork target process\n");
 		exit (-1);
 	}
 	if (rtrace_options.pid == 0) {
@@ -636,7 +638,7 @@ static int start_process(char* app, char* args[])
 			while (access(pipe_path, W_OK)) {
 				usleep(100000);
 				if (spin++ > 50) {
-					fprintf(stderr, "ERROR: A timeout occurred while waiting for the pre-processor pipe to be created");
+					msg_error("a timeout occurred while waiting for the pre-processor pipe to be created");
 					exit (-1);
 				}
 			}
@@ -646,7 +648,7 @@ static int start_process(char* app, char* args[])
 		setpgrp();
 		set_environment();
 		execvp(app, args);
-		fprintf(stderr, "ERROR: failed to start process %s (%s)\n", app, strerror(errno));
+		msg_error("failed to start process %s (%s)\n", app, strerror(errno));
 		exit (-1);
 	}
 	if (rtrace_options.start) {
@@ -693,7 +695,7 @@ static void start_process_managed(char* app, char* args[])
 		setpgrp();
 		set_environment();
 		execvp(app, args);
-		fprintf(stderr, "ERROR: failed to start process %s (%s)\n", app, strerror(errno));
+		msg_error("failed to start process %s (%s)\n", app, strerror(errno));
 		exit (-1);
 	}
 }
@@ -745,7 +747,7 @@ static void print_description(int indent, int length, const char* description)
 		if (pend < plimit) {
 			while (isalnum(*pend)) {
 				if (pend == pstart) {
-					fprintf(stderr, "WARNING: couldn't split the description (%s) into %d "
+					msg_warning("couldn't split the description (%s) into %d "
 							        "character chunks\n", description, length);
 					return;
 				}
@@ -782,7 +784,7 @@ static void print_module_info(const char* name) {
 	sprintf(path, SP_RTRACE_LIB_PATH "%s", name);
 	void* lib = dlopen(path, RTLD_LAZY);
 	if (lib == NULL) {
-        fprintf (stderr, "%s\n", dlerror());
+        msg_error("%s\n", dlerror());
 		return;
 	}
 	sp_rtrace_get_module_info_t get_module_info;
@@ -802,13 +804,13 @@ static void list_modules()
 {
 	DIR* libdir = opendir("/usr/lib/" SP_RTRACE_LIB_DIR);
 	if (libdir == NULL) {
-		fprintf(stderr, "ERROR: failed to open module directory /usr/lib/" SP_RTRACE_LIB_DIR "\n");
+		msg_error("failed to open module directory /usr/lib/" SP_RTRACE_LIB_DIR "\n");
 		return;
 	}
 	/* preload the main module, as it exports symbols for submodules */
 	void* mainlib = dlopen("/usr/lib/" SP_RTRACE_MAIN_MODULE, RTLD_LAZY | RTLD_GLOBAL);
 	if (mainlib == NULL) {
-        fprintf (stderr, "ERROR: %s\n", dlerror());
+        msg_error("%s\n", dlerror());
         closedir(libdir);
 		return;
 	}
@@ -837,7 +839,7 @@ int main(int argc, char* argv[])
 	struct sigaction sa = {.sa_flags = 0, .sa_handler = sigint_handler};
 	sigemptyset(&sa.sa_mask);
 	if (sigaction(SIGINT, &sa, NULL) == -1) {
-		fprintf(stderr, "ERROR: Failed to install SIGINT handler\n");
+		msg_error("Failed to install SIGINT handler\n");
 		return -1;
 	}
 
@@ -853,7 +855,7 @@ int main(int argc, char* argv[])
 	/*
 	sa.sa_handler = sigchld_handler;
 	if (sigaction(SIGCHLD, &sa, NULL) == -1) {
-		fprintf(stderr, "ERROR: Failed to install SIGCHILD handler\n");
+		msg_error("Failed to install SIGCHILD handler\n");
 		return -1;
 	}
 	*/
@@ -866,7 +868,7 @@ int main(int argc, char* argv[])
 		switch(opt) {
 		case 'o':
 			if (rtrace_options.output_dir) {
-				fprintf(stderr, "WARNING: Overriding previously given option: -o %s\n", rtrace_options.output_dir);
+				msg_warning("overriding previously given option: -o %s\n", rtrace_options.output_dir);
 				free(rtrace_options.output_dir);
 			}
 			rtrace_options.output_dir = strdup_a(optarg);
@@ -878,7 +880,7 @@ int main(int argc, char* argv[])
 
 		case 'e':
 			if (rtrace_options.preload) {
-				fprintf(stderr, "WARNING: Overriding previously given option: -p %s\n", rtrace_options.preload);
+				msg_warning("overriding previously given option: -p %s\n", rtrace_options.preload);
 				free(rtrace_options.preload);
 			}
 			rtrace_options.preload = strdup_a(optarg);
@@ -891,7 +893,7 @@ int main(int argc, char* argv[])
 		case 't':
 			rtrace_options.pid = atoi(optarg);
 			if (rtrace_options.pid == 0) {
-				fprintf(stderr, "ERROR: invalid pid value: %s", optarg);
+				msg_error("invalid pid value: %s", optarg);
 				exit (-1);
 			}
 			rtrace_options.mode = MODE_TOGGLE;
@@ -903,7 +905,7 @@ int main(int argc, char* argv[])
 
 		case 'b':
 			if (rtrace_options.backtrace_depth) {
-				fprintf(stderr, "WARNING: Overriding previously given option: -b %s\n", rtrace_options.backtrace_depth);
+				msg_warning("overriding previously given option: -b %s\n", rtrace_options.backtrace_depth);
 				free(rtrace_options.backtrace_depth);
 			}
 			rtrace_options.backtrace_depth = strdup_a(optarg);
@@ -919,7 +921,7 @@ int main(int argc, char* argv[])
 
 		case 'P':
 			if (rtrace_options.postproc) {
-				fprintf(stderr, "WARNING: Overriding previously given option: -P %s\n", rtrace_options.postproc);
+				msg_warning("overriding previously given option: -P %s\n", rtrace_options.postproc);
 				free(rtrace_options.backtrace_depth);
 			}
 			rtrace_options.postproc = strdup_a(optarg ? optarg : "");
@@ -959,8 +961,12 @@ int main(int argc, char* argv[])
 			rtrace_options.mode = MODE_LISTEN;
 			break;
 
+		case 'q':
+			msg_set_verbosity(MSG_ERROR);
+			break;
+
 		case '?':
-			fprintf(stderr, "ERROR: Unknown sp-rtrace option: %c\n", optopt);
+			msg_error("unknown sp-rtrace option: %c\n", optopt);
 			display_usage();
 			exit (-1);
 		}
@@ -985,7 +991,7 @@ int main(int argc, char* argv[])
 		}
 		case MODE_LISTEN: {
 			if (!rtrace_options.manage_preproc) {
-				fprintf(stderr, "ERROR: -L mode is for internal use only\n");
+				msg_error("-L mode is for internal use only\n");
 				exit (-1);
 			}
 			LOG("Switching to listen mode");
@@ -994,7 +1000,7 @@ int main(int argc, char* argv[])
 			break;
 		}
 		default: {
-			fprintf(stderr, "ERROR: Failed to determine work mode, not enough options specified\n");
+			msg_error("failed to determine work mode, not enough options specified\n");
 			display_usage();
 			exit (-1);
 		}

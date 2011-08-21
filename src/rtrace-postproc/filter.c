@@ -32,6 +32,7 @@
 
 #include "common/sp_rtrace_proto.h"
 #include "common/utils.h"
+#include "common/msg.h"
 #include "sp_rtrace_postproc.h"
 
 #define HASH_SIZE      (1 << 16)
@@ -94,11 +95,11 @@ static long res_compare(const fres_t* res1, const fres_t* res2)
 		return res1->call->data.res_id - res2->call->data.res_id;
 	}
 	if (!res1->call->data.res_type) {
-		fprintf(stderr, "WARNING: resource type is not set for record #%d\n", res1->call->data.index);
+		msg_warning("resource type is not set for record #%d\n", res1->call->data.index);
 		return -1;
 	}
 	if (!res2->call->data.res_type) {
-		fprintf(stderr, "WARNING: resource type is not set for record #%d\n", res1->call->data.index);
+		msg_warning("resource type is not set for record #%d\n", res1->call->data.index);
 		return 1;
 	}
 	rd_resource_t* res_type1 = res1->call->data.res_type;
@@ -311,7 +312,7 @@ static void* filter_load_index_data(const char* filename)
 {
 	FILE* fp = fopen(filename, "r");
 	if (fp == NULL) {
-		fprintf(stderr, "ERROR: failed to open event index file: %s (%s)\n", filename, strerror(errno));
+		msg_error("failed to open event index file: %s (%s)\n", filename, strerror(errno));
 		exit (-1);
 	}
 	char line[128];
@@ -376,7 +377,7 @@ void filter_leaks(rd_t* rd)
 	fres_index_t index = {.rd = rd};
 	/* create resource indexing hash table */
 	if (htable_init(&index.table, HASH_SIZE, (op_unary_t)res_hash, (op_binary_t)res_compare) != 0) {
-		fprintf(stderr, "ERROR: failed to create resource indexing table\n");
+		msg_error("failed to create resource indexing table\n");
 		exit (-1);
 	}
 

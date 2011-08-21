@@ -77,6 +77,11 @@ the path is stripped, leaving only file name.
 Keep the resolved address data from the input file. By default
 the resolved data from the input file are discared and the
 addresses are always resolved again.
+.TP
+\fI--quiet\fP (\fI-q\fP)
+Suppress warning messages. Note that command line parsing warnings
+are not suppressed for options specified before this option.
+
 .SH EXAMPLES
 .TP
 sp-rtrace-resolve -i 1235.rtrace.text > 1235.rtrace.resolved

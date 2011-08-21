@@ -39,6 +39,7 @@
 #include "resolver.h"
 #include "sp_rtrace_resolve.h"
 #include "common/utils.h"
+#include "common/msg.h"
 #include "namecache.h"
 
 #define DMGL_PARAMS  (1 << 0) /* Include function args */
@@ -128,14 +129,14 @@ static int rs_mmap_is_absolute(const char* path)
 	int i, is_absolute = 1;
 
 	if (!(file = fopen(path, "r"))) {
-//		fprintf(stderr, "WARNING: could not open file %s\n", path);
+//		msg_warning("could not open file %s\n", path);
 		return -ENOENT;
 	}
 
 	/* read ELF header */
 	ret = fread(&elf_header, sizeof(elf_header), 1, file);
 	if (ret != 1) {
-		fprintf(stderr, "ERROR: invalid ELF header from %s\n", path);
+		msg_error("invalid ELF header from %s\n", path);
 		return -EINVAL;
 	}
 
@@ -147,7 +148,7 @@ static int rs_mmap_is_absolute(const char* path)
 	ret = fread(program_header, sizeof(Elf_Phdr_t), elf_header.e_phnum, file);
 	if (ret != elf_header.e_phnum) {
 		free(program_header);
-		fprintf(stderr, "ERROR: could not read program header table from %s\n", path);
+		msg_error("could not read program header table from %s\n", path);
 		return -EINVAL;
 	}
 
@@ -408,14 +409,14 @@ static int rs_open_file(rs_cache_record_t* rec, const char* filename)
 	rec->file = bfd_openr(filename, TARGET);
 
 	if (rec->file == NULL) {
-		fprintf(stderr, "ERROR: %s: %s\n", filename, bfd_errmsg(bfd_get_error()));
+		msg_error("%s: %s\n", filename, bfd_errmsg(bfd_get_error()));
 		return -EINVAL;
 	}
 
 	if (!bfd_check_format (rec->file, bfd_object)) {
 		bfd_close(rec->file);
 		rec->file = NULL;
-		fprintf(stderr, "ERROR: file %s not in executable format\n", filename);
+		msg_error("file %s not in executable format\n", filename);
 		return -EINVAL;
 	}
 	return 0;
@@ -453,7 +454,7 @@ static int rs_load_symbols(rs_cache_record_t* rec, const char* filename)
 		}
 		/* read the symbol table from opened file */
 		if ((bfd_get_file_flags (rec->file) & HAS_SYMS) == 0) {
-			fprintf(stderr, "ERROR: no symbols in %s\n", bfd_get_filename(rec->file));
+			msg_error("no symbols in %s\n", bfd_get_filename(rec->file));
 			return -EINVAL;
 		}
 
@@ -497,7 +498,7 @@ static int rs_load_symbols(rs_cache_record_t* rec, const char* filename)
 	}
 
 	if (symcount < 0) {
-		fprintf(stderr, "ERROR: %s: %s\n", bfd_get_filename(rec->file), bfd_errmsg(bfd_get_error()));
+		msg_error("%s: %s\n", bfd_get_filename(rec->file), bfd_errmsg(bfd_get_error()));
 		return -EINVAL;
 	}
 	rec->symcount = symcount;

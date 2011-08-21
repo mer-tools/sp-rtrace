@@ -32,6 +32,7 @@
 
 #include "sp_rtrace_postproc.h"
 #include "common/sp_rtrace_proto.h"
+#include "common/msg.h"
 #include "library/sp_rtrace_defs.h"
 
 #include "parse_binary.h"
@@ -346,7 +347,7 @@ static int read_generic_packet(rd_t* rd, const char* data, int size)
 			 * It might be possible that multiple data files are streamed into
 			 * post-processor. In this case simply stop parsing the new packets
 			 * and process the received data  */
-			fprintf(stderr, "WARNING: handshake packet received in the middle of data stream\n");
+			msg_warning("handshake packet received in the middle of data stream\n");
 			return PACKET_UNKNOWN;
 		}
 		//LOG("type=%c%c%c%c, size=%d", data[0], data[1], data[2], data[3], len);
@@ -393,7 +394,7 @@ static int read_generic_packet(rd_t* rd, const char* data, int size)
 				rd_fcall_set_ftrace(rd, fcall_prev, trace);
 			}
 			else {
-				fprintf(stderr, "WARNING: a backtrace packet did not follow function call/function argument packet\n");
+				msg_warning("a backtrace packet did not follow function call/function argument packet\n");
 			}
 		    fcall_prev = NULL;
             break;
@@ -403,7 +404,7 @@ static int read_generic_packet(rd_t* rd, const char* data, int size)
 				fcall_prev->args = read_packet_FA(rd->hshake, data);
 			}
 			else {
-				fprintf(stderr, "WARNING: a function argument packet did not follow function call packet\n");
+				msg_warning("a function argument packet did not follow function call packet\n");
 			}
 			break;
 		}
@@ -431,7 +432,7 @@ static int read_generic_packet(rd_t* rd, const char* data, int size)
 		}
 
 		default:
-			fprintf(stderr, "WARNING: Unknown packet: %x (len=%d)\n", type, len);
+			msg_warning("unknown packet: %x (len=%d)\n", type, len);
 		    fcall_prev = NULL;
 			return PACKET_UNKNOWN;
 	}
@@ -463,20 +464,20 @@ static void read_binary_data(rd_t* rd, int fd)
 		 * and it's the first packet written into pipe. So in
 		 * theory it can't be fragmented.
 		 */
-		fprintf(stderr, "ERROR: handshaking packet processing failed\n");
+		msg_error("handshaking packet processing failed\n");
 		exit (-1);
 	}
 	/* check for architecture compatibility */
 	short endian = 0x0100;
 	char endianness = *(char*)&endian;
 	if (rd->hshake->endianness != endianness || sizeof(pointer_t) != rd->hshake->pointer_size) {
-		fprintf(stderr, "ERROR: unsupported architecture: endianess(%d:%d), pointer size(%d:%d)\n",
+		msg_error("unsupported architecture: endianess(%d:%d), pointer size(%d:%d)\n",
 				rd->hshake->endianness, endianness, rd->hshake->pointer_size, (int)sizeof(pointer_t));
 		fprintf(stderr, "This could happen when text file is being processed without correct format option.\n");
 	    exit (-1);
 	}
 	if (strcmp(rd->hshake->arch, BUILD_ARCH)) {
-		fprintf(stderr, "ERROR: unsupported architecture: %s (expected %s)\n",
+		msg_error("unsupported architecture: %s (expected %s)\n",
 				rd->hshake->arch, BUILD_ARCH);
 	    exit (-1);
 	}
