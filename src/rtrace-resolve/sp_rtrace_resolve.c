@@ -58,6 +58,7 @@
 
 #include "common/utils.h"
 #include "common/rtrace_data.h"
+#include "common/msg.h"
 #include "library/sp_rtrace_defs.h"
 #include "common/header.h"
 #include "library/sp_rtrace_formatter.h"
@@ -164,13 +165,13 @@ static const char* parse_mmap_record(const char* line, rs_cache_t* rs)
 			sprintf(path, "rtrace.in.%s", ptr);
 			mmap->fin = fopen(path, "w+");
 			if (mmap->fin == NULL) {
-				fprintf(stderr, "ERROR: failed to create module address file %s\n", path);
+				msg_error("failed to create module address file %s\n", path);
 				exit(-1);
 			}
 			sprintf(path, "rtrace.out.%s", ptr);
 			mmap->fout = fopen(path, "w+");
 			if (mmap->fout == NULL) {
-				fprintf(stderr, "ERROR: failed to create module address file %s\n", path);
+				msg_error("failed to create module address file %s\n", path);
 				exit(-1);
 			}
 		}
@@ -195,7 +196,7 @@ static void parse_index_record(char* line, rs_cache_t* rs)
 		rs_mmap_t* mmap = rs->mmaps_index[index];
 		if (fgets(line, PATH_MAX, mmap->fout) == 0) {
 			fputs(line, stderr);
-			fprintf(stderr, "ERROR: multi-pass resolving failed, unexpected eof "
+			msg_error("multi-pass resolving failed, unexpected eof "
 							" of %s resolved data\n", mmap->module);
 			exit(-1);
 		}
@@ -238,12 +239,12 @@ static void mmap_resolve_address_file(rs_mmap_t* mmap, rs_cache_t* rs)
 		char resolved_name[PATH_MAX] = "";
 		int n = sscanf(line, "\t0x%lx (%[^\n]",  &address, resolved_name);
 		if (n < 1) {
-				fprintf(stderr, "WARNING: unexpected string in module address file: %s", line);
+				msg_warning("unexpected string in module address file: %s", line);
 		}
 		else {
 			if (n == 2) resolved_name[strlen(resolved_name) - 1] = '\0';
 			if (fputs(rs_resolve_address(rs, address, resolved_name), mmap->fout) == EOF) {
-				fprintf(stderr, "ERROR: while writing resolved data to index file (%s)\n", strerror(errno));
+				msg_error("while writing resolved data to index file (%s)\n", strerror(errno));
 				exit (-1);
 			}
 		}
@@ -287,7 +288,7 @@ static void do_resolve(FILE *fpin, FILE *fpout)
     if (resolve_options.mode & MODE_MULTI_PASS) {
 		FILE* findex = fopen("rtrace.index", "w+");
 		if (!findex) {
-			fprintf(stderr, "ERROR: failed to create multi-pass index file\n");
+			msg_error("failed to create multi-pass index file\n");
 			exit(-1);
 		}
 		/* 1. step - index the input stream */
@@ -300,7 +301,7 @@ static void do_resolve(FILE *fpin, FILE *fpout)
 				/* backtrace record with memory mapping, index it */
 				if (index >= 0) {
 					if (fprintf(findex, "^%d\n", index) == 0) {
-						fprintf(stderr, "ERROR: while writing index data to file (%s)\n", strerror(errno));
+						msg_error("while writing index data to file (%s)\n", strerror(errno));
 						exit (-1);
 					}
 					continue;
@@ -320,7 +321,7 @@ static void do_resolve(FILE *fpin, FILE *fpout)
 			if (resolver_abort) return;
 			parse_index_record(line, &rs);
 			if (fputs(line, fpout) == EOF) {
-				fprintf(stderr, "ERROR: while writing assembled data to file (%s)\n", strerror(errno));
+				msg_error("while writing assembled data to file (%s)\n", strerror(errno));
 				exit (-1);
 			}
 		}
@@ -338,7 +339,7 @@ static void do_resolve(FILE *fpin, FILE *fpout)
 			if (!pout) pout = parse_backtrace_record(line, &rs);
 			if (!pout) pout = line;
 			if (fputs(pout, fpout) == EOF) {
-				fprintf(stderr, "ERROR: while writing resolved data to file (%s)\n", strerror(errno));
+				msg_error("while writing resolved data to file (%s)\n", strerror(errno));
 				exit (-1);
 			}
 		}
@@ -359,7 +360,7 @@ static void read_header(FILE* fpin, FILE* fpout)
 {
 	char line[4096];
 	if (fgets(line, sizeof(line), fpin) == NULL) {
-		fprintf(stderr, "ERROR: while reading input stream (%s)\n", strerror(errno));
+		msg_error("while reading input stream (%s)\n", strerror(errno));
 		exit (-1);
 	}
 	sp_rtrace_header_t header;
@@ -367,7 +368,7 @@ static void read_header(FILE* fpin, FILE* fpout)
 	
 	/* check source stream architecture */
 	if (header.fields[SP_RTRACE_HEADER_ARCH] && strcmp(header.fields[SP_RTRACE_HEADER_ARCH], BUILD_ARCH)) {
-		fprintf(stderr, "ERROR: unsupported architecture: %s (expected %s)\n",
+		msg_error("unsupported architecture: %s (expected %s)\n",
 				header.fields[SP_RTRACE_HEADER_ARCH], BUILD_ARCH);
 	    exit (-1);
 	}
@@ -393,7 +394,7 @@ static void resolve()
 	if (resolve_options.input_file) {
 		fpin = fopen(resolve_options.input_file, "r");
 		if (fpin == NULL) {
-			fprintf(stderr, "ERROR: Failed to open input file %s (%s)\n",
+			msg_error("failed to open input file %s (%s)\n",
 					resolve_options.input_file, strerror(errno));
 			exit (-1);
 		}
@@ -401,7 +402,7 @@ static void resolve()
 	if (resolve_options.output_file) {
 		fpout = fopen(resolve_options.output_file, "w");
 		if (fpout == NULL) {
-			fprintf(stderr, "ERROR: Failed to open input file %s (%s)\n",
+			msg_error("failed to open input file %s (%s)\n",
 					resolve_options.input_file, strerror(errno));
 			exit (-1);
 		}
@@ -410,7 +411,7 @@ static void resolve()
     /* initialize BFD library */
     bfd_init();
     if (namecache_alloc() != 0) {
-    	fprintf(stderr, "ERROR: failed to allocate resolved name cache\n");
+    	msg_error("failed to allocate resolved name cache\n");
     	exit (-1);
     }
 
@@ -444,7 +445,7 @@ int main(int argc, char* argv[])
 	struct sigaction sa = {.sa_flags = 0, .sa_handler = sigint_handler};
 	sigemptyset(&sa.sa_mask);
 	if (sigaction(SIGINT, &sa, NULL) == -1) {
-		fprintf(stderr, "ERROR: Failed to install SIGINT handler\n");
+		msg_error("failed to install SIGINT handler\n");
 		return -1;
 	}
 	/* command line options */
@@ -456,13 +457,14 @@ int main(int argc, char* argv[])
 			 {"help", 0, 0, 'h'},
 			 {"full-path", 0, 0, 'p'},
 			 {"keep-resolved", 0, 0, 'k'},
+			 {"quiet", 0, 0, 'q'},
 			 {0, 0, 0, 0},
 	};
 	/* parse command line options */
 	int opt;
 	opterr = 0;
 
-	while ( (opt = getopt_long(argc, argv, "i:o:hm:pkt:", long_options, NULL)) != -1) {
+	while ( (opt = getopt_long(argc, argv, "i:o:hm:pkt:q", long_options, NULL)) != -1) {
 		switch(opt) {
 		case 'h':
 			display_usage();
@@ -470,7 +472,7 @@ int main(int argc, char* argv[])
 
 		case 'i':
 			if (resolve_options.input_file) {
-				fprintf(stderr, "WARNING: Overriding previously given option: -i %s\n", resolve_options.input_file);
+				msg_warning("overriding previously given option: -i %s\n", resolve_options.input_file);
 				free(resolve_options.input_file);
 			}
 			resolve_options.input_file = strdup_a(optarg);
@@ -478,7 +480,7 @@ int main(int argc, char* argv[])
 
 		case 'o':
 			if (resolve_options.output_file) {
-				fprintf(stderr, "WARNING: Overriding previously given option: -o %s\n", resolve_options.output_file);
+				msg_warning("overriding previously given option: -o %s\n", resolve_options.output_file);
 				free(resolve_options.output_file);
 			}
 			resolve_options.output_file = strdup_a(optarg);
@@ -486,25 +488,25 @@ int main(int argc, char* argv[])
 
 		case 'm':
 			if ((resolve_options.mode & MODE_OPERATION_MASK) != MODE_FULL_CACHE) {
-				fprintf(stderr, "WARNING: Overriding previously given operation mode option (-m <mode>)\n");
+				msg_warning("overriding previously given operation mode option (-m <mode>)\n");
 			}
 			if (!strcmp(optarg, "multi-pass")) resolve_options.mode = (resolve_options.mode & (~MODE_OPERATION_MASK)) | MODE_MULTI_PASS;
 			else if (!strcmp(optarg, "single-cache")) resolve_options.mode = (resolve_options.mode & (~MODE_OPERATION_MASK)) | MODE_SINGLE_CACHE;
 			else {
-				fprintf(stderr, "ERROR: Unknown operation mode: %s\n", optarg);
+				msg_error("unknown operation mode: %s\n", optarg);
 				exit(-1);
 			}
 			break;
 
 		case 't':
 			if ((resolve_options.mode & MODE_METHOD_MASK) != (MODE_BFD | MODE_ELF)) {
-				fprintf(stderr, "WARNING: Overriding previously given resolving method option (-t <method>)\n");
+				msg_warning("overriding previously given resolving method option (-t <method>)\n");
 			}
 
 			if (!strcmp(optarg, "elf")) resolve_options.mode = (resolve_options.mode & (~MODE_METHOD_MASK)) | MODE_ELF;
 			else if (!strcmp(optarg, "bfd")) resolve_options.mode = (resolve_options.mode & (~MODE_METHOD_MASK)) | MODE_BFD;
 			else {
-				fprintf(stderr, "ERROR: Unknown resolving method: %s\n", optarg);
+				msg_error("unknown resolving method: %s\n", optarg);
 				exit(-1);
 			}
 			break;
@@ -517,14 +519,18 @@ int main(int argc, char* argv[])
 			resolve_options.keep_resolved = true;
 			break;
 
+		case 'q':
+			msg_set_verbosity(MSG_ERROR);
+			break;
+
 		case '?':
-			fprintf(stderr, "ERROR: Unknown sp-resolve option: %c\n", optopt);
+			msg_error("unknown sp-resolve option: %c\n", optopt);
 			display_usage();
 			exit (-1);
 		}
 	}
 	if (optind < argc) {
-		fprintf(stderr, "ERROR: Unknown sp-rtrace-resolve argument: %s\n", argv[optind]);
+		msg_error("unknown sp-rtrace-resolve argument: %s\n", argv[optind]);
 		display_usage();
 		exit(-1);
 	}

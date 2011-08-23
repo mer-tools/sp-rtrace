@@ -51,6 +51,7 @@ struct option rtrace_long_opt[] = {
 		 {"backtrace-all", 0, 0, 'A'},
 		 {"libunwind", 0, 0, 'u'},
 		 {"monitor", 1, 0, 'M'},
+		 {"quiet", 0, 0, 'q'},
 		 {0, 0, 0, 0}
 };
 
@@ -163,7 +164,7 @@ char *rtrace_env_opt[] = {
 };
 
 /* sp_rtrace short option list */
-char* rtrace_short_opt = "+i:o:me:st:fb:TAP:S:Bhx:lLFuM:";
+char* rtrace_short_opt = "+i:o:me:st:fb:TAP:S:Bhx:lLFuM:q";
 
 void rtrace_args_add_opt(rtrace_args_t* args, char opt, const char* value)
 {

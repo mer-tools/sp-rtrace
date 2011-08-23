@@ -33,6 +33,7 @@
 #include "sp_rtrace_postproc.h"
 
 #include "common/header.h"
+#include "common/msg.h"
 
 #include "library/sp_rtrace_formatter.h"
 

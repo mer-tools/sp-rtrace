@@ -22,6 +22,7 @@ libsp_rtrace_main_la_SOURCES = modules/sp_rtrace_main.c rtrace/rtrace_env.c comm
 libsp_rtrace_main_la_LDFLAGS = $(VERSION_INFO)
 libsp_rtrace_main_la_CFLAGS = -rdynamic $(AM_CFLAGS)
 libsp_rtrace_main_la_LIBADD = -lrt -ldl -lpthread -lsp-rtrace1
+sp_rtrace_main.$(OBJEXT): libsp-rtrace1.a
 
 libsp_rtrace_memory_la_SOURCES = modules/sp_rtrace_memory.c
 libsp_rtrace_memory_la_CFLAGS = -rdynamic $(AM_CFLAGS)
@@ -67,24 +68,28 @@ libsp_rtrace_pagemap_la_LIBADD =  -lpthread
 bin_PROGRAMS = sp-rtrace sp-rtrace-postproc sp-rtrace-resolve sp-rtrace-allocmap sp-rtrace-timeline
 
 sp_rtrace_SOURCES = rtrace/sp_rtrace.c rtrace/listener.c rtrace/rtrace_env.c common/utils.c \
-	common/dlist.c common/rtrace_data.c common/htable.c 
+	common/dlist.c common/rtrace_data.c common/htable.c common/msg.c
 sp_rtrace_CFLAGS = $(AM_CFLAGS)
 sp_rtrace_LDFLAGS = -Wl,-z,defs
 sp_rtrace_LDADD = -ldl
 
 sp_rtrace_postproc_SOURCES = rtrace-postproc/sp_rtrace_postproc.c rtrace-postproc/parse_binary.c \
     rtrace-postproc/parse_text.c rtrace-postproc/leaks_sort.c rtrace-postproc/writer.c rtrace-postproc/filter.c \
-    common/rtrace_data.c common/htable.c common/dlist.c common/utils.c common/header.c
+    common/rtrace_data.c common/htable.c common/dlist.c common/utils.c common/header.c common/msg.c
 sp_rtrace_postproc_CFLAGS = $(AM_CFLAGS)
 sp_rtrace_postproc_LDFLAGS = -Wl,-z,defs
 sp_rtrace_postproc_LDADD = -lsp-rtrace1
+sp_rtrace_postproc.$(OBJEXT): libsp-rtrace1.a
+
 
 sp_rtrace_resolve_SOURCES = rtrace-resolve/sp_rtrace_resolve.c common/utils.c common/rtrace_data.c common/dlist.c \
-	rtrace-resolve/sarray.c common/htable.c rtrace-resolve/namecache.c rtrace-resolve/resolver.c common/header.c
+	rtrace-resolve/sarray.c common/htable.c rtrace-resolve/namecache.c rtrace-resolve/resolver.c common/header.c \
+	common/msg.c
 	
 sp_rtrace_resolve_CFLAGS = $(AM_CFLAGS)
 sp_rtrace_resolve_LDFLAGS = -Wl,-z,defs
 sp_rtrace_resolve_LDADD = -lbfd -lsp-rtrace1
+sp_rtrace_resolve.$(OBJEXT): libsp-rtrace1.a
 
 sp_rtrace_allocmap_SOURCES = rtrace-allocmap/sp_rtrace_allocmap.c
 sp_rtrace_allocmap_CFLAGS = $(AM_CFLAGS)
@@ -106,6 +111,7 @@ sp_rtrace_timeline_SOURCES = /timeline.h rtrace-timeline/timeline.cpp rtrace-tim
 sp_rtrace_timeline_CXXFLAGS = $(AM_CXXFLAGS)
 sp_rtrace_timeline_LDFLAGS = -Wl,-z,defs
 sp_rtrace_timeline_LDADD = -lsp-rtrace1
+sp_rtrace_timeline.$(OBJEXT): libsp-rtrace1.a
 
 
 bin_PROGRAMS += sp-rtrace-pagemap
@@ -125,6 +131,7 @@ sp_rtrace_pagemap_CFLAGS = $(AM_CFLAGS)
 sp_rtrace_pagemap_CXXFLAGS = $(AM_CXXFLAGS)
 sp_rtrace_pagemap_LDFLAGS = -Wl,-z,defs
 sp_rtrace_pagemap_LDADD = -lsp-rtrace1
+sp_rtrace_pagemap.$(OBJEXT): libsp-rtrace1.a
 
 
 DISTCLEANFILES = Makefile.in *la 

@@ -46,6 +46,7 @@
 #include "common/utils.h"
 #include "common/sp_rtrace_proto.h"
 #include "common/debug_log.h"
+#include "common/msg.h"
 
 /* the read buffer size */
 #define BUFFER_SIZE			4096
@@ -74,7 +75,7 @@ int flush_data()
 	int size = output_buffer_head - output_buffer;
 	if (fd_out > 0 && size) {
 		if (write(fd_out, output_buffer, size) < 0) {
-			fprintf(stderr, "ERROR: failed to write to file/post-processor pipe (%s)\n",
+			msg_error("failed to write to file/post-processor pipe (%s)\n",
 					strerror(errno));
 			return -1;
 		}
@@ -293,11 +294,11 @@ static int process_packet(const char* data, size_t size)
 		}
 		struct stat file_stat;
 		if (stat(path, &file_stat) == -1) {
-			fprintf(stderr, "WARNING: Failed to stat attached file %s: %s\n", path, strerror(errno));
+			msg_warning("failed to stat attached file %s: %s\n", path, strerror(errno));
 		}
 		else {
 			if (file_stat.st_size == 0) {
-				fprintf(stderr, "WARNING: The attached file %s has zero size\n", path);
+				msg_warning("the attached file %s has zero size\n", path);
 			}
 		}
 	}
@@ -318,12 +319,12 @@ int process_data()
 	/* read and process the handshake packet */
 	n = read(fd_in, buffer, BUFFER_SIZE - 1);
 	if (n < 1) {
-	    fprintf(stderr, "ERROR: failed to read data from pipe\n");
+	    msg_error("failed to read data from pipe\n");
 	    return -1;
 	}
 	offset = process_handshake(ptr_in, n);
 	if (offset <= 0) {
-		fprintf(stderr, "ERROR: handshaking packet processing failed\n");
+		msg_error("handshaking packet processing failed\n");
 		return -1;
 	}
 	n -= offset;
@@ -347,7 +348,7 @@ int process_data()
 			break;
 		}
 		if (rtrace_stop_requests >= REQUEST_STOP) {
-			fprintf(stderr, "WARNING: Trace was forced to abort before all of data was retrieved.\n");
+			msg_warning("trace was forced to abort before all of data was retrieved.\n");
 			break;
 		}
 		if (nbytes == -1 && errno == EINTR) {

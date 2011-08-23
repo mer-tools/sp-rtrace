@@ -53,6 +53,10 @@ tracing upon receiving this signal.
 
 By default SIGUSR1 is used, but it can be changed if it interferes with
 the target process signal handling.
+.TP
+\fI--quiet\fP (\fI-q\fP)
+Suppress warning messages. Note that command line parsing warnings
+are not suppressed for options specified before this option.
 .SS Process launching options:
 .TP
 \fI--start\fP (\fI-s\fP)
@@ -161,6 +165,7 @@ P memtransfer      1.0  Memory transfer tracing module. Tracks calls of the
                         functions that results in changing memory blocks (
                         strcpy, memmove, memset etc).
 .fi
+
 .SH SEE ALSO
 .IR sp-rtrace-postproc (1),
 .IR sp-rtrace-resolve (1)

@@ -29,6 +29,7 @@
 #include "common/sp_rtrace_proto.h"
 #include "library/sp_rtrace_defs.h"
 #include "common/header.h"
+#include "common/msg.h"
 #include "sp_rtrace_postproc.h"
 #include "library/sp_rtrace_formatter.h"
 #include "library/sp_rtrace_parser.h"
@@ -226,7 +227,7 @@ static void read_text_data(rd_t* rd, FILE* fp)
 				}
 			}
 			else {
-				fprintf(stderr, "WARNING: found a backtrace record without preceding function call record\n");
+				msg_warning("found a backtrace record without preceding function call record\n");
 			}
 			continue;
 		}
@@ -240,7 +241,7 @@ static void read_text_data(rd_t* rd, FILE* fp)
 				}
 			}
 			else {
-				fprintf(stderr, "WARNING: found a function argument record without preceding function call record\n");
+				msg_warning("found a function argument record without preceding function call record\n");
 			}
 			continue;
 		}
@@ -341,7 +342,7 @@ static void read_text_data(rd_t* rd, FILE* fp)
 
 		if (rec_type == SP_RTRACE_RECORD_COMMENT) {
 			if (*line != '#') {
-				fprintf(stderr, "WARNING, unrecognized record, assuming it's a comment: %s", line);
+				msg_warning("unrecognized record, assuming it's a comment: %s", line);
 			}
 			rd_comment_t* comment = dlist_create_node(sizeof(rd_comment_t));
 			comment->index = comment_index;

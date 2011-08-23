@@ -42,6 +42,7 @@
 #include "common/sp_rtrace_proto.h"
 #include "common/rtrace_data.h"
 #include "common/utils.h"
+#include "common/msg.h"
 
 #include "rtrace_common.h"
 
@@ -115,6 +116,7 @@ static void display_usage()
 			"  --exclude <file> - specify events to exclude from report.\n"
 			"                     For include/exclude options the events are stored in a\n"
 			"                     text file, each line containing event index.\n"
+			"  -q               - hide warning messages.\n"
 			"  -h               - this help page.\n"
 	);
 }
@@ -124,13 +126,13 @@ static FILE* start_resolver(char* filename)
 {
 	int fds[2];
 	if (pipe(fds) != 0) {
-		fprintf(stderr, "ERROR: failed to create resolver pipe\n");
+		msg_error("failed to create resolver pipe\n");
 		exit (-1);
 	}
 
 	postproc_options.pid_resolve = fork();
 	if (postproc_options.pid_resolve == -1) {
-		fprintf(stderr, "ERROR: failed to fork resolver process\n");
+		msg_error("failed to fork resolver process\n");
 		exit (-1);
 	}
 	if (postproc_options.pid_resolve == 0) {
@@ -139,7 +141,7 @@ static FILE* start_resolver(char* filename)
 		dup2(fds[0], STDIN_FILENO);
 
 		execvp(SP_RTRACE_RESOLVER, args);
-		fprintf(stderr, "ERROR: failed to execute resolver process %s (%s)\n", SP_RTRACE_RESOLVER, strerror(errno));
+		msg_error("failed to execute resolver process %s (%s)\n", SP_RTRACE_RESOLVER, strerror(errno));
 	}
 	close(fds[0]);
 	return fdopen(fds[1], "w");
@@ -161,7 +163,7 @@ static void write_rtrace_log(rd_t* rd)
 	if (postproc_options.output_dir) {
 		char path[PATH_MAX];
 		if (get_log_filename(rd->pinfo->pid, postproc_options.output_dir, SP_RTRACE_TEXT_FILE_PATTERN, path, sizeof(path)) != 0) {
-			fprintf(stderr, "ERROR: failed to make new log file name for directory %s\n", postproc_options.output_dir);
+			msg_error("failed to make new log file name for directory %s\n", postproc_options.output_dir);
 			exit (-1);
 		}
 		output_file = path;
@@ -169,7 +171,7 @@ static void write_rtrace_log(rd_t* rd)
 	if (postproc_options.resolve) {
 		fp = start_resolver(output_file);
 		if (fp == NULL) {
-			fprintf(stderr, "ERROR: failed to get resolver pipe\n");
+			msg_error("failed to get resolver pipe\n");
 			exit (-1);
 		}
 	}
@@ -177,7 +179,7 @@ static void write_rtrace_log(rd_t* rd)
 		if (output_file) {
 			fp = fopen(output_file, "w");
 			if (fp == NULL) {
-				fprintf(stderr, "ERROR: failed to create log file %s\n", output_file);
+				msg_error("failed to create log file %s\n", output_file);
 				exit (-1);
 			}
 			printf("INFO: Created text log file %s\n", output_file);
@@ -238,7 +240,7 @@ int main(int argc, char* argv[])
 	struct sigaction sa = {.sa_flags = 0, .sa_handler = sigint_handler};
 	sigemptyset(&sa.sa_mask);
 	if (sigaction(SIGINT, &sa, NULL) == -1) {
-		fprintf(stderr, "ERROR: Failed to install SIGINT handler\n");
+		msg_error("failed to install SIGINT handler\n");
 		return -1;
 	}
 
@@ -258,13 +260,14 @@ int main(int argc, char* argv[])
 			 {"backtrace-depth", 1, 0, 'b'},
 			 {"include", 1, 0, 'I'},
 			 {"exclude", 1, 0, 'X'},
+			 {"quiet", 0, 0, 'q'},
 			 {0, 0, 0, 0}
 	};
 	/* parse command line options */
 	int opt;
 	opterr = 0;
 	
-	while ( (opt = getopt_long(argc, argv, "i:o:tcs:ahrlC:R:b:", long_options, NULL)) != -1) {
+	while ( (opt = getopt_long(argc, argv, "i:o:tcs:ahrlC:R:b:q", long_options, NULL)) != -1) {
 		switch(opt) {
 		case 'h':
 			display_usage();
@@ -272,7 +275,7 @@ int main(int argc, char* argv[])
 
 		case 'i':
 			if (postproc_options.input_file) {
-				fprintf(stderr, "WARNING: Overriding previously given option: -i %s\n", postproc_options.input_file);
+				msg_warning("overriding previously given option: -i %s\n", postproc_options.input_file);
 				free(postproc_options.input_file);
 			}
 			postproc_options.input_file = strdup_a(optarg);
@@ -281,7 +284,7 @@ int main(int argc, char* argv[])
 		case 'o':
 			if (strcmp(optarg, "stdout")) {
 				if (postproc_options.output_dir) {
-					fprintf(stderr, "WARNING: Overriding previously given option: -o %s\n", postproc_options.output_dir);
+					msg_warning("overriding previously given option: -o %s\n", postproc_options.output_dir);
 					free(postproc_options.output_dir);
 				}
 				postproc_options.output_dir = strdup_a(optarg);
@@ -302,14 +305,14 @@ int main(int argc, char* argv[])
 
 		case 'b':
 			if (postproc_options.backtrace_depth != -1) {
-				fprintf(stderr, "WARNING: Overriding previously given option: -b %d\n", postproc_options.backtrace_depth);
+				msg_warning("overriding previously given option: -b %d\n", postproc_options.backtrace_depth);
 			}
 			postproc_options.backtrace_depth = atoi(optarg);
 			break;
 			
 		case 's':
 			if (postproc_options.compare_leaks) {
-				fprintf(stderr, "WARNING: Overriding previously given sort option (-s <order>)\n");
+				msg_warning("overriding previously given sort option (-s <order>)\n");
 			}
 			if (!strcmp(optarg, "size"))
 				postproc_options.compare_leaks = (op_binary_t)leaks_compare_by_size_desc;
@@ -327,27 +330,27 @@ int main(int argc, char* argv[])
 
 		case 'C':
 			if (postproc_options.filter_context != -1) {
-				fprintf(stderr, "WARNING: Overriding previously given option: -C %x\n", postproc_options.filter_context);
+				msg_warning("overriding previously given option: -C %x\n", postproc_options.filter_context);
 			}
 			if (sscanf(optarg, "%x", &postproc_options.filter_context) != 1) {
-				fprintf(stderr, "ERROR: invalid context mask: %s\n", optarg);
+				msg_error("invalid context mask: %s\n", optarg);
 				exit (-1);
 			}
 			break;
 
 		case 'R':
 			if (postproc_options.filter_resource) {
-				fprintf(stderr, "WARNING: Overriding previously given option: -R %x\n", postproc_options.filter_resource);
+				msg_warning("overriding previously given option: -R %x\n", postproc_options.filter_resource);
 			}
 			if (sscanf(optarg, "%x", &postproc_options.filter_resource) != 1) {
-				fprintf(stderr, "ERROR: invalid resource type mask: %s\n", optarg);
+				msg_error("invalid resource type mask: %s\n", optarg);
 				exit (-1);
 			}
 			break;
 			
 		case 'I':
 			if (postproc_options.exclude_file) {
-				fprintf(stderr, "WARNING: include option overrides already specified exclude option\n");
+				msg_warning("include option overrides already specified exclude option\n");
 				free(postproc_options.exclude_file);
 				postproc_options.exclude_file = NULL;
 			}
@@ -356,15 +359,19 @@ int main(int argc, char* argv[])
 
 		case 'X':
 			if (postproc_options.include_file) {
-				fprintf(stderr, "WARNING: exclude option is ignored beacuse of already specified include option\n");
+				msg_warning("exclude option is ignored beacuse of already specified include option\n");
 			}
 			else {
 				postproc_options.exclude_file = strdup_a(optarg);
 			}
 			break;
 
+		case 'q':
+			msg_set_verbosity(MSG_ERROR);
+			break;
+
 		case '?':
-			fprintf(stderr, "ERROR: Unknown sp-rtrace-postproc option: %c\n", optopt);
+			msg_error("unknown sp-rtrace-postproc option: %c\n", optopt);
 			display_usage();
 			exit (-1);
 		
@@ -373,13 +380,13 @@ int main(int argc, char* argv[])
 		}
 	}
 	if (optind < argc) {
-		fprintf(stderr, "ERROR: Unknown sp-rtrace-postproc argument: %s\n", argv[optind]);
+		msg_error("unknown sp-rtrace-postproc argument: %s\n", argv[optind]);
 		display_usage();
 		exit(-1);
 	}
 	rd_t* rd = rd_create();
 	if (rd == NULL) {
-		fprintf(stderr, "ERROR: Failed to create rtrace data container\n");
+		msg_error("failed to create rtrace data container\n");
 		exit (-1);
 	}
 
@@ -389,7 +396,7 @@ int main(int argc, char* argv[])
 			postproc_options.compare_leaks = (op_binary_t)leaks_compare_by_size_asc;
 	}
 	else if (postproc_options.compare_leaks) {
-		fprintf(stderr, "ERROR: --sort option should be used with --filter-leaks and "
+		msg_error("--sort option should be used with --filter-leaks and "
 					"--compress options.\n");
 		exit (-1);
 	}
@@ -401,14 +408,14 @@ int main(int argc, char* argv[])
 	if (postproc_options.input_file) {
 		fd = open(postproc_options.input_file, O_RDONLY);
 		if (fd == -1) {
-			fprintf(stderr, "ERROR: Failed to open input file %s (%s)\n",
+			msg_error("failed to open input file %s (%s)\n",
 					postproc_options.input_file, strerror(errno));
 			exit (-1);
 		}
 	}
 	unsigned char proto_id;
 	if (read(fd, &proto_id, 1) != 1) {
-		fprintf(stderr, "ERROR: Failed to read identification byte from the input stream.\n");
+		msg_error("failed to read identification byte from the input stream.\n");
 		exit (-1);
 	}
 	if (proto_id == SP_RTRACE_PROTO_HS_ID) {
@@ -417,7 +424,7 @@ int main(int argc, char* argv[])
 	else {
 		FILE* fp = fdopen(fd, "r");
 		if (!fp) {
-			fprintf(stderr, "ERROR: Failed to reopen input stream.\n");
+			msg_error("failed to reopen input stream.\n");
 			exit (-1);
 		}
 		ungetc(proto_id, fp);
@@ -425,7 +432,7 @@ int main(int argc, char* argv[])
 	}
 
 	if (!rd->pinfo) {
-		fprintf(stderr, "ERROR: failed to parse log header.\n");
+		msg_error("failed to parse log header.\n");
 		exit (-1);
 	}
 
