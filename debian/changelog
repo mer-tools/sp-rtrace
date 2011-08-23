@@ -1,3 +1,9 @@
+sp-rtrace (1.8.1-1) unstable; urgency=low
+
+  * Fixes: NB#278409 - sp-rtrace trace toggling is not working as expected
+
+ -- Tommi Rantala <ext-tommi.1.rantala@nokia.com>  Tue, 23 Aug 2011 14:42:33 +0300
+
 sp-rtrace (1.8-2) unstable; urgency=low
 
   * Fixes: NB#277216 - [SDK] Use consistent option names for functracer &
