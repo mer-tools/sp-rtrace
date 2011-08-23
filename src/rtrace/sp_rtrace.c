@@ -828,6 +828,31 @@ static void list_modules()
 }
 
 /**
+ * Translates signal name (SIG???) into its value in string format.
+ *
+ * This function allocates string to store the result, which
+ * should be freed by the caller afterwards.
+ * Numeric names are treated as already translated signal values.
+ * For example passing "SIGUSR2" allocates and returns string "12".
+ * Passing "11" allocates and returns string "11".
+ * If unrecognized name is specified, the default signal value "10"
+ * (SIGUSR1) is returned.
+ * @param name   the signal name.
+ * @return       the signal value.
+ */
+static char* translate_signal(const char* name)
+{
+	if (atoi(name) > 0) return strdup_a(name);
+
+	int signum = SIGUSR1;
+	if (!strcmp(name, "SIGUSR2")) signum = SIGUSR2;
+
+	char signame[32];
+	snprintf(signame, sizeof(signame), "%d", signum);
+	return strdup_a(signame);
+}
+
+/**
  *
  * @param argc
  * @param argv
@@ -928,7 +953,7 @@ int main(int argc, char* argv[])
 			break;
 
 		case 'S': {
-			rtrace_options.toggle_signal_name = strdup_a(optarg);
+			rtrace_options.toggle_signal_name = translate_signal(optarg);
 			int signum = atoi(rtrace_options.toggle_signal_name);
 			if (signum > 0) rtrace_options.toggle_signal = signum;
 			break;
