@@ -1,3 +1,9 @@
+sp-rtrace (1.8.2-1) unstable; urgency=low
+
+  * Fixes: NB#280962 - options in sp-rtrace -h examples are wrong
+
+ -- Tommi Rantala <ext-tommi.1.rantala@nokia.com>  Fri, 23 Sep 2011 11:40:31 +0300
+
 sp-rtrace (1.8.1-1) unstable; urgency=low
 
   * Fixes: NB#278409 - sp-rtrace trace toggling is not working as expected
