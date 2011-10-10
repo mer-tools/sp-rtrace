@@ -92,7 +92,7 @@
 #define KPF_SLUB_FROZEN_INFO    ""
 #define KPF_SLUB_DEBUG_INFO     ""
 
-page_flag_name_t page_flag_names[] = {
+page_flag_name_t page_flag_names[64] = {
 	[KPF_LOCKED]		= {'L', "locked", KPF_LOCKED_INFO},
 
 	[KPF_ERROR]		= {'E', "error", KPF_ERROR_INFO},

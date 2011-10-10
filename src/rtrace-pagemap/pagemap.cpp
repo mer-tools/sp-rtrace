@@ -70,6 +70,11 @@ int main(int argc, char* const argv[])
 			}
 		}
 		else if (Options::getInstance()->getFilter()) {
+			if (Options::getInstance()->getBottomAllocCount() || Options::getInstance()->getTopAllocCount()) {
+				std::cerr << "Warning: --top, --bottom options can be used only with sp-rtrace-pagemap report "
+						"options (-c, -d, -p)!\n";
+
+			}
 			if (Options::getInstance()->getInFilename().empty()) {
 				throw std::runtime_error("ERROR: filter can't be applied to reports processed from standard input\n");
 			}
