@@ -1,3 +1,10 @@
+sp-rtrace (1.8.3-1) unstable; urgency=low
+
+  * Fixes: NB#285696 - sp-rtrace-pagemap crashes when --help-pages option is
+    used
+
+ -- Tommi Rantala <ext-tommi.1.rantala@nokia.com>  Mon, 10 Oct 2011 14:09:48 +0300
+
 sp-rtrace (1.8.2-1) unstable; urgency=low
 
   * Fixes: NB#280962 - options in sp-rtrace -h examples are wrong
