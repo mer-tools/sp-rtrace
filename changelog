@@ -1,3 +1,6 @@
+sp-rtrace (1.8.3), 10 Oct 2011:
+  * Fix `sp-rtrace-pagemap --help-pages' crash.
+
 sp-rtrace (1.8.2), 23 Sep 2011:
   * Fix use of incorrect options in inline help examples.
 
