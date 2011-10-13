@@ -1,3 +1,9 @@
+sp-rtrace (1.8.4-1) unstable; urgency=low
+
+  * Fixes: NB#286000 - Corrupted sp-rtrace log file name
+
+ -- Tommi Rantala <ext-tommi.1.rantala@nokia.com>  Thu, 13 Oct 2011 14:04:17 +0300
+
 sp-rtrace (1.8.3-1) unstable; urgency=low
 
   * Fixes: NB#285696 - sp-rtrace-pagemap crashes when --help-pages option is
