@@ -1,3 +1,5 @@
+%define _defaultdocdir %{_datadir}/doc
+
 Name: sp-rtrace	
 Version: 1.8.3
 Release: 1%{?dist}
