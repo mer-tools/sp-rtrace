@@ -88,7 +88,7 @@ sp_rtrace_resolve_SOURCES = rtrace-resolve/sp_rtrace_resolve.c common/utils.c co
 	
 sp_rtrace_resolve_CFLAGS = $(AM_CFLAGS)
 sp_rtrace_resolve_LDFLAGS = -Wl,-z,defs
-sp_rtrace_resolve_LDADD = -lbfd -lsp-rtrace1
+sp_rtrace_resolve_LDADD = $(LIBS_BFD) -lsp-rtrace1
 sp_rtrace_resolve.$(OBJEXT): libsp-rtrace1.a
 
 sp_rtrace_allocmap_SOURCES = rtrace-allocmap/sp_rtrace_allocmap.c
