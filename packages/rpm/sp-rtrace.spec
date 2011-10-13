@@ -1,5 +1,5 @@
 Name: sp-rtrace	
-Version: 1.4
+Version: 1.8.3
 Release: 1%{?dist}
 Summary:  Resource consumption tracing tools
 Group: Development/Tools
@@ -7,7 +7,8 @@ License: GPLv2+
 URL: http://www.gitorious.org/+maemo-tools-developers/maemo-tools/sp-rtrace	
 Source: %{name}_%{version}.tar.gz
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-BuildRequires: autoconf, automake, doxygen, libtool, binutils-devel, glib2-devel
+BuildRequires: autoconf, automake, doxygen, libtool, binutils-devel, glib2-devel, gcc-c++
+BuildRequires: zlib-devel
 
 %description
  This package provides tools for tracing allocation and deallocation of
@@ -34,17 +35,20 @@ rm %{buildroot}/usr/lib/%{name}/*a
 rm -rf %{buildroot}
 
 %files
-%defattr(-,root,root,-)
+%defattr(755,root,root,-)
 %{_bindir}/sp-rtrace-postproc
+%{_bindir}/sp-rtrace-pagemap
 %{_bindir}/sp-rtrace
 %{_bindir}/sp-rtrace-resolve
-%{_libdir}/libsp-rtrace-main.so*
-%{_libdir}/sp-rtrace/*so
 %{_bindir}/rtrace-rename
 %{_bindir}/rtrace-sort
 %{_bindir}/rtrace-stats
+%defattr(644,root,root,-)
+%{_libdir}/libsp-rtrace-main.so*
+%{_libdir}/sp-rtrace/*so
 %{_mandir}/man1/sp-rtrace.1.gz
 %{_mandir}/man1/sp-rtrace-postproc.1.gz
+%{_mandir}/man1/sp-rtrace-pagemap.1.gz
 %{_mandir}/man1/sp-rtrace-resolve.1.gz
 %{_mandir}/man1/rtrace-rename.1.gz
 %{_mandir}/man1/rtrace-sort.1.gz
@@ -64,7 +68,7 @@ Group: Development/Libraries
  format compatible reports.
 
 %files -n lib%{name}
-%defattr(-,root,root,-)
+%defattr(644,root,root,-)
 %{_libdir}/libsp-rtrace1.so.*
 
 %post -n lib%{name} -p /sbin/ldconfig
@@ -84,13 +88,16 @@ Group: Development/Tools
  consuption tracing support library (libsp-rtrace1).
 
 %files -n lib%{name}-devel
-%defattr(-,root,root,-)
+%defattr(644,root,root,-)
 %{_libdir}/libsp-rtrace1.so
 %{_includedir}/*.h
 %{_mandir}/man3/sp_rtrace_context*.3.gz
 %{_mandir}/man3/sp_rtrace_formatter*.3.gz
 %{_mandir}/man3/sp_rtrace_print*.3.gz
+%{_mandir}/man3/sp_rtrace_filter*.3.gz
+%{_mandir}/man3/sp_rtrace_tracker*.3.gz
 %{_mandir}/man1/rtrace-module-gen.1.gz
+%defattr(655,root,root,-)
 %{_bindir}/rtrace-module-gen
 
 
@@ -107,16 +114,16 @@ Group: Development/Tools
  reports.
 
 %files visualize
-%defattr(-,root,root,-)
+%defattr(655,root,root,-)
 %{_bindir}/rtrace-allocmap
 %{_bindir}/rtrace-allocmap-animate
 %{_bindir}/rtrace-calltree
 %{_bindir}/rtrace-from-function
 %{_bindir}/rtrace-graphs-function
 %{_bindir}/rtrace-graphs-overview
-%{_bindir}/rtrace-timeline
 %{_bindir}/sp-rtrace-allocmap
 %{_bindir}/sp-rtrace-timeline
+%defattr(644,root,root,-)
 %{_mandir}/man1/rtrace-allocmap.1.gz
 %{_mandir}/man1/rtrace-allocmap-animate.1.gz
 %{_mandir}/man1/rtrace-calltree.1.gz
@@ -125,5 +132,4 @@ Group: Development/Tools
 %{_mandir}/man1/rtrace-graphs-overview.1.gz
 %{_mandir}/man1/sp-rtrace-allocmap.1.gz
 %{_mandir}/man1/sp-rtrace-timeline.1.gz
-%{_mandir}/man1/rtrace-timeline.1.gz
 

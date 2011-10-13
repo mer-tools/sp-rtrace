@@ -136,7 +136,7 @@ static FILE* start_resolver(char* filename)
 		exit (-1);
 	}
 	if (postproc_options.pid_resolve == 0) {
-		char* const args[] = {SP_RTRACE_RESOLVER, "-telf", filename ? "-o" : NULL, filename, NULL};
+		char* const args[] = {SP_RTRACE_RESOLVER, filename ? "-o" : NULL, filename, NULL};
 		close(fds[1]);
 		dup2(fds[0], STDIN_FILENO);
 
@@ -156,12 +156,12 @@ static FILE* start_resolver(char* filename)
 static void write_rtrace_log(rd_t* rd)
 {
 	FILE* fp;
+	char path[PATH_MAX];
 	char *output_file = NULL;
 
 	/* If output directory is specified, create a file there.
 	 * Otherwise write to standard output */
 	if (postproc_options.output_dir) {
-		char path[PATH_MAX];
 		if (get_log_filename(rd->pinfo->pid, postproc_options.output_dir, SP_RTRACE_TEXT_FILE_PATTERN, path, sizeof(path)) != 0) {
 			msg_error("failed to make new log file name for directory %s\n", postproc_options.output_dir);
 			exit (-1);

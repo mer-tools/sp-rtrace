@@ -26,10 +26,11 @@ AC_DEFINE_UNQUOTED(INSTALL_DIR, "$prefix", [Installation directory])
 
 # Checks for libraries.
 
-# Check for BFD availability
-AC_CHECK_LIB([bfd], [bfd_fopen],
-  [LIBS_BFD="-lbfd"],
-  [AC_MSG_ERROR([BFD library is required])],
+
+# Check for zlib availability
+AC_CHECK_LIB([z], [inflate],
+  [LIBS_Z="-lz"],
+  [AC_MSG_ERROR([zlib library is required])],
 )
 
 # Check for dl availability
@@ -38,19 +39,27 @@ AC_CHECK_LIB([dl], [dlopen],
   [AC_MSG_ERROR([dlopen library is required])],
 )
 
-# Check for clock_gettime
-AC_CHECK_LIB([rt], [clock_gettime],
-  [LIBS_RT="-lrt"],
-  [AC_MSG_ERROR([rt library is required])],
-)
-
 # Check for liberty_pic
 AC_CHECK_LIB([iberty_pic], [cplus_demangle],
  [LIBS_IBERTY="-liberty_pic"],
  [LIBS_IBERTY="-liberty"]
 )
 
+# Check for BFD availability
+AC_CHECK_LIB([bfd], [bfd_openr],
+  [LIBS_BFD="-lbfd $LIBS_DL $LIBS_Z"],
+  [AC_MSG_ERROR([BFD library is required])],
+  [$LIBS_DL $LIBS_Z $LIBS_IBERTY]
+)
+
+# Check for clock_gettime
+AC_CHECK_LIB([rt], [clock_gettime],
+  [LIBS_RT="-lrt"],
+  [AC_MSG_ERROR([rt library is required])],
+)
+
 AC_SUBST(LIBS_IBERTY)
+AC_SUBST(LIBS_BFD)
 
 PKG_CHECK_MODULES([GLIB], [glib-2.0])
 
