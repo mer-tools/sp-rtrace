@@ -43,6 +43,10 @@
 #   better corner-case error checks
 # 2011-01-10
 # - retain rtrace.txt extension for post-processed files
+# 2011-10-25
+# - Fix: really convert callgraph to SVG (not PS)
+# - Do callgraph symbol resolving using debug symbols instead of ELF
+#   symbol table (much slower & memory hungry, but much better results)
 
 # script name
 name=${0##*/}
@@ -126,8 +130,8 @@ convert_binary ()
 {
 	# merge & remove leaks & resolve
 	echo "- Resolving and removing freed allocations from binary trace..."
-	echo "  sp-rtrace-postproc -clr < $srt > $dst"
-	sp-rtrace-postproc -clr < $src > $dst
+	echo "  sp-rtrace-postproc -cl < $srt | sp-rtrace-resolve -mmulti-pass > $dst"
+	sp-rtrace-postproc -cl < $src | sp-rtrace-resolve -mmulti-pass > $dst
 	if [ $? -ne 0 ]; then
 		echo "  ERROR: conversion failed!"
 		rm $dst
@@ -163,8 +167,8 @@ convert_ascii ()
 		sp-rtrace-postproc -cl < $src > $dst
 	else
 		echo "- Removing freed allocations and resolving traces:"
-		echo "  sp-rtrace-postproc -clr < $src > $dst"
-		sp-rtrace-postproc -clr < $src > $dst
+		echo "  sp-rtrace-postproc -cl < $src | sp-rtrace-resolve -mmulti-pass > $dst"
+		sp-rtrace-postproc -cl < $src | sp-rtrace-resolve -mmulti-pass > $dst
 	fi
 	if [ $? -ne 0 ]; then
 		echo "  ERROR: conversion failed!"
@@ -241,7 +245,7 @@ do
 		check_dot
 		echo "Plotting function call graph..."
 		echo "'$dot' -> '$svg'"
-		dot -Tps $dot > $svg
+		dot -Tsvg $dot > $svg
 		if [ $? != 0 ]; then
 			rm $svg
 			echo "ERROR: 'dot' (GraphViz) call failed"

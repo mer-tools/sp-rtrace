@@ -66,6 +66,9 @@
 # - Leave only totals timeline & alloc count histogram as
 #   they're most relevant for users and generate the histogram
 #   separately so that it can be scaled horizontally
+# 2011-10-25
+# - Do callgraph symbol resolving using debug symbols instead of ELF
+#   symbol table (much slower & memory hungry, but much better results)
 
 usage ()
 {
@@ -338,8 +341,8 @@ for src in $binaries; do
 		continue
 	fi
 	# merge & remove leaks & resolve
-	echo "  sp-rtrace-postproc -clr < $src > $dst"
-	sp-rtrace-postproc -clr < $src > $dst
+	echo "  sp-rtrace-postproc -cl < $src | sp-rtrace-resolve -mmulti-pass > $dst"
+	sp-rtrace-postproc -cl < $src | sp-rtrace-resolve -mmulti-pass > $dst
 	if [ $? -eq 0 ]; then
 		callgraphs="$callgraphs $dst"
 	else
@@ -397,8 +400,8 @@ for src in $texts; do
 		echo "  sp-rtrace-postproc -cl < $src > $dst"
 		sp-rtrace-postproc -cl < $src > $dst
 	else
-		echo "  sp-rtrace-postproc -clr < $src > $dst"
-		sp-rtrace-postproc -clr < $src > $dst
+		echo "  sp-rtrace-postproc -cl < $src | sp-rtrace-resolve -mmulti-pass > $dst"
+		sp-rtrace-postproc -cl < $src | sp-rtrace-resolve -mmulti-pass > $dst
 	fi
 	if [ $? -eq 0 ]; then
 		callgraphs="$callgraphs $dst"
