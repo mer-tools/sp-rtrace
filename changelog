@@ -1,4 +1,4 @@
-sp-rtrace (1.8.5):
+sp-rtrace (1.8.5), 25 Oct 2011:
   * Force elf resolving mode for sp-rtrace-postproc "-r" option
   * In rtrace-graphs-* helper scripts do callgraph symbol resolving
     using debug symbols instead of ELF symbol table  (debug symbols are
