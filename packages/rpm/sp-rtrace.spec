@@ -21,8 +21,7 @@ BuildRequires: zlib-devel
 %build
 autoreconf -fvi
 
-%configure 
-make 
+%configure
 
 %install
 rm -rf %{buildroot}

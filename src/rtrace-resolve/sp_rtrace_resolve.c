@@ -499,7 +499,7 @@ int main(int argc, char* argv[])
 			break;
 
 		case 't':
-			if ((resolve_options.mode & MODE_METHOD_MASK) != (MODE_BFD | MODE_ELF)) {
+			if ((resolve_options.mode & MODE_METHOD_MASK) != MODE_BFD) {
 				msg_warning("overriding previously given resolving method option (-t <method>)\n");
 			}
 
