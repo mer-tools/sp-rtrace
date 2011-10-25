@@ -1,3 +1,10 @@
+sp-rtrace (1.8.5):
+  * Force elf resolving mode for sp-rtrace-postproc "-r" option
+  * In rtrace-graphs-* helper scripts do callgraph symbol resolving
+    using debug symbols instead of ELF symbol table  (debug symbols are
+    much slower & memory hungry, but can give much better results)
+  * Fix, convert callgraph to SVG (not PS) in rtrace-graphs-function
+
 sp-rtrace (1.8.4), 13 Oct 2011:
   * Fix corrupted log file name when `-r' option is used.
 
