@@ -52,3 +52,9 @@ std::ostream& WxtTerminalHeader::write(std::ostream& stream) const {
 std::ostream& WxtTerminalFooter::write(std::ostream& stream) const {
 	return stream <<"pause -1 \"The graph is displayed in other window. Hit enter when you are finished viewing it...\\n\"\n";
 }
+
+
+std::ostream& SvgTerminalHeader::write(std::ostream& stream) const {
+	return stream << "set terminal svg size " << Options::getInstance()->getScaleX() * 1024 / 100 <<
+			"," << Options::getInstance()->getScaleY() * 768 / 100 << " dynamic\n";
+}
