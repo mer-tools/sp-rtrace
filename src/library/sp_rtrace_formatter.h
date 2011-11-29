@@ -90,7 +90,7 @@ int sp_rtrace_print_trace(FILE* fp, const struct sp_rtrace_ftrace_t* trace);
  * @param[in] resolved  the resolved address name.
  * @return              0 - success, -errno - failure
  */
-int sp_rtrace_print_trace_step(FILE* fp, void* addr, const const char* resolved);
+int sp_rtrace_print_trace_step(FILE* fp, void* addr, const char* resolved);
 
 /**
  * Prints context registry record.

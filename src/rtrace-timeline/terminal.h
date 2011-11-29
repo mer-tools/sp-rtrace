@@ -116,6 +116,19 @@ public:
 };
 
 /**
+ * SVG  terminal header
+ */
+class SvgTerminalHeader: public TerminalWriter {
+public:
+
+	/**
+	 * @copydoc TerminalWriter::write
+	 */
+	std::ostream& write(std::ostream& stream) const;
+};
+
+
+/**
  * The terminal class manages gnuplot terminal footers and
  * headers.
  */
