@@ -1,3 +1,10 @@
+sp-rtrace (1.8.6-1) unstable; urgency=low
+
+  * Fixes: NB#292447 - /usr/include/sp_rtrace_formatter.h:93: error: duplicate
+    'const'
+
+ -- Tommi Rantala <ext-tommi.1.rantala@nokia.com>  Tue, 29 Nov 2011 11:53:00 +0200
+
 sp-rtrace (1.8.5-1) unstable; urgency=low
 
   * Fixes: NB#286000 - Corrupted sp-rtrace log file name
