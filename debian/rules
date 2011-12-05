@@ -99,7 +99,7 @@ binary-arch: build install
 	dh_fixperms
 #	dh_perl
 #	dh_python
-	dh_makeshlibs -X/usr/bin/* -X/usr/lib/sp-rtrace/*
+	dh_makeshlibs -V -X/usr/bin/* -X/usr/lib/sp-rtrace/*
 	dh_installdeb
 	dh_shlibdeps 
 	dh_gencontrol
