@@ -1,3 +1,10 @@
+sp-rtrace (1.8.6-2) unstable; urgency=low
+
+  * Fixes: NB#293783 - sp-rtrace: add version dependency information to shlibs
+    file
+
+ -- Tommi Rantala <ext-tommi.1.rantala@nokia.com>  Wed, 07 Dec 2011 14:34:07 +0200
+
 sp-rtrace (1.8.6-1) unstable; urgency=low
 
   * Fixes: NB#292447 - /usr/include/sp_rtrace_formatter.h:93: error: duplicate
