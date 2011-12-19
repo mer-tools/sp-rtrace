@@ -1,11 +1,11 @@
 Name: sp-rtrace
-Version: 1.8.5
+Version: 1.8.6
 Release: 1%{?dist}
 Summary:  Resource consumption tracing tools
 Group: Development/Tools
 License: GPLv2+
 URL: http://www.gitorious.org/+maemo-tools-developers/maemo-tools/sp-rtrace
-Source: %{name}_%{version}.tar.gz
+Source: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-build
 BuildRequires: autoconf, automake, doxygen, libtool, binutils-devel, glib2-devel, gcc-c++
 BuildRequires: zlib-devel
@@ -43,7 +43,7 @@ rm -rf %{buildroot}
 %{_bindir}/rtrace-sort
 %{_bindir}/rtrace-stats
 %{_libdir}/libsp-rtrace-main.so*
-%{_libdir}/sp-rtrace/*so
+%{_libdir}/sp-rtrace/
 %{_mandir}/man1/sp-rtrace.1.gz
 %{_mandir}/man1/sp-rtrace-postproc.1.gz
 %{_mandir}/man1/sp-rtrace-pagemap.1.gz
@@ -105,6 +105,9 @@ Group: Development/Tools
 %package visualize
 Summary: Postprocessing tools for the sp-rtrace report visualization
 Group: Development/Tools
+Requires: sp-rtrace, python, graphviz
+#There's no miminal gnuplot-nox like in Debian
+#Requires: gnuplot
 
 %description visualize
  This package contains various visualization (alloc addressmap,
@@ -132,6 +135,10 @@ Group: Development/Tools
 
 
 %changelog
+* Mon Dec 19 2011 Eero Tamminen <eero.tamminen@nokia.com> 1.8.6
+  * fix rpmlint error, add minimal visualize package deps
+  * Update to 1.8.6
+
 * Tue Oct 25 2011 Eero Tamminen <eero.tamminen@nokia.com> 1.8.5
   * Force elf resolving mode for sp-rtrace-postproc "-r" option
   * In rtrace-graphs-* helper scripts do callgraph symbol resolving
