@@ -5,7 +5,7 @@ Summary:  Resource consumption tracing tools
 Group: Development/Tools
 License: GPLv2+
 URL: http://www.gitorious.org/+maemo-tools-developers/maemo-tools/sp-rtrace
-Source: %{name}.tar.gz
+Source: %{name}-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-build
 BuildRequires: autoconf, automake, doxygen, libtool, binutils-devel, glib2-devel, gcc-c++
 BuildRequires: zlib-devel
@@ -81,6 +81,7 @@ Group: Development/Libraries
 %package -n lib%{name}-devel
 Summary: Development files for using resource consumption tracing support library
 Group: Development/Tools
+Requires: lib%{name} = %{version}
 
 %description -n lib%{name}-devel
  This package contains headers, manuals and symbolic links to use the resource
