@@ -758,15 +758,16 @@ int sp_rtrace_write_function_call(sp_rtrace_fcall_t* call, sp_rtrace_ftrace_t* t
 			exit (-1);
 		}
 		backtrace_lock = 1;
-		trace_data.nframes = backtrace_impl((void**)bt_frames, bt_depth);
+		int nframes = backtrace_impl((void**)bt_frames, bt_depth);
 		backtrace_lock = 0;
 
-		trace_data.nframes -= BT_SKIP_TOP + BT_SKIP_BOTTOM;
-		if ((int)trace_data.nframes > sp_rtrace_options->backtrace_depth) {
-			trace_data.nframes = sp_rtrace_options->backtrace_depth;
+		nframes -= BT_SKIP_TOP + BT_SKIP_BOTTOM;
+		if (nframes > sp_rtrace_options->backtrace_depth) {
+			nframes = sp_rtrace_options->backtrace_depth;
 		}
-		if (trace_data.nframes > 0) {
+		if (nframes > 0) {
 			trace = &trace_data;
+			trace_data.nframes = nframes;
 		}
 	}
 
