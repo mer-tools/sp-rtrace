@@ -324,7 +324,7 @@ void Options::parseCommandLine(int argc, char* const argv[], Processor* processo
 		}
 	}
 	if (working_dir.empty()) {
-		unsigned int pos = out_template.rfind("/");
+		unsigned long pos = out_template.rfind("/");
 		if (pos != std::string::npos) {
 			working_dir = out_template.substr(0, pos);
 		}

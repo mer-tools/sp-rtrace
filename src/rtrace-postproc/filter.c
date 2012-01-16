@@ -297,7 +297,7 @@ static int trim_backtrace(rd_ftrace_t* trace, unsigned int backtrace_depth)
  */
 static int filter_compare_event_index(const void* index1, const void* index2)
 {
-	return (int)index1 - (int)index2;
+	return (long)index1 - (long)index2;
 }
 
 /**
@@ -318,8 +318,8 @@ static void* filter_load_index_data(const char* filename)
 	char line[128];
 	void* root = NULL;
 	while (fgets(line, sizeof(line), fp)) {
-		int index;
-		if (sscanf(line, "%d", &index) == 1) {
+		unsigned long index;
+		if (sscanf(line, "%li", &index) == 1) {
 			tsearch((void*)index, &root, filter_compare_event_index);
 		}
 	}
@@ -352,7 +352,8 @@ typedef struct index_filter_t {
  */
 static void fcall_filter_index(rd_fcall_t* call, index_filter_t* filter)
 {
-	bool found = tfind((void*)call->data.index, &filter->index_map, filter_compare_event_index);
+	unsigned long index = call->data.index;
+	bool found = tfind((void*)index, &filter->index_map, filter_compare_event_index);
 	if ((found && !filter->include) || (!found && filter->include)) {
 		rd_fcall_remove(filter->rd, call);
 	}
@@ -437,7 +438,8 @@ void filter_trim_backtraces(rd_t* rd)
 
 	/* trim the backtraces. Note that only backtrace size is changed, the allocated memory
 	 * is not reallocated */
-	htable_foreach2(&rd->ftraces, (op_binary_t)trim_backtrace, (void*)rd->pinfo->backtrace_depth);
+	unsigned long bt_depth = rd->pinfo->backtrace_depth;
+	htable_foreach2(&rd->ftraces, (op_binary_t)trim_backtrace, (void*)bt_depth);
 }
 
 

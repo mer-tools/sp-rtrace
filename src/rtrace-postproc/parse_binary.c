@@ -88,7 +88,9 @@ static rd_context_t* read_packet_CR(const rd_hshake_t* hs __attribute__((unused)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
 	rd_context_t* context = (rd_context_t*)dlist_create_node(sizeof(rd_context_t));
-	data += read_dword(data, &context->data.id);
+	unsigned int context_id;
+	data += read_dword(data, &context_id);
+	context->data.id = context_id;
 	read_stringa(data, &context->data.name);
 	return context;
 }
@@ -105,7 +107,9 @@ static rd_resource_t* read_packet_RR(const rd_hshake_t* hs, const char* data)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
 	rd_resource_t* res = (rd_resource_t*)dlist_create_node(sizeof(rd_resource_t));
-	data += read_dword(data, &res->data.id);
+	unsigned int res_id;
+	data += read_dword(data, &res_id);
+	res->data.id = res_id;
 	if (HS_CHECK_VERSION(hs, 1, 3)) {
 		data += read_dword(data, &res->data.flags);
 	}
