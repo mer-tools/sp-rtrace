@@ -1,21 +1,48 @@
+sp-rtrace
+---------
+
+Contents:
+  1. Introduction
+  2. Components
+  2.1 Tracing modules
+  2.1.1 Main module (sp-rtrace-main.so)
+  2.1.2 Tracing modules
+  2.2 Data pre-processor (rtrace)
+  2.3 Data post-processor (rtrace-postproc)
+  2.3.1 Internal data storage
+  2.3.2 Post-processing
+  2.3.2.1 leak filtering (--filter-leaks)
+  2.3.2.2 backtrace compressing (--compress)
+  2.3.3.3 future post-processing options
+  3 Tracing Configuration
+  4 Trace data flow
+  5 Visualization tools
+  6 Notes
+  6.1 Limitations
+  6.1 Scratchbox (Maemo)
+  6.2 Debugging
+
+
 1. Introduction
 
-The resource consumption tracking (rtrace) package contains a set
-of utilities to provide resource allocation/deallocation call
-trace and post-processing.
+The sp-rtrace resource consumption tracking suite contains a set of
+utilities for different resource types allocation / deallocation call
+tracing, trace post-processing and visualization.
+
 
 2. Components
+
 +----------------------+    +---------------+      +----------------+
 |     main module      | -> | pre-processor |  ,-> | post-processor |
 +----------------------+    +---------------+  |   +----------------+
-    | tracing module 1 |            |          |         |     ^
-    +------------------+            v          |         v     |
-    |       ...        |      binary output ---+       text output
-    +------------------+                                 |     ^
-    | tracing module N |                                 v     |
-    +------------------+                              +----------+
-                                                      | resolver |
-                                                      +----------+
+    | tracing module 1 |            |          |       |   |   ^
+    +------------------+            v          |       v   v   |
+    |       ...        |      binary output ---+      text output
+    +------------------+                             /     |   ^
+    | tracing module N |                            /      v   |
+    +------------------+     +------------+ <------'    +----------+
+                             | visualizer | <---------- | resolver |
+                             +------------+             +----------+
 
 2.1 Tracing modules
 
@@ -71,6 +98,7 @@ necessary.
 Tracing modules uses data writing API provided by the main module to 
 report resource allocation/deallocation calls.
 
+
 2.2 Data pre-processor (rtrace)
 
 The data pre-processor provides the following functionality:
@@ -101,9 +129,11 @@ The pre-processor also uses internal buffer (4KB) for buffering
 pipe data which can be also disabled (by the same option as 
 main module trace data buffer).
 
-When --toggle option is specified pre-processor sends the toggle signal
-to the target process. Then it either opens a named pipe and starts listening
-for trace data (non manage mode) or simply exits (managed mode).
+When --toggle option is specified pre-processor sends the toggle
+signal to the target process. Then it either opens a named pipe and
+starts listening for trace data (non-managed mode) or simply exits
+(managed mode).
+
 
 2.3 Data post-processor (rtrace-postproc)
 
@@ -151,65 +181,119 @@ functions with the same backtrace only one is printed.
 A plugin system could be added to post-processor allowing users to
 write their own custom plugins. 
 
+
 2.4 Name resolver (rtrace-resolve)
 
 The resolver processes the input file by replacing backtrace
 addresses with resolved names. To resolve an address a memory
 mapping record covering it must be located before the address.
 
-3 Configuration
+
+3 Tracing configuration
 
 The tracing module configuration is done with environment
 variables (usually set by the rtrace launcher and other helper
 scripts).
 
-3.1 SP_RTRACE_OUTPUT_DIR
-Specifies the output directory for rtrace logs. By default the
-home directory is used.
+* SP_RTRACE_OUTPUT_DIR
+  Specifies the output directory for rtrace logs. By default
+  the home directory is used.
 
-3.2 SP_RTRACE_TOGGLE_SIGNAL
-Specifies the trace toggling signal number. By default SIGUSR1 
-is used.
+* SP_RTRACE_TOGGLE_SIGNAL
+  Specifies the trace toggling signal number. By default SIGUSR1 
+  is used.
 
-3.3 SP_RTRACE_START
-Defines that trace should be started automatically when the 
-target process is spawned.
+* SP_RTRACE_START
+  Defines that trace should be started automatically when the target
+  process is spawned.
 
-3.4 SP_RTRACE_MANAGE_PREPROC
-Defines that the main trace module must spawn pre-processor
-process when necessary. By default sp-rtrace is spawned externally
-and the main module just connects to its named pipe.
+* SP_RTRACE_MANAGE_PREPROC
+  Defines that the main trace module must spawn pre-processor
+  process when necessary. By default sp-rtrace is spawned externally
+  and the main module just connects to its named pipe.
 
-3.5 SP_RTRACE_BACKTRACE_DEPTH
-Specifies the maximum number of frames listed in the backtraces.
+* SP_RTRACE_BACKTRACE_DEPTH
+  Specifies the maximum number of frames listed in the backtraces.
 
-3.6 SP_RTRACE_DISABLE_TIMESTAMP
-Disables timestamps reported by the tracing modules.
+* SP_RTRACE_DISABLE_TIMESTAMP
+  Disables timestamps reported by the tracing modules.
 
-3.7 SP_RTRACE_ENABLE_ARGUMENTS
-Enables sending function argument (FA) packets.
+* SP_RTRACE_ENABLE_ARGUMENTS
+  Enables sending function argument (FA) packets.
 
-3.8 SP_RTRACE_POSTPROC
-Specifies post-processing options. 
+* SP_RTRACE_POSTPROC
+  Specifies post-processing options. 
 
-3.9 SP_RTRACE_DISABLE_EVENT_BUFFERING
+* SP_RTRACE_DISABLE_EVENT_BUFFERING
+  Disables data buffering in main module and pre-processor.
 
-Disables data buffering in main module and pre-processor.
 
-4 Operation
+4 Trace data flow
 
 The usual data flow is:
 sp-rtrace-<module>.so -> sp-rtrace-main.so -> rtrace -> rtrace-postproc -> 
 rtrace-resolve
 
-5 Notes
+
+5 Visualization tools
+
+There are several resource trace visualization tools.
+
+Binaries:
+
+* sp-rtrace-pagemap
+  ASCII graphs for all the writable memory mappings the traced process
+  has, what kind of memory page types they have and how much of these
+  pages are utilized by the traced (non-freed) allocations.  Trace
+  data needs to contain both pagemap and memory modules output.
+
+* sp-rtrace-timeline
+  o allocation timelines:
+    + non-freed allocation total + alloc overhead
+    + alloc & free counts
+    + resource lifetimes 
+  o histograms:
+  + allocation size vs. freed & non-freed allocation count
+  + allocation size vs. freed & non-freed allocation amount 
+
+Scripts:
+
+* rtrace-calltree
+  generate .dot callgraphs from the trace data, used by
+  rtrace-graph-* scripts
+
+* rtrace-graphs-overview
+  o overview alloc/dealloc timeline and allocation count/size
+    histogram charts (using sp-rtrace-timeline)
+  o callgraphs to resolved functions which are allocating
+    non-freed resources (using rtrace-calltree) with (hopefully)
+    irrelevant functions removed from the graph to make it readable 
+
+* rtrace-graphs-function
+  create callgraph(s) of allocations going through given function
+
+* rtrace-from-function
+  list amount of allocations from the given function
+
+
+6 Notes
+	
+6.1 Limitations
+
+Binary data is portable only between machines having same endianess
+and pointer size.  If you want to process e.g. 32-bit ARM trace data
+on a 64-bit x86 machine, convert the trace data first to ASCII format.
+
+6.1 Scratchbox (Maemo)
 
 In scratchbox (arm) to launch process with enabled tracing the managed mode
 must be used. Otherwise the pre-processor will create named pipe with
 emulation process id while the main module will try to connect to a named
 pipe created with its (target) process id.
 
+6.2 Debugging
+
 It's possible to enable additional debug output (mainly used for rtrace 
 debugging) with --enable-debug-info configure option. Note that log functions
-uses not async signal safe functions and therefore toggling trace could
+don't use async signal safe functions and therefore toggling trace could
 lead to corruption.
