@@ -8,8 +8,6 @@ AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AC_CONFIG_SRCDIR([src/rtrace/sp_rtrace.c])
 AC_CONFIG_HEADERS([config.h])
 
-AC_PREFIX_DEFAULT(/usr)
-
 # Checks for programs.
 
 AC_PROG_CC
