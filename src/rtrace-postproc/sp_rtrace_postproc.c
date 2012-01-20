@@ -140,7 +140,7 @@ static FILE* start_resolver(char* filename)
 		close(fds[1]);
 		dup2(fds[0], STDIN_FILENO);
 
-		execvp(SP_RTRACE_RESOLVER, args);
+		execv(SP_RTRACE_RESOLVER, args);
 		msg_error("failed to execute resolver process %s (%s)\n", SP_RTRACE_RESOLVER, strerror(errno));
 	}
 	close(fds[0]);

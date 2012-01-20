@@ -154,7 +154,7 @@ void Filter::write(const std::string& filename)
 	if (pid == 0) {
 		const char* const args[] = {SP_RTRACE_POSTPROC, "-i", Options::getInstance()->getInFilename().c_str(), "--include", tmp_name,
 				Options::getInstance()->getOutFilename().empty() ? NULL : "-o", Options::getInstance()->getOutFilename().c_str(), NULL};
-		execvp(SP_RTRACE_POSTPROC, (char**)args);
+		execv(SP_RTRACE_POSTPROC, (char**)args);
 		throw std::runtime_error(Formatter() << "ERROR: Failed to execute " << SP_RTRACE_POSTPROC << " (" << strerror(errno) << ")");
 	}
 	int status;

@@ -305,7 +305,7 @@ static int open_postproc_pipe()
 		argv[argc] = NULL;
 
 		setpgrp();
-		execvp(SP_RTRACE_POSTPROC, argv);
+		execv(SP_RTRACE_POSTPROC, argv);
 		msg_error("failed to execute post-processor process %s (%s)\n",
 				SP_RTRACE_POSTPROC, strerror(errno));
 		exit (-1);
@@ -531,7 +531,7 @@ static void toggle_child_process(int cpid)
 		*parg++ = "-m";
 	}
 	*parg++ = NULL;
-	execv(BINDIR "/" SP_RTRACE_PREPROC, args);
+	execv(SP_RTRACE_PREPROC, args);
 }
 
 
@@ -808,7 +808,7 @@ static void list_modules()
 		return;
 	}
 	/* preload the main module, as it exports symbols for submodules */
-	void* mainlib = dlopen(LIBDIR "/" SP_RTRACE_MAIN_MODULE, RTLD_LAZY | RTLD_GLOBAL);
+	void* mainlib = dlopen(SP_RTRACE_MAIN_MODULE, RTLD_LAZY | RTLD_GLOBAL);
 	if (mainlib == NULL) {
 		msg_error("%s\n", dlerror());
 		closedir(libdir);

@@ -189,7 +189,7 @@ static void enable_tracing(bool value)
  * Opens named pipe to the pre-processor.
  *
  * First this function checks if the necessary named pipe exists.
- * If not, it launches pre-processor (sp-rtrace-proc) and
+ * If not, it launches pre-processor (sp-rtrace) and
  * waits until it creates the named pipe.
  * @return    the opened pipe descriptor.
  */
@@ -217,7 +217,7 @@ static int open_pipe()
 				LOG("\t'%s'", *ptr++);
 			}
 #endif
-			execve(BINDIR "/" SP_RTRACE_PREPROC, args.argv, NULL);
+			execve(SP_RTRACE_PREPROC, args.argv, NULL);
 			fprintf(stderr, "ERROR: Failed to execute pre-processor process %s (%s)\n",
 					SP_RTRACE_PREPROC, strerror(errno));
 			exit (-1);

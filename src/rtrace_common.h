@@ -36,16 +36,16 @@
 #define SP_RTRACE_LIB_PATH         LIBDIR "/sp-rtrace"
 
 /* the main tracing module */
-#define SP_RTRACE_MAIN_MODULE      "libsp-rtrace-main.so"
+#define SP_RTRACE_MAIN_MODULE      LIBDIR "/libsp-rtrace-main.so"
 
 /* pre-processor  */
-#define SP_RTRACE_PREPROC          "sp-rtrace"
+#define SP_RTRACE_PREPROC          BINDIR "/sp-rtrace"
 
 /* post-processor */
-#define SP_RTRACE_POSTPROC         "sp-rtrace-postproc"
+#define SP_RTRACE_POSTPROC         BINDIR "/sp-rtrace-postproc"
 
 /* resolver */
-#define SP_RTRACE_RESOLVER         "sp-rtrace-resolve"
+#define SP_RTRACE_RESOLVER         BINDIR "/sp-rtrace-resolve"
 
 /* event pre-processor named pipe path template */
 #define SP_RTRACE_PIPE_PATTERN      "/tmp/rtrace-"
