@@ -558,7 +558,6 @@ static void toggle_child_processes(int pid)
 		}
 	}
 	closedir(dir);
-	
 }
 
 /**
