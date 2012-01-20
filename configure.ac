@@ -20,7 +20,6 @@ AC_SUBST(VERSION_INFO, $(echo -version-info $VERSION | sed s/\\./:/))
 # set up defines
 AC_DEFINE(_GNU_SOURCE, 1, [Enable GNU extensions])
 AC_DEFINE_UNQUOTED(BUILD_ARCH, "$(uname -m)", [Build architecture])
-AC_DEFINE_UNQUOTED(INSTALL_DIR, "$prefix", [Installation directory])
 
 # Checks for libraries.
 

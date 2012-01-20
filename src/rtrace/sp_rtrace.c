@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -219,7 +219,7 @@ static void set_environment()
 				ppreload += sprintf(ppreload, "%s:", module);
 			}
 			else {
-				ppreload += sprintf(ppreload, SP_RTRACE_LIB_PATH "libsp-rtrace-%s.so:", module);
+				ppreload += sprintf(ppreload, SP_RTRACE_LIB_PATH "/libsp-rtrace-%s.so:", module);
 			}
 			module = strtok(NULL, ":");
 		}
@@ -488,7 +488,7 @@ static void begin_tracing()
  * @param[in] ppid  the parent process to check.
  * @return
  */
-static bool is_child_processs_of(int pid, int ppid)
+static bool is_child_process_of(int pid, int ppid)
 {
 	int rc = false;
 	char buffer[1024];
@@ -531,7 +531,7 @@ static void toggle_child_process(int cpid)
 		*parg++ = "-m";
 	}
 	*parg++ = NULL;
-	execv(INSTALL_DIR "/bin/" SP_RTRACE_PREPROC, args);
+	execv(BINDIR "/" SP_RTRACE_PREPROC, args);
 }
 
 
@@ -552,7 +552,7 @@ static void toggle_child_processes(int pid)
 	while ((de = readdir(dir)) != NULL) {
 		if (de->d_type == DT_DIR) {
 			int cpid = atoi(de->d_name);
-			if (cpid && is_child_processs_of(cpid, pid)) {
+			if (cpid && is_child_process_of(cpid, pid)) {
 				toggle_child_process(cpid);
 			}
 		}
@@ -781,7 +781,7 @@ static void print_module_info(const char* name) {
 	char path[PATH_MAX];
 	char types[] = {'?', 'P', 'A'};
 
-	sprintf(path, SP_RTRACE_LIB_PATH "%s", name);
+	sprintf(path, SP_RTRACE_LIB_PATH "/%s", name);
 	void* lib = dlopen(path, RTLD_LAZY);
 	if (lib == NULL) {
         msg_error("%s\n", dlerror());
@@ -798,20 +798,20 @@ static void print_module_info(const char* name) {
 }
 
 /**
- * Lists rtrace modules located in /usr/lib/sp-rtrace directory.
+ * Lists rtrace modules located in sp-rtrace library directory.
  */
 static void list_modules()
 {
-	DIR* libdir = opendir("/usr/lib/" SP_RTRACE_LIB_DIR);
+	DIR* libdir = opendir(SP_RTRACE_LIB_PATH);
 	if (libdir == NULL) {
-		msg_error("failed to open module directory /usr/lib/" SP_RTRACE_LIB_DIR "\n");
+		msg_error("failed to open module directory " SP_RTRACE_LIB_PATH "\n");
 		return;
 	}
 	/* preload the main module, as it exports symbols for submodules */
-	void* mainlib = dlopen("/usr/lib/" SP_RTRACE_MAIN_MODULE, RTLD_LAZY | RTLD_GLOBAL);
+	void* mainlib = dlopen(LIBDIR "/" SP_RTRACE_MAIN_MODULE, RTLD_LAZY | RTLD_GLOBAL);
 	if (mainlib == NULL) {
-        msg_error("%s\n", dlerror());
-        closedir(libdir);
+		msg_error("%s\n", dlerror());
+		closedir(libdir);
 		return;
 	}
 	struct dirent *de;

@@ -217,7 +217,7 @@ static int open_pipe()
 				LOG("\t'%s'", *ptr++);
 			}
 #endif
-			execve(INSTALL_DIR "/bin/" SP_RTRACE_PREPROC, args.argv, NULL);
+			execve(BINDIR "/" SP_RTRACE_PREPROC, args.argv, NULL);
 			fprintf(stderr, "ERROR: Failed to execute pre-processor process %s (%s)\n",
 					SP_RTRACE_PREPROC, strerror(errno));
 			exit (-1);
