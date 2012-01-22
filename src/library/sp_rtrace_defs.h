@@ -162,7 +162,7 @@ typedef struct sp_rtrace_mmap_t {
  */
 typedef struct sp_rtrace_ftrace_t {
 	/* number of frames in stack trace */
-	unsigned int nframes;
+	unsigned long nframes;
 
 	/* the frame return addresses */
 	pointer_t* frames;
