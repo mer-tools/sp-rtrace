@@ -249,7 +249,7 @@ static int elf_get_address_info(rs_cache_record_t* rec, pointer_t address, symbo
 
 				for (sym = symtab; sym < symtab_end; sym = (Elf_Sym_t*)((char*)sym + symtab_size)) {
 					if (ELF_ST_TYPE(sym->st_info) == STT_FUNC && sym->st_shndx != SHN_UNDEF) {
-						if ((Elf_Addr_t)abs_address >= sym->st_value && (unsigned)(abs_address - sym->st_value) < sym->st_size) {
+						if ((Elf_Addr_t)abs_address >= sym->st_value && (unsigned long)(abs_address - sym->st_value) < sym->st_size) {
 							if (strtab + sym->st_name) {
 								symbol->name =  strtab + sym->st_name;
 								return 0;

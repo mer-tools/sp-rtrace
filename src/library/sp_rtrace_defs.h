@@ -179,7 +179,7 @@ typedef struct sp_rtrace_ftrace_t {
  */
 typedef struct sp_rtrace_context_t {
 	/* the context id */
-	unsigned int id;
+	unsigned long id;
 	/* the context name */
 	char* name;
 } sp_rtrace_context_t;
@@ -189,7 +189,7 @@ typedef struct sp_rtrace_context_t {
  */
 typedef struct sp_rtrace_resource_t {
 	/* the resource type id */
-	unsigned int id;
+	unsigned long id;
 	/* the resource type */
 	char* type;
 	/* the resource description */

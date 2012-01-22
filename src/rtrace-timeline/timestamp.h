@@ -103,9 +103,9 @@ public:
 	 */
 	static timestamp_t fromString(const std::string& text) {
 		timestamp_t timestamp = 0;
-		unsigned int lpos = text.size();
-		unsigned int mpos = text.find('.');
-		unsigned int shift = 1000;
+		unsigned long lpos = text.size();
+		unsigned long mpos = text.find('.');
+		unsigned long shift = 1000;
 		if (mpos != std::string::npos) {
 			timestamp = atoi(text.substr(mpos + 1, lpos - mpos - 1).c_str());
 			lpos = mpos - 1;
