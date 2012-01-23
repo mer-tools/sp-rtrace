@@ -1,7 +1,7 @@
-.TH SP-RTRACE 1 "2011-05-26" "sp-rtrace"
+.TH SP-RTRACE 1 "2012-01-23" "sp-rtrace"
 .SH NAME
 sp-rtrace - launch target binary in resource consumption tracing mode
-or manage already started process.
+or manage already started process(es).
 .SH SYNOPSIS
 sp-rtrace \fI<options>\fP [-x \fI<binary>\fP [\fI<arg>\fP] ... [\fI<arg>\fP]]
 .SH DESCRIPTION
@@ -31,18 +31,21 @@ post-processor to use standard output.
 .TP
 \fI--manage-preproc\fP (\fI-m\fP)
 Specifies that the pre-processor (sp-rtrace) is launched internally by
-the main module. By default the main tracing module tries to connect to
-a named pipe (/tmp/rtrace-<pid>) created by pre-processor. But if startup 
-tracing of the sub processes is required or there are problems in 
-estabilishing data connection through named pipe (for example scratchbox
-arm emulation) a managed pre-processor mode can be used.
+the main module. By default the main tracing module tries to connect
+to a named pipe (/tmp/rtrace-<pid>) created by pre-processor. But if
+tracing tracing of the sub processes right after they're forked is
+required, or there are problems in establishing data connection
+through named pipe (for example Scratchbox ARM emulation), or traced
+process controls all terminal output, a managed pre-processor mode can
+be used.
 
-In this mode the sp-rtrace process for data pre-processing is started by
-the tracing module. This allows to use the pre-processor standard input
-without using named pipes. However stopping tracing closes pre-processor
-and sends SIGCHLD signal to the tracing process, which can affect its work.
+In this mode the sp-rtrace process used for the data pre-processing is
+started by the tracing module. This allows to use the pre-processor
+standard input without using named pipes. However, stopping tracing
+closes pre-processor and sends SIGCHLD signal to the tracing process,
+which can also affect its work.
 
-Also managed mode must be used if the target process enables/disables
+Managed mode must be used also if the target process enables/disables
 tracing by sending toggle signal to itself.
 
 By default the managed mode is not used.
@@ -97,27 +100,31 @@ Disables timestamps in function call (FC) packets.
 By default timestamps are enabled.
 .TP
 \fI--backtrace-all\fP (\fI-A\fP)
-Enables backtrace reporting for all functions. By default only allocation
-function backtraces are reported because de-allocation backtraces are less interesting
-and most often only adds unnecessary overhead.
+Enables backtrace reporting for all tracked functions, including
+resource freeing. By default only resource allocation functions
+backtraces are reported because de-allocation backtraces aren't
+normally interesting and extra backtracing can add considerably
+ overhead.
 .TP
 \fI--monitor\fP=<size1>[,<size2>...] (\fI-M\fP <size>[,<size2>...])
-Report backtraces only for allocations having the specified resource sizes. This option
-can be used to monitor a specific (leaking) allocation in environment where monitoring
-long backtraces of all allocations is too slow.
-Note while the size list is unlimited, specifying too many sizes will have negative 
-performance impact.
+Report backtraces only for allocations having the specified resource
+sizes. This option can be used after identifying sizes of leaking
+allocations, to trace just those, if taking long backtraces for all
+allocations would be too slow. Note that while the size list is
+unlimited, specifying too many sizes will have a negative performance
+impact.
 .TP
 \fI--backtrace-depth\fP=<depth>(\fI-b\fP <depth>)
 The maximum number of frame return addresses in stack trace. 0 will disable
 backtracing functionality. Reducing backtrace depth improves performance,
 but gives less information of the function call origins.
 
-By default the backtrace depth is 10.
+By default, the backtrace depth is 10.
 .TP
 \fI--libunwind\fP (\fI-A\fP)
-Forces to use libunwind for stack frame unwinding. Use it with caution, as for 
-example on arm targets it uses more time and requires debug symbols.
+Forces to use libunwind for stack frame unwinding. Use it with
+caution, as for example on ARM targets it uses more time and requires
+debug symbols.
 
 .SS Process managing options:
 .TP
@@ -127,50 +134,44 @@ Sends toggle signal to the specified process.
 \fI--follow-forks\fP (\fI-f\fP)
 Toggles tracing also for all the child processes of the target process. By default
 the toggle signal is sent only to the target process, but by using this option
-it will be sent also to all child processes.
+it will be sent also to all the child processes.
 
 .SH USAGE NOTES
 The trace data from the target process to data pre-processor (sp-rtrace) is 
 transferred over pipe managed by the main tracing module. In rare cases the
 target process can try to close opened file descriptors (for example "lsof"
-utility) resulting in trace failure. In such case either re-enable tracing
-with sp-rtrace -t <pid> or use functracer tool which produces similar output.
+utility) resulting in tracing failure. In such case either re-enable tracing
+with sp-rtrace -t <pid> or use functracer tool which produces similar output
+with other means.
 .SH EXAMPLES
 .TP
 sp-rtrace -s -e memory -x sample
-Start sample process with tracing enabled at start. The (binary) output data
-will be stored in current directory.
-.TP
-sp-rtrace -s -e memory -P '-l -c' -o $(pwd) -x sample
-Start sample process with tracing enabled at start. Invoke sp-rtrace-postproc
-with options -l -c (filter leaks and compress backtraces - see sp-rtrace-postproc
-manual) and store the resulting file (text) into current directory.
+Start 'sample' process with tracing enabled at start. The (binary) output data
+will be stored to the current directory.
 .TP
 sp-rtrace -s -e memory -P '-r' -x sample
-Start sample process with tracing enabled at start. Invoke sp-rtrace-postproc
-with options -r (resolve addresses) and write results to the standard output.
+Additionally invoke sp-rtrace-postproc with options -r (resolve addresses)
+and write results to the standard output (the default when post-processing
+is used).
+.TP
+sp-rtrace -s -e memory -P '-l -c' -o $(pwd) -x sample
+Invoke sp-rtrace-postproc with options -l -c (filter leaks and compress
+backtraces, see sp-rtrace-postproc manual) and store the resulting (ASCII)
+trace file to the current directory.
 .TP
 sp-rtrace -t $(pidof sample)
-Toggle tracing for an already running 'sample' process.
+Toggle tracing for an already running 'sample' process.  If traced
+process was started with '-m' or '-f', those options need to be used
+also for toggling.
 .TP
 sp-rtrace -l
-Lists all available tracing modules. For example:
-.nf
-T      Name      Version                  Description
-- --------------- ----- -----------------------------------------------------
-P memory           1.0  Memory allocation/deallocation tracing module. Tracks 
-                        calls of malloc, calloc, realloc, posix_memalign and 
-                        free functions.
-P memtransfer      1.0  Memory transfer tracing module. Tracks calls of the 
-                        functions that results in changing memory blocks (
-                        strcpy, memmove, memset etc).
-.fi
-
+List all available tracing modules.
 .SH SEE ALSO
 .IR sp-rtrace-postproc (1),
-.IR sp-rtrace-resolve (1)
+.IR sp-rtrace-resolve (1),
+.IR functracer (1)
 .SH COPYRIGHT
-Copyright (C) 2010-2011 Nokia Corporation.
+Copyright (C) 2010-2012 Nokia Corporation.
 .PP
 This is free software. You may redistribute copies of it under the
 terms of the GNU General Public License v2 included with the software.

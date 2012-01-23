@@ -1,4 +1,4 @@
-.TH SP-RTRACE-RESOLVE 1 "2010-07-1" "sp-trace-resolve"
+.TH SP-RTRACE-RESOLVE 1 "2012-01-23" "sp-trace-resolve"
 .SH NAME
 sp-rtrace-resolve - resolve backtrace address function names.
 .SH SYNOPSIS
@@ -57,15 +57,16 @@ With bfd method resolver will not try to scan elf symbol table
 if the debug symbols aren't present. Instead it will attempt
 to load dynamic symbols with bfd.
 
-Bfd method gives more detailed information though it might be
-misleading sometimes when template methods and other inline 
-functions are used:
+Bfd method gives more detailed information, but sometimes it
+may produce misleading results when template methods and other
+inline functions are used to create and destroy a temporary
+object within function/method call arguments:
 .RS
 .IP *
-as a general rule one should ignore e.g. Qt (template/inline)
-destructors shown for resource _allocation_ paths 
+as a general rule one can ignore e.g. Qt (template/inline)
+\fIdestructors\fP shown for resource \fIallocation\fP paths 
 .IP *
-gdb can be used to find out the right place in code based on
+Gdb can be used to find out the right place in code based on
 the address.
 .RE
 .TP
@@ -92,7 +93,7 @@ result into 1235.rtrace.resolved file.
 .IR sp-rtrace (1),
 .IR sp-rtrace-postproc (1)
 .SH COPYRIGHT
-Copyright (C) 2010 Nokia Corporation.
+Copyright (C) 2010-2012 Nokia Corporation.
 .PP
 This is free software. You may redistribute copies of it under the
 terms of the GNU General Public License v2 included with the software.
