@@ -80,10 +80,6 @@ case $build in
     ;;
 esac
     
-
-# optional libunwind support
-AC_CHECK_HEADER([libunwind.h], AC_DEFINE(USE_LUNWIND, 1, [Add libunwind support]))
-
 # optional debug output
 AC_ARG_ENABLE(debug-info, 
   [  --enable-debug-info Enables debug output], 
