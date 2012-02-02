@@ -31,6 +31,7 @@
 static void* handle = NULL;
 
 static const char* const libs[] = {
+	"libunwind.so.8.0.0",
 	"libunwind.so.7.0.0",
 };
 
