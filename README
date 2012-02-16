@@ -106,12 +106,18 @@ The data pre-processor provides the following functionality:
 2) pre-processing data sent by tracing modules,
 3) trace enabling/disabling for already launched process. 
 
-Normally after launching a new process (if the tracing is enabled
-at start) the pre-processor creates named pipe /tmp/rtrace-<pid>
-and listens it for the trace data. But when managed mode is used
-pre-processor exists after launching the target process and a new
-pre-processor process purely for data pre-processing is started
-by the main module.
+If tracing is enabled (with the "-s" option) at start, after launching
+the given process pre-processor creates a named pipe /tmp/rtrace-<pid>
+and listens it for the trace data.
+
+If tracing wasn't enabled at start, sp-rtrace exits after launching
+the process-to-trace onto background.  This way one can start large
+number of processes e.g. at device boot to wait for being traced,
+without redundant sp-rtrace instances.
+
+When managed mode is used, pre-processor also exists after launching
+the target process.  The differences is that a new pre-processor is
+started by the sp-rtrace main module itself for data pre-processing.
 
 The post-processor keeps track of the module memory mapping and
 rescans /proc/<pid>/maps file whenever new library (NL) packet is
@@ -231,8 +237,20 @@ scripts).
 4 Trace data flow
 
 The usual data flow is:
-sp-rtrace-<module>.so -> sp-rtrace-main.so -> rtrace -> rtrace-postproc -> 
-rtrace-resolve
+  libsp-rtrace-<module>.so
+    -> libsp-rtrace-main.so
+       -> sp-rtrace
+          -> sp-rtrace-postproc
+	     -> sp-rtrace-resolve
+
+Depending on sp-rtrace options used to invoke the traced process,
+the sp-rtrace instance that actually collects the data can be:
+* that sp-rtrace instance
+  (-s option given without -m)
+* sp-rtrace instance run later by user to toggle tracing
+  (when neither -s nor -m options were given)
+* sp-rtrace instance invoked by the main module
+  (-m option given, regardless of whether -s was given)
 
 
 5 Visualization tools
