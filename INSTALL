@@ -30,7 +30,8 @@ steps in the sp-rtrace directory:
                             parts.
   3) Build the sp-rtrace binaries with "make"
   4) Install the bult binaries with "make install"
-  
+  5) Run "ldconfig -v" so that dynamic linker finds libsp-rtrace.so
+
 
 1.3 Troubleshooting
 -------------------
