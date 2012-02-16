@@ -974,7 +974,7 @@ bool sp_rtrace_initialize()
 			LOG("Use libunwind for stack frame unwinding");
 			backtrace_impl = libunwind_initialize();
 			if (backtrace_impl == NULL) {
-				fprintf(stderr, "WARNING: libunwind backtracing option specified, but libunwind_unitialize returned NULL. "
+				fprintf(stderr, "WARNING: libunwind backtracing option specified, but libunwind_initialize() returned NULL. "
 						"Switching to standard backtrace() implementation.\n");
 				backtrace_impl = backtrace;
 			}
