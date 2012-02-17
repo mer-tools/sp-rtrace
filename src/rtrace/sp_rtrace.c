@@ -586,22 +586,22 @@ static bool is_process_traced(int pid)
  */
 static void toggle_tracing()
 {
-  /* first check if the target process is launched in tracing mode*/
-  if (!is_process_traced(rtrace_options.pid)) {
-    msg_error("the target process %d is not launched in tracing mode.\n", rtrace_options.pid);
-    return;
-  }
+	char pipe_path[128];
 
-  if (rtrace_options.follow_forks) {
+	/* first check if the target process is launched in tracing mode */
+	if (!is_process_traced(rtrace_options.pid)) {
+		msg_error("process %d doesn't have sp-rtrace LD_PRELOAD module. Was it started with sp-rtrace tool?\n", rtrace_options.pid);
+		return;
+	}
+
+	if (rtrace_options.follow_forks) {
 		toggle_child_processes(rtrace_options.pid);
 	}
-	char pipe_path[128];
 	snprintf(pipe_path, sizeof(pipe_path), SP_RTRACE_PIPE_PATTERN "%d", rtrace_options.pid);
 
 	if (access(pipe_path, F_OK) == 0) {
 		stop_tracing();
-	}
-	else {
+	} else {
 		begin_tracing();
 	}
 }
