@@ -56,9 +56,9 @@ typedef struct {
 // TODO: change addresses to long
 typedef struct {
 	/* the memory are start address */
-	unsigned int from;
+	unsigned long from;
 	/* the memory area end address */
-	unsigned int to;
+	unsigned long to;
 	/* size of the following page data */
 	unsigned int size;
 } pageflags_header_t;
