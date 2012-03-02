@@ -70,6 +70,9 @@ postproc_options_t postproc_options = {
 	.backtrace_depth = -1,
 	.include_file = NULL,
 	.exclude_file = NULL,
+	.filter_range_start = 0,
+	.filter_range_size = 0,
+	.filter_range_target = NULL,
 };
 
 volatile sig_atomic_t postproc_abort = 0;
@@ -85,6 +88,7 @@ static void free_options()
 	if (postproc_options.output_dir) free(postproc_options.output_dir);
 	if (postproc_options.include_file) free(postproc_options.include_file);
 	if (postproc_options.exclude_file) free(postproc_options.exclude_file);
+	if (postproc_options.filter_range_target) free(postproc_options.filter_range_target);
 }
 
 /**
@@ -116,6 +120,9 @@ static void display_usage()
 			"  --exclude <file> - specify events to exclude from report.\n"
 			"                     For include/exclude options the events are stored in a\n"
 			"                     text file, each line containing event index.\n"
+			" --call-address <target>:<start>+<size>\n"
+			"                     filter allocations which backtraces contains an address\n"
+			"                     in the specified range.\n"
 			"  -q               - hide warning messages.\n"
 			"  -h               - this help page.\n"
 	);
@@ -261,6 +268,7 @@ int main(int argc, char* argv[])
 			 {"include", 1, 0, 'I'},
 			 {"exclude", 1, 0, 'X'},
 			 {"quiet", 0, 0, 'q'},
+			 {"call-address", 1, 0, 'g'},
 			 {0, 0, 0, 0}
 	};
 	/* parse command line options */
@@ -269,114 +277,127 @@ int main(int argc, char* argv[])
 	
 	while ( (opt = getopt_long(argc, argv, "i:o:tcs:ahrlC:R:b:q", long_options, NULL)) != -1) {
 		switch(opt) {
-		case 'h':
-			display_usage();
-			exit (0);
+			case 'h':
+				display_usage();
+				exit (0);
 
-		case 'i':
-			if (postproc_options.input_file) {
-				msg_warning("overriding previously given option: -i %s\n", postproc_options.input_file);
-				free(postproc_options.input_file);
-			}
-			postproc_options.input_file = strdup_a(optarg);
-			break;
-
-		case 'o':
-			if (strcmp(optarg, "stdout")) {
-				if (postproc_options.output_dir) {
-					msg_warning("overriding previously given option: -o %s\n", postproc_options.output_dir);
-					free(postproc_options.output_dir);
+			case 'i':
+				if (postproc_options.input_file) {
+					msg_warning("overriding previously given option: -i %s\n", postproc_options.input_file);
+					free(postproc_options.input_file);
 				}
-				postproc_options.output_dir = strdup_a(optarg);
-			}
-			break;
+				postproc_options.input_file = strdup_a(optarg);
+				break;
 
-		case 'l':
-			postproc_options.filter_leaks = true;
-			break;
+			case 'o':
+				if (strcmp(optarg, "stdout")) {
+					if (postproc_options.output_dir) {
+						msg_warning("overriding previously given option: -o %s\n", postproc_options.output_dir);
+						free(postproc_options.output_dir);
+					}
+					postproc_options.output_dir = strdup_a(optarg);
+				}
+				break;
 
-		case 'c':
-			postproc_options.compress = true;
-			break;
+			case 'l':
+				postproc_options.filter_leaks = true;
+				break;
 
-		case 'r':
-			postproc_options.resolve = true;
-			break;
+			case 'c':
+				postproc_options.compress = true;
+				break;
 
-		case 'b':
-			if (postproc_options.backtrace_depth != -1) {
-				msg_warning("overriding previously given option: -b %d\n", postproc_options.backtrace_depth);
-			}
-			postproc_options.backtrace_depth = atoi(optarg);
-			break;
-			
-		case 's':
-			if (postproc_options.compare_leaks) {
-				msg_warning("overriding previously given sort option (-s <order>)\n");
-			}
-			if (!strcmp(optarg, "size"))
-				postproc_options.compare_leaks = (op_binary_t)leaks_compare_by_size_desc;
-			else if (!strcmp(optarg, "size-asc"))
-				postproc_options.compare_leaks = (op_binary_t)leaks_compare_by_size_asc;
-			else if (!strcmp(optarg, "count"))
-				postproc_options.compare_leaks = (op_binary_t)leaks_compare_by_count_desc;
-			else if (!strcmp(optarg, "count-asc"))
-				postproc_options.compare_leaks = (op_binary_t)leaks_compare_by_count_asc;
-			break;
+			case 'r':
+				postproc_options.resolve = true;
+				break;
 
-		case 'a':
-			postproc_options.remove_args = true;
-			break;
+			case 'b':
+				if (postproc_options.backtrace_depth != -1) {
+					msg_warning("overriding previously given option: -b %d\n", postproc_options.backtrace_depth);
+				}
+				postproc_options.backtrace_depth = atoi(optarg);
+				break;
 
-		case 'C':
-			if (postproc_options.filter_context != -1) {
-				msg_warning("overriding previously given option: -C %x\n", postproc_options.filter_context);
-			}
-			if (sscanf(optarg, "%x", &postproc_options.filter_context) != 1) {
-				msg_error("invalid context mask: %s\n", optarg);
+			case 's':
+				if (postproc_options.compare_leaks) {
+					msg_warning("overriding previously given sort option (-s <order>)\n");
+				}
+				if (!strcmp(optarg, "size"))
+					postproc_options.compare_leaks = (op_binary_t)leaks_compare_by_size_desc;
+				else if (!strcmp(optarg, "size-asc"))
+					postproc_options.compare_leaks = (op_binary_t)leaks_compare_by_size_asc;
+				else if (!strcmp(optarg, "count"))
+					postproc_options.compare_leaks = (op_binary_t)leaks_compare_by_count_desc;
+				else if (!strcmp(optarg, "count-asc"))
+					postproc_options.compare_leaks = (op_binary_t)leaks_compare_by_count_asc;
+				break;
+
+			case 'a':
+				postproc_options.remove_args = true;
+				break;
+
+			case 'C':
+				if (postproc_options.filter_context != -1) {
+					msg_warning("overriding previously given option: -C %x\n", postproc_options.filter_context);
+				}
+				if (sscanf(optarg, "%x", &postproc_options.filter_context) != 1) {
+					msg_error("invalid context mask: %s\n", optarg);
+					exit (-1);
+				}
+				break;
+
+			case 'R':
+				if (postproc_options.filter_resource) {
+					msg_warning("overriding previously given option: -R %x\n", postproc_options.filter_resource);
+				}
+				if (sscanf(optarg, "%x", &postproc_options.filter_resource) != 1) {
+					msg_error("invalid resource type mask: %s\n", optarg);
+					exit (-1);
+				}
+				break;
+
+			case 'I':
+				if (postproc_options.exclude_file) {
+					msg_warning("include option overrides already specified exclude option\n");
+					free(postproc_options.exclude_file);
+					postproc_options.exclude_file = NULL;
+				}
+				postproc_options.include_file = strdup_a(optarg);
+				break;
+
+			case 'X':
+				if (postproc_options.include_file) {
+					msg_warning("exclude option is ignored beacuse of already specified include option\n");
+				}
+				else {
+					postproc_options.exclude_file = strdup_a(optarg);
+				}
+				break;
+
+			case 'q':
+				msg_set_verbosity(MSG_ERROR);
+				break;
+
+			case '?':
+				msg_error("unknown sp-rtrace-postproc option: %c\n", optopt);
+				display_usage();
 				exit (-1);
-			}
-			break;
 
-		case 'R':
-			if (postproc_options.filter_resource) {
-				msg_warning("overriding previously given option: -R %x\n", postproc_options.filter_resource);
-			}
-			if (sscanf(optarg, "%x", &postproc_options.filter_resource) != 1) {
-				msg_error("invalid resource type mask: %s\n", optarg);
-				exit (-1);
-			}
-			break;
-			
-		case 'I':
-			if (postproc_options.exclude_file) {
-				msg_warning("include option overrides already specified exclude option\n");
-				free(postproc_options.exclude_file);
-				postproc_options.exclude_file = NULL;
-			}
-			postproc_options.include_file = strdup_a(optarg);
-			break;
+			case 't':
+				break;
 
-		case 'X':
-			if (postproc_options.include_file) {
-				msg_warning("exclude option is ignored beacuse of already specified include option\n");
+			case 'g': {
+				char target[4096];
+				if (sscanf(optarg, "%[^:]:%lx+%lx", target, &postproc_options.filter_range_start, &postproc_options.filter_range_size) != 3) {
+					msg_warning("ignoring filter range (<target>:<start>+<size>) in unknown format: %s\n", optarg);
+					postproc_options.filter_range_start = 0;
+					postproc_options.filter_range_size = 0;
+				}
+				else {
+					postproc_options.filter_range_target = strdup_a(target);
+				}
+				break;
 			}
-			else {
-				postproc_options.exclude_file = strdup_a(optarg);
-			}
-			break;
-
-		case 'q':
-			msg_set_verbosity(MSG_ERROR);
-			break;
-
-		case '?':
-			msg_error("unknown sp-rtrace-postproc option: %c\n", optopt);
-			display_usage();
-			exit (-1);
-		
-		case 't':
-			break;
 		}
 	}
 	if (optind < argc) {
@@ -445,8 +466,8 @@ int main(int argc, char* argv[])
 		filter_resource(rd);
 	}
 
-	if (postproc_options.filter_leaks) {
-		filter_leaks(rd);
+	if (postproc_options.filter_range_target) {
+		filter_call_address_range(rd);
 	}
 
 	if (postproc_options.include_file) {
@@ -460,9 +481,15 @@ int main(int argc, char* argv[])
 	if (postproc_options.filter_context != -1) {
 		filter_context(rd);
 	}
+
 	if (rd->hinfo) {
 		filter_find_lowhigh_blocks(rd);
 	}
+
+	if (postproc_options.filter_leaks) {
+		filter_leaks(rd);
+	}
+
 	filter_update_resource_visibility(rd);
 
 	/* write resulting output */

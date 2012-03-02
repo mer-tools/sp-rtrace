@@ -1,0 +1,21 @@
+#!/bin/sh
+
+display_options()
+{
+    echo "Scans target symbol table for address range of the specified function."
+    echo "  Usage: function-range.sh <target> <function>"
+    echo "    The result is given in format <target>:<start address>+<size>"
+}
+
+if [ $# -lt 2 ]; then
+    display_options
+    exit 1
+fi
+
+target=$1
+shift
+function=$1
+
+echo $target:$(nm -SC  "$target" | grep "$function" | head -n1 | sed -r "s/([0-9a-f]+) ([0-9a-f]+) .*/\1+\2/" )
+
+exit 0

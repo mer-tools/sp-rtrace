@@ -38,6 +38,7 @@
 
 #include "resolver.h"
 #include "sp_rtrace_resolve.h"
+#include "common/resolve_utils.h"
 #include "common/utils.h"
 #include "common/msg.h"
 #include "namecache.h"
@@ -115,57 +116,6 @@ typedef struct {
  * Memory mapping support
  */
 
-/**
- *
- * @param path
- * @return
- */
-static int rs_mmap_is_absolute(const char* path)
-{
-	FILE *file;
-	Elf_Ehdr_t elf_header;
-	Elf_Phdr_t *program_header;
-	size_t ret;
-	int i, is_absolute = 1;
-
-	if (!(file = fopen(path, "r"))) {
-//		msg_warning("could not open file %s\n", path);
-		return -ENOENT;
-	}
-
-	/* read ELF header */
-	ret = fread(&elf_header, sizeof(elf_header), 1, file);
-	if (ret != 1) {
-		msg_error("invalid ELF header from %s\n", path);
-		return -EINVAL;
-	}
-
-	program_header = (Elf_Phdr_t*)malloc_a(sizeof(Elf_Phdr_t) * elf_header.e_phnum);
-
-	fseek(file, elf_header.e_phoff, SEEK_SET);
-
-	/* read program header table */
-	ret = fread(program_header, sizeof(Elf_Phdr_t), elf_header.e_phnum, file);
-	if (ret != elf_header.e_phnum) {
-		free(program_header);
-		msg_error("could not read program header table from %s\n", path);
-		return -EINVAL;
-	}
-
-	for (i = 0; i < elf_header.e_phnum; i++) {
-		if ((program_header[i].p_type == PT_LOAD) && (!program_header[i].p_offset)) {
-			if (!program_header[i].p_vaddr) {
-				is_absolute = 0;
-			}
-			break;
-		}
-	}
-
-	free(program_header);
-	fclose(file);
-
-	return is_absolute;
-}
 
 /**
  * Memory mapping comparison function.

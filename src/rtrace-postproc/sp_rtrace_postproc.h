@@ -52,6 +52,9 @@ typedef struct postproc_options_t {
 	int backtrace_depth;
 	char* include_file;
 	char* exclude_file;
+	unsigned long filter_range_start;
+	unsigned long filter_range_size;
+	char* filter_range_target;
 } postproc_options_t;
 
 extern postproc_options_t postproc_options;

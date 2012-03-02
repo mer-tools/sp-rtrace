@@ -128,4 +128,13 @@ void filter_include(rd_t* rd);
 void filter_exclude(rd_t* rd);
 
 
+/**
+ * Filters allocations with backtraces having an address in the specified range.
+ *
+ * This filter is used to reduce the allocations scope to a specific function
+ * (code) in the target binary.
+ * @param rd
+ */
+void filter_call_address_range(rd_t* rd);
+
 #endif /* FILTER_H*/
