@@ -1,3 +1,13 @@
+sp-rtrace (?.?.?), ?? ??? 2012:
+  * Dash shell (Ubuntu) and 64-bit fixes
+  * sp-rtrace-resolve --sysroot option for cross-architecture resolving
+    (e.g. 32-bit ARM on 32-bit x86, but not 32-bit x86 vs. 64-bit x86)
+  * Libunwind support simplification and backtracing error handling fix
+  * Support parallel sp-rtrace installations in different locations
+  * Option for filtering allocs which backtraces contains given
+    function (address range)
+  * Documentation updates
+
 sp-rtrace (1.8.6), 29 Nov 2011:
   * Add SVG output support to timeline tool.
   * Fix double const in header "sp_rtrace_formatter.h".
