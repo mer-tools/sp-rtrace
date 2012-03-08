@@ -7,8 +7,8 @@ License: GPLv2+
 URL: http://www.gitorious.org/+maemo-tools-developers/maemo-tools/sp-rtrace
 Source: %{name}-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-build
-BuildRequires: autoconf, automake, doxygen, libtool, binutils-devel, glib2-devel, gcc-c++
-BuildRequires: zlib-devel
+BuildRequires: autoconf, automake, libtool, doxygen, gcc-c++
+BuildRequires: binutils-devel, glib2-devel
 
 %description
  This package provides tools for tracing allocation and deallocation of
