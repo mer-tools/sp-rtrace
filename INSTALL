@@ -16,8 +16,7 @@ Note that earlier versions might also work.
 
 In RPM based distributions the dependencies are named a bit differently,
 and you need:
-   autoconf, automake, libtool, doxygen, binutils-devel, glib2-devel,
-   gcc-c++, zlib-devel
+   autoconf, automake, libtool, doxygen, binutils-devel, glib2-devel, gcc-c++
 
 
 1.2 Compilation & Installation
