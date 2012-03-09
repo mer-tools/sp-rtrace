@@ -4,6 +4,7 @@ sp-rtrace (?.?.?), ?? ??? 2012:
     (e.g. 32-bit ARM on 32-bit x86, but not 32-bit x86 vs. 64-bit x86)
   * Libunwind support simplification and backtracing error handling fix
   * Support parallel sp-rtrace installations in different locations
+  * Fix pagemap files race condition, add PID prefix to all extra files
   * Option for filtering allocs which backtraces contains given
     function (address range)
   * Documentation updates

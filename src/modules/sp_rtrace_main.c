@@ -615,7 +615,7 @@ static int _atoi(const char* str)
  *
  * @param[in] buffer  the output buffer.
  * @param[in] value   the value to convert.
- * @return            the output buffer.
+ * @return            the new end of output buffer.
  */
 static char* _itoa(char* buffer, int value)
 {
@@ -632,7 +632,7 @@ static char* _itoa(char* buffer, int value)
 		*ptr_buffer++ = *ptr--;
 	} while (ptr >= tmp);
 	*ptr_buffer = '\0';
-	return buffer;
+	return ptr_buffer;
 }
 
 
@@ -1008,10 +1008,13 @@ void sp_rtrace_get_out_filename(const char* pattern, char* buffer, size_t size)
 	if (*sp_rtrace_options->output_dir) ptr = _stpncpy(buffer, sp_rtrace_options->output_dir, size);
 	else ptr = _stpncpy(buffer, sp_rtrace_options->start_dir, size);
 	*ptr++ = '/';
+	ptr =_itoa(ptr, getpid());
+	*ptr++ = '-';
 	ptr = _stpncpy(ptr, pattern, size - (ptr - buffer));
 	*ptr++ = '-';
 	int index = 0;
 	do {
+		/* increase index until non-existing filename is found */
 		_itoa(ptr, index++);
 	} while (access(buffer, F_OK) == 0);
 }
