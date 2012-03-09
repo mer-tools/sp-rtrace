@@ -25,7 +25,7 @@
 /**
  * @file sp_rtrace_pagemap.c
  *
- * Module to trace empty pagemap pages ((libsp-rtrace-pagemap.so).
+ * Module to trace empty pagemap pages (libsp-rtrace-pagemap.so).
  *
  */
 
