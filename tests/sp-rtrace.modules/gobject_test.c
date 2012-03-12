@@ -25,6 +25,9 @@
  * @file gobject_test.c
  *
  * Test application for GObject tracking module (gobject) coverage.
+ * 
+ * gcc -o gobject_test -O -Wall -rdynamic gobject_test.c \
+ *   $(pkg-config --cflags --libs gobject-2.0)
  */
 
 #define _GNU_SOURCE

@@ -22,16 +22,19 @@
  */
 
 /**
- * @file memory_test.c
+ * @file file_test.c
  *
- * Test application for memory tracking module (memory) coverage.
+ * Test application for file descriptor tracking module (file) coverage.
  */
 
+#define _GNU_SOURCE
+#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/inotify.h>
 
 #define OUTPUT_FILENAME  "./file_out"
 
