@@ -178,7 +178,7 @@ public:
 	}
 
 	/**
-	 * Retrieves the filtered area ddress
+	 * Retrieves the filtered area address.
 	 */
 	unsigned long getFilterAddress() {
 		return filter_address;

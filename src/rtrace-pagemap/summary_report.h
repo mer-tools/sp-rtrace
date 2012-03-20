@@ -36,7 +36,7 @@ private:
 
 	/**
 	 * Filters the required flags.
-     *
+	 *
 	 * @param[in] flags   the raw page flags.
 	 * @return            the filtered page flags value.
 	 */

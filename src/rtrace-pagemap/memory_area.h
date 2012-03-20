@@ -52,7 +52,7 @@ public:
 	unsigned long to;
 	// address of the memory
 	pageflags_data_t* flags;
-	// the memory are information (taken from maps file)
+	// the memory area information (taken from maps file)
 	std::string info;
 	// the access permissions, parsed from info strings
 	unsigned int permissions;

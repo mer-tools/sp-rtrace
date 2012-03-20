@@ -53,7 +53,6 @@ typedef struct {
  * This structure contains information about the memory area
  * described by the following page data.
  */
-// TODO: change addresses to long
 typedef struct {
 	/* the memory are start address */
 	unsigned long from;
