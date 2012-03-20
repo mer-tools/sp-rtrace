@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2011 by Nokia Corporation
+ * Copyright (C) 2011-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -25,7 +25,7 @@
 /**
  * @file sp_rtrace_pagemap.c
  *
- * Module to trace empty pagemap pages (libsp-rtrace-pagemap.so).
+ * Module to retrieve pagemap pages status (libsp-rtrace-pagemap.so).
  *
  */
 
@@ -48,8 +48,6 @@
 #include "common/utils.h"
 
 #include "sp_rtrace_pagemap.h"
-
-//#define MSG(text) {	char buffer[] = ">>>" text "\n"; if(write(STDERR_FILENO, buffer, sizeof(buffer))){}; }
 
 /*
  * pagemap kernel ABI bits
@@ -76,8 +74,8 @@ static sp_rtrace_module_info_t module_info = {
 		.version_major = 1,
 		.version_minor = 0,
 		.name = "pagemap",
-		.description = "Empty pagemap pages tracking module. "
-				       "Tracks allocated pages containing only zero bytes and attaches page mapping data "
+		.description = "Memory page utilization module. "
+				       "Finds rw pages containing only zero bytes and attaches page mapping data "
 				       "from /proc/pid/pagemap and /proc/pageflags.",
 };
 
@@ -87,7 +85,7 @@ static bool trace_enabled = false;
 static unsigned long page_size;
 
 /* the parser memory map registration callback */
-typedef int (*parser_callback_t)(unsigned long from, unsigned long to, const char* module, const char* access, void* data);
+typedef int (*parser_callback_t)(unsigned long from, unsigned long to, const char* access, void* data);
 
 /**
  * The parser data structure.
@@ -154,7 +152,7 @@ static void _strmove(char *dest, const char *src, size_t size)
 }
 
 /**
- * Converts reads hexadecimal value from string format.
+ * Returns hexadecimal value scanned from a string.
  *
  * @param[in] str   the input string containing hexadecimal value.
  * @return          the scanned value.
@@ -216,20 +214,19 @@ static unsigned int read_page_mapping_count(unsigned long addr, pfile_data_t* da
 }
 
 /**
- * Scans address range for memory pages containing zeroes.
+ * Scans rw address range for zeroed memory pages and get page usage counts.
  *
  * The data is stored in pagescan_t structure array and written
  * in the specified file.
  * @param[in] from     the memory area start address.
  * @param[in] to       the memory area end address.
- * @param[in] module   the module(file) mapped to the specified address range.
  * @param[in] rights   the memory are access rights (in the same format as in maps file).
  * @param[in] data     a structure containing input/output file descriptors.
  *
  * @return             0 - success.
  *                    <0 - -errno error code.
  */
-static int scan_address_range(unsigned long from, unsigned long to, const char* module, const char* rights, pfile_data_t* data)
+static int scan_address_range(unsigned long from, unsigned long to, const char* rights, pfile_data_t* data)
 {
 	if (rights[0] != 'r' || rights[1] != 'w' || rights[3] != 'p') return EINVAL;
 
@@ -249,7 +246,7 @@ static int scan_address_range(unsigned long from, unsigned long to, const char* 
 		if (n != sizeof(pageflags_data_t)) return (n == -1) ? -errno : -EINVAL;
 
 		if (is_zero_page(from)) {
-			/* zero page found, update it's info field and write it back into the kpageflags file */
+			/* zero page found, update its info field and write it back into the kpageflags file */
 			page_data.info |= PAGE_ZERO;
 		}
 		page_data.kcount = read_page_mapping_count(from, data);
@@ -266,13 +263,12 @@ static int scan_address_range(unsigned long from, unsigned long to, const char* 
  *
  * @param[in] from    the memory area start address.
  * @param[in] to      the memory area end address.
- * @param[in] module  the module(file) mapped to the specified address range.
  * @param[in] rights  the memory are access rights (in the same format as in maps file).
  * @param[in] data    a structure containing input/output file descriptors.
  * @return             0 - success.
  *                    <0 - -errno error code.
  */
-static int cut_kpageflags_range(unsigned long from, unsigned long to, const char* module, const char* rights, pfile_data_t* data)
+static int cut_kpageflags_range(unsigned long from, unsigned long to, const char* rights, pfile_data_t* data)
 {
 	/* store the memory area header data */
 	pageflags_header_t header = {
@@ -320,7 +316,7 @@ static int cut_kpageflags_range(unsigned long from, unsigned long to, const char
  *
  * This function parses the maps file record and scans the r/w
  * address range for memory pages containing only zero bytes.
- * @param[in] fd_out  the output file descriptor.
+ * @param[in] data    the parser data.
  * @param[in] buffer  the maps file record. The data in this
  *                    buffer is changed during parsing.
  * @param[in] size    the size of maps file record.
@@ -344,25 +340,10 @@ static int parse_record(parser_data_t* data, char* buffer, size_t size)
 	if (!ptr) return -EINVAL;
 	*ptr++ = '\0';
 
-	ptr = _strnchr(ptr, ' ', size - (ptr - buffer));
-	if (!ptr) return -EINVAL;
-	ptr++;
-
-	ptr = _strnchr(ptr, ' ', size - (ptr - buffer));
-	if (!ptr) return -EINVAL;
-	ptr++;
-
-	char* name_s = _strnchr(ptr, ' ', size - (ptr - buffer));
-	if (name_s) {
-		while (*name_s == ' ') name_s++;
-	}
-	else {
-		name_s = buffer + size - 1;
-	}
 	unsigned long from = str2hex(from_s);
 	unsigned long to = str2hex(to_s);
 
-	return data->process(from, to, name_s, rights_s, data->data);
+	return data->process(from, to, rights_s, data->data);
 }
 
 /**
@@ -405,7 +386,7 @@ static int parse_maps(parser_data_t* data)
 
 	char buffer[4096];
 	int n, offset = 0;
-	while ( (n = read(fd, buffer + offset, sizeof(buffer) - offset)) ) {
+	while ( (n = read(fd, buffer + offset, sizeof(buffer) - offset)) > 0 ) {
 		size_t total_size = n + offset;
 		int nparsed = parse_buffer(data, buffer, total_size);
 		_strmove(buffer, buffer + nparsed, total_size - nparsed);
@@ -536,7 +517,8 @@ static void enable_tracing(bool value)
 
 		find_zero_memory_pages(filename);
 
-		/* Copy /proc/self/pagemap, /proc/kpageflags files for debugging purposes
+#if DEBUG_INFO
+		/* Copy /proc/self/pagemap, /proc/kpageflags files for debugging purposes */
 
 		sp_rtrace_get_out_filename("pagemap-pagemap", filename, sizeof(filename));
 		sp_rtrace_attachment_t file_pagemap = {
@@ -567,6 +549,7 @@ static void enable_tracing(bool value)
 		diff = diff * 1000 + (ts2.tv_nsec - ts1.tv_nsec) / 1000000;
 		fprintf(stderr, "time: %.3f\n", (double)diff / 1000);
 		*/
+#endif /* DEBUG_INFO */
 	}
 	trace_enabled = value;
 }
@@ -592,7 +575,7 @@ static void trace_pagemap_fini(void)
  *
  * @return  the module information data.
  */
-const sp_rtrace_module_info_t* sp_rtrace_get_module_info()
+const sp_rtrace_module_info_t* sp_rtrace_get_module_info(void)
 {
 	return &module_info;
 }
