@@ -704,7 +704,7 @@ static void* trace_mmap(void *addr, size_t length, int prot, int flags, int fd, 
 		.res_size = (size_t)length,
 	};
 
-	char arg_length[16]; snprintf(arg_length, sizeof(arg_length), "0x%x", length);
+	char arg_length[16]; snprintf(arg_length, sizeof(arg_length), "0x%lx", (unsigned long)length);
 	char arg_prot[16]; snprintf(arg_prot, sizeof(arg_prot), "0x%x", prot);
 	char arg_flags[16]; snprintf(arg_flags, sizeof(arg_flags), "0x%x", flags);
 	char arg_fd[16]; snprintf(arg_fd, sizeof(arg_fd), "0x%x", fd);
@@ -748,7 +748,7 @@ static void* trace_mmap2(void *addr, size_t length, int prot, int flags, int fd,
 		.res_size = (size_t)length,
 	};
 
-	char arg_length[16]; snprintf(arg_length, sizeof(arg_length), "0x%x", length);
+	char arg_length[16]; snprintf(arg_length, sizeof(arg_length), "0x%lx", (unsigned long)length);
 	char arg_prot[16]; snprintf(arg_prot, sizeof(arg_prot), "0x%x", prot);
 	char arg_flags[16]; snprintf(arg_flags, sizeof(arg_flags), "0x%x", flags);
 	char arg_fd[16]; snprintf(arg_fd, sizeof(arg_fd), "0x%x", fd);
@@ -792,11 +792,11 @@ static void* trace_mmap64(void *addr, size_t length, int prot, int flags, int fd
 		.res_size = (size_t)length,
 	};
 
-	char arg_length[16]; snprintf(arg_length, sizeof(arg_length), "0x%x", length);
+	char arg_length[16]; snprintf(arg_length, sizeof(arg_length), "0x%lx", (unsigned long)length);
 	char arg_prot[16]; snprintf(arg_prot, sizeof(arg_prot), "0x%x", prot);
 	char arg_flags[16]; snprintf(arg_flags, sizeof(arg_flags), "0x%x", flags);
 	char arg_fd[16]; snprintf(arg_fd, sizeof(arg_fd), "0x%x", fd);
-	char arg_offset[16]; snprintf(arg_offset, sizeof(arg_offset), "0x%llx", offset);
+	char arg_offset[16]; snprintf(arg_offset, sizeof(arg_offset), "0x%llx", (unsigned long long)offset);
 	char arg_mode[16];
 	sp_rtrace_farg_t args[] = {
 		{.name="length", .value=arg_length},
@@ -840,7 +840,7 @@ static int trace_munmap(void *addr, size_t length)
 		.res_size = (size_t)0,
 	};
 
-	char arg_length[16]; snprintf(arg_length, sizeof(arg_length), "%d", length);
+	char arg_length[16]; snprintf(arg_length, sizeof(arg_length), "%li", (unsigned long)length);
 	sp_rtrace_farg_t args[] = {
 		{.name="length", .value=arg_length},
 		{0}

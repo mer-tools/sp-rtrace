@@ -168,8 +168,10 @@ static long compare_resource(rd_resource_t* res, sp_rtrace_resource_t* template)
  */
 static long compare_calls(rd_fcall_t* call1, rd_fcall_t* call2)
 {
-	if (call1->data.timestamp == call2->data.timestamp) return call1->data.index - call2->data.index;
-	return call1->data.timestamp - call2->data.timestamp;
+	long rc = call1->data.timestamp == call2->data.timestamp ?
+		(int)(call1->data.index - call2->data.index) :
+		(int)(call1->data.timestamp - call2->data.timestamp);
+	return rc;
 }
 
 /**

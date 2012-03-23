@@ -3,7 +3,7 @@
 #
 # This file is part of sp-rtrace.
 #
-# Copyright (C) 2005-2007,2009-2011 by Nokia Corporation
+# Copyright (C) 2005-2007,2009-2012 by Nokia Corporation
 #
 # Contact: Eero Tamminen <eero.tamminen@nokia.com>
 #
@@ -177,6 +177,8 @@
 # - Add "count" callgraph report
 # 2011-03-24:
 # - Rename&reuse refs to only_counts to indicate kBs aren't needed
+# 2012-03-20:
+# - Fix max size limit
 #
 # Originally this file (alloc-tree) was a part of libleaks package, but
 # renamed and moved to the sp-rtrace package during libleaks redesign.
@@ -678,6 +680,8 @@ class Rtrace:
                     stack = True
                 # backtrace stack frames collected for previous allocs/frees?
                 if stack:
+                    #if options.verbose:
+                    #    debug("sizes: %s, trace: %s" % (sizes,trace))
                     if options.progress:
                         # show parsing progress
                         debug(line[:line.find('.')])
@@ -1016,7 +1020,7 @@ class Options:
     depth = 3           # depends on report type
     limit = 10          # maximum percentage of total to show
     size_min = 0	# minimum alloc size to include
-    size_max = 0xEFFF	# maximum alloc size to include
+    size_max = 0x7fffffff # maximum alloc size to include
     emph_limit = 60     # maximum percentage of total to emphasize
     own_allocs = 1.2    # factor by how much own allocs can exceed child allocs
     report = "graph"    # report type

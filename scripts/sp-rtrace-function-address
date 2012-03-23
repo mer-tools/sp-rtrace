@@ -1,0 +1,69 @@
+#!/bin/sh
+#
+# Rtrace helper script. This file is part of sp-rtrace.
+#
+# Copyright (C) 2012 by Nokia Corporation
+#
+# Contact: Eero Tamminen <eero.tamminen@nokia.com>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License 
+# version 2 as published by the Free Software Foundation. 
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+# 02110-1301 USA
+#
+#
+
+display_options()
+{
+	echo "Scans target symbol table for address range of the specified function."
+	echo "  Usage: function-range.sh <target> <function>"
+	echo "    The result is given in format <target>:<start address>+<size>"
+}
+
+address_range()
+{
+	target=$1
+	address=$(nm -SC  "$target" 2>&1)
+	if [ $? -ne 0 ] || [ "$address" = "nm: $target: no symbols" ]; then
+		echo "" 
+		return
+	fi
+	echo "$address"
+}
+
+if [ $# -lt 2 ]; then
+	display_options
+	exit 1
+fi
+
+if ! type anm >/dev/null 2>&1; then
+    echo "Warning: nm utility was not found in the default path."
+    exit 1
+fi
+
+
+target=$1
+shift
+function=$1
+
+address=$(address_range $target)
+if [ -z "$address" ]; then
+	address=$(address_range /usr/lib/debug/$target)
+	if [ -z "$address" ]; then
+		echo "Failed to get symbol table for $target" >&2 
+		exit 1
+	fi
+fi
+
+echo $target:$(echo "$address" | grep "$function" | head -n1 | sed -r "s/([0-9a-f]+) ([0-9a-f]+) .*/\1+\2/" )
+
+exit 0

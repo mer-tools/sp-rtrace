@@ -140,5 +140,19 @@ void rs_cache_init(rs_cache_t* rs);
 void rs_cache_free(rs_cache_t* rs);
 
 
+/**
+ * Converts target path into its path in the host OS filesystem.
+ *
+ * Only full paths are converted. This is used for cross platform resolving,
+ * when guest system root path is specified.
+ * Note that the path is stored locally and next rs_host_path() call will
+ * overwrite it. Copy the returned path if it needs to be stored for some
+ * time.
+ * @param path  the target path.
+ * @param out   the host path.
+ * @return
+ */
+const char* rs_host_path(const char* path);
+
 #endif
 

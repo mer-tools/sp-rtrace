@@ -88,6 +88,23 @@ is in text format and contains one event index per line.
 Removes events that are listed in the \fIfile\fP. The exclude file
 is in text format and contains one event index per line.
 .TP
+\fI--call-address\fP=<target>:<start address>+<size>
+Removes allocation events not originated from the specified code
+range. 
+
+This option is useful to monitor only allocations from a
+specific address range, for example a library function.
+This option is best used with helper script sp-rtrace-function-address
+which extracts function address range from target binary and displays
+it in the --call-address option format:
+sp-rtrace-function-address <target> <function>
+
+
+For example:
+sp-rtrace-postproc -i <input report> --call-addresss=$(sp-rtrace-function-address <library> <function>) -lr
+
+
+.TP
 \fI--quiet\fP (\fI-q\fP)
 Suppress warning messages. Note that command line parsing warnings
 are not suppressed for options specified before this option.

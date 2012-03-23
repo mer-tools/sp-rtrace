@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -32,24 +32,20 @@
  * Common definitions.
  */
 
-/* the tracing module installation directory and path*/
-#define SP_RTRACE_LIB_DIR          "sp-rtrace"
-#define SP_RTRACE_LIB_PATH         INSTALL_DIR "/lib/" SP_RTRACE_LIB_DIR "/"
+/* the tracing module installation directory and path */
+#define SP_RTRACE_LIB_PATH         LIBDIR "/sp-rtrace"
 
 /* the main tracing module */
-#define SP_RTRACE_MAIN_MODULE      "libsp-rtrace-main.so"
-
-/* the audit tracing module */
-#define SP_RTRACE_AUDIT_MODULE      "libsp-rtrace-audit.so"
+#define SP_RTRACE_MAIN_MODULE      LIBDIR "/libsp-rtrace-main.so"
 
 /* pre-processor  */
-#define SP_RTRACE_PREPROC          "sp-rtrace"
+#define SP_RTRACE_PREPROC          BINDIR "/sp-rtrace"
 
 /* post-processor */
-#define SP_RTRACE_POSTPROC         "sp-rtrace-postproc"
+#define SP_RTRACE_POSTPROC         BINDIR "/sp-rtrace-postproc"
 
 /* resolver */
-#define SP_RTRACE_RESOLVER         "sp-rtrace-resolve"
+#define SP_RTRACE_RESOLVER         BINDIR "/sp-rtrace-resolve"
 
 /* event pre-processor named pipe path template */
 #define SP_RTRACE_PIPE_PATTERN      "/tmp/rtrace-"

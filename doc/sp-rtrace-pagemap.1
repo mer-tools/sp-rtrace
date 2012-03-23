@@ -88,7 +88,7 @@ generate warning message about attachment size being zero.
 
 .SH EXAMPLES
 .TP
-sp-rtrace -s -p pagemap:memory -P-o$(pwd) -x sample
+sp-rtrace -s -e pagemap:memory -P-o$(pwd) -x sample
 Starts sample process with pagemap and memory modules and invoke post-processor
 to produce text file required for pagemap post-processor (sp-rtrace-pagemap).
 .TP

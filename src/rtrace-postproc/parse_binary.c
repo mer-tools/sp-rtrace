@@ -88,7 +88,7 @@ static rd_context_t* read_packet_CR(const rd_hshake_t* hs __attribute__((unused)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
 	rd_context_t* context = (rd_context_t*)dlist_create_node(sizeof(rd_context_t));
-	data += read_dword(data, &context->data.id);
+	data += read_dword2long(data, &context->data.id);
 	read_stringa(data, &context->data.name);
 	return context;
 }
@@ -105,7 +105,7 @@ static rd_resource_t* read_packet_RR(const rd_hshake_t* hs, const char* data)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
 	rd_resource_t* res = (rd_resource_t*)dlist_create_node(sizeof(rd_resource_t));
-	data += read_dword(data, &res->data.id);
+	data += read_dword2long(data, &res->data.id);
 	if (HS_CHECK_VERSION(hs, 1, 3)) {
 		data += read_dword(data, &res->data.flags);
 	}
@@ -222,9 +222,9 @@ static rd_fcall_t* read_packet_FC(const rd_hshake_t* hs __attribute__((unused)),
     cd->index = call_index++;
     /* read resource type id into res_type field. A reference to the resource
      * type data will be properly stored after returning from this function */
-    unsigned int res_type;
-    data += read_dword(data, &res_type);
-    cd->res_type = (void*)(long)res_type;
+    unsigned long res_type;
+    data += read_dword2long(data, &res_type);
+    cd->res_type = (void*)res_type;
     cd->res_type_flag = SP_RTRACE_FCALL_RFIELD_ID;
     /* */
     data += read_dword(data, &cd->context);
@@ -253,7 +253,7 @@ static rd_ftrace_t* read_packet_BT(const rd_hshake_t* hs __attribute__((unused))
 
     rd_ftrace_t* trace = (rd_ftrace_t*)htable_create_node(sizeof(rd_ftrace_t));
     trace->ref_count = 0;
-    data += read_dword(data, &trace->data.nframes);
+    data += read_dword2long(data, &trace->data.nframes);
     trace->data.frames = (pointer_t*)malloc_a(sizeof(pointer_t) * trace->data.nframes);
     memcpy(trace->data.frames, data, sizeof(pointer_t) * trace->data.nframes);
     /* binary packets can't contain resolved address names */

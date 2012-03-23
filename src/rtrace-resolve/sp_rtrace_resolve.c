@@ -74,6 +74,7 @@ resolve_options_t resolve_options = {
 	.mode = MODE_DEFAULT,
 	.full_path = false,
 	.keep_resolved = false,
+	.root_path = NULL,
 };
 
 
@@ -88,6 +89,7 @@ static void free_options()
 {
 	if (resolve_options.input_file) free(resolve_options.input_file);
 	if (resolve_options.output_file) free(resolve_options.output_file);
+	if (resolve_options.root_path) free(resolve_options.root_path);
 }
 
 
@@ -109,6 +111,7 @@ static void display_usage()
 			"  -k           - keep resolved names (by default the resolved names\n"
 			"                 from input stream are ignored and the addresses are\n"
 			"                 always resolved again).\n"
+			"  -s           - specify guest OS root path for cross platform resolving.\n"
 			"  -h           - this help page.\n"
 	);
 }
@@ -368,9 +371,12 @@ static void read_header(FILE* fpin, FILE* fpout)
 	
 	/* check source stream architecture */
 	if (header.fields[SP_RTRACE_HEADER_ARCH] && strcmp(header.fields[SP_RTRACE_HEADER_ARCH], BUILD_ARCH)) {
-		msg_error("unsupported architecture: %s (expected %s)\n",
+		msg_warning("Non native architecture: %s (expected %s).\n",
 				header.fields[SP_RTRACE_HEADER_ARCH], BUILD_ARCH);
-	    exit (-1);
+		if ( !resolve_options.root_path ) {
+			msg_error("Set guest system root path to attempt cross architecture resolving\n");
+			exit (-1);
+		}
 	}
 	/* set the resolve filter tag */
 	header_set_filter(&header, header_get_filter(&header) | FILTER_MASK_RESOLVE);
@@ -458,13 +464,14 @@ int main(int argc, char* argv[])
 			 {"full-path", 0, 0, 'p'},
 			 {"keep-resolved", 0, 0, 'k'},
 			 {"quiet", 0, 0, 'q'},
+			 {"sysroot", 1, 0, 's'},
 			 {0, 0, 0, 0},
 	};
 	/* parse command line options */
 	int opt;
 	opterr = 0;
 
-	while ( (opt = getopt_long(argc, argv, "i:o:hm:pkt:q", long_options, NULL)) != -1) {
+	while ( (opt = getopt_long(argc, argv, "i:o:hm:pkt:qs:", long_options, NULL)) != -1) {
 		switch(opt) {
 		case 'h':
 			display_usage();
@@ -521,6 +528,10 @@ int main(int argc, char* argv[])
 
 		case 'q':
 			msg_set_verbosity(MSG_ERROR);
+			break;
+
+		case 's':
+			resolve_options.root_path = strdup_a(optarg);
 			break;
 
 		case '?':

@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2011 by Nokia Corporation
+ * Copyright (C) 2011-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -52,16 +52,16 @@ void Options::displayUsage()
 		"  -i <path>    - the input file path. Standard input used by default.\n"
 		"  -o <path>    - the output directory. Standard output is used by default.\n"
 		"  -p           - page type statistics. Displays information about memory\n"
-	    "                 pages contained in the mapped areas.\n"
+		"                 pages contained in the mapped areas.\n"
 		"  -d           - allocation per page statistics. Displays percentage of\n"
 		"                 active allocations for each page.\n"
 		"  -c           - page mapping report. Displays numbers of mappings per page.\n"
 		"  -T <number>  - the number of top allocations per area to print.\n"
 		"  -B <number>  - the number of bottom allocations per area to print.\n"
 		"  -s           - summary about page types from all memory areas.\n"
-		"  -N <name>    - filter report by area name.\n"
-		"  -A <addr>    - filter report by an address inside memory area.\n"
-	    "  -P <type>    - filter by the page type.\n"
+		"  -N <name>    - filter report by given area name.\n"
+		"  -A <addr>    - filter report by given hex address inside memory area.\n"
+		"  -P <type>    - filter report by given page type.\n"
 		"  -h           - this help page. More information is available at\n"
 		"                 --help-filter, --help-pages commands.\n"
 			;
@@ -76,9 +76,9 @@ void Options::displayFilterUsage()
 		"ignored. To generate filtered pagemap report first apply the necessary\n"
 		"filter and then generate report from the filtered output.\n\n"
 		"The filters leave only events with resource identifiers (addresses):\n"
-		"-N <name> (--filter-name <name>) - belonging to the specified memory area.\n"
+		"-N <name> (--filter-name <name>) - belonging to the given memory area.\n"
 		"-A <addr> (--filter-address <addr>) - belonging to the same memory area\n"
-		"   as the specified address.\n"
+		"   as the given hex address.\n"
 		"-P <type> (--filter-page <type>) - allocated on the memory pages matching\n"
 		"   the requested page type. See --help-pages for description of memory\n"
 		"   page types.\n"
@@ -197,8 +197,13 @@ void Options::parseCommandLine(int argc, char* const argv[])
 			}
 
 			case 'A': {
+				char *endptr;
+				filter_address = strtoll(optarg, &endptr, 16);
+				if (!filter_address || *endptr) {
+					std::cerr << "ERROR: invalid hex address given\n";
+					exit (-1);
+				}
 				filter = true;
-				std::stringstream(optarg) >> filter_address;
 				break;
 			}
 

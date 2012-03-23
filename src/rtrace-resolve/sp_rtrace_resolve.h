@@ -53,6 +53,7 @@ typedef struct resolve_options_t {
 	int mode;
 	bool full_path;
 	bool keep_resolved;
+	char* root_path;
 } resolve_options_t;
 
 

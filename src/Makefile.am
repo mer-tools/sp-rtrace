@@ -1,6 +1,8 @@
 AM_CFLAGS = -Wall -Wextra -Wno-unused-function -Wno-missing-field-initializers -Wno-unused-parameter
 AM_CXXFLAGS = -Wall -Wextra -Wno-unused-function -Wno-missing-field-initializers -Wno-unused-parameter
 
+# needed for executing post-processors and finding modules under install dir
+AM_CPPFLAGS = -DBINDIR='"$(bindir)"' -DLIBDIR='"$(libdir)"'
 
 lib_LTLIBRARIES = libsp-rtrace1.la  libsp-rtrace-main.la
 
@@ -75,7 +77,8 @@ sp_rtrace_LDADD = -ldl
 
 sp_rtrace_postproc_SOURCES = rtrace-postproc/sp_rtrace_postproc.c rtrace-postproc/parse_binary.c \
     rtrace-postproc/parse_text.c rtrace-postproc/leaks_sort.c rtrace-postproc/writer.c rtrace-postproc/filter.c \
-    common/rtrace_data.c common/htable.c common/dlist.c common/utils.c common/header.c common/msg.c
+    common/rtrace_data.c common/htable.c common/dlist.c common/utils.c common/header.c common/msg.c \
+    common/resolve_utils.c
 sp_rtrace_postproc_CFLAGS = $(AM_CFLAGS)
 sp_rtrace_postproc_LDFLAGS = -Wl,-z,defs
 sp_rtrace_postproc_LDADD = -lsp-rtrace1
@@ -84,7 +87,7 @@ sp_rtrace_postproc.$(OBJEXT): libsp-rtrace1.a
 
 sp_rtrace_resolve_SOURCES = rtrace-resolve/sp_rtrace_resolve.c common/utils.c common/rtrace_data.c common/dlist.c \
 	rtrace-resolve/sarray.c common/htable.c rtrace-resolve/namecache.c rtrace-resolve/resolver.c common/header.c \
-	common/msg.c
+	common/msg.c common/resolve_utils.c
 	
 sp_rtrace_resolve_CFLAGS = $(AM_CFLAGS)
 sp_rtrace_resolve_LDFLAGS = -Wl,-z,defs

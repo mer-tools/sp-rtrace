@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010,2011 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -189,7 +189,7 @@ static void enable_tracing(bool value)
  * Opens named pipe to the pre-processor.
  *
  * First this function checks if the necessary named pipe exists.
- * If not, it launches pre-processor (sp-rtrace-proc) and
+ * If not, it launches pre-processor (sp-rtrace) and
  * waits until it creates the named pipe.
  * @return    the opened pipe descriptor.
  */
@@ -217,7 +217,7 @@ static int open_pipe()
 				LOG("\t'%s'", *ptr++);
 			}
 #endif
-			execve(INSTALL_DIR "/bin/" SP_RTRACE_PREPROC, args.argv, NULL);
+			execve(SP_RTRACE_PREPROC, args.argv, NULL);
 			fprintf(stderr, "ERROR: Failed to execute pre-processor process %s (%s)\n",
 					SP_RTRACE_PREPROC, strerror(errno));
 			exit (-1);
@@ -615,7 +615,7 @@ static int _atoi(const char* str)
  *
  * @param[in] buffer  the output buffer.
  * @param[in] value   the value to convert.
- * @return            the output buffer.
+ * @return            the new end of output buffer.
  */
 static char* _itoa(char* buffer, int value)
 {
@@ -632,7 +632,7 @@ static char* _itoa(char* buffer, int value)
 		*ptr_buffer++ = *ptr--;
 	} while (ptr >= tmp);
 	*ptr_buffer = '\0';
-	return buffer;
+	return ptr_buffer;
 }
 
 
@@ -974,7 +974,7 @@ bool sp_rtrace_initialize()
 			LOG("Use libunwind for stack frame unwinding");
 			backtrace_impl = libunwind_initialize();
 			if (backtrace_impl == NULL) {
-				fprintf(stderr, "WARNING: libunwind backtracing option specified, but libunwind_unitialize returned NULL. "
+				fprintf(stderr, "WARNING: libunwind backtracing option specified, but libunwind_initialize() returned NULL. "
 						"Switching to standard backtrace() implementation.\n");
 				backtrace_impl = backtrace;
 			}
@@ -1008,10 +1008,13 @@ void sp_rtrace_get_out_filename(const char* pattern, char* buffer, size_t size)
 	if (*sp_rtrace_options->output_dir) ptr = _stpncpy(buffer, sp_rtrace_options->output_dir, size);
 	else ptr = _stpncpy(buffer, sp_rtrace_options->start_dir, size);
 	*ptr++ = '/';
+	ptr =_itoa(ptr, getpid());
+	*ptr++ = '-';
 	ptr = _stpncpy(ptr, pattern, size - (ptr - buffer));
 	*ptr++ = '-';
 	int index = 0;
 	do {
+		/* increase index until non-existing filename is found */
 		_itoa(ptr, index++);
 	} while (access(buffer, F_OK) == 0);
 }

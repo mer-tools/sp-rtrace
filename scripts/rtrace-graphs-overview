@@ -69,6 +69,8 @@
 # 2011-10-25
 # - Do callgraph symbol resolving using debug symbols instead of ELF
 #   symbol table (much slower & memory hungry, but much better results)
+# 2012-02-29
+# - Workaround for Ubuntu's Dash shell printf
 
 usage ()
 {
@@ -106,6 +108,19 @@ if [ $# -lt 1 ]; then
 	usage "no resource trace files given"
 fi
 
+# check for printf without full backslash support
+printf '\xF0'|grep -q F0
+if [ $? -eq 0 ]; then
+	if [ \! -x /usr/bin/printf ]; then
+		echo "ERROR: 'printf' is missing backslash support!" >&2
+		exit 1
+	fi
+	printf=/usr/bin/printf
+	echo "Warning: 'printf' without escape support, using '$printf' instead."
+else
+	printf=printf
+fi
+
 # check which trace files are binary, which are textual or something else
 texts=""
 binaries=""
@@ -119,7 +134,7 @@ for src in $*; do
 		echo " - $src, SKIPPING (PNG/EPS/PS files are results, not inputs)"
 		continue
 	fi
-	if [ "$(dd if=$src bs=1 count=1 2> /dev/null)" = "$(printf '\xF0')" ]; then
+	if [ "$(dd if=$src bs=1 count=1 2> /dev/null)" = "$($printf '\xF0')" ]; then
 		echo "- $src: binary"
 		binaries="$binaries $src"
 		continue

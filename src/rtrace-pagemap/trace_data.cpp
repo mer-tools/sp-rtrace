@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2011 by Nokia Corporation
+ * Copyright (C) 2011-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -86,7 +86,10 @@ void TraceData::scanMemoryAreas()
 		unsigned long from, to;
 		char rights[16];
 		char path[PATH_MAX];
-		if (sscanf(buffer, "%lx-%lx %[^ ] %[^ ] %[^ ] %[^ ] %[^ ]", &from, &to, rights, path, path, path, path) == 7) {
+		int n = sscanf(buffer, "%lx-%lx %[^ ] %[^ ] %[^ ] %[^ ] %[^ ]",
+			       &from, &to, rights, path, path, path, path);
+		if (n >= 3) {
+			if (n < 7) path[0] = '\0';
 			void* ptr = getPageflagsData(from, to);
 			addMemoryArea(from, to, static_cast<pageflags_data_t*>(ptr), path, buffer);
 		}
@@ -183,7 +186,7 @@ void TraceData::parseReport(const std::string& filename)
 	pageflags_addr = mmap(NULL, pageflags_size, PROT_READ, MAP_SHARED, pageflags_fd, 0);
 	if (pageflags_addr == MAP_FAILED) throw std::runtime_error(Formatter() << "Failed to mmap pageflags file '" << filename_pageflags << "': " << strerror(errno));
 
-	// scan the mapped areas from maps/pageflagus files
+	// scan the mapped areas from maps/pageflags files
 	scanMemoryAreas();
 
 	// scan the allocation events

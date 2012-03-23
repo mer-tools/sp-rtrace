@@ -31,6 +31,7 @@
 #include "filter.h"
 
 #include "common/sp_rtrace_proto.h"
+#include "common/resolve_utils.h"
 #include "common/utils.h"
 #include "common/msg.h"
 #include "sp_rtrace_postproc.h"
@@ -297,7 +298,7 @@ static int trim_backtrace(rd_ftrace_t* trace, unsigned int backtrace_depth)
  */
 static int filter_compare_event_index(const void* index1, const void* index2)
 {
-	return (int)index1 - (int)index2;
+	return (long)index1 - (long)index2;
 }
 
 /**
@@ -318,8 +319,8 @@ static void* filter_load_index_data(const char* filename)
 	char line[128];
 	void* root = NULL;
 	while (fgets(line, sizeof(line), fp)) {
-		int index;
-		if (sscanf(line, "%d", &index) == 1) {
+		unsigned long index;
+		if (sscanf(line, "%li", &index) == 1) {
 			tsearch((void*)index, &root, filter_compare_event_index);
 		}
 	}
@@ -352,7 +353,8 @@ typedef struct index_filter_t {
  */
 static void fcall_filter_index(rd_fcall_t* call, index_filter_t* filter)
 {
-	bool found = tfind((void*)call->data.index, &filter->index_map, filter_compare_event_index);
+	unsigned long index = call->data.index;
+	bool found = tfind((void*)index, &filter->index_map, filter_compare_event_index);
 	if ((found && !filter->include) || (!found && filter->include)) {
 		rd_fcall_remove(filter->rd, call);
 	}
@@ -437,7 +439,8 @@ void filter_trim_backtraces(rd_t* rd)
 
 	/* trim the backtraces. Note that only backtrace size is changed, the allocated memory
 	 * is not reallocated */
-	htable_foreach2(&rd->ftraces, (op_binary_t)trim_backtrace, (void*)rd->pinfo->backtrace_depth);
+	unsigned long bt_depth = rd->pinfo->backtrace_depth;
+	htable_foreach2(&rd->ftraces, (op_binary_t)trim_backtrace, (void*)bt_depth);
 }
 
 
@@ -466,3 +469,81 @@ void filter_exclude(rd_t* rd)
 	if (filter.index_map) tdestroy(filter.index_map, free_index);
 }
 
+/*
+ * Code address range filtering support
+ */
+
+
+/**/
+typedef struct {
+	rd_t* rd;
+	unsigned long start;
+	unsigned long size;
+} call_address_filter_t;
+
+
+/**
+ * Calculates the real code address based on target name and specified address range.
+ * @param mmap
+ * @param filter
+ */
+static long mmap_lookup_filter_range_target(rd_mmap_t* mmap, call_address_filter_t* filter)
+{
+	if (strstr(mmap->data.module, postproc_options.filter_range_target)) {
+		filter->start = postproc_options.filter_range_start;
+		filter->size = postproc_options.filter_range_size;
+		if (!rs_mmap_is_absolute(mmap->data.module)) {
+			filter->start += mmap->data.from;
+		}
+	}
+	return 0;
+}
+
+/**
+ * Checks if the code address range was found.
+ * @param mmap
+ * @param filter
+ */
+static long mmap_lookup_filter_range_target_found(rd_mmap_t* mmap, call_address_filter_t* filter)
+{
+	return !filter->start;
+}
+
+/**
+ * Removes allocation events with backtraces not containing any addresses in the
+ * specified range.
+ * @param call
+ * @param filter
+ */
+static void fcall_filter_range(rd_fcall_t* call, call_address_filter_t* filter)
+{
+	unsigned int i;
+	for (i = 0; i < call->trace->data.nframes; i++) {
+		pointer_t address = call->trace->data.frames[i];
+		if (address >= filter->start && address < filter->start + filter->size) {
+			return;
+		}
+	}
+	rd_fcall_remove(filter->rd, call);
+}
+
+
+void filter_call_address_range(rd_t* rd)
+{
+	call_address_filter_t filter = {
+		.rd = rd,
+		.start = 0,
+		.size = 0,
+	};
+
+	dlist_foreach2_in(&rd->mmaps, dlist_first(&rd->mmaps), (op_binary_t)mmap_lookup_filter_range_target_found,
+			(void*)&filter, (op_binary_t)mmap_lookup_filter_range_target, (void*)&filter);
+	if (!filter.start) {
+		msg_warning("failed to find the specified call address range target: %s\n", postproc_options.filter_range_target);
+		free(postproc_options.filter_range_target);
+		postproc_options.filter_range_target = NULL;
+		return;
+	}
+
+	dlist_foreach2(&rd->calls, (op_binary_t)fcall_filter_range, (void*)&filter);
+}

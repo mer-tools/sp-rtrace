@@ -38,6 +38,7 @@
 
 #include "resolver.h"
 #include "sp_rtrace_resolve.h"
+#include "common/resolve_utils.h"
 #include "common/utils.h"
 #include "common/msg.h"
 #include "namecache.h"
@@ -115,57 +116,6 @@ typedef struct {
  * Memory mapping support
  */
 
-/**
- *
- * @param path
- * @return
- */
-static int rs_mmap_is_absolute(const char* path)
-{
-	FILE *file;
-	Elf_Ehdr_t elf_header;
-	Elf_Phdr_t *program_header;
-	size_t ret;
-	int i, is_absolute = 1;
-
-	if (!(file = fopen(path, "r"))) {
-//		msg_warning("could not open file %s\n", path);
-		return -ENOENT;
-	}
-
-	/* read ELF header */
-	ret = fread(&elf_header, sizeof(elf_header), 1, file);
-	if (ret != 1) {
-		msg_error("invalid ELF header from %s\n", path);
-		return -EINVAL;
-	}
-
-	program_header = (Elf_Phdr_t*)malloc_a(sizeof(Elf_Phdr_t) * elf_header.e_phnum);
-
-	fseek(file, elf_header.e_phoff, SEEK_SET);
-
-	/* read program header table */
-	ret = fread(program_header, sizeof(Elf_Phdr_t), elf_header.e_phnum, file);
-	if (ret != elf_header.e_phnum) {
-		free(program_header);
-		msg_error("could not read program header table from %s\n", path);
-		return -EINVAL;
-	}
-
-	for (i = 0; i < elf_header.e_phnum; i++) {
-		if ((program_header[i].p_type == PT_LOAD) && (!program_header[i].p_offset)) {
-			if (!program_header[i].p_vaddr) {
-				is_absolute = 0;
-			}
-			break;
-		}
-	}
-
-	free(program_header);
-	fclose(file);
-
-	return is_absolute;
-}
 
 /**
  * Memory mapping comparison function.
@@ -249,7 +199,7 @@ static int elf_get_address_info(rs_cache_record_t* rec, pointer_t address, symbo
 
 				for (sym = symtab; sym < symtab_end; sym = (Elf_Sym_t*)((char*)sym + symtab_size)) {
 					if (ELF_ST_TYPE(sym->st_info) == STT_FUNC && sym->st_shndx != SHN_UNDEF) {
-						if ((Elf_Addr_t)abs_address >= sym->st_value && (unsigned)(abs_address - sym->st_value) < sym->st_size) {
+						if ((Elf_Addr_t)abs_address >= sym->st_value && (unsigned long)(abs_address - sym->st_value) < sym->st_size) {
 							if (strtab + sym->st_name) {
 								symbol->name =  strtab + sym->st_name;
 								return 0;
@@ -406,17 +356,17 @@ static int get_address_info(rs_cache_record_t* rec, pointer_t address, char* buf
  */
 static int rs_open_file(rs_cache_record_t* rec, const char* filename)
 {
-	rec->file = bfd_openr(filename, TARGET);
+	rec->file = bfd_openr(rs_host_path(filename), TARGET);
 
 	if (rec->file == NULL) {
-		msg_error("%s: %s\n", filename, bfd_errmsg(bfd_get_error()));
+		msg_error("%s: %s\n", rs_host_path(filename), bfd_errmsg(bfd_get_error()));
 		return -EINVAL;
 	}
 
 	if (!bfd_check_format (rec->file, bfd_object)) {
 		bfd_close(rec->file);
 		rec->file = NULL;
-		msg_error("file %s not in executable format\n", filename);
+		msg_error("file %s not in executable format\n", rs_host_path(filename));
 		return -EINVAL;
 	}
 	return 0;
@@ -436,14 +386,14 @@ static int rs_load_symbols(rs_cache_record_t* rec, const char* filename)
 	long symcount = 0;
 	unsigned int size;
 	if (resolve_options.mode & MODE_BFD) {
-		static char *places[]={".","./.debug", "/usr/lib/debug", NULL};
+		static char *places[]={".", "./.debug", "/usr/lib/debug", NULL};
 
 		/* locate and open the symbol file */
 		if (rs_open_file(rec, filename) < 0) return -EINVAL;
 
 		int index = 0;
 		while (places[index]) {
-			rec->dbg_name = bfd_follow_gnu_debuglink (rec->file, places[index]);
+			rec->dbg_name = bfd_follow_gnu_debuglink (rec->file, rs_host_path(places[index]));
 			if (rec->dbg_name) {
 				bfd_close(rec->file);
 				int rc = rs_open_file(rec, rec->dbg_name);
@@ -468,9 +418,9 @@ static int rs_load_symbols(rs_cache_record_t* rec, const char* filename)
 		/* Use elf symbol table lookup, as the bfd_find_nearest_line returns bogus information
 		 * for global constructors when dynamic symbol tables are used.
 		 */
-		rec->fd = open(filename, O_RDONLY);
+		rec->fd = open(rs_host_path(filename), O_RDONLY);
 		if (rec->fd == -1) {
-			fprintf(stderr, "Failed to open image file %s\n", filename);
+			fprintf(stderr, "Failed to open image file %s\n", rs_host_path(filename));
 			return -EINVAL;
 		}
 		struct stat sb;
@@ -614,3 +564,10 @@ void rs_cache_free(rs_cache_t* rs)
 }
 
 
+const char* rs_host_path(const char* path)
+{
+	if (!resolve_options.root_path || *path != '/') return path;
+	static char host_path[PATH_MAX];
+	snprintf(host_path, PATH_MAX, "%s/%s", resolve_options.root_path, path);
+	return host_path;
+}

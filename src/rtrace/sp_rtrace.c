@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -94,71 +94,64 @@ rtrace_options_t rtrace_options = {
  */
 static void display_usage()
 {
-	printf( "sp-rtrace pre-processor can be used in two modes - to start a new process\n"
-			"or to toggle tracing (enable/disable) for already running process.\n"
-			"\n"
-		    "1. Application tracing usage:\n"
-		    "  sp-rtrace [<options>] -x <application> [<arg1> [<arg2>...]]]\n"
-		    "  Executes and starts tracing <application> process with\n"
-			"  arguments <arg1>, <arg2>...\n"
-		    "  Where <options> are:\n"
-			"  -o <outputdir>  - the directory for output files\n"
-			"  -m              - instructs tracing module to start its\n"
-			"                    own pre-processor process for data handling\n"
-			"  -e <modules>    - a list of LD_PRELOAD tracing modules\n"
-			"                    separated by ':'\n"
-			"  -s              - enable tracing from the start\n"
-			"  -b <depth>      - the maximum number of function addresses\n"
-			"                    in stack trace\n"
-			"  -T              - disables timestamps in FC packets\n"
-			"  -B              - disables packet buffering\n"
-			"  -P <options>    - post-processor options. If this option\n"
-			"                    is set the pre-processor will automatically\n"
-			"                    launch the post-processor for data post-\n"
-			"                    processing\n"
-			"  -A              - enable backtraces for all functions. By default\n"
-			"                    only allocation function backtraces are reported.\n"
-			"  -u              - use libunwind instead of libc backtrace() function\n"
-			"                    for stack trace unwinding.\n"
-			"  -M S1[,S2...]   - report backtraces only for allocations of specified\n"
-			"                    size(s) S1, S2....\n"
-			"  Note that options should be always before the execute (-x)\n"
-			"  switch.\n"
-			"\n"
-			"2. Tracing toggle usage:\n"
-			"  sp-rtrace [-m] [-o <outputdir>] [-f] -t <pid>\n"
-			"  Enables/disables tracing for the process <pid>.\n"
-			"  Where:\n"
-			"  -o <outputdir>  - the directory for output files\n"
-			"  -m              - the target process was started in managed\n"
-			"                    mode\n"
-			"  -f              - send the toggle signal to all subprocesses\n"
-			"                    recursively\n"
-			"  -t <pid>        - pid of the process to toggle tracing for.\n"
-			"\n"
-			"3. Common options:\n"
-			"  -S <signal>     - tracing toggle signal\n"
-			"  -h              - this help page.\n"
-			"  -l              - lists available tracing modules.\n"
-			"  -q              - hide warning messages.\n"
-			"\n"
-			"Usage examples:\n"
-			"  Start sample process with tracing enabled at start. The (binary) output data\n"
-			"  will be stored in current directory:\n"
-			"    sp-rtrace -s -e memory -x sample\n\n"
-			"  Start sample process with tracing enabled at start. Invoke sp-rtrace-postproc\n"
-			"  with options -l -c (filter leaks and compress backtraces - see\n"
-			"  sp-rtrace-postproc manual) and store the resulting file (text)\n"
-			"  into current directory:\n"
-			"    sp-rtrace -s -e memory -P '-l -c' -o $(pwd) -x sample\n\n"
-			"  Start sample process with tracing enabled at start. Invoke sp-rtrace-postproc\n"
-			"  with options -r (resolve addresses) and write results to the standard output:\n"
-			"    sp-rtrace -s -e memory -P '-r' -x sample\n\n"
-			"  Toggle tracing for an already running 'sample' process:\n"
-			"    sp-rtrace -t $(pidof sample)\n\n"
-			"  Lists all available tracing modules:\n"
-			"    sp-rtrace -l\n"
-			);
+	printf("\nsp-rtrace pre-processor can be used in two modes - to start a new process\n"
+	       "or to toggle tracing (enable/disable) for an already running process.\n"
+	       "\n"
+	       "1. Application tracing usage:\n"
+	       "    sp-rtrace [<options>] -x <application> [<arg1> [<arg2>...]]]\n"
+	       "  Executes and starts tracing <application> process with arguments\n"
+	       "    <arg1>, <arg2>...\n"
+	       "  Where the <options> are:\n"
+	       "  -o <outputdir>  - the directory for output files\n"
+	       "  -m              - instruct tracing module to start its own pre-processor\n"
+	       "                    process for data handling\n"
+	       "  -e <modules>    - a list of LD_PRELOAD tracing modules, separated by ':'\n"
+	       "  -s              - enable tracing immediately at start\n"
+	       "  -b <depth>      - the maximum number of function addresses in stack trace\n"
+	       "  -T              - disable timestamps in function call packets\n"
+	       "  -B              - disable packet buffering\n"
+	       "  -P <options>    - post-processor options.  If this option is set,\n"
+	       "                    the pre-processor will automatically launch\n"
+	       "                    the post-processor for data post-processing\n"
+	       "  -A              - get backtraces also for resource freeing.  By default\n"
+	       "                    only resource allocation backtraces are reported\n"
+	       "  -u              - use libunwind instead of libc backtrace() function\n"
+	       "                    for stack trace unwinding\n"
+	       "  -M S1[,S2...]   - report backtraces only for allocations of specified\n"
+	       "                    size(s) S1, S2...\n"
+	       "  Note that options must be given before the execute (-x) switch!\n"
+	       "\n"
+	       "2. Tracing toggle usage:\n"
+	       "    sp-rtrace [-m] [-o <outputdir>] [-f] -t <pid>\n"
+	       "  Enable/disable tracing for the process with given <pid>.\n"
+	       "  Where:\n"
+	       "  -o <outputdir>  - the directory for output files\n"
+	       "  -m              - *if* the target process was started with -m (as managed)\n"
+	       "  -f              - send the toggle signal to all subprocesses recursively\n"
+	       "  -t <pid>        - pid of the process to toggle tracing for\n"
+	       "\n"
+	       "3. Common options:\n"
+	       "  -S <signal>     - tracing toggle signal\n"
+	       "  -h              - this help page\n"
+	       "  -l              - lists available tracing modules\n"
+	       "  -q              - hide warning messages\n"
+	       "\n"
+	       "Usage examples:\n"
+	       "  Start 'sample' process with memory allocation tracing, enabled immediately.\n"
+	       "  The (binary) output data will be stored to the current directory:\n"
+	       "    sp-rtrace -s -e memory -x sample\n\n"
+	       "  Additionally invoke sp-rtrace-postproc with the -r (resolve addresses)\n"
+	       "  option and output resulting (ASCII) trace data to the standard output:\n"
+	       "    sp-rtrace -s -e memory -P '-r' -x sample\n\n"
+	       "  Invoke sp-rtrace-postproc with options '-l -c' (filter unfreed allocs\n"
+	       "  and merge backtraces, see sp-rtrace-postproc manual) and store\n"
+	       "  the resulting (ASCII) trace file to the current directory:\n"
+	       "    sp-rtrace -s -e memory -P '-l -c' -o $(pwd) -x sample\n\n"
+	       "  Toggle tracing for an already running (non-managed) 'sample' process:\n"
+	       "    sp-rtrace -t $(pidof sample)\n\n"
+	       "  Lists all available tracing modules:\n"
+	       "    sp-rtrace -l\n\n"
+	      );
 }
 
 
@@ -219,7 +212,7 @@ static void set_environment()
 				ppreload += sprintf(ppreload, "%s:", module);
 			}
 			else {
-				ppreload += sprintf(ppreload, SP_RTRACE_LIB_PATH "libsp-rtrace-%s.so:", module);
+				ppreload += sprintf(ppreload, SP_RTRACE_LIB_PATH "/libsp-rtrace-%s.so:", module);
 			}
 			module = strtok(NULL, ":");
 		}
@@ -305,7 +298,7 @@ static int open_postproc_pipe()
 		argv[argc] = NULL;
 
 		setpgrp();
-		execvp(SP_RTRACE_POSTPROC, argv);
+		execv(SP_RTRACE_POSTPROC, argv);
 		msg_error("failed to execute post-processor process %s (%s)\n",
 				SP_RTRACE_POSTPROC, strerror(errno));
 		exit (-1);
@@ -488,7 +481,7 @@ static void begin_tracing()
  * @param[in] ppid  the parent process to check.
  * @return
  */
-static bool is_child_processs_of(int pid, int ppid)
+static bool is_child_process_of(int pid, int ppid)
 {
 	int rc = false;
 	char buffer[1024];
@@ -531,7 +524,7 @@ static void toggle_child_process(int cpid)
 		*parg++ = "-m";
 	}
 	*parg++ = NULL;
-	execv(INSTALL_DIR "/bin/" SP_RTRACE_PREPROC, args);
+	execv(SP_RTRACE_PREPROC, args);
 }
 
 
@@ -552,13 +545,12 @@ static void toggle_child_processes(int pid)
 	while ((de = readdir(dir)) != NULL) {
 		if (de->d_type == DT_DIR) {
 			int cpid = atoi(de->d_name);
-			if (cpid && is_child_processs_of(cpid, pid)) {
+			if (cpid && is_child_process_of(cpid, pid)) {
 				toggle_child_process(cpid);
 			}
 		}
 	}
 	closedir(dir);
-	
 }
 
 /**
@@ -594,22 +586,22 @@ static bool is_process_traced(int pid)
  */
 static void toggle_tracing()
 {
-  /* first check if the target process is launched in tracing mode*/
-  if (!is_process_traced(rtrace_options.pid)) {
-    msg_error("the target process %d is not launched in tracing mode.\n", rtrace_options.pid);
-    return;
-  }
+	char pipe_path[128];
 
-  if (rtrace_options.follow_forks) {
+	/* first check if the target process is launched in tracing mode */
+	if (!is_process_traced(rtrace_options.pid)) {
+		msg_error("process %d doesn't have sp-rtrace LD_PRELOAD module. Was it started with sp-rtrace tool?\n", rtrace_options.pid);
+		return;
+	}
+
+	if (rtrace_options.follow_forks) {
 		toggle_child_processes(rtrace_options.pid);
 	}
-	char pipe_path[128];
 	snprintf(pipe_path, sizeof(pipe_path), SP_RTRACE_PIPE_PATTERN "%d", rtrace_options.pid);
 
 	if (access(pipe_path, F_OK) == 0) {
 		stop_tracing();
-	}
-	else {
+	} else {
 		begin_tracing();
 	}
 }
@@ -781,7 +773,7 @@ static void print_module_info(const char* name) {
 	char path[PATH_MAX];
 	char types[] = {'?', 'P', 'A'};
 
-	sprintf(path, SP_RTRACE_LIB_PATH "%s", name);
+	sprintf(path, SP_RTRACE_LIB_PATH "/%s", name);
 	void* lib = dlopen(path, RTLD_LAZY);
 	if (lib == NULL) {
         msg_error("%s\n", dlerror());
@@ -798,20 +790,20 @@ static void print_module_info(const char* name) {
 }
 
 /**
- * Lists rtrace modules located in /usr/lib/sp-rtrace directory.
+ * Lists rtrace modules located in sp-rtrace library directory.
  */
 static void list_modules()
 {
-	DIR* libdir = opendir("/usr/lib/" SP_RTRACE_LIB_DIR);
+	DIR* libdir = opendir(SP_RTRACE_LIB_PATH);
 	if (libdir == NULL) {
-		msg_error("failed to open module directory /usr/lib/" SP_RTRACE_LIB_DIR "\n");
+		msg_error("failed to open module directory " SP_RTRACE_LIB_PATH "\n");
 		return;
 	}
 	/* preload the main module, as it exports symbols for submodules */
-	void* mainlib = dlopen("/usr/lib/" SP_RTRACE_MAIN_MODULE, RTLD_LAZY | RTLD_GLOBAL);
+	void* mainlib = dlopen(SP_RTRACE_MAIN_MODULE, RTLD_LAZY | RTLD_GLOBAL);
 	if (mainlib == NULL) {
-        msg_error("%s\n", dlerror());
-        closedir(libdir);
+		msg_error("%s\n", dlerror());
+		closedir(libdir);
 		return;
 	}
 	struct dirent *de;
@@ -991,8 +983,8 @@ int main(int argc, char* argv[])
 			break;
 
 		case '?':
-			msg_error("unknown sp-rtrace option: %c\n", optopt);
 			display_usage();
+			msg_error("unknown sp-rtrace option: %c\n", optopt);
 			exit (-1);
 		}
 	}
@@ -1025,8 +1017,8 @@ int main(int argc, char* argv[])
 			break;
 		}
 		default: {
-			msg_error("failed to determine work mode, not enough options specified\n");
 			display_usage();
+			msg_error("failed to determine work mode, not enough options specified\n");
 			exit (-1);
 		}
 	}

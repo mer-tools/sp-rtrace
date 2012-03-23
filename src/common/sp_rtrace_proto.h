@@ -122,6 +122,20 @@ static inline int read_dword(const char* ptr, unsigned int* value)
 	return sizeof(int);
 }
 
+/**
+ * Reads double word from binary stream.
+ *
+ * @param[in] ptr     the binary stream.
+ * @param[out] value  the output value.
+ * @return            the number of bytes read.
+ */
+static inline int read_dword2long(const char* ptr, unsigned long* value)
+{
+	SP_RTRACE_PROTO_CHECK_ALIGNMENT(ptr);
+	*value = *(int*)ptr;
+	return sizeof(int);
+}
+
 
 /**
  * Reads word from binary stream.

@@ -25,6 +25,8 @@
  * @file shmposix_test.c
  *
  * Test application for posix shared memory tracking module (shmposix) coverage.
+ * 
+ * Link with -lrt.
  */
 
 #define _GNU_SOURCE
