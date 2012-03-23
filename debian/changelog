@@ -1,3 +1,9 @@
+sp-rtrace (1.9-1) unstable; urgency=low
+
+  * New version with large number of fixes to callgraphs, pagemap etc.
+
+ -- Tommi Rantala <ext-tommi.1.rantala@nokia.com>  Fri, 23 Mar 2012 13:24:07 +0200
+
 sp-rtrace (1.8.6-2) unstable; urgency=low
 
   * Fixes: NB#293783 - sp-rtrace: add version dependency information to shlibs
