@@ -247,7 +247,10 @@ static int process_packet(const char* data, size_t size)
 	if (type == SP_RTRACE_PROTO_OUTPUT_SETTINGS) {
 		char value[PATH_MAX];
 		offset += read_string(data + offset, value, PATH_MAX);
-		if (*value) rtrace_options.output_dir = strdup_a(value);
+		if (*value) {
+			if (rtrace_options.output_dir) free(rtrace_options.output_dir);
+			rtrace_options.output_dir = strdup_a(value);
+		}
 		offset += read_string(data + offset, value, PATH_MAX);
 		if (*value) {
 			if (rtrace_options.postproc) free(rtrace_options.postproc);
