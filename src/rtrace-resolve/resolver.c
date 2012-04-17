@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -34,7 +34,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
+#include <demangle.h>
 
 #include "resolver.h"
 #include "sp_rtrace_resolve.h"
@@ -45,8 +45,6 @@
 
 #define DMGL_PARAMS  (1 << 0) /* Include function args */
 #define DMGL_ANSI  (1 << 1)   /* Include const, volatile, etc */
-
-extern char* cplus_demangle(const char* symbol, int flags);
 
 #define TARGET    "default"
 
