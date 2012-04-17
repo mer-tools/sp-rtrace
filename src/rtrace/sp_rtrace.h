@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -91,7 +91,7 @@ extern sig_atomic_t rtrace_stop_requests;
  *
  * @return  the opened output file/pipe descriptor.
  */
-int rtrace_connect_output();
+int rtrace_connect_output(void);
 
 #endif
 

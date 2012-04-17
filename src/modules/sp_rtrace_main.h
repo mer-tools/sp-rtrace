@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010,2011 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -124,7 +124,7 @@ unsigned int sp_rtrace_register_resource(sp_rtrace_resource_t* resource);
  *
  * @return
  */
-void sp_rtrace_store_heap_info();
+void sp_rtrace_store_heap_info(void);
 
 /**
  * Writes context registry packet into processor pipe.
@@ -141,7 +141,7 @@ int sp_rtrace_write_context_registry(sp_rtrace_context_t* context);
  * @return   true - the initialization was successful.
  *           false - the initialization failed.
  */
-bool sp_rtrace_initialize();
+bool sp_rtrace_initialize(void);
 
 /**
  * Writes new library (NL) packet into processor pipe.

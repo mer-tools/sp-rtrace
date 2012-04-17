@@ -392,7 +392,7 @@ typedef struct rd_t {
  *
  * @return   the new resource trace data object.
  */
-rd_t* rd_create();
+rd_t* rd_create(void);
 
 /**
  * Frees trace data.

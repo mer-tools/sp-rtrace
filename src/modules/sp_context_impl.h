@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -30,7 +30,7 @@
  * Call context support.
  */
 
-extern int (*sp_rtrace_get_call_context)();
+extern int (*sp_rtrace_get_call_context)(void);
 
 /**
  * Initializes call context support.
@@ -40,7 +40,7 @@ extern int (*sp_rtrace_get_call_context)();
  * function is used instead.
  * @return   the current call context.
  */
-int sp_rtrace_init_context();
+int sp_rtrace_init_context(void);
 
 
 #endif
