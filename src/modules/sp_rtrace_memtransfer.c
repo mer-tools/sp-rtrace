@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -42,6 +42,8 @@
 
 #include "common/sp_rtrace_proto.h"
 #include "library/sp_rtrace_defs.h"
+
+/* make sure we don't catch string.h macros */
 
 #ifdef strdup
  #undef strdup
@@ -183,7 +185,7 @@ static void enable_tracing(bool value)
  *
  * @return
  */
-static void trace_initialize()
+static void trace_initialize(void)
 {
 	static int init_mode = MODULE_UNINITIALIZED;
 	switch (init_mode) {
