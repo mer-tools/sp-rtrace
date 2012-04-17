@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -45,38 +45,38 @@ void dlist_init_array(dlist_t* lists, int size)
 
 void dlist_free(dlist_t* list, op_unary_t free_node)
 {
-    if (free_node) {
-        dlist_foreach(list, free_node);
-    }
-    dlist_init(list);
+	if (free_node) {
+		dlist_foreach(list, free_node);
+	}
+	dlist_init(list);
 }
 
 void* dlist_create_node(int size)
 {
-    dlist_node_t* node = (dlist_node_t*)malloc_a(size);
-    /* theoretically next, prev values will be initialized when the node
-     * is added to list - so we could left them uninitialized.
-     */
-    node->next = NULL;
-    node->prev = NULL;
-    return node;
+	dlist_node_t* node = (dlist_node_t*)malloc_a(size);
+	/* theoretically next, prev values will be initialized when the node
+	 * is added to list - so we could left them uninitialized.
+	 */
+	node->next = NULL;
+	node->prev = NULL;
+	return node;
 }
 
 void dlist_add(dlist_t* list, void* node)
 {
-    assert(node);
+	assert(node);
 	dlist_node_t* list_node = (dlist_node_t*)node;
-    if (list->head) {
-    	/* append after head item */
-        list->head->next = list_node;
-    }
-    else {
-    	/* empty list, set as tail item */
-        list->tail = list_node;
-    }
-    list_node->prev = list->head;
-    list_node->next = NULL;
-    list->head = list_node;
+	if (list->head) {
+		/* append after head item */
+		list->head->next = list_node;
+	}
+	else {
+		/* empty list, set as tail item */
+		list->tail = list_node;
+	}
+	list_node->prev = list->head;
+	list_node->next = NULL;
+	list->head = list_node;
 }
 
 void dlist_add_sorted(dlist_t* list, void* node, op_binary_t compare)
@@ -183,7 +183,7 @@ void* dlist_find(dlist_t* list, void* data, op_binary_t compare)
 
 void dlist_remove(dlist_t* list, void* node)
 {
-    assert(node);
+	assert(node);
 	dlist_node_t* list_node = (dlist_node_t*)node;
 	if (list_node->prev) list_node->prev->next = list_node->next;
 	else list->tail = list_node->next;
@@ -195,9 +195,9 @@ void dlist_foreach(dlist_t* list, op_unary_t do_what)
 {
 	dlist_node_t* node = dlist_first(list);
 	while (node) {
-	    dlist_node_t* current = node;
-	    node = node->next;
-	    do_what(current);
+		dlist_node_t* current = node;
+		node = node->next;
+		do_what(current);
 	}
 }
 
@@ -205,9 +205,9 @@ void dlist_foreach2(dlist_t* list, op_binary_t do_what, void* data)
 {
 	dlist_node_t* node = dlist_first(list);
 	while (node) {
-        dlist_node_t* current = node;
-        node = node->next;
-        do_what(current, data);
+		dlist_node_t* current = node;
+		node = node->next;
+		do_what(current, data);
 	}
 }
 
@@ -217,9 +217,9 @@ dlist_node_t* dlist_foreach_in(dlist_t* list, dlist_node_t* from, op_unary_t do_
 		from = dlist_first(list);
 	}
 	while (from && do_while(from)) {
-	    dlist_node_t* node = from;
-	    from = from->next;
-	    do_what(node);
+		dlist_node_t* node = from;
+		from = from->next;
+		do_what(node);
 	}
 	return from;
 }
@@ -232,9 +232,9 @@ dlist_node_t* dlist_foreach2_in(dlist_t* list, dlist_node_t* from,
 		from = dlist_first(list);
 	}
 	while (from && do_while(from, data_while)) {
-	    dlist_node_t* node = from;
-	    from = from->next;
-	    do_what(node, data_what);
+		dlist_node_t* node = from;
+		from = from->next;
+		do_what(node, data_what);
 	}
 	return from;
 }
@@ -244,8 +244,8 @@ dlist_node_t* dlist_foreach2_in(dlist_t* list, dlist_node_t* from,
  * 
  */
 typedef struct {
-    dlist_node_t* head;
-    dlist_node_t* tail;
+	dlist_node_t* head;
+	dlist_node_t* tail;
 } segment_t;
 
 /**
@@ -255,41 +255,41 @@ typedef struct {
  */
 static void merge_segments(segment_t* segment1, segment_t* segment2, op_binary_t compare)
 {
-    dlist_node_t* node1 = segment1->tail;
-    dlist_node_t* node2 = segment2->tail;
+	dlist_node_t* node1 = segment1->tail;
+	dlist_node_t* node2 = segment2->tail;
 
-    /* concatenate segments: segment1+segment2 */
-    segment1->head->next = segment2->tail;
-    segment2->tail->prev = segment1->head;
+	/* concatenate segments: segment1+segment2 */
+	segment1->head->next = segment2->tail;
+	segment2->tail->prev = segment1->head;
 
-    while (true) {
-    	/* find the next node in segment1 that is greater than the segment2:current node */
-        while (compare(node1, node2) <= 0) {
-            if (node1 == segment1->head) {
-            	/* if segment1 runs out of nodes, the merging is complete */
-                node1->next = node2;
-                node2->prev = node1;
-                return;
-            }
-            node1 = node1->next;
-        }
-        /* insert the segment2:current node before the segment1:current node */
-        if (node1 != segment1->tail) node1->prev->next = node2;
-        node2->prev = node1->prev;
-        /* find the next node in segment 2 that is greater than the segment1:current node */
-        while (compare(node2, node1) < 0) {
-            if (node2 == segment2->head) {
-            	/* if segment2 runs out of nodes, the merging is complete */
-                node1->prev = node2;
-                node2->next = node1;
-                return;
-            }
-            node2 = node2->next;
-        }
-        /* insert the segment2:current->prev node before segment1:current node */
-        node1->prev = node2->prev;
-        node1->prev->next = node1;
-    }
+	while (true) {
+		/* find the next node in segment1 that is greater than the segment2:current node */
+		while (compare(node1, node2) <= 0) {
+			if (node1 == segment1->head) {
+				/* if segment1 runs out of nodes, the merging is complete */
+				node1->next = node2;
+				node2->prev = node1;
+				return;
+			}
+			node1 = node1->next;
+		}
+		/* insert the segment2:current node before the segment1:current node */
+		if (node1 != segment1->tail) node1->prev->next = node2;
+		node2->prev = node1->prev;
+		/* find the next node in segment 2 that is greater than the segment1:current node */
+		while (compare(node2, node1) < 0) {
+			if (node2 == segment2->head) {
+				/* if segment2 runs out of nodes, the merging is complete */
+				node1->prev = node2;
+				node2->next = node1;
+				return;
+			}
+			node2 = node2->next;
+		}
+		/* insert the segment2:current->prev node before segment1:current node */
+		node1->prev = node2->prev;
+		node1->prev->next = node1;
+	}
 }
 
 /**
@@ -300,57 +300,57 @@ static void merge_segments(segment_t* segment1, segment_t* segment2, op_binary_t
  */
 static void dlist_sort_segment(segment_t* segment, op_binary_t compare)
 {
-    /* First check primitive cases */
-    /* segment contains single item - so it's already sorted */
-    if (segment->tail == segment->head) return;
-    /* segment contains two items - swap if necessary */
-    if (segment->tail->next == segment->head) {
-        if (compare(segment->tail, segment->head) > 0) {
-            segment->head = segment->tail;
-            segment->tail = segment->head->next;
-            segment->tail->next = segment->head;
-            segment->head->prev = segment->tail;
-        }
-        return;
-    }
-    /* segment contains 3+ items - proceed with recursive sorting */
-    dlist_node_t* node1 = segment->tail;
-    dlist_node_t* node2 = segment->tail;
+	/* First check primitive cases */
+	/* segment contains single item - so it's already sorted */
+	if (segment->tail == segment->head) return;
+	/* segment contains two items - swap if necessary */
+	if (segment->tail->next == segment->head) {
+		if (compare(segment->tail, segment->head) > 0) {
+			segment->head = segment->tail;
+			segment->tail = segment->head->next;
+			segment->tail->next = segment->head;
+			segment->head->prev = segment->tail;
+		}
+		return;
+	}
+	/* segment contains 3+ items - proceed with recursive sorting */
+	dlist_node_t* node1 = segment->tail;
+	dlist_node_t* node2 = segment->tail;
 
-    /* find the middle node */
-    while (node2 != segment->head) {
-        node1 = node1->next;
-        node2 = node2->next;
-        if (node2 == segment->head) break;
-        node2 = node2->next;
-    }
+	/* find the middle node */
+	while (node2 != segment->head) {
+		node1 = node1->next;
+		node2 = node2->next;
+		if (node2 == segment->head) break;
+		node2 = node2->next;
+	}
 
-    /* split into two segments */
-    segment_t segment1 = {.tail = segment->tail, .head = node1->prev};
-    segment_t segment2 = {.tail = node1, .head = segment->head};
-    /* sort the new segments */
-    dlist_sort_segment(&segment1, compare);
-    dlist_sort_segment(&segment2, compare);
+	/* split into two segments */
+	segment_t segment1 = {.tail = segment->tail, .head = node1->prev};
+	segment_t segment2 = {.tail = node1, .head = segment->head};
+	/* sort the new segments */
+	dlist_sort_segment(&segment1, compare);
+	dlist_sort_segment(&segment2, compare);
 
-    /* set the new tail/head nodes for the segment */
-    segment->tail = compare(segment1.tail, segment2.tail) <= 0 ? segment1.tail : segment2.tail;
-    segment->head = compare(segment1.head, segment2.head) > 0 ? segment1.head : segment2.head;
+	/* set the new tail/head nodes for the segment */
+	segment->tail = compare(segment1.tail, segment2.tail) <= 0 ? segment1.tail : segment2.tail;
+	segment->head = compare(segment1.head, segment2.head) > 0 ? segment1.head : segment2.head;
 
-    /* merge the segments back */
-    merge_segments(&segment1, &segment2, compare);
+	/* merge the segments back */
+	merge_segments(&segment1, &segment2, compare);
 }
 
 void dlist_sort(dlist_t* list, op_binary_t compare)
 {
-    /* list contains one or no records, no sorting necessary */
-    if (list->head == list->tail) return;
+	/* list contains one or no records, no sorting necessary */
+	if (list->head == list->tail) return;
 
-    segment_t segment = {.head = list->head, .tail = list->tail};
-    dlist_sort_segment(&segment, compare);
+	segment_t segment = {.head = list->head, .tail = list->tail};
+	dlist_sort_segment(&segment, compare);
 
-    /* set the new tail/head nodes for the list */
-    list->head = segment.head;
-    list->head->next = NULL;
-    list->tail = segment.tail;
-    list->tail->prev = NULL;
+	/* set the new tail/head nodes for the list */
+	list->head = segment.head;
+	list->head->next = NULL;
+	list->tail = segment.tail;
+	list->tail->prev = NULL;
 }

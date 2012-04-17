@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010,2011 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -276,43 +276,41 @@ void rd_fcall_remove(rd_t* rd, rd_fcall_t* call)
 
 void rd_fcall_set_ftrace(rd_t* rd, rd_fcall_t* call, rd_ftrace_t* trace)
 {
-    /* Check if a matching backtrace has already been stored into
-     * backtrace table. */
-    rd_ftrace_t* xtrace = (rd_ftrace_t*)htable_find(&rd->ftraces, (htable_node_t*)trace);
-    if (!xtrace) {
-        /* unregistered backtrace. store it */
-        htable_store(&rd->ftraces, (htable_node_t*)trace);
-    }
-    else {
-        /* registered backtrace. Use the one from backtrace table and
-         * free the created backtrace. */
-        rd_ftrace_free(trace);
-        trace = xtrace;
-    }
-    trace->ref_count++;
-    call->trace = trace;
-    ref_node_t* node =(ref_node_t*)dlist_create_node(sizeof(ref_node_t));
-    node->ref = call;
-    call->ref = node;
-    dlist_add(&trace->calls, node);
+	/* Check if a matching backtrace has already been stored into
+	 * backtrace table. */
+	rd_ftrace_t* xtrace = (rd_ftrace_t*)htable_find(&rd->ftraces, (htable_node_t*)trace);
+	if (!xtrace) {
+		/* unregistered backtrace. store it */
+		htable_store(&rd->ftraces, (htable_node_t*)trace);
+	} else {
+		/* registered backtrace. Use the one from backtrace table and
+		 * free the created backtrace. */
+		rd_ftrace_free(trace);
+		trace = xtrace;
+	}
+	trace->ref_count++;
+	call->trace = trace;
+	ref_node_t* node =(ref_node_t*)dlist_create_node(sizeof(ref_node_t));
+	node->ref = call;
+	call->ref = node;
+	dlist_add(&trace->calls, node);
 }
 
 
 void rd_fcalls_set_ftrace(rd_t* rd, dlist_t* calls, rd_ftrace_t* trace)
 {
-    /* Check if a matching backtrace has already been stored into
-     * backtrace table. */
-    rd_ftrace_t* xtrace = (rd_ftrace_t*)htable_find(&rd->ftraces, (htable_node_t*)trace);
-    if (!xtrace) {
-        /* unregistered backtrace. store it */
-        htable_store(&rd->ftraces, (htable_node_t*)trace);
-    }
-    else {
-        /* registered backtrace. Use the one from backtrace table and
-         * free the created backtrace. */
-        rd_ftrace_free(trace);
-        trace = xtrace;
-    }
-    dlist_foreach2(calls, (op_binary_t)store_fcall_trace, (void*)trace);
+	/* Check if a matching backtrace has already been stored into
+	 * backtrace table. */
+	rd_ftrace_t* xtrace = (rd_ftrace_t*)htable_find(&rd->ftraces, (htable_node_t*)trace);
+	if (!xtrace) {
+		/* unregistered backtrace. store it */
+		htable_store(&rd->ftraces, (htable_node_t*)trace);
+	} else {
+		/* registered backtrace. Use the one from backtrace table and
+		 * free the created backtrace. */
+		rd_ftrace_free(trace);
+		trace = xtrace;
+	}
+	dlist_foreach2(calls, (op_binary_t)store_fcall_trace, (void*)trace);
 }
 

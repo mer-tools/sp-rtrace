@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010,2011 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -101,11 +101,11 @@ void rd_pinfo_free(rd_pinfo_t* pinfo);
  * Used to store MI packet.
  */
 typedef struct rd_minfo_t {
-    /* double linked list support */
-    dlist_node_t node;
-    /* module id */
-    unsigned int id;
-    /* module information record data */
+	/* double linked list support */
+	dlist_node_t node;
+	/* module id */
+	unsigned int id;
+	/* module information record data */
 	unsigned char vmajor;
 	unsigned char vminor;
 	char* name;
@@ -149,10 +149,10 @@ void rd_mmap_free(rd_mmap_t* mmap);
  * Used to store CR packet.
  */
 typedef struct rd_context_t {
-    /* double linked list support */
-    dlist_node_t node;
+	/* double linked list support */
+	dlist_node_t node;
 
-    sp_rtrace_context_t data;
+	sp_rtrace_context_t data;
 } rd_context_t;
 
 #define RD_CONTEXT(x) ((rd_context_t*)x)
@@ -172,11 +172,11 @@ void rd_context_free(rd_context_t* context);
  * Used to store RR packet.
  */
 typedef struct rd_resource_t {
-    /* double linked list support */
-    dlist_node_t node;
+	/* double linked list support */
+	dlist_node_t node;
 
-    /* the resource data */
-    sp_rtrace_resource_t data;
+	/* the resource data */
+	sp_rtrace_resource_t data;
 	/* flag to hide resource from call records */
 	bool hide;
 } rd_resource_t;
@@ -200,13 +200,13 @@ void rd_resource_free(rd_resource_t* resource);
  * data (BT packet).
  */
 typedef struct rd_fcall_t {
-    /* double linked list support */
-    dlist_node_t node;
+	/* double linked list support */
+	dlist_node_t node;
 
-    /* the function call data */
-    sp_rtrace_fcall_t data;
+	/* the function call data */
+	sp_rtrace_fcall_t data;
 
-    /* the function call backtrace */
+	/* the function call backtrace */
 	struct rd_ftrace_t* trace;
 
 	/* back reference from ftrace record */
@@ -237,8 +237,8 @@ void rd_fcall_free(rd_fcall_t* call);
  * Used to store BT packet.
  */
 typedef struct rd_ftrace_t {
-    /* hash table support */
-    htable_node_t node;
+	/* hash table support */
+	htable_node_t node;
 
 	/* the reference counter */
 	int ref_count;
