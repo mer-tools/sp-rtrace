@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -33,6 +33,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
+#include <sys/inotify.h>
 #include <dlfcn.h>
 #include <stdarg.h>
 #include <unistd.h>
@@ -148,7 +149,7 @@ static void enable_tracing(bool value)
  *
  * @return
  */
-static void trace_initialize()
+static void trace_initialize(void)
 {
 	static int init_mode = MODULE_UNINITIALIZED;
 	switch (init_mode) {
@@ -451,7 +452,7 @@ static int trace_fclose(FILE *fp)
 	return rc;
 }
 
-static int trace_fcloseall()
+static int trace_fcloseall(void)
 {
 	int rc = trace_off.fcloseall();
 	if (rc == 0) {
@@ -791,7 +792,7 @@ int fclose(FILE *fp)
 	return trace_rt->fclose(fp);
 }
 
-int fcloseall()
+int fcloseall(void)
 {
 	return trace_rt->fcloseall();
 }
@@ -959,7 +960,7 @@ static int init_fclose(FILE *fp)
 	return trace_init_rt->fclose(fp);
 }
 
-static int init_fcloseall()
+static int init_fcloseall(void)
 {
 	trace_initialize();
 	return trace_init_rt->fcloseall();
@@ -1091,7 +1092,7 @@ static void trace_file_fini(void)
  *
  * @return  the module information data.
  */
-const sp_rtrace_module_info_t* sp_rtrace_get_module_info()
+const sp_rtrace_module_info_t* sp_rtrace_get_module_info(void)
 {
 	return &module_info;
 }

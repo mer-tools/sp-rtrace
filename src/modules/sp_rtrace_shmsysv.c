@@ -1,8 +1,7 @@
-
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -190,7 +189,7 @@ static void enable_tracing(bool value)
  *
  * @return
  */
-static void trace_initialize()
+static void trace_initialize(void)
 {
 	static int init_mode = MODULE_UNINITIALIZED;
 	switch (init_mode) {
@@ -224,7 +223,7 @@ static void trace_initialize()
  * tracing functions
  */
 
-int trace_shmget(key_t key, size_t size, int shmflg)
+static int trace_shmget(key_t key, size_t size, int shmflg)
 {
 	int rc = trace_off.shmget(key, size, shmflg);
 	if (rc != -1 && (shmflg & IPC_CREAT)) {
@@ -241,7 +240,7 @@ int trace_shmget(key_t key, size_t size, int shmflg)
 	return rc;
 }
 
-int trace_shmctl(int shmid, int cmd, struct shmid_ds *buf)
+static int trace_shmctl(int shmid, int cmd, struct shmid_ds *buf)
 {
 	/* check if the segment was allocated by current process
 	 * and read it's attachment counter if so */
@@ -288,7 +287,7 @@ int trace_shmctl(int shmid, int cmd, struct shmid_ds *buf)
 	return rc;
 }
 
-void* trace_shmat(int shmid, const void *shmaddr, int shmflg)
+static void* trace_shmat(int shmid, const void *shmaddr, int shmflg)
 {
 	void* rc = trace_off.shmat(shmid, shmaddr, shmflg);
 	int size = 1;
@@ -335,7 +334,7 @@ void* trace_shmat(int shmid, const void *shmaddr, int shmflg)
 }
 
 
-int trace_shmdt(const void *shmaddr)
+static int trace_shmdt(const void *shmaddr)
 {
 	int nattach = -1;
 	int shmid = 0;
@@ -368,7 +367,7 @@ int trace_shmdt(const void *shmaddr)
 		/* if the segment was marked for removal it should be destroyed after detaching the
 		 * last address. */
 		if (nattach == 1) {
-			sp_rtrace_fcall_t call = {
+			sp_rtrace_fcall_t call2 = {
 					.type = SP_RTRACE_FTYPE_FREE,
 					.res_type = (void*)res_segment.id,
 					.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
@@ -376,7 +375,7 @@ int trace_shmdt(const void *shmaddr)
 					.res_size = 0,
 					.res_id = (pointer_t)shmid,
 			};
-			sp_rtrace_write_function_call(&call, NULL, NULL);
+			sp_rtrace_write_function_call(&call2, NULL, NULL);
 		}
 	}
 	return rc;
@@ -474,7 +473,7 @@ static void trace_shmem_fini(void)
  *
  * @return  the module information data.
  */
-const sp_rtrace_module_info_t* sp_rtrace_get_module_info()
+const sp_rtrace_module_info_t* sp_rtrace_get_module_info(void)
 {
 	return &module_info;
 }

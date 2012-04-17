@@ -291,7 +291,8 @@ static unsigned int nreg_get_hash(const char* name)
 /**
  * Releases resources allocated by name registry.
  */
-static void hash_cleanup() {
+static void hash_cleanup(void)
+{
 	tdestroy(nreg_root, nreg_free_node);
 }
 
@@ -423,7 +424,7 @@ static void fdreg_remove(int fd)
 /**
  * Releases resources allocated by file descriptor registry.
  */
-static void fdreg_cleanup()
+static void fdreg_cleanup(void)
 {
 	tdestroy(fdreg_root, fdreg_free_node);
 }
@@ -506,7 +507,7 @@ static addr_node_t* addr_get(pointer_t addr)
  *
  * @return
  */
-static void addr_cleanup()
+static void addr_cleanup(void)
 {
 	tdestroy(addr_root, free);
 }
@@ -529,7 +530,7 @@ static void enable_tracing(bool value)
  *
  * @return
  */
-static void trace_initialize()
+static void trace_initialize(void)
 {
 	static int init_mode = MODULE_UNINITIALIZED;
 	switch (init_mode) {
@@ -1114,9 +1115,7 @@ static void trace_fini_lib(void)
  *
  * @return  the module information data.
  */
-const sp_rtrace_module_info_t* sp_rtrace_get_module_info()
+const sp_rtrace_module_info_t* sp_rtrace_get_module_info(void)
 {
 	return &module_info;
 }
-
-

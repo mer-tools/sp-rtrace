@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -85,7 +85,7 @@ static volatile sig_atomic_t resolver_abort = 0;
  *
  * @return
  */
-static void free_options()
+static void free_options(void)
 {
 	if (resolve_options.input_file) free(resolve_options.input_file);
 	if (resolve_options.output_file) free(resolve_options.output_file);
@@ -93,7 +93,7 @@ static void free_options()
 }
 
 
-static void display_usage()
+static void display_usage(void)
 {
 	printf( "sp-rtrace-resolve name resolver is used for stack trace function\n"
 			"name resolving. It accepts text output produced by post-processor\n"
@@ -392,7 +392,7 @@ static void read_header(FILE* fpin, FILE* fpout)
  * @p do_resolve function to do the actual name resolving.
  * @return
  */
-static void resolve()
+static void resolve(void)
 {
 	FILE *fpin = stdin, *fpout = stdout;
 	/* read data from the specified file or standard input if no

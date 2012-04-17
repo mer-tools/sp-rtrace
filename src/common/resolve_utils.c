@@ -26,6 +26,7 @@
 #include <unistd.h>
 #include <stdio.h>
 
+#include "resolve_utils.h"
 #include "utils.h"
 #include "msg.h"
 
@@ -55,7 +56,7 @@
  * @param path
  * @return
  */
- int rs_mmap_is_absolute(const char* path)
+int rs_mmap_is_absolute(const char* path)
 {
 	FILE *file;
 	Elf_Ehdr_t elf_header;

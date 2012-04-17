@@ -244,19 +244,6 @@ static long store_fcall_trace(ref_node_t* call, rd_ftrace_t* trace)
  * Utility functions
  */
 
-
-/**
- * Compares reference node with a pointer.
- *
- * @param[in] node   the reference node.
- * @param[in] call   the pointer to look for.
- * @return           0 if the reference node refers to the specified pointer.
- */
-static long compare_ref(ref_node_t* node, void* call)
-{
-	return node->ref - call;
-}
-
 void rd_fcall_remove(rd_t* rd, rd_fcall_t* call)
 {
 	dlist_remove(&rd->calls, call);

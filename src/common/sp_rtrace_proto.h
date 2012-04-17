@@ -288,7 +288,7 @@ static inline size_t write_pointer(char* ptr, pointer_t value)
  * @param[in] value  the value to write.
  * @return           the number of bytes written.
  */
-static size_t write_string(char* ptr, const char* str)
+static inline size_t write_string(char* ptr, const char* str)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(ptr);
 	if (str) {
@@ -329,9 +329,13 @@ typedef struct {
 	const char* description;
 } sp_rtrace_module_info_t;
 
-/* Module information retrieval function template. This function
- * must be implemented by all tracing submodules */
-typedef sp_rtrace_module_info_t* (*sp_rtrace_get_module_info_t)();
+/* Module information retrieval function template */
+typedef sp_rtrace_module_info_t* (*sp_rtrace_get_module_info_t)(void);
+
+/**
+ * implemented by all tracing submodules
+ */
+const sp_rtrace_module_info_t* sp_rtrace_get_module_info(void);
 
 #ifdef __cplusplus
 }

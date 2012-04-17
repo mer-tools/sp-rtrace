@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -70,7 +70,7 @@ static int hs_size = 0;
  *
  * @return
  */
-int flush_data()
+static int flush_data(void)
 {
 	int size = output_buffer_head - output_buffer;
 	if (fd_out > 0 && size) {
@@ -140,7 +140,7 @@ static long range_compare(rd_mmap_t* mmap1, sp_rtrace_mmap_t* mmap2)
  * @param[in] pid   the target process identifier.
  * @return
  */
-static int scan_mmap_data()
+static int scan_mmap_data(void)
 {
 	char name[PATH_MAX], buffer[PATH_MAX];
 	sprintf(name, "/proc/%d/maps", rtrace_options.pid);

@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -73,7 +73,7 @@ typedef struct fres_index_t {
  *
  * @param[in] res  the data to free.
  */
-void free_fres_rec(fres_t* res)
+static void free_fres_rec(fres_t* res)
 {
 	free(res);
 }

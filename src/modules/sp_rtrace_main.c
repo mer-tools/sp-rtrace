@@ -193,7 +193,7 @@ static void enable_tracing(bool value)
  * waits until it creates the named pipe.
  * @return    the opened pipe descriptor.
  */
-static int open_pipe()
+static int open_pipe(void)
 {
 	if (sp_rtrace_options->manage_preproc) {
 		LOG("spawning pre-processor process");
@@ -280,7 +280,7 @@ static sync_entity_t pipe_buffer_locked = 0;
  *
  * @return   the number of bytes written.
  */
-static int pipe_buffer_flush()
+static int pipe_buffer_flush(void)
 {
 	int size = pipe_buffer_head - pipe_buffer;
 	if (write(fd_proc, pipe_buffer, size) < 0) {
@@ -299,7 +299,7 @@ static int pipe_buffer_flush()
  *
  * @return   a pointer to the writable area in pipe buffer.
  */
-static char* pipe_buffer_lock()
+static char* pipe_buffer_lock(void)
 {
 	while ( !sync_bool_compare_and_swap(&pipe_buffer_locked, 0, 1));
 	return pipe_buffer_head;
@@ -340,7 +340,7 @@ static void pipe_buffer_unlock(const char* ptr, int size)
  *
  * @return
  */
-static void pipe_buffer_reset()
+static void pipe_buffer_reset(void)
 {
 	pipe_buffer_head = pipe_buffer;
 }
@@ -457,7 +457,7 @@ static int write_output_settings(const char* output_dir, const char* postproc)
  *
  * @return   the number of bytes written.
  */
-static int write_process_info()
+static int write_process_info(void)
 {
 	PACKET_INIT(SP_RTRACE_PROTO_PROCESS_INFO);
 	PACKET_WRITE(dword, getpid());
@@ -477,7 +477,7 @@ static int write_process_info()
  *
  * @return  the number of bytes written.
  */
-static int write_heap_info()
+static int write_heap_info(void)
 {
 	if (heap_info.arena) {
 		PACKET_INIT(SP_RTRACE_PROTO_HEAP_INFO);
@@ -506,7 +506,7 @@ static int write_heap_info()
  *
  * @return
  */
-static void write_initial_data()
+static void write_initial_data(void)
 {
     unsigned int i;
 
