@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -60,7 +60,7 @@ struct option rtrace_long_opt[] = {
  * The environment variables must have the same index as
  * related option index.
  */
-char *rtrace_env_opt[] = {
+const char *rtrace_env_opt[] = {
 		/**
 		 * --input-file
 		 * Specifies the output directory for rtrace logs.
@@ -164,7 +164,7 @@ char *rtrace_env_opt[] = {
 };
 
 /* sp_rtrace short option list */
-char* rtrace_short_opt = "+i:o:me:st:fb:TAP:S:Bhx:lLFuM:q";
+const char* rtrace_short_opt = "+i:o:me:st:fb:TAP:S:Bhx:lLFuM:q";
 
 void rtrace_args_add_opt(rtrace_args_t* args, char opt, const char* value)
 {

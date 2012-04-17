@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010,2011 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -118,7 +118,7 @@ static inline int read_byte(const char* ptr, unsigned char* value)
 static inline int read_dword(const char* ptr, unsigned int* value)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(ptr);
-	*value = *(int*)ptr;
+	*value = *(const int*)ptr;
 	return sizeof(int);
 }
 
@@ -132,7 +132,7 @@ static inline int read_dword(const char* ptr, unsigned int* value)
 static inline int read_dword2long(const char* ptr, unsigned long* value)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(ptr);
-	*value = *(int*)ptr;
+	*value = *(const int*)ptr;
 	return sizeof(int);
 }
 
@@ -147,7 +147,7 @@ static inline int read_dword2long(const char* ptr, unsigned long* value)
  */
 static inline int read_word(const char* ptr, unsigned short* value)
 {
-	*value = *(unsigned short*)ptr;
+	*value = *(const unsigned short*)ptr;
 	return sizeof(short);
 }
 
@@ -162,7 +162,7 @@ static inline int read_word(const char* ptr, unsigned short* value)
 static inline int read_pointer(const char* ptr, pointer_t* value)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(ptr);
-	*value = *(pointer_t*)ptr;
+	*value = *(const pointer_t*)ptr;
 	return sizeof(pointer_t);
 }
 

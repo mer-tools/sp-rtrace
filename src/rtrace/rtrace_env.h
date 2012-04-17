@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -82,12 +82,12 @@ extern struct option rtrace_long_opt[];
 /**
  * environment variables, representing pre-processor options.
  */
-extern char *rtrace_env_opt[];
+extern const char *rtrace_env_opt[];
 
 /**
  * short pre-processor options
  */
-extern char* rtrace_short_opt;
+extern const char *rtrace_short_opt;
 
 /* The maximum total size of all command line arguments */
 #define RTRACE_MAX_ARGS_SIZE        4096

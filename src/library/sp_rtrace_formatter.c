@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010,2011 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -123,12 +123,12 @@ int sp_rtrace_print_call(FILE* fp, const struct sp_rtrace_fcall_t* call)
 	ptr += sprintf(ptr, "%s", call->name);
 
 	/* append resource type for multi resource traces */
-	char* res_name = NULL;
+	const char* res_name = NULL;
 	switch (call->res_type_flag) {
 		case SP_RTRACE_FCALL_RFIELD_REF: {
-			rd_resource_t* res = call->res_type;
+			const rd_resource_t* res = call->res_type;
 			if (res && !res->hide) {
-				res_name =  res->data.type;
+				res_name = res->data.type;
 			}
 			break;
 		}

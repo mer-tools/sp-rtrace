@@ -312,11 +312,11 @@ static int open_postproc_pipe()
  *
  * @return   the log file descriptor.
  */
-static int open_output_file()
+static int open_output_file(void)
 {
 	char path[PATH_MAX];
-	char* default_dir = ".";
-	char* dir;
+	const char* default_dir = ".";
+	const char* dir;
 
 	dir = rtrace_options.output_dir;
 	/* if (dir == NULL) dir = getenv("HOME"); */

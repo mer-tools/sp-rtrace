@@ -1,8 +1,7 @@
-
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -138,7 +137,7 @@ static trace_t* trace_init_rt = &trace_off;
  */
 
 /**
- * Name resgistry node
+ * Name registry node
  */
 typedef struct nreg_node_t {
 	/* the object name */
@@ -226,7 +225,7 @@ static void nreg_validate_hash(const void* item, const VISIT which, __attribute_
 
 			case postorder:
 			case leaf: {
-				const nreg_node_t* pnode = *(nreg_node_t**)item;
+				const nreg_node_t* pnode = *(nreg_node_t* const*)item;
 				if (pnode->hash == nreg_validate_hash_value) nreg_validate_hash_result = false;
 				break;
 			}

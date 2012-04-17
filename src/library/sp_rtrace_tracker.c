@@ -38,7 +38,7 @@ static int _strcmpp(const char* str1, const char* str2)
 		str1++;
 		str2++;
 	}
-	return *(unsigned char*)str1 - *(unsigned char*)str2;
+	return *(const unsigned char*)str1 - *(const unsigned char*)str2;
 }
 
 /**
