@@ -357,8 +357,12 @@ int process_data()
 			msg_warning("trace was forced to abort before all of data was retrieved.\n");
 			break;
 		}
-		if (nbytes == -1 && errno == EINTR) {
-			continue;
+		if (nbytes == -1) {
+			if (errno == EINTR) {
+				continue;
+			} else {
+				break;
+			}
 		}
 		n += nbytes;
 		ptr_in = buffer;
