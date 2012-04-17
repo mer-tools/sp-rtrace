@@ -151,45 +151,45 @@ static long res_hash(const fres_t* res)
  */
 static long fcall_remove_freed(rd_fcall_t* call, void* data)
 {
-	fres_index_t* index = (fres_index_t*)data;
+	fres_index_t* idx = (fres_index_t*)data;
 	fres_t find_res = {.call = call};
-    fres_t* res = htable_find(&index->table, &find_res);
-    rd_resource_t* res_type = call->data.res_type;
+	fres_t* res = htable_find(&idx->table, &find_res);
+	rd_resource_t* res_type = call->data.res_type;
 
-    if (call->data.type == SP_RTRACE_FTYPE_ALLOC) {
-    	if (res && (res_type->data.flags & SP_RTRACE_RESOURCE_REFCOUNT)) {
-    		res->ref_count++;
-			rd_fcall_remove(index->rd, call);
-    	}
-    	else {
-    		/* create resource index record */
+	if (call->data.type == SP_RTRACE_FTYPE_ALLOC) {
+		if (res && (res_type->data.flags & SP_RTRACE_RESOURCE_REFCOUNT)) {
+			res->ref_count++;
+			rd_fcall_remove(idx->rd, call);
+		}
+		else {
+			/* create resource index record */
 			fres_t* new_res = (fres_t*)calloc_a(1, sizeof(fres_t));
 			new_res->call = call;
 			new_res->ref_count = 1;
 			/* store the created record into resource index table */
-			fres_t* old_res = htable_store(&index->table, new_res);
+			fres_t* old_res = htable_store(&idx->table, new_res);
 			if (old_res) free_fres_rec(old_res);
-    	}
-    }
-    else if (call->data.type == SP_RTRACE_FTYPE_FREE) {
-    	/* create resource template for htable_find function. As the
-    	 * compare function of resource hash table uses only call->res
-    	 * id value, setting the .call field is enough for lookups */
-        if (res) {
-        	res->ref_count--;
-        	if (res->ref_count == 0 || !(res_type->data.flags & SP_RTRACE_RESOURCE_REFCOUNT)) {
+		}
+	}
+	else if (call->data.type == SP_RTRACE_FTYPE_FREE) {
+		/* create resource template for htable_find function. As the
+		 * compare function of resource hash table uses only call->res
+		 * id value, setting the .call field is enough for lookups */
+		if (res) {
+			res->ref_count--;
+			if (res->ref_count == 0 || !(res_type->data.flags & SP_RTRACE_RESOURCE_REFCOUNT)) {
 				/* The resource allocation record found. Remove the record
 				 * from function call list and free it. Also remove and
 				 * free the resource index record */
 				htable_remove_node((htable_node_t*)res);
-				rd_fcall_remove(index->rd, res->call);
+				rd_fcall_remove(idx->rd, res->call);
 				free_fres_rec(res);
-        	}
-        }
-        /* deallocation call record is always removed */
-        rd_fcall_remove(index->rd, call);
-    }
-    return 0;
+			}
+		}
+		/* deallocation call record is always removed */
+		rd_fcall_remove(idx->rd, call);
+	}
+	return 0;
 }
 
 
@@ -319,9 +319,9 @@ static void* filter_load_index_data(const char* filename)
 	char line[128];
 	void* root = NULL;
 	while (fgets(line, sizeof(line), fp)) {
-		unsigned long index;
-		if (sscanf(line, "%li", &index) == 1) {
-			tsearch((void*)index, &root, filter_compare_event_index);
+		unsigned long idx;
+		if (sscanf(line, "%li", &idx) == 1) {
+			tsearch((void*)idx, &root, filter_compare_event_index);
 		}
 	}
 	fclose(fp);
@@ -353,8 +353,8 @@ typedef struct index_filter_t {
  */
 static void fcall_filter_index(rd_fcall_t* call, index_filter_t* filter)
 {
-	unsigned long index = call->data.index;
-	bool found = tfind((void*)index, &filter->index_map, filter_compare_event_index);
+	unsigned long idx = call->data.index;
+	bool found = tfind((void*)idx, &filter->index_map, filter_compare_event_index);
 	if ((found && !filter->include) || (!found && filter->include)) {
 		rd_fcall_remove(filter->rd, call);
 	}
@@ -376,16 +376,16 @@ static void free_index(void* data __attribute__((unused)))
 void filter_leaks(rd_t* rd)
 {
 	/* indexing structure to wrap needed data into single argument */
-	fres_index_t index = {.rd = rd};
+	fres_index_t idx = {.rd = rd};
 	/* create resource indexing hash table */
-	if (htable_init(&index.table, HASH_SIZE, (op_unary_t)res_hash, (op_binary_t)res_compare) != 0) {
+	if (htable_init(&idx.table, HASH_SIZE, (op_unary_t)res_hash, (op_binary_t)res_compare) != 0) {
 		msg_error("failed to create resource indexing table\n");
 		exit (-1);
 	}
 
-	dlist_foreach2(&rd->calls, (op_binary_t)fcall_remove_freed, (void*)&index);
+	dlist_foreach2(&rd->calls, (op_binary_t)fcall_remove_freed, (void*)&idx);
 
-	htable_free(&index.table, (op_unary_t)free_fres_rec);
+	htable_free(&idx.table, (op_unary_t)free_fres_rec);
 }
 
 void filter_context(rd_t* rd)
