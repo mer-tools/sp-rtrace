@@ -137,14 +137,14 @@ static long mmap_compare(const rs_mmap_t* mmap1, const rs_mmap_t* mmap2)
  * @param[in] mmap
  * @return
  */
-static void rs_mmap_free_node(rs_mmap_t* mmap)
+static void rs_mmap_free_node(rs_mmap_t* map)
 {
-	if (mmap->module) free(mmap->module);
-	if (mmap->is_cache_owner) {
-		rs_cache_record_clear(mmap->cache);
-		free(mmap->cache);
+	if (map->module) free(map->module);
+	if (map->is_cache_owner) {
+		rs_cache_record_clear(map->cache);
+		free(map->cache);
 	}
-	free(mmap);
+	free(map);
 }
 
 
@@ -279,8 +279,8 @@ static int bfd_get_address_info(rs_cache_record_t* rec, pointer_t address, symbo
  */
 static int get_address_info(rs_cache_record_t* rec, pointer_t address, char* buffer)
 {
-	symbol_info_t bfd = {0};
-	symbol_info_t elf = {0};
+	symbol_info_t bfd = {.name=NULL, .source=NULL};
+	symbol_info_t elf = {.name=NULL, .source=NULL};
 	symbol_info_t* sym = NULL;
 	char* ptr_out = buffer;
 
@@ -384,21 +384,21 @@ static int rs_load_symbols(rs_cache_record_t* rec, const char* filename)
 	long symcount = 0;
 	unsigned int size;
 	if (resolve_options.mode & MODE_BFD) {
-		static char *places[]={".", "./.debug", "/usr/lib/debug", NULL};
+		const char *places[] = {".", "./.debug", "/usr/lib/debug", NULL};
 
 		/* locate and open the symbol file */
 		if (rs_open_file(rec, filename) < 0) return -EINVAL;
 
-		int index = 0;
-		while (places[index]) {
-			rec->dbg_name = bfd_follow_gnu_debuglink (rec->file, rs_host_path(places[index]));
+		int idx = 0;
+		while (places[idx]) {
+			rec->dbg_name = bfd_follow_gnu_debuglink (rec->file, rs_host_path(places[idx]));
 			if (rec->dbg_name) {
 				bfd_close(rec->file);
 				int rc = rs_open_file(rec, rec->dbg_name);
 				if (rc < 0) return -EINVAL;
 				break;
 			}
-			index++;
+			idx++;
 		}
 		/* read the symbol table from opened file */
 		if ((bfd_get_file_flags (rec->file) & HAS_SYMS) == 0) {
@@ -484,22 +484,22 @@ const char* rs_resolve_address(rs_cache_t* rs, pointer_t address, const char* na
 	if (nc) return nc->name;
 
 	while (true) {
-		rs_mmap_t* mmap = rs_mmap_find_module(&rs->mmaps, address);
-		if (mmap == NULL) {
+		rs_mmap_t* map = rs_mmap_find_module(&rs->mmaps, address);
+		if (map == NULL) {
 			sprintf(buffer, "\t0x%lx %s\n", address, UNKNOWN_SYMBOL);
 			break;
 		}
-		if (mmap != mmap->cache->mmap) {
-			rs_cache_record_clear(mmap->cache);
-			if (rs_load_symbols(mmap->cache, mmap->module) < 0) {
-				rs_cache_record_clear(mmap->cache);
-				sprintf(buffer, "\t0x%lx from %s\n", address, mmap->module);
+		if (map != map->cache->mmap) {
+			rs_cache_record_clear(map->cache);
+			if (rs_load_symbols(map->cache, map->module) < 0) {
+				rs_cache_record_clear(map->cache);
+				sprintf(buffer, "\t0x%lx from %s\n", address, map->module);
 				break;
 			}
-			mmap->cache->mmap = mmap;
+			map->cache->mmap = map;
 		}
-		if (get_address_info(mmap->cache, address, buffer) < 0) {
-			sprintf(buffer, "\t0x%lx from %s\n", address, mmap->module);
+		if (get_address_info(map->cache, address, buffer) < 0) {
+			sprintf(buffer, "\t0x%lx from %s\n", address, map->module);
 			break;
 		}
 		break;
@@ -510,26 +510,26 @@ const char* rs_resolve_address(rs_cache_t* rs, pointer_t address, const char* na
 
 rs_mmap_t* rs_mmap_add_module(rs_cache_t* rs, const char* module, pointer_t from, pointer_t to, bool single_cache)
 {
-	rs_mmap_t* mmap = NULL;
+	rs_mmap_t* map = NULL;
 	int is_absolute = rs_mmap_is_absolute(module);
 	if (is_absolute >= 0) {
-		mmap = malloc_a(sizeof(rs_mmap_t));
-		mmap->module = strdup_a(module);
-		mmap->from = from;
-		mmap->to = to;
-		mmap->fin = NULL;
-		mmap->fout = NULL;
-		mmap->is_absolute = is_absolute;
-		mmap->id = rs->mmaps_size;
-		mmap->cache = single_cache ?  &rs->cache : (rs_cache_record_t*)calloc_a(1, sizeof(rs_cache_record_t));
-		mmap->is_cache_owner = !single_cache;
-		sarray_add(&rs->mmaps, mmap);
+		map = malloc_a(sizeof(rs_mmap_t));
+		map->module = strdup_a(module);
+		map->from = from;
+		map->to = to;
+		map->fin = NULL;
+		map->fout = NULL;
+		map->is_absolute = is_absolute;
+		map->id = rs->mmaps_size;
+		map->cache = single_cache ?  &rs->cache : (rs_cache_record_t*)calloc_a(1, sizeof(rs_cache_record_t));
+		map->is_cache_owner = !single_cache;
+		sarray_add(&rs->mmaps, map);
 		if (rs->mmaps_size == rs->mmaps_limit) {
 			rs->mmaps_limit *= 2;
 			rs->mmaps_index = (rs_mmap_t**)realloc_a(rs->mmaps_index, rs->mmaps_limit * sizeof(rs_mmap_t*));
 		}
-		rs->mmaps_index[rs->mmaps_size++] = mmap;
-		return mmap;
+		rs->mmaps_index[rs->mmaps_size++] = map;
+		return map;
 	}
 	return NULL;
 }
