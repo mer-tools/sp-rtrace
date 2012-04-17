@@ -198,8 +198,8 @@ static bool is_zero_page(unsigned long from)
 static unsigned int read_page_mapping_count(unsigned long addr, pfile_data_t* data)
 {
 	uint64_t count = 0;
-	unsigned long index = addr / page_size * 8;
-	lseek(data->fd_map, index, SEEK_SET);
+	unsigned long idx = addr / page_size * 8;
+	lseek(data->fd_map, idx, SEEK_SET);
 
 	uint64_t page_index;
 	size_t n = read(data->fd_map, &page_index, sizeof(uint64_t));
@@ -270,23 +270,24 @@ static int scan_address_range(unsigned long from, unsigned long to, const char* 
  */
 static int cut_kpageflags_range(unsigned long from, unsigned long to, const char* rights, pfile_data_t* data)
 {
+	size_t n;
 	/* store the memory area header data */
 	pageflags_header_t header = {
 		.from = from,
 		.to = to,
 		.size = (to - from) / page_size * sizeof(pageflags_data_t),
 	};
-	size_t n = write(data->fd_out, &header, sizeof(pageflags_header_t));
+	n = write(data->fd_out, &header, sizeof(pageflags_header_t));
 	if (n != sizeof(pageflags_header_t)) return (n == (size_t)-1) ? -errno : -EINVAL;
 
-	unsigned long index = from / page_size * 8;
+	unsigned long idx = from / page_size * 8;
 	unsigned long end = to / page_size * 8;
 
-	lseek(data->fd_map, index, SEEK_SET);
+	lseek(data->fd_map, idx, SEEK_SET);
 
-	while (index < end) {
+	while (idx < end) {
 		uint64_t page_index;
-		size_t n = read(data->fd_map, &page_index, sizeof(uint64_t));
+		n = read(data->fd_map, &page_index, sizeof(uint64_t));
 		if (n != sizeof(uint64_t)) return (n == (size_t)-1) ? -errno : -EINVAL;
 
 		pageflags_data_t page_data = {
@@ -305,7 +306,7 @@ static int cut_kpageflags_range(unsigned long from, unsigned long to, const char
 		}
 		n = write(data->fd_out, &page_data, sizeof(pageflags_data_t));
 		if (n != sizeof(pageflags_data_t)) return (n == (size_t)-1) ? -errno : -EINVAL;
-		index += 8;
+		idx += 8;
 	}
 	return 0;
 }
