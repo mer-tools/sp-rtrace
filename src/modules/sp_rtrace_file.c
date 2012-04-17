@@ -222,9 +222,9 @@ static int trace_open(const char* pathname, int flags, ...)
 				.res_id = (pointer_t)rc,
 		};
 		sp_rtrace_farg_t args[] = {
-				{.name = "pathname", .value = (char*)pathname},
+				{.name = "pathname", .value = pathname},
 				{.name = "flags", .value = flags_s},
-				{0}
+				{.name = NULL, .value = NULL}
 		};
 		sp_rtrace_write_function_call(&call, NULL, args);
 	}
@@ -261,9 +261,9 @@ static int trace_open64(const char* pathname, int flags, ...)
 				.res_id = (pointer_t)rc,
 		};
 		sp_rtrace_farg_t args[] = {
-				{.name = "pathname", .value = (char*)pathname},
+				{.name = "pathname", .value = pathname},
 				{.name = "flags", .value = flags_s},
-				{0}
+				{.name = NULL, .value = NULL}
 		};
 		sp_rtrace_write_function_call(&call, NULL, args);
 	}
@@ -337,7 +337,7 @@ static int trace_socket(int domain, int type, int protocol)
 				{.name = "domain", .value = domain_s},
 				{.name = "type", .value = type_s},
 				{.name = "protocol", .value = protocol_s},
-				{0}
+				{.name = NULL, .value = NULL}
 		};
 		sp_rtrace_write_function_call(&call, NULL, args);
 	}
@@ -357,9 +357,9 @@ static FILE *trace_fopen(const char *path, const char *mode)
 				.res_id = (pointer_t)rc,
 		};
 		sp_rtrace_farg_t args[] = {
-				{.name = "path", .value = (char*)path},
-				{.name = "mode", .value = (char*)mode},
-				{0}
+				{.name = "path", .value = path},
+				{.name = "mode", .value = mode},
+				{.name = NULL, .value = NULL}
 		};
 		sp_rtrace_write_function_call(&call, NULL, args);
 
@@ -393,8 +393,8 @@ static FILE *trace_fdopen(int fd, const char *mode)
 		};
 		sp_rtrace_farg_t args[] = {
 				{.name = "fd", .value = fd_s},
-				{.name = "mode", .value = (char*)mode},
-				{0}
+				{.name = "mode", .value = mode},
+				{.name = NULL, .value = NULL}
 		};
 		sp_rtrace_write_function_call(&call2, NULL, args);
 
@@ -425,9 +425,9 @@ static FILE *trace_freopen(const char *path, const char *mode, FILE *stream)
 				.res_id = (pointer_t)rc,
 		};
 		sp_rtrace_farg_t args[] = {
-				{.name = "path", .value = (char*)path},
-				{.name = "mode", .value = (char*)mode},
-				{0}
+				{.name = "path", .value = path},
+				{.name = "mode", .value = mode},
+				{.name = NULL, .value = NULL}
 		};
 		sp_rtrace_write_function_call(&call2, NULL, args);
 
@@ -485,9 +485,9 @@ static int trace_creat(const char *pathname, mode_t mode)
 				.res_id = (pointer_t)rc,
 		};
 		sp_rtrace_farg_t args[] = {
-				{.name = "pathname", .value = (char*)pathname},
+				{.name = "pathname", .value = pathname},
 				{.name = "mode", .value = mode_s},
-				{0}
+				{.name = NULL, .value = NULL}
 		};
 		sp_rtrace_write_function_call(&call, NULL, args);
 	}
@@ -598,7 +598,7 @@ static int trace_socketpair(int domain, int type, int protocol, int sv[2])
 				{.name = "domain", .value = domain_s},
 				{.name = "type", .value = type_s},
 				{.name = "protocol", .value = protocol_s},
-				{0}
+				{.name = NULL, .value = NULL}
 		};
 
 		sp_rtrace_fcall_t call1 = {

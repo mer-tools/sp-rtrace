@@ -591,10 +591,10 @@ static int trace_shm_open(const char *name, int oflag, mode_t mode)
 			};
 
 			sp_rtrace_farg_t args[] = {
-				{.name="name", .value=(char*)name},
+				{.name="name", .value=name},
 				{.name="oflag", .value=arg_oflag},
 				{.name="mode", .value=arg_mode},
-				{0}
+				{.name=NULL, .value=NULL}
 			};
 			sp_rtrace_write_function_call(&call, NULL, args);
 		}
@@ -608,10 +608,10 @@ static int trace_shm_open(const char *name, int oflag, mode_t mode)
 		};
 
 		sp_rtrace_farg_t args[] = {
-			{.name="name", .value=(char*)name},
+			{.name="name", .value=name},
 			{.name="oflag", .value=arg_oflag},
 			{.name="mode", .value=arg_mode},
-			{0}
+			{.name=NULL, .value=NULL}
 		};
 		sp_rtrace_write_function_call(&call, NULL, args);
 	}
@@ -632,8 +632,8 @@ static int trace_shm_unlink(const char *name)
 	};
 	
 	sp_rtrace_farg_t args[] = {
-		{.name="name", .value=(char*)name},
-		{0}
+		{.name="name", .value=name},
+		{.name=NULL, .value=NULL}
 	};
 	sp_rtrace_write_function_call(&call, NULL, args);
 	return rc;
@@ -716,9 +716,9 @@ static void* trace_mmap(void *addr, size_t length, int prot, int flags, int fd, 
 		{.name="flags", .value=arg_flags},
 		{.name="fd", .value=arg_fd},
 		{.name="offset", .value=arg_offset},
-		{0}, // reseverd for fd name
-		{0}, // reserved for fd mode
-		{0}
+		{.name=NULL, .value=NULL}, // reseverd for fd name
+		{.name=NULL, .value=NULL}, // reserved for fd mode
+		{.name=NULL, .value=NULL}
 	};
 	if (pfd) {
 		args[5].name = "name";
@@ -760,9 +760,9 @@ static void* trace_mmap2(void *addr, size_t length, int prot, int flags, int fd,
 		{.name="flags", .value=arg_flags},
 		{.name="fd", .value=arg_fd},
 		{.name="offset", .value=arg_offset},
-		{0}, // reseverd for fd name
-		{0}, // reserved for fd mode
-		{0}
+		{.name=NULL, .value=NULL}, // reseverd for fd name
+		{.name=NULL, .value=NULL}, // reserved for fd mode
+		{.name=NULL, .value=NULL}
 	};
 	if (pfd) {
 		args[5].name = "name";
@@ -804,9 +804,9 @@ static void* trace_mmap64(void *addr, size_t length, int prot, int flags, int fd
 		{.name="flags", .value=arg_flags},
 		{.name="fd", .value=arg_fd},
 		{.name="offset", .value=arg_offset},
-		{0}, // reserved for fd name
-		{0}, // reserved for fd mode
-		{0}
+		{.name=NULL, .value=NULL}, // reserved for fd name
+		{.name=NULL, .value=NULL}, // reserved for fd mode
+		{.name=NULL, .value=NULL}
 	};
 	if (pfd) {
 		args[5].name = "name";
@@ -843,7 +843,7 @@ static int trace_munmap(void *addr, size_t length)
 	char arg_length[16]; snprintf(arg_length, sizeof(arg_length), "%li", (unsigned long)length);
 	sp_rtrace_farg_t args[] = {
 		{.name="length", .value=arg_length},
-		{0}
+		{.name=NULL, .value=NULL}
 	};
 	sp_rtrace_write_function_call(&call, NULL, args);
 	return rc;

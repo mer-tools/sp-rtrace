@@ -265,7 +265,7 @@ static int trace_shmctl(int shmid, int cmd, struct shmid_ds *buf)
 		};
 		sp_rtrace_farg_t args[] = {
 				{.name = "cmd", .value = "IPC_RMID"},
-				{0}
+				{.name = NULL, .value = NULL}
 		};
 		sp_rtrace_write_function_call(&call, NULL, args);
 	}
@@ -326,7 +326,7 @@ static void* trace_shmat(int shmid, const void *shmaddr, int shmflg)
 		sp_rtrace_farg_t args[] = {
 				{.name = "shmid", .value = shmid_s},
 				{.name = "cpid", .value = cpid_s},
-				{0}
+				{.name = NULL, .value = NULL}
 		};
 		sp_rtrace_write_function_call(&call, NULL, args);
 	}

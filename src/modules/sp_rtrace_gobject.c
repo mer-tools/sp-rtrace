@@ -139,11 +139,13 @@ static gpointer trace_g_object_newv(GType object_type, guint n_parameters, GPara
 	gpointer rc = trace_off.g_object_newv(object_type, n_parameters, parameters);
 	pointer_t res_id = (pointer_t)rc;
 	size_t res_size = (size_t)1;
+	const char *type_name = "unknown";
+	GTypeQuery type_info;
 
-	GTypeQuery type_info = {0};
 	g_type_query(object_type, &type_info);
 	if (type_info.type) {
 		res_size = type_info.instance_size;
+		type_name = type_info.type_name;
 	}
 
 	sp_rtrace_fcall_t call = {
@@ -155,8 +157,8 @@ static gpointer trace_g_object_newv(GType object_type, guint n_parameters, GPara
 			.res_id = (pointer_t)res_id,
 	};
 	sp_rtrace_farg_t args[] = {
-			{.name = "type", .value = (char*)type_info.type_name},
-			{0}
+			{.name = "type", .value = type_name},
+			{.name = NULL, .value = NULL}
 	};
 	sp_rtrace_write_function_call(&call, NULL, args);
 	return rc;
@@ -184,11 +186,13 @@ static gpointer trace_g_object_ref(gpointer object)
 	gpointer rc = trace_off.g_object_ref(object);
 	pointer_t res_id = (pointer_t)rc;
 	size_t res_size = (size_t)1;
+	const char *type_name = "unknown";
+	GTypeQuery type_info;
 
-	GTypeQuery type_info = {0};
 	g_type_query(((GObject*)object)->g_type_instance.g_class->g_type, &type_info);
 	if (type_info.type) {
 		res_size = type_info.instance_size;
+		type_name = type_info.type_name;
 	}
 	sp_rtrace_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
@@ -199,8 +203,8 @@ static gpointer trace_g_object_ref(gpointer object)
 			.res_id = (pointer_t)res_id,
 	};
 	sp_rtrace_farg_t args[] = {
-			{.name = "type", .value = (char*)type_info.type_name},
-			{0}
+			{.name = "type", .value = type_name},
+			{.name = NULL, .value = NULL}
 	};
 	sp_rtrace_write_function_call(&call, NULL, args);
 
@@ -331,5 +335,3 @@ const sp_rtrace_module_info_t* sp_rtrace_get_module_info(void)
 {
 	return &module_info;
 }
-
-
