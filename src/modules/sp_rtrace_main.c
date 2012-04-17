@@ -1012,10 +1012,10 @@ void sp_rtrace_get_out_filename(const char* pattern, char* buffer, size_t size)
 	*ptr++ = '-';
 	ptr = _stpncpy(ptr, pattern, size - (ptr - buffer));
 	*ptr++ = '-';
-	int index = 0;
+	int idx = 0;
 	do {
-		/* increase index until non-existing filename is found */
-		_itoa(ptr, index++);
+		/* increase idx until non-existing filename is found */
+		_itoa(ptr, idx++);
 	} while (access(buffer, F_OK) == 0);
 }
 

@@ -194,9 +194,9 @@ static const char* parse_mmap_record(const char* line, rs_cache_t* rs)
  */
 static void parse_index_record(char* line, rs_cache_t* rs)
 {
-	int index;
-	if (sscanf(line, "^%d", &index) == 1) {
-		rs_mmap_t* mmap = rs->mmaps_index[index];
+	int idx;
+	if (sscanf(line, "^%d", &idx) == 1) {
+		rs_mmap_t* mmap = rs->mmaps_index[idx];
 		if (fgets(line, PATH_MAX, mmap->fout) == 0) {
 			fputs(line, stderr);
 			msg_error("multi-pass resolving failed, unexpected eof "
@@ -300,10 +300,10 @@ static void do_resolve(FILE *fpin, FILE *fpout)
 			const char* pout = NULL;
 			pout = parse_mmap_record(line, &rs);
 			if (!pout) {
-				int index = parse_backtrace_index(line, &rs);
+				int idx = parse_backtrace_index(line, &rs);
 				/* backtrace record with memory mapping, index it */
-				if (index >= 0) {
-					if (fprintf(findex, "^%d\n", index) == 0) {
+				if (idx >= 0) {
+					if (fprintf(findex, "^%d\n", idx) == 0) {
 						msg_error("while writing index data to file (%s)\n", strerror(errno));
 						exit (-1);
 					}

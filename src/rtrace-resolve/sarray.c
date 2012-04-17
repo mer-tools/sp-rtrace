@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -58,12 +58,12 @@ void sarray_add(sarray_t* array, void* item)
 		array->data = data;
 	}
 	/* insert item into array keeping it sorted */
-	int index = array->size++;
-	while (index && array->do_compare(item, array->data[index - 1]) < 0) {
-		array->data[index] = array->data[index - 1];
-		index--;
+	int idx = array->size++;
+	while (idx && array->do_compare(item, array->data[idx - 1]) < 0) {
+		array->data[idx] = array->data[idx - 1];
+		idx--;
 	}
-	array->data[index] = item;
+	array->data[idx] = item;
 }
 
 void* sarray_find(sarray_t* array, void* item)

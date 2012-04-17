@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -36,10 +36,10 @@
 
 int get_log_filename(int pid, const char* dir, const char* pattern, char* path, size_t size)
 {
-	int index = 0;
+	int idx = 0;
 	do {
 		int offset = snprintf(path, size, "%s/", dir);
-		snprintf(path + offset, size - offset, pattern, pid, index++);
+		snprintf(path + offset, size - offset, pattern, pid, idx++);
 	} while (access(path, F_OK) == 0);
 	return 0;
 }

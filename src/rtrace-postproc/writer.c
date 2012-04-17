@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010,2011 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -80,8 +80,8 @@ static int write_attachment_info(rd_attachment_t* file, FILE* fp)
  */
 static long comment_check_index(rd_comment_t* comment, void* data)
 {
-	long index = (long)data;
-	return comment->index < index;
+	long idx = (long)data;
+	return comment->index < idx;
 }
 
 /**
@@ -205,8 +205,8 @@ typedef struct {
 static void write_leaks(rd_resource_t* res, leaks_t* leaks)
 {
 	TRY(sp_rtrace_print_comment(leaks->fp, "# Resource - %s (%s):\n", res->data.type, res->data.desc));
-	int index = ffs(res->data.id) - 1;
-	TRY(sp_rtrace_print_comment(leaks->fp, "# %d block(s) leaked with total size of %d bytes\n", leaks->leaks[index].count, leaks->leaks[index].total_size));
+	int idx = ffs(res->data.id) - 1;
+	TRY(sp_rtrace_print_comment(leaks->fp, "# %d block(s) leaked with total size of %d bytes\n", leaks->leaks[idx].count, leaks->leaks[idx].total_size));
 
 }
 
