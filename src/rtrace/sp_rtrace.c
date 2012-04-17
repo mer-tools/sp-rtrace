@@ -54,6 +54,17 @@
 
 #define MESSAGE_SIGINT "INFO: Trace was stopped, please wait for data retrieval to be finished.\n"
 
+/* SIGCHLD handler was installed to track post-processor termination,
+ * but tracing process termination was messing up with the detection
+ * and thus the SIGCHLD handling was removed.
+ * In theory pre-processor has pipe to either process (traced process
+ * and post-processor) which should be intact until the child process
+ * terminates. So broken pipe will indicate that the associated process
+ * has been terminated.
+ */
+#define ENABLE_SIGCHLD_HANDLER 0
+
+
 /* Application exit condition, set by SIGINT */
 sig_atomic_t rtrace_stop_requests = 0;
 
@@ -92,7 +103,7 @@ rtrace_options_t rtrace_options = {
 /**
  * Display the help information.
  */
-static void display_usage()
+static void display_usage(void)
 {
 	printf("\nsp-rtrace pre-processor can be used in two modes - to start a new process\n"
 	       "or to toggle tracing (enable/disable) for an already running process.\n"
@@ -169,6 +180,7 @@ static void sigint_handler(int sig __attribute((unused)))
 	}
 }
 
+#if ENABLE_SIGCHLD_HANDLER
 /**
  * Stops data processing and exits application if either traced process
  * or post-processor was terminated.
@@ -178,13 +190,14 @@ static void sigchld_handler(int sig __attribute((unused)))
 {
 	rtrace_stop_requests = REQUEST_STOP;
 }
+#endif
 
 /**
  * Updates environment variables according to the specified command line arguments.
  *
  * @return
  */
-static void set_environment()
+static void set_environment(void)
 {
 	char path[PATH_MAX];
 	setenv(SP_RTRACE_READY, OPT_ENABLE, 1);
@@ -240,7 +253,7 @@ static void set_environment()
  *
  * @return
  */
-static void free_options()
+static void free_options(void)
 {
 	if (rtrace_options.output_dir) free(rtrace_options.output_dir);
 	if (rtrace_options.preload) free(rtrace_options.preload);
@@ -258,7 +271,7 @@ static void free_options()
  * the opened pipe to it.
  * @return  the pipe descriptor.
  */
-static int open_postproc_pipe()
+static int open_postproc_pipe(void)
 {
 	int fd[2];
 	if (pipe(fd) == -1) {
@@ -372,7 +385,7 @@ int rtrace_connect_output()
  *
  * @return
  */
-static void disconnect_output()
+static void disconnect_output(void)
 {
 	close (fd_out);
 	if (rtrace_options.pid_postproc) {
@@ -426,7 +439,7 @@ static void disconnect_input(const char* pipe_path)
  * target process.
  * @return
  */
-static void stop_tracing()
+static void stop_tracing(void)
 {
 	fprintf(stderr, "INFO: Tracing stopped. The log file will be created shortly.\n");
 	kill(rtrace_options.pid, rtrace_options.toggle_signal);
@@ -438,7 +451,7 @@ static void stop_tracing()
  *
  * @return
  */
-static void begin_tracing()
+static void begin_tracing(void)
 {
 	if (rtrace_options.manage_preproc) {
 		/* The pre-processor is managed by the tracing module.
@@ -584,7 +597,7 @@ static bool is_process_traced(int pid)
  *
  * @return             0 - success.
  */
-static void toggle_tracing()
+static void toggle_tracing(void)
 {
 	char pipe_path[128];
 
@@ -701,7 +714,7 @@ static void start_process_managed(char* app, char* args[])
  * handle its event data.
  * @return
  */
-static void enter_listen_mode()
+static void enter_listen_mode(void)
 {
 	/* the output stream will be setup after output settings
 	 * (OS) packet is received.
@@ -792,7 +805,7 @@ static void print_module_info(const char* name) {
 /**
  * Lists rtrace modules located in sp-rtrace library directory.
  */
-static void list_modules()
+static void list_modules(void)
 {
 	DIR* libdir = opendir(SP_RTRACE_LIB_PATH);
 	if (libdir == NULL) {
@@ -860,22 +873,14 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
-	/* SIGCHLD handler was installed to track post-processor termination,
-	 * but tracing process termination was messing up with the detection
-	 * and thus the SIGCHLD handling was removed.
-	 * In theory pre-processor has pipe to either process (traced process
-	 * and post-processor) which should be intact until the child process
-	 * terminates. So broken pipe will indicate that the associated process
-	 * has been terminated.
-	 */
+#if ENABLE_SIGCHLD_HANDLER
 	/* install SIGCHLD handler */
-	/*
 	sa.sa_handler = sigchld_handler;
 	if (sigaction(SIGCHLD, &sa, NULL) == -1) {
 		msg_error("Failed to install SIGCHILD handler\n");
 		return -1;
 	}
-	*/
+#endif
 
 	/* parse command line options */
 	int opt = 0;
