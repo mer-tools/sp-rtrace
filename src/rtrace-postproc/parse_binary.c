@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010,2011 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -62,7 +62,7 @@ static rd_hshake_t* read_handshake_packet(const char* data)
 {
 	/* reset the function call index as handshake packet means parsing new data */
 	call_index = 1;
-    /**/
+	/**/
 	rd_hshake_t* hs = (rd_hshake_t*)malloc_a(sizeof(rd_hshake_t));
 	unsigned char len;
 	data += read_byte(data, &hs->vmajor);
@@ -186,7 +186,7 @@ static rd_minfo_t* read_packet_MI(const rd_hshake_t* hs __attribute__((unused)),
 	data += read_dword(data, &version);
 	info->vmajor = version >> 16;
 	info->vminor = version & 0xFFFF;
-    read_stringa(data, &info->name);
+	read_stringa(data, &info->name);
 	return info;
 }
 
@@ -217,26 +217,27 @@ static rd_attachment_t* read_packet_FILE(const rd_hshake_t* hs __attribute__((un
 static rd_fcall_t* read_packet_FC(const rd_hshake_t* hs __attribute__((unused)), const char* data)
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
-    rd_fcall_t* call = (rd_fcall_t*)dlist_create_node(sizeof(rd_fcall_t));
-    sp_rtrace_fcall_t* cd = &call->data;
-    cd->index = call_index++;
-    /* read resource type id into res_type field. A reference to the resource
-     * type data will be properly stored after returning from this function */
-    unsigned long res_type;
-    data += read_dword2long(data, &res_type);
-    cd->res_type = (void*)res_type;
-    cd->res_type_flag = SP_RTRACE_FCALL_RFIELD_ID;
-    /* */
-    data += read_dword(data, &cd->context);
-    data += read_dword(data, &cd->timestamp);
-    data += read_dword(data, &cd->type);
-    data += read_stringa(data, &cd->name);
-    data += read_dword(data, (unsigned int*)&cd->res_size);
-    read_pointer(data, &cd->res_id);
-    call->trace = NULL;
-    call->args = NULL;
-    call->ref = NULL;
-    return call;
+	rd_fcall_t* call = (rd_fcall_t*)dlist_create_node(sizeof(rd_fcall_t));
+	sp_rtrace_fcall_t* cd = &call->data;
+	cd->index = call_index++;
+	/* read resource type id into res_type field. A reference to the resource
+	 * type data will be properly stored after returning from this function
+	 */
+	unsigned long res_type;
+	data += read_dword2long(data, &res_type);
+	cd->res_type = (void*)res_type;
+	cd->res_type_flag = SP_RTRACE_FCALL_RFIELD_ID;
+	/* */
+	data += read_dword(data, &cd->context);
+	data += read_dword(data, &cd->timestamp);
+	data += read_dword(data, &cd->type);
+	data += read_stringa(data, &cd->name);
+	data += read_dword(data, (unsigned int*)&cd->res_size);
+	read_pointer(data, &cd->res_id);
+	call->trace = NULL;
+	call->args = NULL;
+	call->ref = NULL;
+	return call;
 }
 
 
@@ -251,16 +252,16 @@ static rd_ftrace_t* read_packet_BT(const rd_hshake_t* hs __attribute__((unused))
 {
 	SP_RTRACE_PROTO_CHECK_ALIGNMENT(data);
 
-    rd_ftrace_t* trace = (rd_ftrace_t*)htable_create_node(sizeof(rd_ftrace_t));
-    trace->ref_count = 0;
-    data += read_dword2long(data, &trace->data.nframes);
-    trace->data.frames = (pointer_t*)malloc_a(sizeof(pointer_t) * trace->data.nframes);
-    memcpy(trace->data.frames, data, sizeof(pointer_t) * trace->data.nframes);
-    /* binary packets can't contain resolved address names */
-    trace->data.resolved_names = NULL;
+	rd_ftrace_t* trace = (rd_ftrace_t*)htable_create_node(sizeof(rd_ftrace_t));
+	trace->ref_count = 0;
+	data += read_dword2long(data, &trace->data.nframes);
+	trace->data.frames = (pointer_t*)malloc_a(sizeof(pointer_t) * trace->data.nframes);
+	memcpy(trace->data.frames, data, sizeof(pointer_t) * trace->data.nframes);
+	/* binary packets can't contain resolved address names */
+	trace->data.resolved_names = NULL;
 
-    dlist_init(&trace->calls);
-    return trace;
+	dlist_init(&trace->calls);
+	return trace;
 }
 
 /**
@@ -284,7 +285,7 @@ static rd_fargs_t* read_packet_FA(const rd_hshake_t* hs __attribute__((unused)),
 	}
 	args->data[i].name = NULL;
 	args->data[i].value = NULL;
-    return args;
+	return args;
 }
 
 
@@ -361,32 +362,35 @@ static int read_generic_packet(rd_t* rd, const char* data, int size)
 	/* process packet depending on its type */
 
 	switch (type) {
-		case SP_RTRACE_PROTO_MEMORY_MAP: {
+		rd_resource_t* res;
+		rd_ftrace_t* trace;
+
+		case SP_RTRACE_PROTO_MEMORY_MAP:
 			dlist_add(&rd->mmaps, read_packet_MM(rd->hshake, data));
-		    fcall_prev = NULL;
+			fcall_prev = NULL;
 			break;
-		}
-		case SP_RTRACE_PROTO_CONTEXT_REGISTRY: {
+
+		case SP_RTRACE_PROTO_CONTEXT_REGISTRY:
 			dlist_add(&rd->contexts, read_packet_CR(rd->hshake, data));
-		    fcall_prev = NULL;
+			fcall_prev = NULL;
 			break;
-		}
-		case SP_RTRACE_PROTO_RESOURCE_REGISTRY: {
-			rd_resource_t* res = read_packet_RR(rd->hshake, data);
+
+		case SP_RTRACE_PROTO_RESOURCE_REGISTRY:
+			res = read_packet_RR(rd->hshake, data);
 			dlist_add(&rd->resources, res);
 			res_index[res->data.id] = res;
-		    fcall_prev = NULL;
+			fcall_prev = NULL;
 			break;
-		}
-		case SP_RTRACE_PROTO_FUNCTION_CALL: {
-            fcall_prev = read_packet_FC(rd->hshake, data);
-            dlist_add(&rd->calls, fcall_prev);
-            fcall_prev->data.res_type = res_index[(long)fcall_prev->data.res_type];
-            fcall_prev->data.res_type_flag = SP_RTRACE_FCALL_RFIELD_REF;
-            break;
-        }
-		case SP_RTRACE_PROTO_BACKTRACE: {
-            rd_ftrace_t* trace = read_packet_BT(rd->hshake, data);
+
+		case SP_RTRACE_PROTO_FUNCTION_CALL:
+			fcall_prev = read_packet_FC(rd->hshake, data);
+			dlist_add(&rd->calls, fcall_prev);
+			fcall_prev->data.res_type = res_index[(long)fcall_prev->data.res_type];
+			fcall_prev->data.res_type_flag = SP_RTRACE_FCALL_RFIELD_REF;
+			break;
+
+		case SP_RTRACE_PROTO_BACKTRACE:
+			trace = read_packet_BT(rd->hshake, data);
 			/* check if function call record for this backtrace has been processed.
 			 * It should have been a record processed right before this one.
 			 */
@@ -396,10 +400,10 @@ static int read_generic_packet(rd_t* rd, const char* data, int size)
 			else {
 				msg_warning("a backtrace packet did not follow function call/function argument packet\n");
 			}
-		    fcall_prev = NULL;
-            break;
-		}
-		case SP_RTRACE_PROTO_FUNCTION_ARGS: {
+			fcall_prev = NULL;
+			break;
+
+		case SP_RTRACE_PROTO_FUNCTION_ARGS:
 			if (fcall_prev) {
 				fcall_prev->args = read_packet_FA(rd->hshake, data);
 			}
@@ -407,33 +411,32 @@ static int read_generic_packet(rd_t* rd, const char* data, int size)
 				msg_warning("a function argument packet did not follow function call packet\n");
 			}
 			break;
-		}
-		case SP_RTRACE_PROTO_PROCESS_INFO: {
+
+		case SP_RTRACE_PROTO_PROCESS_INFO:
 			rd->pinfo = read_packet_PI(rd->hshake, data);
-		    fcall_prev = NULL;
+			fcall_prev = NULL;
 			break;
-		}
-		case SP_RTRACE_PROTO_MODULE_INFO: {
+
+		case SP_RTRACE_PROTO_MODULE_INFO:
 			dlist_add(&rd->minfo, read_packet_MI(rd->hshake, data));
-		    fcall_prev = NULL;
+			fcall_prev = NULL;
 			break;
-		}
-		case SP_RTRACE_PROTO_HEAP_INFO: {
+
+		case SP_RTRACE_PROTO_HEAP_INFO:
 			rd->hinfo = read_packet_HI(rd->hshake, data);
-		    fcall_prev = NULL;
+			fcall_prev = NULL;
 			break;
-		}
-		case SP_RTRACE_PROTO_OUTPUT_SETTINGS: {
+
+		case SP_RTRACE_PROTO_OUTPUT_SETTINGS:
 			break;
-		}
-		case SP_RTRACE_PROTO_ATTACHMENT: {
+
+		case SP_RTRACE_PROTO_ATTACHMENT:
 			dlist_add(&rd->files, read_packet_FILE(rd->hshake, data));
 			break;
-		}
-
+		
 		default:
 			msg_warning("unknown packet: %x (len=%d)\n", type, len);
-		    fcall_prev = NULL;
+			fcall_prev = NULL;
 			return PACKET_UNKNOWN;
 	}
 	return len;
@@ -474,12 +477,12 @@ static void read_binary_data(rd_t* rd, int fd)
 		msg_error("unsupported architecture: endianess(%d:%d), pointer size(%d:%d)\n",
 				rd->hshake->endianness, endianness, rd->hshake->pointer_size, (int)sizeof(pointer_t));
 		fprintf(stderr, "This could happen when text file is being processed without correct format option.\n");
-	    exit (-1);
+		exit (-1);
 	}
 	if (strcmp(rd->hshake->arch, BUILD_ARCH)) {
 		msg_error("unsupported architecture: %s (expected %s)\n",
 				rd->hshake->arch, BUILD_ARCH);
-	    exit (-1);
+		exit (-1);
 	}
 	n -= data_len + 1;
 	ptr_in += data_len;
