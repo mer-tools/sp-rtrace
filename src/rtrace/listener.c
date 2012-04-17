@@ -180,7 +180,10 @@ static int scan_mmap_data(void)
 				int size = ptr - name;
 				write_dword(name + SP_RTRACE_PROTO_TYPE_SIZE, size - SP_RTRACE_PROTO_TYPE_SIZE - SP_RTRACE_PROTO_LENGTH_SIZE);
 				/* write the assembled packet to the output stream */
-				if (write_data(name, size) < 0) return -1;
+				if (write_data(name, size) < 0) {
+					fclose(fp);
+					return -1;
+				}
 			}
 		}
 		fclose(fp);

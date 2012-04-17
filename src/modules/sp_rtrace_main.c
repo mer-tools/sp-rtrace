@@ -866,12 +866,12 @@ unsigned int sp_rtrace_register_resource(sp_rtrace_resource_t* resource)
 }
 
 
-void sp_rtrace_store_heap_info()
+void sp_rtrace_store_heap_info(void)
 {
 	heap_info = mallinfo();
 }
 
-bool sp_rtrace_initialize()
+bool sp_rtrace_initialize(void)
 {
 	static volatile int initialize_lock = 0;
 	if (sync_bool_compare_and_swap(&initialize_lock, 0, 1)) {
@@ -1033,7 +1033,7 @@ int sp_rtrace_copy_file(const char* source, const char* dest)
 	}
 	char buffer[0x8000];
 	int n_in;
-	while ( (n_in = read(fd_in, buffer, sizeof(buffer))) ) {
+	while ( (n_in = read(fd_in, buffer, sizeof(buffer))) > 0 ) {
 		int n_out = write(fd_out, buffer, n_in);
 		if (n_in != n_out) {
 			rc = -errno;
@@ -1054,6 +1054,7 @@ static void trace_main_fini(void) __attribute__((destructor));
  */
 static void trace_main_init(void)
 {
+	/* if env read fails at this stage, this will be called again later */
 	sp_rtrace_initialize();
 
 	int toggle_signal = SIGUSR1;
@@ -1086,5 +1087,3 @@ static void trace_main_fini(void)
 		close_pipe(fd_proc);
 	}
 }
-
-

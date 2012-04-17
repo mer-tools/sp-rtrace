@@ -73,6 +73,7 @@ int rs_mmap_is_absolute(const char* path)
 	ret = fread(&elf_header, sizeof(elf_header), 1, file);
 	if (ret != 1) {
 		msg_error("invalid ELF header from %s\n", path);
+		fclose(file);
 		return -EINVAL;
 	}
 
@@ -85,6 +86,7 @@ int rs_mmap_is_absolute(const char* path)
 	if (ret != elf_header.e_phnum) {
 		free(program_header);
 		msg_error("could not read program header table from %s\n", path);
+		fclose(file);
 		return -EINVAL;
 	}
 

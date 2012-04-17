@@ -212,7 +212,7 @@ static void set_environment(void)
 	if (rtrace_options.backtrace_all) setenv(rtrace_env_opt[OPT_BACKTRACE_ALL], OPT_ENABLE, 1);
 	if (rtrace_options.libunwind) setenv(rtrace_env_opt[OPT_LIBUNWIND], OPT_ENABLE, 1);
 	if (rtrace_options.monitor_size) setenv(rtrace_env_opt[OPT_MONITOR_SIZE], rtrace_options.monitor_size, 1);
-	setenv(SP_RTRACE_START_DIR, getcwd(path, sizeof(path)), 1);
+	if (getcwd(path, sizeof(path))) setenv(SP_RTRACE_START_DIR, path, 1);
 
 	char preload[PATH_MAX], *ppreload = preload;
 	ppreload += sprintf(preload, "%s:", SP_RTRACE_MAIN_MODULE);

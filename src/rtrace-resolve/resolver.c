@@ -422,9 +422,7 @@ static int rs_load_symbols(rs_cache_record_t* rec, const char* filename)
 			return -EINVAL;
 		}
 		struct stat sb;
-		fstat(rec->fd, &sb);
-
-		if (sb.st_size <= EI_CLASS) {
+		if (fstat(rec->fd, &sb) < 0 || sb.st_size <= EI_CLASS) {
 			fprintf(stderr, "Image file too short to contain elf header\n");
 			close(rec->fd);
 			return -EINVAL;

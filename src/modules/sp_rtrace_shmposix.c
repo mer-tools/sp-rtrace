@@ -266,22 +266,25 @@ static unsigned int nreg_calc_hash(const char* name)
 /**
  * Retrieves hash for the specified name.
  *
- * If the specified name is already registered, it's hash code is
+ * If the specified name is already registered, its hash code is
  * returned. Otherwise a new hash code is calculated, registered and
  * returned.
- * @param[in] name  the obejct name.
+ * @param[in] name  the object name.
  * @return          the hash code.
  */
 static unsigned int nreg_get_hash(const char* name)
 {
 	nreg_node_t node = {.name = (char*)name};
-
 	nreg_node_t** ppnode = tfind(&node, &nreg_root, nreg_compare_name);
+
 	if (!ppnode) {
 		nreg_node_t* pnode = malloc(sizeof(nreg_node_t));
 		if (!pnode) return -1;
 		pnode->name = strdup(name);
-		if (!pnode->name) return -1;
+		if (!pnode->name) {
+			free(pnode);
+			return -1;
+		}
 		pnode->hash = nreg_calc_hash(name);
 		ppnode = tsearch(pnode, &nreg_root, nreg_compare_name);
 	}
@@ -912,7 +915,7 @@ int open(const char *pathname, int flags, ...)
 		va_start(args, flags);
 		int mode = va_arg(args, int);
 		va_end(args);
-		BT_EXECUTE_LOCKED(rc = trace_rt->open(pathname, flags, va_arg(args, int)), trace_off.open(pathname, flags, mode));
+		BT_EXECUTE_LOCKED(rc = trace_rt->open(pathname, flags, mode), trace_off.open(pathname, flags, mode));
 	}
 	else {
 		BT_EXECUTE_LOCKED(rc = trace_rt->open(pathname, flags), trace_off.open(pathname, flags));
@@ -929,7 +932,7 @@ int open64(const char *pathname, int flags, ...)
 		va_start(args, flags);
 		int mode = va_arg(args, int);
 		va_end(args);
-		BT_EXECUTE_LOCKED(rc = trace_rt->open64(pathname, flags, va_arg(args, int)), trace_off.open(pathname, flags, mode));
+		BT_EXECUTE_LOCKED(rc = trace_rt->open64(pathname, flags, mode), trace_off.open(pathname, flags, mode));
 	}
 	else {
 		BT_EXECUTE_LOCKED(rc = trace_rt->open64(pathname, flags), trace_off.open(pathname, flags));
