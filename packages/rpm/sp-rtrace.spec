@@ -1,5 +1,5 @@
 Name: sp-rtrace
-Version: 1.8.6
+Version: 1.9
 Release: 1%{?dist}
 Summary:  Resource consumption tracing tools
 Group: Development/Tools
@@ -42,6 +42,7 @@ rm -rf %{buildroot}
 %{_bindir}/rtrace-rename
 %{_bindir}/rtrace-sort
 %{_bindir}/rtrace-stats
+%{_bindir}/rtrace-function-address
 %{_libdir}/libsp-rtrace-main.so*
 %{_libdir}/sp-rtrace/
 %{_mandir}/man1/sp-rtrace.1.gz
@@ -51,6 +52,7 @@ rm -rf %{buildroot}
 %{_mandir}/man1/rtrace-rename.1.gz
 %{_mandir}/man1/rtrace-sort.1.gz
 %{_mandir}/man1/rtrace-stats.1.gz
+%{_mandir}/man1/rtrace-function-address.1.gz
 %doc COPYING.* README
 
 #
@@ -123,6 +125,7 @@ Requires: sp-rtrace, python, graphviz
 %{_bindir}/rtrace-from-function
 %{_bindir}/rtrace-graphs-function
 %{_bindir}/rtrace-graphs-overview
+%{_bindir}/rtrace-alloc-sizes
 %{_bindir}/sp-rtrace-allocmap
 %{_bindir}/sp-rtrace-timeline
 %{_mandir}/man1/rtrace-allocmap.1.gz
@@ -131,11 +134,15 @@ Requires: sp-rtrace, python, graphviz
 %{_mandir}/man1/rtrace-from-function.1.gz
 %{_mandir}/man1/rtrace-graphs-function.1.gz
 %{_mandir}/man1/rtrace-graphs-overview.1.gz
+%{_mandir}/man1/rtrace-alloc-sizes.1.gz
 %{_mandir}/man1/sp-rtrace-allocmap.1.gz
 %{_mandir}/man1/sp-rtrace-timeline.1.gz
 
 
 %changelog
+* Mon Apr 25 2012 Eero Tamminen <eero.tamminen@nokia.com> 1.9
+  * Update to 1.9 with many fixes, add new files
+
 * Mon Dec 19 2011 Eero Tamminen <eero.tamminen@nokia.com> 1.8.6
   * fix rpmlint error, add minimal visualize package deps
   * Update to 1.8.6
