@@ -63,6 +63,7 @@ static sp_rtrace_resource_t res_memory = {
 };
 
 /* Internal allocation function emulation heap.
+ * Used before the module is fully initialized.
  *
  * The heap structure is:
  *   [size1][chunk1][size2][chunk2]...[sizeN][chunkN]

@@ -63,6 +63,8 @@ static sp_rtrace_module_info_t module_info = {
 /* */
 #define DEFAULT_BACKTRACE_DEPTH    10
 
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
+
 /* pre-processor pipe descriptor */
 static int fd_proc = 0;
 
@@ -100,11 +102,11 @@ sp_rtrace_options_t* sp_rtrace_options = &rtrace_main_options;
 
 /* unnecessary backtrace frames that can be stripped */
 #ifdef __arm__
- #define BT_SKIP_TOP       4
+ #define BT_SKIP_TOP       4	/* first frames in backtrace (=sp-rtrace functions) */
 #else
  #define BT_SKIP_TOP       3
 #endif
-#define BT_SKIP_BOTTOM     0
+#define BT_SKIP_BOTTOM     0	/* towards the main */
 
 
 /*
@@ -747,12 +749,13 @@ int sp_rtrace_write_function_call(sp_rtrace_fcall_t* call, sp_rtrace_ftrace_t* t
 
 	if (!trace && sp_rtrace_options->backtrace_depth && sp_rtrace_filter_validate(sp_rtrace_options->filter, call)) {
 		unsigned int bt_depth = sp_rtrace_options->backtrace_depth + BT_SKIP_TOP + BT_SKIP_BOTTOM;
-		if (bt_depth > sizeof(bt_frames) / sizeof(bt_frames[0])) {
-			bt_depth = sizeof(bt_frames) / sizeof(bt_frames[0]);
+		if (bt_depth > ARRAY_SIZE(bt_frames)) {
+			bt_depth = ARRAY_SIZE(bt_frames);
 		}
 		/* backtrace() function could trigger tracked function calls.
 		 * lock those functions for other threads while using the standard
-		 * functions for the current thread  */
+		 * functions for the current thread
+		 */
 		if (backtrace_lock) {
 			fprintf(stderr, "ERROR: infinite recursion detected backtrace() calling %s()\n", call->name);
 			exit (-1);
@@ -822,7 +825,7 @@ int sp_rtrace_write_function_call(sp_rtrace_fcall_t* call, sp_rtrace_ftrace_t* t
 
 unsigned int sp_rtrace_register_module(const char* name, unsigned char vmajor, unsigned char vminor, sp_rtrace_enable_tracing_t enable_func)
 {
-	if (rtrace_module_index >= sizeof(rtrace_modules) / sizeof(rtrace_modules[0])) {
+	if (rtrace_module_index >= ARRAY_SIZE(rtrace_modules)) {
 		return 0;
 	}
 	rtrace_module_t* module = &rtrace_modules[rtrace_module_index];
@@ -854,7 +857,7 @@ unsigned int sp_rtrace_register_resource(sp_rtrace_resource_t* resource)
     }
 
 	/* Register new resource type */
-	if (rtrace_resource_index >= sizeof(rtrace_resources) / sizeof(rtrace_resources[0])) {
+	if (rtrace_resource_index >= ARRAY_SIZE(rtrace_resources)) {
 		return -1;
 	}
     ((sp_rtrace_resource_t*)resource)->id = rtrace_resource_index + 1;
