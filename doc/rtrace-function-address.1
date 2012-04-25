@@ -1,0 +1,22 @@
+.TH RTRACE-FUNCTION-ADDRESS 1 "2012-04-25" "sp-rtrace"
+.SH NAME
+rtrace-function-address - get given function address range
+.SH SYNOPSIS
+rtrace-function-address <LIBRARY> <FUNCTION>
+.SH DESCRIPTION
+\fIrtrace-function-address\fP scans given ELF object/library
+symbol table for address range of the specified function and provides
+corresponding value to to give for sp-rtrace-postproc --call-address
+option.
+.PP
+Library path should be absolute from file system root.
+.PP
+The result is given in '<path>:<address>+<size>' format.
+.SH SEE ALSO
+.IR sp-rtrace-postproc (1)
+.SH COPYRIGHT
+Copyright (C) 2012 Nokia Corporation.
+.PP
+This is free software.  You may redistribute copies of it under the
+terms of the GNU General Public License v2 included with the software.
+There is NO WARRANTY, to the extent permitted by law.

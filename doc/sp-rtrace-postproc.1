@@ -89,20 +89,18 @@ Removes events that are listed in the \fIfile\fP. The exclude file
 is in text format and contains one event index per line.
 .TP
 \fI--call-address\fP=<target>:<start address>+<size>
-Removes allocation events not originated from the specified code
-range. 
+Removes allocation events not originating from the specified code
+address range.
 
-This option is useful to monitor only allocations from a
-specific address range, for example a library function.
-This option is best used with helper script sp-rtrace-function-address
-which extracts function address range from target binary and displays
-it in the --call-address option format:
-sp-rtrace-function-address <target> <function>
-
+This option is useful for monitoring only allocations from a specific
+address range, for example a library function. This option is best
+used with the \fIrtrace-function-address\fP helper script which
+extracts function address range from given ELF object (shared library)
+and displays it in the \fI--call-address\fP option format:
+<target>:<start address>+<size>
 
 For example:
-sp-rtrace-postproc -i <input report> --call-addresss=$(sp-rtrace-function-address <library> <function>) -lr
-
+sp-rtrace-postproc -i <report> --call-address=$(rtrace-function-address <path> <function>) -lr
 
 .TP
 \fI--quiet\fP (\fI-q\fP)
@@ -125,9 +123,10 @@ rtrace-text-resolved file.
 
 .SH SEE ALSO
 .IR sp-rtrace (1),
-.IR sp-rtrace-resolve (1)
+.IR sp-rtrace-resolve (1),
+.IR rtrace-function-address (1)
 .SH COPYRIGHT
-Copyright (C) 2010 Nokia Corporation.
+Copyright (C) 2010-2012 Nokia Corporation.
 .PP
 This is free software. You may redistribute copies of it under the
 terms of the GNU General Public License v2 included with the software.
