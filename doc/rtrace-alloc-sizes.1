@@ -1,0 +1,30 @@
+.TH RTRACE-ALLOC-SIZES 1 "2012-04-25" "sp-rtrace"
+.SH NAME
+rtrace-alloc-sizes - trace allocation histogram and size checks
+.SH SYNOPSIS
+rtrace-alloc-sizes <ASCII trace file> <libc mmap threshold>
+.SH DESCRIPTION
+\fIrtrace-alloc-sizes\fP prints (reduced) ASCII histogram of
+allocation sizes and counts, warn about bad allocation sizes
+and provide some related, simple statistics.
+.PP
+Basically its functionality is a small subset of
+\fIsp-rtrace-timeline\fP features with the addition of warnings
+and using ASCII output instead of Gnuplot graphs.  (Reduced)
+ASCII histograms are sometimes easier to read than huge graphs.
+.SH EXAMPLES
+.br
+	rtrace-alloc-sizes 1234-0.rtrace.txt 16
+.PP
+Glibc allows setting the mmap() threshold (limit when malloc will use
+mmap() instead of normal heap) using environment variables. On desktop
+this limit defaults to 128kB, on Maemo it's been set to 16kB.
+.SH SEE ALSO
+.IR sp-rtrace-postproc (1),
+.IR sp-rtrace-timeline (1)
+.SH COPYRIGHT
+Copyright (C) 2012 Nokia Corporation.
+.PP
+This is free software.  You may redistribute copies of it under the
+terms of the GNU General Public License v2 included with the software.
+There is NO WARRANTY, to the extent permitted by law.

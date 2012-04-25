@@ -1,0 +1,126 @@
+#!/usr/bin/env python
+#
+# Rtrace helper script. This file is part of sp-rtrace.
+#
+# Copyright (C) 2012 by Nokia Corporation
+#
+# Contact: Eero Tamminen <eero.tamminen@nokia.com>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License 
+# version 2 as published by the Free Software Foundation. 
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+# 02110-1301 USA
+import os, re, sys
+
+# estimated malloc overhead
+overhead = 8
+
+# limit on what sized waste to show
+wastelimit = 4096
+# limit on what sized items to show in histogram
+histlimit = 64*1024
+# output max width for histogram part
+maxwidth = 60
+
+
+args = len(sys.argv)
+if args != 3 or sys.argv[1][0] == '-' or not os.path.exists(sys.argv[1]):
+    name = os.path.basename(sys.argv[0])
+    print """
+Print (reduced) ASCII histogram of allocation sizes and counts,
+warn about bad allocation sizes and provide some related, simple
+statistics.
+
+Usage:
+	%s <sp-rtrace ASCII trace> <libc mmap threshold>
+
+Example:
+	%s 1234-0.rtrace.txt 16
+
+(Glibc mmap threshold is typically 128kB for desktop and 16kB for Maemo/MeeGo.)
+""" % (name, name)
+    sys.exit(1)
+
+# device malloc mmap() threshold
+threshold = int(sys.argv[2]) * 1024
+
+
+# get alloc sizes from sp-rtrace trace file
+rex = re.compile("^[0-9].*\(([0-9]+)\)")
+
+sizes = {}
+# find alloc sizes and count per size
+for line in open(sys.argv[1]).readlines():
+    match = rex.match(line)
+    if not match:
+        continue
+    size = int(match.group(1))
+    if size in sizes:
+        sizes[size] += 1
+    else:
+        sizes[size] = 1
+
+sized = sizes.keys()
+sized.sort()
+
+
+# find largest count and calculate totals
+largest = 0
+allocscount = 0
+allocstotal = 0
+for size in sized:
+    count = sizes[size]
+    allocscount += count
+    allocstotal += size*count
+    if count > largest:
+        largest = count
+
+
+print
+print "Alloc size/count histogram of items using >= %d kB (with overhead):" % round(histlimit/1024)
+# output histogram of significant sized allocs
+for size in sized:
+    count = sizes[size]
+    total = (size+overhead)*count
+    if total > histlimit:
+        width = count * maxwidth / largest + 1
+        print "%8d %s (%s), %d kB" % (size, width*'#', count, round(total/1024))
+
+
+print
+print "Alloc size warnings:"
+# warn about alloc size related waste
+allocswaste = 0
+for size in sized:
+    count = sizes[size]
+    if count < 2:
+        continue
+    if size < overhead * 2:
+        waste = overhead * count
+        if waste > wastelimit:
+            print "- %d bytes of overhead wasted for %d small %d sized allocs (= %d B)" % (waste, count, size, count*size)
+    elif size > threshold:
+        # align to page size
+        mmap = (size + 4095) & 0xFFFF000
+        waste = (mmap - size) * count
+        allocswaste += waste
+        if waste > wastelimit:
+            optimal = size & 0xFFFF000
+            print "- %d bytes wasted for %d unoptimal %d sized allocs (optimal size = %d B)" % (waste, count, size, optimal)
+
+
+print
+print "Statistics:"
+print "- %d allocs" % allocscount
+print "- %d kB in total" % round(allocstotal/1024)
+print "+ %d kB of estimated alloc overhead" % round(allocscount*overhead/1024)
+print "+ %d kB of mmap()ed allocs alignment overhead" % round(allocswaste/1024)
