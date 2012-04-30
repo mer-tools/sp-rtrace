@@ -84,14 +84,14 @@ information added during post-processing and resolving.
      <function name> - the function name, allocator of the resource.
      <resource type> - an optional resource type id
                        (omitted if only one resource type is being tracked). 
-     <resourse size> - the size of the allocated resource
-                       (whenerver it's  possible to calculate it).
+     <resource size> - the size of the allocated resource
+                       (whenever it's  possible to calculate it).
      <resource id>   - the resource identifier returned by allocator function
                        and used to uniquely identify the allocated resource
                        (in hexadecimal format 0x...).
      <arguments>     - A list of function arguments (see the arguments record
                        description for full specification).
-     <backtrace>     - a backtrace of the alloacator function call (see the 
+     <backtrace>     - a backtrace of the allocator function call (see the 
                        backtrace description for full specification).
 
 
@@ -116,7 +116,7 @@ information added during post-processing and resolving.
                        (in hexadecimal format 0x...).
      <arguments>     - A list of function arguments (see the arguments record
                        description for full specification).
-     <backtrace>     - a backtrace of the alloacator function call (see the 
+     <backtrace>     - a backtrace of the allocator function call (see the 
                        backtrace description for full specification).
 
 
