@@ -559,7 +559,17 @@ static void toggle_child_processes(int pid)
 		if (de->d_type == DT_DIR) {
 			int cpid = atoi(de->d_name);
 			if (cpid && is_child_process_of(cpid, pid)) {
-				toggle_child_process(cpid);
+				char cmdline[PATH_MAX];
+				snprintf(cmdline, sizeof(cmdline), "/proc/%i/cmdline", cpid);
+				int fd = open(cmdline, O_RDONLY);
+				if (fd) {
+					read(fd, cmdline, sizeof(cmdline));
+					close(fd);
+				}
+				else {
+					cmdline[0] = '\0';
+				}
+				if (!strstr(cmdline, SP_RTRACE_PREPROC)) toggle_child_process(cpid);
 			}
 		}
 	}

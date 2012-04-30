@@ -201,7 +201,7 @@ static int open_pipe(void)
 		LOG("spawning pre-processor process");
 		/* spawn the pre-processor process if */
 		int fd[2];
-		if (pipe(fd) == -1) return -1;
+		if (pipe2(fd, O_CLOEXEC) == -1) return -1;
 		pid_t pid = fork();
 		if (pid == -1) return -1;
 		if (pid == 0) {
