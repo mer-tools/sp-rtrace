@@ -52,7 +52,7 @@ static sp_rtrace_module_info_t module_info = {
 };
 
 
-static sp_rtrace_resource_t res_gobject = {
+static module_resource_t res_gobject = {
 		.type = "gobject",
 		.desc = "GObject instance",
 		.flags = SP_RTRACE_RESOURCE_REFCOUNT,
@@ -148,15 +148,14 @@ static gpointer trace_g_object_newv(GType object_type, guint n_parameters, GPara
 		type_name = type_info.type_name;
 	}
 
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_gobject.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_gobject.id,
 			.name = "g_object_newv",
 			.res_size = res_size,
 			.res_id = (pointer_t)res_id,
 	};
-	sp_rtrace_farg_t args[] = {
+	module_farg_t args[] = {
 			{.name = "type", .value = type_name},
 			{.name = NULL, .value = NULL}
 	};
@@ -169,10 +168,9 @@ static void trace_g_type_free_instance(GTypeInstance* instance)
 {
 	trace_off.g_type_free_instance(instance);
 
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_FREE,
-			.res_type = (void*)res_gobject.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_gobject.id,
 			.name = "g_type_free_instance",
 			.res_size = 0,
 			.res_id = (pointer_t)(pointer_t)instance,
@@ -194,15 +192,14 @@ static gpointer trace_g_object_ref(gpointer object)
 		res_size = type_info.instance_size;
 		type_name = type_info.type_name;
 	}
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_gobject.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_gobject.id,
 			.name = "g_object_ref",
 			.res_size = res_size,
 			.res_id = (pointer_t)res_id,
 	};
-	sp_rtrace_farg_t args[] = {
+	module_farg_t args[] = {
 			{.name = "type", .value = type_name},
 			{.name = NULL, .value = NULL}
 	};
@@ -216,10 +213,9 @@ static void trace_g_object_unref(gpointer object)
 {
 	trace_off.g_object_unref(object);
 	
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_FREE,
-			.res_type = (void*)res_gobject.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_gobject.id,
 			.name = "g_object_unref",
 			.res_size = 0,
 			.res_id = (pointer_t)(pointer_t)object,

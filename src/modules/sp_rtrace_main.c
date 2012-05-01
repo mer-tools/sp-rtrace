@@ -135,9 +135,8 @@ static unsigned int rtrace_module_index = 0;
 /*
  * Resource type registry
  */
-static sp_rtrace_resource_t rtrace_resources[32];
+static module_resource_t rtrace_resources[32];
 static unsigned int rtrace_resource_index = 0;
-
 
 /* inserts data at saved position */
 #define PACKET_INSERT(ptr, type, value) \
@@ -172,6 +171,15 @@ static unsigned int rtrace_resource_index = 0;
 		pipe_buffer_unlock(_buffer, _ptr - _buffer); \
 		return _ptr - _buffer;
 
+/**
+ * Returns the current end of the heap.
+ * @return
+ */
+static pointer_t heap_end(void)
+{
+	void* ptr = sbrk(0);
+	return (pointer_t)ptr;
+}
 
 /**
  * Enables/disables tracing.
@@ -391,7 +399,7 @@ static int write_module_info(int id, const char* name, unsigned char major, unsi
 }
 
 
-static int write_resource_registry(const sp_rtrace_resource_t* resource)
+static int write_resource_registry(const module_resource_t* resource)
 {
 	if (!sp_rtrace_options->enable) return 0;
 	PACKET_INIT(SP_RTRACE_PROTO_RESOURCE_REGISTRY);
@@ -484,7 +492,7 @@ static int write_heap_info(void)
 	if (heap_info.arena) {
 		PACKET_INIT(SP_RTRACE_PROTO_HEAP_INFO);
 		PACKET_WRITE(dword, heap_bottom);
-		PACKET_WRITE(dword, (pointer_t)sbrk(0));
+		PACKET_WRITE(dword, heap_end());
 		PACKET_WRITE(dword, heap_info.arena);
 		PACKET_WRITE(dword, heap_info.ordblks);
 		PACKET_WRITE(dword, heap_info.smblks);
@@ -700,6 +708,24 @@ static void calc_relative_path(const char* from, const char* to, char* out)
 	strcpy(out, ptr_match);
 }
 
+/**
+ * Wrapper to convert module_fcall_t structure used internally to pass
+ * function call event structures between modules to sp_rtrace_fcall_t
+ * structure used to store function call event structures in post-processing
+ * utilities.
+ * @param filter   the filter to validate.
+ * @param call     the call to validate.
+ * @return
+ */
+static bool filter_validate(const sp_rtrace_filter_t* filter, const module_fcall_t* call)
+{
+	sp_rtrace_fcall_t fcall = {
+		.type = call->type,
+		.res_size = call->res_size,
+	};
+	return sp_rtrace_filter_validate(filter, &fcall);
+}
+
 /*
  * Public API implementation
  */
@@ -711,7 +737,7 @@ int sp_rtrace_write_new_library(const char* library)
 	PACKET_FINISH();
 }
 
-int sp_rtrace_write_attachment(const sp_rtrace_attachment_t* file)
+int sp_rtrace_write_attachment(const module_attachment_t* file)
 {
 	/* try to relate the attachment to the output directory */
 	char relative_path[PATH_MAX];
@@ -723,7 +749,7 @@ int sp_rtrace_write_attachment(const sp_rtrace_attachment_t* file)
 	PACKET_FINISH();
 }
 
-int sp_rtrace_write_context_registry(sp_rtrace_context_t* context)
+int sp_rtrace_write_context_registry(const module_context_t* context)
 {
 	if (!sp_rtrace_options->enable) return 0;
 	PACKET_INIT(SP_RTRACE_PROTO_CONTEXT_REGISTRY);
@@ -732,22 +758,17 @@ int sp_rtrace_write_context_registry(sp_rtrace_context_t* context)
 	PACKET_FINISH();
 }
 
-int sp_rtrace_write_function_call(sp_rtrace_fcall_t* call, sp_rtrace_ftrace_t* trace, sp_rtrace_farg_t* args)
+int sp_rtrace_write_function_call(const module_fcall_t* call, const module_ftrace_t* trace, const module_farg_t* args)
 {
 	if (!sp_rtrace_options->enable) return 0;
 
-	/* check if the resource type contains resource identifier */
-	if (call->res_type_flag != SP_RTRACE_FCALL_RFIELD_ID) {
-		return -EINVAL;
-	}
-
 	pointer_t bt_frames[256];
-	sp_rtrace_ftrace_t trace_data = {
+	module_ftrace_t trace_data = {
 			.nframes = 0,
 			.frames = bt_frames + BT_SKIP_TOP,
 	};
 
-	if (!trace && sp_rtrace_options->backtrace_depth && sp_rtrace_filter_validate(sp_rtrace_options->filter, call)) {
+	if (!trace && sp_rtrace_options->backtrace_depth && filter_validate(sp_rtrace_options->filter, call)) {
 		unsigned int bt_depth = sp_rtrace_options->backtrace_depth + BT_SKIP_TOP + BT_SKIP_BOTTOM;
 		if (bt_depth > ARRAY_SIZE(bt_frames)) {
 			bt_depth = ARRAY_SIZE(bt_frames);
@@ -775,7 +796,7 @@ int sp_rtrace_write_function_call(sp_rtrace_fcall_t* call, sp_rtrace_ftrace_t* t
 	}
 
 	PACKET_INIT(SP_RTRACE_PROTO_FUNCTION_CALL);
-	PACKET_WRITE(dword, (unsigned long)call->res_type);
+	PACKET_WRITE(dword, (unsigned long)call->res_type_id);
 	PACKET_WRITE(dword, sp_rtrace_get_call_context());
 
 	int timestamp = 0;
@@ -796,7 +817,7 @@ int sp_rtrace_write_function_call(sp_rtrace_fcall_t* call, sp_rtrace_ftrace_t* t
 	if (args) {
 		PACKET_START(SP_RTRACE_PROTO_FUNCTION_ARGS);
 		char* psize = PACKET_RESERVE(sizeof(int));
-		const sp_rtrace_farg_t* first_arg = args;
+		const module_farg_t* first_arg = args;
 		while (args->name) {
 			PACKET_WRITE(string, args->name);
 			PACKET_WRITE(string, args->value);
@@ -844,7 +865,7 @@ unsigned int sp_rtrace_register_module(const char* name, unsigned char vmajor, u
 	return module->id;
 }
 
-unsigned int sp_rtrace_register_resource(sp_rtrace_resource_t* resource)
+unsigned int sp_rtrace_register_resource(module_resource_t* resource)
 {
 	/* Check if the specified resource type is already registered. If so return
 	 * the registered id. */
@@ -860,7 +881,7 @@ unsigned int sp_rtrace_register_resource(sp_rtrace_resource_t* resource)
 	if (rtrace_resource_index >= ARRAY_SIZE(rtrace_resources)) {
 		return -1;
 	}
-    ((sp_rtrace_resource_t*)resource)->id = rtrace_resource_index + 1;
+    resource->id = rtrace_resource_index + 1;
 	rtrace_resources[rtrace_resource_index++] = *resource;
 	if (sp_rtrace_options->enable) {
 		write_resource_registry(resource);
@@ -880,7 +901,7 @@ bool sp_rtrace_initialize(void)
 	if (sync_bool_compare_and_swap(&initialize_lock, 0, 1)) {
 
 		/* cache the heap bottom address */
-		heap_bottom = (pointer_t)sbrk(0);
+		heap_bottom = heap_end();
 
 		/* first check if the environment is ready */
 		const char* env_ready = getenv(SP_RTRACE_READY);

@@ -33,6 +33,7 @@
 #include "common/sp_rtrace_proto.h"
 #include "library/sp_rtrace_defs.h"
 #include "library/sp_rtrace_filter.h"
+#include "modules/sp_rtrace_module.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -79,7 +80,7 @@ extern sp_rtrace_options_t* sp_rtrace_options;
  * @param[in] args  the function argument data (can be NULL).
  * @return          the number of bytes written.
  */
-int sp_rtrace_write_function_call(sp_rtrace_fcall_t* call, sp_rtrace_ftrace_t* trace, sp_rtrace_farg_t* args);
+int sp_rtrace_write_function_call(const module_fcall_t* call, const module_ftrace_t* trace, const module_farg_t* args);
 
 
 typedef void (*sp_rtrace_enable_tracing_t)(bool);
@@ -116,7 +117,7 @@ unsigned int sp_rtrace_register_module(const char* name, unsigned char vmajor, u
  *                         out - the resource identifier.
  * @return                 the resource type id or 0 if resource registry is full.
  */
-unsigned int sp_rtrace_register_resource(sp_rtrace_resource_t* resource);
+unsigned int sp_rtrace_register_resource(module_resource_t* resource);
 
 /**
  * Stores current heap information (mallinfo()) so it can be sent to pre-processor
@@ -132,7 +133,7 @@ void sp_rtrace_store_heap_info(void);
  * @param[in] context     the context data.
  * @return                the number of bytes written.
  */
-int sp_rtrace_write_context_registry(sp_rtrace_context_t* context);
+int sp_rtrace_write_context_registry(const module_context_t* context);
 
 
 /**
@@ -158,7 +159,7 @@ int sp_rtrace_write_new_library(const char* library);
  * @param[in] file     the attachment data.
  * @return             the number of bytes written.
  */
-int sp_rtrace_write_attachment(const sp_rtrace_attachment_t* file);
+int sp_rtrace_write_attachment(const module_attachment_t* file);
 
 /**
  * Generates unique filename in the output directory.

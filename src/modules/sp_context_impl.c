@@ -63,7 +63,7 @@ static unsigned int (*rt_context_create)(const char* name);
 
 unsigned int sp_context_create(const char* name)
 {
-	sp_rtrace_context_t context = {.id = rt_context_create(name), .name = (char*)name};
+	module_context_t context = {.id = rt_context_create(name), .name = name};
 	if (context.id) {
 		sp_rtrace_write_context_registry(&context);
 	}

@@ -268,7 +268,7 @@ static int scan_address_range(unsigned long from, unsigned long to, const char* 
  * @return             0 - success.
  *                    <0 - -errno error code.
  */
-static int cut_kpageflags_range(unsigned long from, unsigned long to, const char* rights, pfile_data_t* data)
+static int cut_kpageflags_range(unsigned long from, unsigned long to, __attribute__((unused)) const char* rights, pfile_data_t* data)
 {
 	size_t n;
 	/* store the memory area header data */
@@ -497,7 +497,7 @@ static void enable_tracing(bool value)
 		char filename[PATH_MAX];
 		/* copy /proc/self/maps file */
 		sp_rtrace_get_out_filename("pagemap-maps", filename, sizeof(filename));
-		sp_rtrace_attachment_t file_maps = {
+		module_attachment_t file_maps = {
 				.name = "maps",
 				.path = filename,
 		};
@@ -506,7 +506,7 @@ static void enable_tracing(bool value)
 
 		/* copy data from /proc/kpageflags file */
 		sp_rtrace_get_out_filename("pagemap-pageflags", filename, sizeof(filename));
-		sp_rtrace_attachment_t file_kpageflags = {
+		module_attachment_t file_kpageflags = {
 				.name = "pageflags",
 				.path = filename,
 		};
@@ -522,7 +522,7 @@ static void enable_tracing(bool value)
 		/* Copy /proc/self/pagemap, /proc/kpageflags files for debugging purposes */
 
 		sp_rtrace_get_out_filename("pagemap-pagemap", filename, sizeof(filename));
-		sp_rtrace_attachment_t file_pagemap = {
+		module_attachment_t file_pagemap = {
 				.name = "pagemap",
 				.path = filename,
 		};
@@ -530,7 +530,7 @@ static void enable_tracing(bool value)
 		sp_rtrace_write_attachment(&file_pagemap);
 
 		sp_rtrace_get_out_filename("pagemap-kpageflags", filename, sizeof(filename));
-		sp_rtrace_attachment_t file_kpageflags = {
+		module_attachment_t file_kpageflags = {
 				.name = "kpageflags",
 				.path = filename,
 		};

@@ -56,7 +56,7 @@ static sp_rtrace_module_info_t module_info = {
 				       "and free functions.",
 };
 
-static sp_rtrace_resource_t res_memory = {
+static module_resource_t res_memory = {
 		.type = "memory",
 		.desc = "memory allocation in bytes",
 		.flags = SP_RTRACE_RESOURCE_DEFAULT,
@@ -223,7 +223,7 @@ static void emu_free(void* ptr)
 static void* emu_realloc(void* ptr, size_t size)
 {
 	unsigned int chunk_size = 0;
-	if (ptr) chunk_size = *(unsigned int*) (ptr - 4);
+	if (ptr) chunk_size = *(unsigned int*) ((pointer_t)ptr - 4);
 
 	emu_free(ptr);
 	void* ptr_new = emu_alloc_mem(size, EMU_HEAP_ALIGN);
@@ -286,10 +286,9 @@ static void* trace_malloc(size_t size)
 	backtrace_lock = 0;
 
 	if (rc) {
-		sp_rtrace_fcall_t call = {
+		module_fcall_t call = {
 				.type = SP_RTRACE_FTYPE_ALLOC,
-				.res_type = (void*)res_memory.id,
-				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.res_type_id = res_memory.id,
 				.name = "malloc",
 				.res_size = size,
 				.res_id = (pointer_t)rc,
@@ -307,10 +306,9 @@ static void* trace_calloc(size_t nmemb, size_t size)
 	backtrace_lock = 0;
 
 	if (rc) {
-		sp_rtrace_fcall_t call = {
+		module_fcall_t call = {
 				.type = SP_RTRACE_FTYPE_ALLOC,
-				.res_type = (void*)res_memory.id,
-				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.res_type_id = res_memory.id,
 				.name = "calloc",
 				.res_size = nmemb * size,
 				.res_id = (pointer_t)rc,
@@ -329,10 +327,9 @@ static void* trace_realloc(void* ptr, size_t size)
 	/* if allocation was successful or the requested size was 0,
 	 *  and the old pointer was not NULL - register old pointer freeing */
 	if ((rc || !size) && ptr) {
-		sp_rtrace_fcall_t call = {
+		module_fcall_t call = {
 				.type = SP_RTRACE_FTYPE_FREE,
-				.res_type = (void*)res_memory.id,
-				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.res_type_id = res_memory.id,
 				.name = "realloc",
 				.res_size = 0,
 				.res_id = (pointer_t)ptr,
@@ -341,10 +338,9 @@ static void* trace_realloc(void* ptr, size_t size)
 	}
 	/* if allocation was successful register new pointer allocation */
 	if (rc) {
-		sp_rtrace_fcall_t call = {
+		module_fcall_t call = {
 				.type = SP_RTRACE_FTYPE_ALLOC,
-				.res_type = (void*)res_memory.id,
-				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.res_type_id = res_memory.id,
 				.name = "realloc",
 				.res_size = size,
 				.res_id = (pointer_t)rc,
@@ -359,10 +355,9 @@ static int trace_posix_memalign(void **memptr, size_t alignment, size_t size)
 {
 	int rc = trace_off.posix_memalign(memptr, alignment, size);
 	if (rc == 0) {
-		sp_rtrace_fcall_t call = {
+		module_fcall_t call = {
 				.type = SP_RTRACE_FTYPE_ALLOC,
-				.res_type = (void*)res_memory.id,
-				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.res_type_id = res_memory.id,
 				.name = "posix_memalign",
 				.res_size = size,
 				.res_id = (pointer_t)*memptr,
@@ -379,10 +374,9 @@ static void trace_free(void* ptr)
 	/* unlock backtrace after the original function has been called */
 	backtrace_lock = 0;
 
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_FREE,
-			.res_type = (void*)res_memory.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_memory.id,
 			.name = "free",
 			.res_size = 0,
 			.res_id = (pointer_t)ptr,

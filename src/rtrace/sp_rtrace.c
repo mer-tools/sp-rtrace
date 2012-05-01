@@ -288,7 +288,8 @@ static int open_postproc_pipe(void)
 		dup2(fd[0], STDIN_FILENO);
 
 		/* create post-process argument list */
-		char* argv[32], *ptr = rtrace_options.postproc;
+		char* argv[32];
+		char* ptr = rtrace_options.postproc;
 		int argc = 0;
 		char output_dir[512];
 		

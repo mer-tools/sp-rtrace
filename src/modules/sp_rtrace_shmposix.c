@@ -54,31 +54,31 @@ static sp_rtrace_module_info_t module_info = {
 };
 
 /* resource identifiers */
-static sp_rtrace_resource_t res_pshmmap = {
+static module_resource_t res_pshmmap = {
 	.type = "pshmmap",
 	.desc = "posix shared memory mapping",
 	.flags = SP_RTRACE_RESOURCE_DEFAULT,
 };
 
-static sp_rtrace_resource_t res_fshmmap = {
+static module_resource_t res_fshmmap = {
 	.type = "fshmmap",
 	.desc = "file mapping",
 	.flags = SP_RTRACE_RESOURCE_DEFAULT,
 };
 
-static sp_rtrace_resource_t res_shmmap = {
+static module_resource_t res_shmmap = {
 	.type = "shmmap",
 	.desc = "generic memory mapping",
 	.flags = SP_RTRACE_RESOURCE_DEFAULT,
 };
 
-static sp_rtrace_resource_t res_pshmobj = {
+static module_resource_t res_pshmobj = {
 	.type = "pshmobj",
 	.desc = "posix shared memory object",
 	.flags = SP_RTRACE_RESOURCE_DEFAULT,
 };
 
-static sp_rtrace_resource_t res_pshmfd = {
+static module_resource_t res_pshmfd = {
 	.type = "pshmfd",
 	.desc = "opened posix shared memory object",
 	.flags = SP_RTRACE_RESOURCE_DEFAULT,
@@ -145,6 +145,16 @@ typedef struct nreg_node_t {
 	/* the unique resource identifier */
 	unsigned int hash;
 } nreg_node_t;
+
+/**
+ * Name registry node const version
+ */
+typedef struct nreg_node_const_t {
+	/* the object name */
+	const char* name;
+	/* the unique resource identifier */
+	unsigned int hash;
+} nreg_node_const_t;
 
 /* the name registry root*/
 static void* nreg_root = NULL;
@@ -274,7 +284,7 @@ static unsigned int nreg_calc_hash(const char* name)
  */
 static unsigned int nreg_get_hash(const char* name)
 {
-	nreg_node_t node = {.name = (char*)name};
+	nreg_node_const_t node = {.name = name};
 	nreg_node_t** ppnode = tfind(&node, &nreg_root, nreg_compare_name);
 
 	if (!ppnode) {
@@ -584,16 +594,15 @@ static int trace_shm_open(const char *name, int oflag, mode_t mode)
 		char arg_mode[16]; snprintf(arg_mode, sizeof(arg_mode), "0x%x", mode);
 
 		if (oflag & O_CREAT) {
-			sp_rtrace_fcall_t call = {
+			module_fcall_t call = {
 				.type = SP_RTRACE_FTYPE_ALLOC,
-				.res_type = (void*)res_pshmobj.id,
-				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.res_type_id = res_pshmobj.id,
 				.name = "shm_open",
 				.res_id = (pointer_t)nreg_get_hash(name),
 				.res_size = (size_t)1,
 			};
 
-			sp_rtrace_farg_t args[] = {
+			module_farg_t args[] = {
 				{.name="name", .value=name},
 				{.name="oflag", .value=arg_oflag},
 				{.name="mode", .value=arg_mode},
@@ -601,16 +610,15 @@ static int trace_shm_open(const char *name, int oflag, mode_t mode)
 			};
 			sp_rtrace_write_function_call(&call, NULL, args);
 		}
-		sp_rtrace_fcall_t call = {
+		module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_pshmfd.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_pshmfd.id,
 			.name = "shm_open",
 			.res_id = (pointer_t)rc,
 			.res_size = (size_t)1,
 		};
 
-		sp_rtrace_farg_t args[] = {
+		module_farg_t args[] = {
 			{.name="name", .value=name},
 			{.name="oflag", .value=arg_oflag},
 			{.name="mode", .value=arg_mode},
@@ -625,16 +633,15 @@ static int trace_shm_open(const char *name, int oflag, mode_t mode)
 static int trace_shm_unlink(const char *name)
 {
 	int rc = trace_off.shm_unlink(name);
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 		.type = SP_RTRACE_FTYPE_FREE,
-		.res_type = (void*)res_pshmobj.id,
-		.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+		.res_type_id = res_pshmobj.id,
 		.name = "shm_unlink",
 		.res_id = (pointer_t)nreg_get_hash(name),
 		.res_size = (size_t)0,
 	};
 	
-	sp_rtrace_farg_t args[] = {
+	module_farg_t args[] = {
 		{.name="name", .value=name},
 		{.name=NULL, .value=NULL}
 	};
@@ -698,10 +705,9 @@ static void* trace_mmap(void *addr, size_t length, int prot, int flags, int fd, 
 	addr_store((pointer_t)rc, fd);
 	fdreg_node_t* pfd = fdreg_get_fd(fd);
 
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 		.type = SP_RTRACE_FTYPE_ALLOC,
-		.res_type = (void*)(pfd ? (pfd->type == FD_POSIX ? res_pshmmap.id : res_fshmmap.id) : res_shmmap.id),
-		.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+		.res_type_id = (pfd ? (pfd->type == FD_POSIX ? res_pshmmap.id : res_fshmmap.id) : res_shmmap.id),
 		.name = "mmap",
 		.res_id = (pointer_t)rc,
 		.res_size = (size_t)length,
@@ -713,7 +719,7 @@ static void* trace_mmap(void *addr, size_t length, int prot, int flags, int fd, 
 	char arg_fd[16]; snprintf(arg_fd, sizeof(arg_fd), "0x%x", fd);
 	char arg_offset[16]; snprintf(arg_offset, sizeof(arg_offset), "0x%lx", offset);
 	char arg_mode[16];
-	sp_rtrace_farg_t args[] = {
+	module_farg_t args[] = {
 		{.name="length", .value=arg_length},
 		{.name="prot", .value=arg_prot},
 		{.name="flags", .value=arg_flags},
@@ -742,10 +748,9 @@ static void* trace_mmap2(void *addr, size_t length, int prot, int flags, int fd,
 	addr_store((pointer_t)rc, fd);
 	fdreg_node_t* pfd = fdreg_get_fd(fd);
 
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 		.type = SP_RTRACE_FTYPE_ALLOC,
-		.res_type = (void*)(pfd ? (pfd->type == FD_POSIX ? res_pshmmap.id : res_fshmmap.id) : res_shmmap.id),
-		.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+		.res_type_id = (pfd ? (pfd->type == FD_POSIX ? res_pshmmap.id : res_fshmmap.id) : res_shmmap.id),
 		.name = "mmap2",
 		.res_id = (pointer_t)rc,
 		.res_size = (size_t)length,
@@ -757,7 +762,7 @@ static void* trace_mmap2(void *addr, size_t length, int prot, int flags, int fd,
 	char arg_fd[16]; snprintf(arg_fd, sizeof(arg_fd), "0x%x", fd);
 	char arg_offset[16]; snprintf(arg_offset, sizeof(arg_offset), "0x%lx", pgoffset);
 	char arg_mode[16];
-	sp_rtrace_farg_t args[] = {
+	module_farg_t args[] = {
 		{.name="length", .value=arg_length},
 		{.name="prot", .value=arg_prot},
 		{.name="flags", .value=arg_flags},
@@ -786,10 +791,9 @@ static void* trace_mmap64(void *addr, size_t length, int prot, int flags, int fd
 	addr_store((pointer_t)rc, fd);
 	fdreg_node_t* pfd = fdreg_get_fd(fd);
 
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 		.type = SP_RTRACE_FTYPE_ALLOC,
-		.res_type = (void*)(pfd ? (pfd->type == FD_POSIX ? res_pshmmap.id : res_fshmmap.id) : res_shmmap.id),
-		.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+		.res_type_id = (pfd ? (pfd->type == FD_POSIX ? res_pshmmap.id : res_fshmmap.id) : res_shmmap.id),
 		.name = "mmap64",
 		.res_id = (pointer_t)rc,
 		.res_size = (size_t)length,
@@ -801,7 +805,7 @@ static void* trace_mmap64(void *addr, size_t length, int prot, int flags, int fd
 	char arg_fd[16]; snprintf(arg_fd, sizeof(arg_fd), "0x%x", fd);
 	char arg_offset[16]; snprintf(arg_offset, sizeof(arg_offset), "0x%llx", (unsigned long long)offset);
 	char arg_mode[16];
-	sp_rtrace_farg_t args[] = {
+	module_farg_t args[] = {
 		{.name="length", .value=arg_length},
 		{.name="prot", .value=arg_prot},
 		{.name="flags", .value=arg_flags},
@@ -834,17 +838,16 @@ static int trace_munmap(void *addr, size_t length)
 		pfd = fdreg_get_fd(paddr->fd);
 	}
 
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 		.type = SP_RTRACE_FTYPE_FREE,
-		.res_type = (void*)(pfd ? (pfd->type == FD_POSIX ? res_pshmmap.id : res_fshmmap.id) : res_shmmap.id),
-		.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+		.res_type_id = (pfd ? (pfd->type == FD_POSIX ? res_pshmmap.id : res_fshmmap.id) : res_shmmap.id),
 		.name = "munmap",
 		.res_id = (pointer_t)addr,
 		.res_size = (size_t)0,
 	};
 
 	char arg_length[16]; snprintf(arg_length, sizeof(arg_length), "%li", (unsigned long)length);
-	sp_rtrace_farg_t args[] = {
+	module_farg_t args[] = {
 		{.name="length", .value=arg_length},
 		{.name=NULL, .value=NULL}
 	};
@@ -860,10 +863,9 @@ static int trace_close(int fd)
 	fdreg_node_t* pfd = fdreg_get_fd(fd);
 	if (pfd) {
 		if (pfd->type == FD_POSIX) {
-			sp_rtrace_fcall_t call = {
+			module_fcall_t call = {
 				.type = SP_RTRACE_FTYPE_FREE,
-				.res_type = (void*)res_pshmfd.id,
-				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.res_type_id = res_pshmfd.id,
 				.name = "close",
 				.res_id = (pointer_t)fd,
 				.res_size = (size_t)0,

@@ -167,7 +167,7 @@ void dlist_add_sorted_r(dlist_t* list, void* node, op_binary_t compare)
  */
 static long compare_pointers(void* data1, void* data2)
 {
-	return data1 - data2;
+	return (long)data1 - (long)data2;
 }
 
 
