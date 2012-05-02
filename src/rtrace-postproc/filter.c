@@ -504,7 +504,7 @@ static long mmap_lookup_filter_range_target(rd_mmap_t* mmap, call_address_filter
  * @param mmap
  * @param filter
  */
-static long mmap_lookup_filter_range_target_found(rd_mmap_t* mmap, call_address_filter_t* filter)
+static long mmap_lookup_filter_range_target_found(__attribute__((unused)) rd_mmap_t* mmap, call_address_filter_t* filter)
 {
 	return !filter->start;
 }
