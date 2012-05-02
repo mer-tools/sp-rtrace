@@ -20,7 +20,8 @@ Running tests on a device:
 2) Compile test applications by executing RT_DISABLE_TEST=1 make check
    in tests directory
 3) Copy the test directory to device.
-4) Increse max pty count on device: echo 8 > /proc/sys/kernel/pty/max
+4) If device has small (non-standard) max pty limit, increase it:
+   echo 32 > /proc/sys/kernel/pty/max
 5) Run testsuite by executing RT_DISABLE_COMPILE=1 runtest --tool=sp-rtrace
 
 Directory structure:
@@ -41,13 +42,10 @@ sp-rtrace.postproc - test cases for post-processing options. Contains
   
 sp-rtrace.resolve - test cases for symbol resolving. Contains basic
   tests of resolving backtraces of applications compiled with and 
-  without debug symbols and c++ name demangling.
+  without debug symbols and C++ name demangling.
   
 sp-rtrace.rtrace - test cases for process launching and trace toggling. 
   Contains tests of starting/toggling target processes with trace
   enabled/disabled at start with/without post-processing options in 
   managed/normal mode.
-  
-
-
 

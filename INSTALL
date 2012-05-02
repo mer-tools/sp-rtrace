@@ -50,14 +50,14 @@ in Debian).
 1.4 Troubleshooting
 -------------------
 
-While precompiled headers speeds up C++ compilation, often it makes
-hard to locate the error sources. If this is a problem disable precompiled
-headers with --disable-precomp configure option (see Compilation &
-Installation).
+While precompiled headers speed up C++ compilation, it often makes
+it harder to locate the error sources. If this is a problem, disable
+precompiled headers with --disable-precomp configure option (see
+Compilation & Installation).
 
 sp-rtrace will at run-time print additional debug messages when
 configured with --enable-debug-info option (see Compilation &
 Installation).
 
 If sp-rtrace utilities don't find the modules or other utilities, you
-can use "strace -f" to trace where they try to find them.
+can use "strace -f" to trace where they try to find them from.
