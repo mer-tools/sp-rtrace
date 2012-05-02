@@ -143,7 +143,7 @@ static FILE* start_resolver(char* filename)
 		exit (-1);
 	}
 	if (postproc_options.pid_resolve == 0) {
-		char* const args[] = {SP_RTRACE_RESOLVER, "-telf", filename ? "-o" : NULL, filename, NULL};
+		const char* const args[] = {SP_RTRACE_RESOLVER, "-telf", filename ? "-o" : NULL, filename, NULL};
 		close(fds[1]);
 		dup2(fds[0], STDIN_FILENO);
 

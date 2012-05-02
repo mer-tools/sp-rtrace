@@ -288,7 +288,7 @@ static int open_postproc_pipe(void)
 		dup2(fd[0], STDIN_FILENO);
 
 		/* create post-process argument list */
-		char* argv[32];
+		const char* argv[32];
 		char* ptr = rtrace_options.postproc;
 		int argc = 0;
 		char output_dir[512];
@@ -528,8 +528,8 @@ static void toggle_child_process(int cpid)
 	char spid[16];
 	sprintf(spid, "%d", cpid);
 		
-	char* args[10] = {SP_RTRACE_PREPROC, "--follow-forks", "-t", spid};
-	char** parg = args + 4;
+	const char* args[10] = {SP_RTRACE_PREPROC, "--follow-forks", "-t", spid};
+	const char** parg = args + 4;
 	if (rtrace_options.toggle_signal_name) {
 		*parg++ = "-S";
 		*parg++ = rtrace_options.toggle_signal_name;
