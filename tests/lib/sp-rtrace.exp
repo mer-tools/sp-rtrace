@@ -1,7 +1,7 @@
 #
 # This file is part of sp-rtrace package.
 #
-# Copyright (C) 2010 by Nokia Corporation
+# Copyright (C) 2010-2012 by Nokia Corporation
 #
 # Contact: Eero Tamminen <eero.tamminen@nokia.com>
 #
@@ -135,8 +135,10 @@ proc pidof { name } {
 	if { [string is integer -strict $pid] } {
 		return $pid
 	} else {
-		fail "failed to determine target process pid"
-		return -1
+		fail "failed to determine target process pid (got '$pid' for '$name')"
+		# safe as long as this isn't run as root
+		# (e.g. -1 can kill your whole session)
+		return 0
 	}
 }
 
@@ -148,8 +150,8 @@ proc pidof { name } {
 #
 # Arguments:
 #   key    - the module type key - '-e' (preload) 
-#   module - the module to check (or in the case of audit module the tracked items)
-#   args   - list of functions that should be tracked by the module.
+#   module - the module to check
+#   items  - list of functions that should be tracked by the module.
 #
 proc test_generic_module { key module items } {
 	eval spawn sp-rtrace $key $module -P-t -s -o stdout -x $::bin_dir/$::out_file "bin"
@@ -191,15 +193,4 @@ proc test_generic_module { key module items } {
 #
 proc test_module { module args } {
 	test_generic_module "-e" $module $args
-}
-
-#
-# Checks if the all required functions are tracked by audit moule
-#
-# Arguments:
-#   items  - the functions to track.
-#   args   - list of functions that should be tracked by the module.
-#
-proc test_audit_module { items args } {
-	test_generic_module "-a" $items $args
 }
