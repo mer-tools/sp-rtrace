@@ -43,7 +43,17 @@
 #include "common/sp_rtrace_proto.h"
 #include "library/sp_rtrace_defs.h"
 
-/* make sure we don't catch string.h macros */
+/* glibc doesn't declare these for some reason even with _GNU_SOURCE,
+ * declare them if they aren't macros.
+ */
+#ifndef strdupa
+char *strdupa(const char *s);
+#endif
+#ifndef strndupa
+char *strndupa(const char *s, size_t n);
+#endif
+
+/* make sure we don't catch glibc string.h wrapper macros */
 
 #ifdef strdup
  #undef strdup
@@ -51,14 +61,6 @@
 
 #ifdef strndup
  #undef strndup
-#endif
-
-#ifdef strdupa
- #undef strdupa
-#endif
-
-#ifdef strndupa
- #undef strndupa
 #endif
 
 #ifdef strncpy
@@ -109,8 +111,13 @@ typedef void (*bcopy_t)(const void *src, void *dest, size_t n);
 typedef void (*bzero_t)(void *s, size_t n);
 typedef char* (*strdup_t)(const char *s);
 typedef char* (*strndup_t)(const char *s, size_t n);
+/* igore these if they're macros (like they're in glibc) */
+#ifndef strdupa
 typedef char* (*strdupa_t)(const char *s);
+#endif
+#ifndef strndupa
 typedef char* (*strndupa_t)(const char *s, size_t n);
+#endif
 typedef wchar_t* (*wmemcpy_t)(wchar_t *dest, const wchar_t *src, size_t n);
 typedef wchar_t* (*wmempcpy_t)(wchar_t *dest, const wchar_t *src, size_t n);
 typedef wchar_t* (*wmemmove_t)(wchar_t* dest, const wchar_t* src, size_t b);
@@ -140,8 +147,12 @@ typedef struct trace_t {
 	bzero_t bzero;
 	strdup_t strdup;
 	strndup_t strndup;
+#ifndef strdupa
 	strdupa_t strdupa;
+#endif
+#ifndef strndupa
 	strndupa_t strndupa;
+#endif
 	wmemcpy_t wmemcpy;
 	wmempcpy_t wmempcpy;
 	wmemmove_t wmemmove;
@@ -203,8 +214,12 @@ static void trace_initialize(void)
 			trace_off.bzero = (bzero_t)dlsym(RTLD_NEXT, "bzero");
 			trace_off.strdup = (strdup_t)dlsym(RTLD_NEXT, "strdup");
 			trace_off.strndup = (strndup_t)dlsym(RTLD_NEXT, "strndup");
+#ifndef strdupa
 			trace_off.strdupa = (strdupa_t)dlsym(RTLD_NEXT, "strdupa");
+#endif
+#ifndef strndupa
 			trace_off.strndupa = (strndupa_t)dlsym(RTLD_NEXT, "strndupa");
+#endif
 			trace_off.wmemcpy = (wmemcpy_t)dlsym(RTLD_NEXT, "wmemcpy");
 			trace_off.wmempcpy = (wmempcpy_t)dlsym(RTLD_NEXT, "wmempcpy");
 			trace_off.wmemmove = (wmemmove_t)dlsym(RTLD_NEXT, "wmemmove");
@@ -421,6 +436,7 @@ static char* trace_strndup(const char *s, size_t n)
 	return rc;
 }
 
+#ifndef strdupa
 static char* trace_strdupa(const char *s)
 {
 	char* rc = trace_off.strdupa(s);
@@ -434,7 +450,9 @@ static char* trace_strdupa(const char *s)
 	sp_rtrace_write_function_call(&call, NULL, NULL);
 	return rc;
 }
+#endif
 
+#ifndef strndupa
 static char* trace_strndupa(const char *s, size_t n)
 {
 	char* rc = trace_off.strndupa(s, n);
@@ -448,6 +466,7 @@ static char* trace_strndupa(const char *s, size_t n)
 	sp_rtrace_write_function_call(&call, NULL, NULL);
 	return rc;
 }
+#endif
 
 static wchar_t* trace_wmemcpy(wchar_t *dest, const wchar_t *src, size_t n)
 {
@@ -618,8 +637,12 @@ static trace_t trace_on = {
 	.bzero = trace_bzero,
 	.strdup = trace_strdup,
 	.strndup = trace_strndup,
+#ifndef strdupa
 	.strdupa = trace_strdupa,
+#endif
+#ifndef strndupa
 	.strndupa = trace_strndupa,
+#endif
 	.wmemcpy = trace_wmemcpy,
 	.wmempcpy = trace_wmempcpy,
 	.wmemmove = trace_wmemmove,
@@ -704,15 +727,18 @@ char* strndup(const char *s, size_t n)
 	return trace_rt->strndup(s, n);
 }
 
+#ifndef strdupa
 char* strdupa(const char *s)
 {
 	return trace_rt->strdupa(s);
 }
-
+#endif
+#ifndef strndupa
 char* strndupa(const char *s, size_t n)
 {
 	return trace_rt->strndupa(s, n);
 }
+#endif
 
 wchar_t* wmemcpy(wchar_t *dest, const wchar_t *src, size_t n)
 {
@@ -851,17 +877,20 @@ static char* init_strndup(const char *s, size_t n)
 	return trace_init_rt->strndup(s, n);
 }
 
+#ifndef strdupa
 static char* init_strdupa(const char *s)
 {
 	trace_initialize();
 	return trace_init_rt->strdupa(s);
 }
-
+#endif
+#ifndef strndupa
 static char* init_strndupa(const char *s, size_t n)
 {
 	trace_initialize();
 	return trace_init_rt->strndupa(s, n);
 }
+#endif
 
 static wchar_t* init_wmemcpy(wchar_t *dest, const wchar_t *src, size_t n)
 {
@@ -944,8 +973,12 @@ static trace_t trace_init = {
 	.bzero = init_bzero,
 	.strdup = init_strdup,
 	.strndup = init_strndup,
+#ifndef strdupa
 	.strdupa = init_strdupa,
+#endif
+#ifndef strndupa
 	.strndupa = init_strndupa,
+#endif
 	.wmemcpy = init_wmemcpy,
 	.wmempcpy = init_wmempcpy,
 	.wmemmove = init_wmemmove,
