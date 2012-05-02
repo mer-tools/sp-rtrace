@@ -169,9 +169,9 @@ static int elf_get_address_info(rs_cache_record_t* rec, pointer_t address, symbo
 	Elf_Off_t soff = ehdr->e_shoff, str_soff;
 	Elf_Shdr_t *shdr, *str_shdr;
 
-	void* abs_address = (void*)address;
+	pointer_t abs_address = address;
 	if (!rec->mmap->is_absolute) {
-		abs_address -= (unsigned long)rec->mmap->from;
+		abs_address -= rec->mmap->from;
 	}
 
 	shdr = (Elf_Shdr_t*)((char*)rec->image + soff);
@@ -197,7 +197,7 @@ static int elf_get_address_info(rs_cache_record_t* rec, pointer_t address, symbo
 
 				for (sym = symtab; sym < symtab_end; sym = (Elf_Sym_t*)((char*)sym + symtab_size)) {
 					if (ELF_ST_TYPE(sym->st_info) == STT_FUNC && sym->st_shndx != SHN_UNDEF) {
-						if ((Elf_Addr_t)abs_address >= sym->st_value && (unsigned long)(abs_address - sym->st_value) < sym->st_size) {
+						if ((Elf_Addr_t)abs_address >= sym->st_value && (abs_address - sym->st_value) < sym->st_size) {
 							if (strtab + sym->st_name) {
 								symbol->name =  strtab + sym->st_name;
 								return 0;
@@ -229,18 +229,18 @@ static int elf_get_address_info(rs_cache_record_t* rec, pointer_t address, symbo
  */
 static int bfd_get_address_info(rs_cache_record_t* rec, pointer_t address, symbol_info_t* symbol)
 {
-	void* abs_address = (void*)address;
+	pointer_t abs_address = address;
 
 	asection *section;
 	bfd_vma pc, vma;
 	bfd_size_type size;
 
 	if (!rec->mmap->is_absolute) {
-		abs_address -= (unsigned long)rec->mmap->from;
+		abs_address -= rec->mmap->from;
 	}
 
 	char addr_hex[LINE_MAX];
-	sprintf(addr_hex, "%#lx", (long)abs_address);
+	sprintf(addr_hex, "%#lx", abs_address);
 
 	/* If frame is not the innermost frame, that normally means that
 	   pc points to *after* the call instruction, and we want to
