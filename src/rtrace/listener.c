@@ -115,6 +115,7 @@ static int write_data(const char* data, int size)
  */
 dlist_t s_mmaps;
 
+#if 0 /* unused for now */
 /**
  * Compares memory mapping cache record with module name.
  *
@@ -126,6 +127,7 @@ static long mmap_compare(rd_mmap_t* mmap, const char* name)
 {
 	return strcmp(mmap->data.module, name);
 }
+#endif
 
 static long range_compare(rd_mmap_t* mmap1, sp_rtrace_mmap_t* mmap2)
 {

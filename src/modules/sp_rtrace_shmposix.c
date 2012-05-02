@@ -44,6 +44,11 @@
 
 #include "common/sp_rtrace_proto.h"
 
+/* some of the info is needed also afterwards,
+ * so this is disabled for now
+ */
+#define DO_CLEANUP 0
+
 /* Module information */
 static sp_rtrace_module_info_t module_info = {
 		.type = MODULE_TYPE_PRELOAD,
@@ -184,18 +189,6 @@ static int nreg_compare_name(const void* item1, const void* item2)
 }
 
 /**
- * Releases resource allocated for name registry node.
- *
- * @param[in] item   the name registry node to free.
- */
-static void nreg_free_node(void* item)
-{
-	nreg_node_t* pnode = (nreg_node_t*)item;
-	if (pnode->name) free(pnode->name);
-	free(pnode);
-}
-
-/**
  * Calculates hash from the specified string.
  *
  * @param[in] name   the name to calculate cash for.
@@ -301,6 +294,19 @@ static unsigned int nreg_get_hash(const char* name)
 	return (*ppnode)->hash;
 }
 
+#if DO_CLEANUP
+/**
+ * Releases resource allocated for name registry node.
+ *
+ * @param[in] item   the name registry node to free.
+ */
+static void nreg_free_node(void* item)
+{
+	nreg_node_t* pnode = (nreg_node_t*)item;
+	if (pnode->name) free(pnode->name);
+	free(pnode);
+}
+
 /**
  * Releases resources allocated by name registry.
  */
@@ -308,7 +314,7 @@ static void hash_cleanup(void)
 {
 	tdestroy(nreg_root, nreg_free_node);
 }
-
+#endif /* DO_CLEANUP */
 
 /*
  * File descriptor registry implementation.
@@ -345,17 +351,6 @@ typedef struct fdreg_node_t {
 /* the file descriptor registry root node */
 static void* fdreg_root;
 
-/**
- * Releases resources allocated for file descriptor registry node.
- *
- * @param[in] item   the file descriptor registry node.
- */
-static void fdreg_free_node(void* item)
-{
-	fdreg_node_t* pnode = item;
-	if (pnode->name) free(pnode->name);
-	free(pnode);
-}
 
 /**
  * Compares two file descriptor registry nodes by their file descriptors.
@@ -419,6 +414,19 @@ static fdreg_node_t* fdreg_get_fd(int fd)
 }
 
 
+#if DO_CLEANUP
+/**
+ * Releases resources allocated for file descriptor registry node.
+ *
+ * @param[in] item   the file descriptor registry node.
+ */
+static void fdreg_free_node(void* item)
+{
+	fdreg_node_t* pnode = item;
+	if (pnode->name) free(pnode->name);
+	free(pnode);
+}
+
 /**
  * Removes file descriptor data from the registry.
  *
@@ -441,10 +449,11 @@ static void fdreg_cleanup(void)
 {
 	tdestroy(fdreg_root, fdreg_free_node);
 }
-/**/
+#endif /* DO_CLEANUP */
+
 
 /*
- * Addrses mapping registry
+ * Address mapping registry
  *
  * The address mapping registry is used to associate descriptors mapped
  * by mmap() function with returned addresses.
@@ -515,6 +524,7 @@ static addr_node_t* addr_get(pointer_t addr)
 	return NULL;
 }
 
+#if DO_CLEANUP
 /**
  * Releases resources allocated by adress mapping registry.
  *
@@ -524,7 +534,7 @@ static void addr_cleanup(void)
 {
 	tdestroy(addr_root, free);
 }
-/**/
+#endif /* DO_CLEANUP */
 
 
 /**
@@ -872,7 +882,9 @@ static int trace_close(int fd)
 			};
 			sp_rtrace_write_function_call(&call, NULL, NULL);
 		}
-	//	fdreg_remove(fd);
+#if DO_CLEANUP
+		fdreg_remove(fd);
+#endif
 	}
 	return rc;
 }
