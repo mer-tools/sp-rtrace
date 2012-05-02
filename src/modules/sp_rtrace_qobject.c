@@ -313,6 +313,20 @@ static trace_t trace_on = {
  * Target functions.
  */
 
+/* prototypes to silence gcc warnings.  No header contains
+ * the mangled constructor & destructor variant names so
+ * they have to be declared here.
+ */
+void _ZN7QObjectD0Ev(void* self);
+void _ZN7QObjectD1Ev(void* self);
+void _ZN7QObjectD2Ev(void* self);
+void _ZN7QObjectC1EPS_(void* self, void* parent);
+void _ZN7QObjectC1EPS_PKc(void* self, void* parent, const char* arg);
+void _ZN7QObjectC1ER14QObjectPrivatePS_(void* self, void* priv, void* parent);
+void _ZN7QObjectC2EPS_(void* self, void* parent);
+void _ZN7QObjectC2EPS_PKc(void* self, void* parent, const char* arg);
+void _ZN7QObjectC2ER14QObjectPrivatePS_(void* self, void* priv, void* parent);
+
 
 void _ZN7QObjectD0Ev(void* self)
 {
