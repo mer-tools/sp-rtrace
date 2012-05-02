@@ -16,7 +16,7 @@
 #
 
 #echo sp-rtrace -pmemory $2 $3 $4 $5 $6 -x $1 >> launch.log
-sp-rtrace -pmemory $2 $3 $4 $5 $6 -x $1 &
+sp-rtrace -e memory $2 $3 $4 $5 $6 -x $1 &
 sleep 1
 
 app_name=${1##*/}
