@@ -203,10 +203,10 @@ static unsigned int nreg_calc_raw_hash(const char* name)
 		hash += (hash << 10);
 		hash ^= (hash >> 6);
 	}
-    hash += (hash << 3);
-    hash ^= (hash >> 11);
-    hash += (hash << 15);
-    return hash;
+	hash += (hash << 3);
+	hash ^= (hash >> 11);
+	hash += (hash << 15);
+	return hash;
 }
 
 /**
@@ -643,6 +643,9 @@ static int trace_shm_open(const char *name, int oflag, mode_t mode)
 static int trace_shm_unlink(const char *name)
 {
 	int rc = trace_off.shm_unlink(name);
+	if (rc < 0) {
+		return rc;
+	}
 	module_fcall_t call = {
 		.type = SP_RTRACE_FTYPE_FREE,
 		.res_type_id = res_pshmobj.id,
@@ -673,7 +676,7 @@ static int trace_open(const char *pathname, int flags, ...)
 		rc = trace_off.open(pathname, flags);
 	}
 	backtrace_lock = 0;
-	if (rc != -1) {
+	if (rc >= 0) {
 		fdreg_store_fd(rc, pathname, FD_FILE, flags);
 	}
 	return rc;
@@ -693,7 +696,7 @@ static int trace_open64(const char *pathname, int flags, ...)
 		rc = trace_off.open(pathname, flags);
 	}
 	backtrace_lock = 0;
-	if (rc != -1) {
+	if (rc >= 0) {
 		fdreg_store_fd(rc, pathname, FD_FILE, flags);
 	}
 	return rc;
@@ -703,7 +706,9 @@ static int trace_open64(const char *pathname, int flags, ...)
 static int trace_creat(const char *pathname, mode_t mode)
 {
 	int rc = trace_off.creat(pathname, mode);
-	fdreg_store_fd(rc, pathname, FD_FILE,  O_CREAT|O_WRONLY|O_TRUNC);
+	if (rc >= 0) {
+		fdreg_store_fd(rc, pathname, FD_FILE,  O_CREAT|O_WRONLY|O_TRUNC);
+	}
 	return rc;
 }
 
@@ -711,6 +716,9 @@ static int trace_creat(const char *pathname, mode_t mode)
 static void* trace_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset)
 {
 	void* rc = trace_off.mmap(addr, length, prot, flags, fd, offset);
+	if (rc == (void *) -1) {
+		return rc;
+	}
 
 	addr_store((pointer_t)rc, fd);
 	fdreg_node_t* pfd = fdreg_get_fd(fd);
@@ -754,6 +762,9 @@ static void* trace_mmap(void *addr, size_t length, int prot, int flags, int fd, 
 static void* trace_mmap2(void *addr, size_t length, int prot, int flags, int fd, off_t pgoffset)
 {
 	void* rc = trace_off.mmap2(addr, length, prot, flags, fd, pgoffset);
+	if (rc == (void *) -1) {
+		return rc;
+	}
 
 	addr_store((pointer_t)rc, fd);
 	fdreg_node_t* pfd = fdreg_get_fd(fd);
@@ -797,6 +808,9 @@ static void* trace_mmap2(void *addr, size_t length, int prot, int flags, int fd,
 static void* trace_mmap64(void *addr, size_t length, int prot, int flags, int fd, off64_t offset)
 {
 	void* rc = trace_off.mmap64(addr, length, prot, flags, fd, offset);
+	if (rc == (void *) -1) {
+		return rc;
+	}
 
 	addr_store((pointer_t)rc, fd);
 	fdreg_node_t* pfd = fdreg_get_fd(fd);
@@ -841,6 +855,9 @@ static void* trace_mmap64(void *addr, size_t length, int prot, int flags, int fd
 static int trace_munmap(void *addr, size_t length)
 {
 	int rc = trace_off.munmap(addr, length);
+	if (rc < 0) {
+		return rc;
+	}
 
 	fdreg_node_t* pfd = NULL;
 	addr_node_t* paddr = addr_get((pointer_t)addr);
@@ -869,6 +886,9 @@ static int trace_munmap(void *addr, size_t length)
 static int trace_close(int fd)
 {
 	int rc = trace_off.close(fd);
+	if (rc < 0) {
+		return rc;
+	}
 	backtrace_lock = 0;
 	fdreg_node_t* pfd = fdreg_get_fd(fd);
 	if (pfd) {
