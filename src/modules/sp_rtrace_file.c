@@ -292,28 +292,58 @@ static int trace_close(int fd)
 	return rc;
 }
 
-static int trace_dup2(int oldfd, int newfd)
+static int trace_dup(int oldfd)
 {
-	int rc = trace_off.dup2(oldfd, newfd);
+	int rc = trace_off.dup(oldfd);
 	if (rc != -1) {
-		module_fcall_t call1 = {
-				.type = SP_RTRACE_FTYPE_FREE,
-				.res_type_id = res_fd.id,
-				.name = "dup2",
-				.res_size = 0,
-				.res_id = (pointer_t)newfd,
+		char oldfd_s[16]; 
+		sprintf(oldfd_s, "%d", oldfd);
+		module_farg_t args[] = {
+				{.name = "oldfd", .value = oldfd_s},
+				{.name = NULL, .value = NULL}
 		};
-		sp_rtrace_write_function_call(&call1, NULL, NULL);
-
-		module_fcall_t call2 = {
+		module_fcall_t call = {
 				.type = SP_RTRACE_FTYPE_ALLOC,
 				.res_type_id = res_fd.id,
-				.name = "dup2",
+				.name = "dup",
 				.res_size = 1,
 				.res_id = (pointer_t)rc,
 		};
-		sp_rtrace_write_function_call(&call2, NULL, NULL);
+		sp_rtrace_write_function_call(&call, NULL, args);
 	}
+	return rc;
+}
+
+static int trace_dup2(int oldfd, int newfd)
+{
+	int rc = trace_off.dup2(oldfd, newfd);
+	if (rc < 0 || oldfd == newfd) {
+		return rc;
+	}
+	char oldfd_s[16]; 
+	sprintf(oldfd_s, "%d", oldfd);
+	module_farg_t args[] = {
+		{.name = "oldfd", .value = oldfd_s},
+		{.name = NULL, .value = NULL}
+	};
+	/* newfd is first closed if it was already open */
+	module_fcall_t call1 = {
+		.type = SP_RTRACE_FTYPE_FREE,
+		.res_type_id = res_fd.id,
+		.name = "dup2",
+		.res_size = 0,
+		.res_id = (pointer_t)newfd,
+	};
+	sp_rtrace_write_function_call(&call1, NULL, args);
+
+	module_fcall_t call2 = {
+		.type = SP_RTRACE_FTYPE_ALLOC,
+		.res_type_id = res_fd.id,
+		.name = "dup2",
+		.res_size = 1,
+		.res_id = (pointer_t)rc,
+	};
+	sp_rtrace_write_function_call(&call2, NULL, args);
 	return rc;
 }
 
@@ -494,22 +524,6 @@ static int trace_accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
 				.type = SP_RTRACE_FTYPE_ALLOC,
 				.res_type_id = res_fd.id,
 				.name = "accept",
-				.res_size = 1,
-				.res_id = (pointer_t)rc,
-		};
-		sp_rtrace_write_function_call(&call, NULL, NULL);
-	}
-	return rc;
-}
-
-static int trace_dup(int oldfd)
-{
-	int rc = trace_off.dup(oldfd);
-	if (rc != -1) {
-		module_fcall_t call = {
-				.type = SP_RTRACE_FTYPE_ALLOC,
-				.res_type_id = res_fd.id,
-				.name = "dup",
 				.res_size = 1,
 				.res_id = (pointer_t)rc,
 		};
