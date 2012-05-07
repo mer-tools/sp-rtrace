@@ -579,6 +579,7 @@ static int trace_fcntl(int fd, int cmd, ...)
 		}
 
 		default: {
+			fprintf(stderr, "SP-RTRACE: fcntl(%d, %d, ...) potentially missing arg emulation!\n", fd, cmd);
 			rc = trace_off.fcntl(fd, cmd);
 			break;
 		}
@@ -729,10 +730,10 @@ int open64(const char* pathname, int flags, ...)
 		va_start(args, flags);
 		mode = va_arg(args, int);
 		va_end(args);
-		BT_EXECUTE_LOCKED(rc = trace_rt->open64(pathname, flags, va_arg(args, int)), trace_off.open(pathname, flags, mode));
+		BT_EXECUTE_LOCKED(rc = trace_rt->open64(pathname, flags, va_arg(args, int)), trace_off.open64(pathname, flags, mode));
 	}
 	else {
-		BT_EXECUTE_LOCKED(rc = trace_rt->open64(pathname, flags), trace_off.open(pathname, flags));
+		BT_EXECUTE_LOCKED(rc = trace_rt->open64(pathname, flags), trace_off.open64(pathname, flags));
 	}
 	return rc;
 }
