@@ -369,7 +369,7 @@ static int fdreg_compare_fd(const void* item1, const void* item2)
 }
 
 /**
- * Stores file descriptor into resgitry.
+ * Stores file descriptor into registry.
  *
  * Existing file descriptor data in registry is overwritten.
  * @param[in] fd     the file descriptor value.
@@ -739,7 +739,7 @@ static void trace_mmap_common(const char *name, void *rc, size_t length, int pro
 		{.name="flags", .value=arg_flags},
 		{.name="fd", .value=arg_fd},
 		{.name="offset", .value=arg_offset},
-		{.name=NULL, .value=NULL}, // reseverd for fd name
+		{.name=NULL, .value=NULL}, // reserved for fd name
 		{.name=NULL, .value=NULL}, // reserved for fd mode
 		{.name=NULL, .value=NULL}
 	};
