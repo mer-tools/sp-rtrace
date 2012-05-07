@@ -158,7 +158,7 @@ static void trace_initialize(void)
 		case MODULE_UNINITIALIZED: {
 			trace_off.open = (open_t)dlsym(RTLD_NEXT, "open");
 			trace_off.open64 = (open_t)dlsym(RTLD_NEXT, "open64");
-			trace_off.openat = (open_t)dlsym(RTLD_NEXT, "openat");
+			trace_off.openat = (openat_t)dlsym(RTLD_NEXT, "openat");
 			trace_off.close = (close_t)dlsym(RTLD_NEXT, "close");
 			trace_off.dup2 = (dup2_t)dlsym(RTLD_NEXT, "dup2");
 			trace_off.socket = (socket_t)dlsym(RTLD_NEXT, "socket");
@@ -206,12 +206,12 @@ static void trace_open_common(const char* name, int fd, const char* path, int fl
 	module_fcall_t call = {
 		.type = SP_RTRACE_FTYPE_ALLOC,
 		.res_type_id = res_fd.id,
-		.name = "open",
+		.name = name,
 		.res_size = 1,
 		.res_id = (pointer_t)fd,
 	};
 	module_farg_t args[] = {
-		{.name = "pathname", .value = pathname},
+		{.name = "path", .value = path},
 		{.name = "flags", .value = flags_s},
 		{.name = NULL, .value = NULL}
 	};
@@ -268,7 +268,7 @@ static int trace_openat(int dirfd, const char* pathname, int flags, ...)
 		va_end(args);
 	}
 	else {
-		rc = trace_off.open(dirfd, pathname, flags);
+		rc = trace_off.openat(dirfd, pathname, flags);
 	}
 	if (rc != -1) {
 		trace_open_common("openat", rc, pathname, flags);
@@ -517,7 +517,7 @@ static int trace_creat(const char *pathname, mode_t mode)
 				.res_id = (pointer_t)rc,
 		};
 		module_farg_t args[] = {
-				{.name = "pathname", .value = pathname},
+				{.name = "path", .value = pathname},
 				{.name = "mode", .value = mode_s},
 				{.name = NULL, .value = NULL}
 		};
@@ -755,11 +755,11 @@ int openat(int dirfd, const char* pathname, int flags, ...)
 	if (flags & O_CREAT) {
 		va_list args;
 		va_start(args, flags);
-		trace_rt->openat(dirfd, pathname, flags, va_arg(args, int));
+		rc = trace_rt->openat(dirfd, pathname, flags, va_arg(args, int));
 		va_end(args);
 	}
 	else {
-		trace_rt->openat(dirfd, pathname, flags);
+		rc = trace_rt->openat(dirfd, pathname, flags);
 	}
 	return rc;
 }
