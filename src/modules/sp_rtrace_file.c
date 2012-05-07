@@ -81,6 +81,7 @@ static module_resource_t res_fp = {
 
 typedef int (*open_t)(const char* pathname, int flags, ...);
 typedef int (*open64_t)(const char* pathname, int flags, ...);
+typedef int (*openat_t)(int dirfd, const char* pathname, int flags, ...);
 typedef int (*close_t)(int fd);
 typedef int (*dup2_t)(int oldfd, int newfd);
 typedef int (*socket_t)(int domain, int type, int protocol);
@@ -107,6 +108,7 @@ typedef struct {
 	fcloseall_t fcloseall;
 	open_t open;
 	open64_t open64;
+	openat_t openat;
 	close_t close;
 	dup2_t dup2;
 	socket_t socket;
@@ -156,6 +158,7 @@ static void trace_initialize(void)
 		case MODULE_UNINITIALIZED: {
 			trace_off.open = (open_t)dlsym(RTLD_NEXT, "open");
 			trace_off.open64 = (open_t)dlsym(RTLD_NEXT, "open64");
+			trace_off.openat = (open_t)dlsym(RTLD_NEXT, "openat");
 			trace_off.close = (close_t)dlsym(RTLD_NEXT, "close");
 			trace_off.dup2 = (dup2_t)dlsym(RTLD_NEXT, "dup2");
 			trace_off.socket = (socket_t)dlsym(RTLD_NEXT, "socket");
@@ -195,6 +198,26 @@ static void trace_initialize(void)
 /*
  * tracing functions
  */
+static void trace_open_common(const char* name, int fd, const char* path, int flags)
+{
+	char flags_s[16];
+	sprintf(flags_s, "%x", flags);
+
+	module_fcall_t call = {
+		.type = SP_RTRACE_FTYPE_ALLOC,
+		.res_type_id = res_fd.id,
+		.name = "open",
+		.res_size = 1,
+		.res_id = (pointer_t)fd,
+	};
+	module_farg_t args[] = {
+		{.name = "pathname", .value = pathname},
+		{.name = "flags", .value = flags_s},
+		{.name = NULL, .value = NULL}
+	};
+	sp_rtrace_write_function_call(&call, NULL, args);
+}
+
 static int trace_open(const char* pathname, int flags, ...)
 {
 	int rc = 0;
@@ -210,22 +233,7 @@ static int trace_open(const char* pathname, int flags, ...)
 	backtrace_lock = 0;
 
 	if (rc != -1) {
-		char flags_s[16];
-		sprintf(flags_s, "%x", flags);
-
-		module_fcall_t call = {
-				.type = SP_RTRACE_FTYPE_ALLOC,
-				.res_type_id = res_fd.id,
-				.name = "open",
-				.res_size = 1,
-				.res_id = (pointer_t)rc,
-		};
-		module_farg_t args[] = {
-				{.name = "pathname", .value = pathname},
-				{.name = "flags", .value = flags_s},
-				{.name = NULL, .value = NULL}
-		};
-		sp_rtrace_write_function_call(&call, NULL, args);
+		trace_open_common("open", rc, pathname, flags);
 	}
 	return rc;
 }
@@ -245,27 +253,29 @@ static int trace_open64(const char* pathname, int flags, ...)
 	backtrace_lock = 0;
 
 	if (rc != -1) {
-		char flags_s[16];
-		sprintf(flags_s, "%x", flags);
-
-		module_fcall_t call = {
-				.type = SP_RTRACE_FTYPE_ALLOC,
-				.res_type_id = res_fd.id,
-				.name = "open64",
-				.res_size = 1,
-				.res_id = (pointer_t)rc,
-		};
-		module_farg_t args[] = {
-				{.name = "pathname", .value = pathname},
-				{.name = "flags", .value = flags_s},
-				{.name = NULL, .value = NULL}
-		};
-		sp_rtrace_write_function_call(&call, NULL, args);
+		trace_open_common("open64", rc, pathname, flags);
 	}
 	return rc;
 }
 
-/* TODO: openat() */
+static int trace_openat(int dirfd, const char* pathname, int flags, ...)
+{
+	int rc = 0;
+	if (flags & O_CREAT) {
+		va_list args;
+		va_start(args, flags);
+		rc = trace_off.openat(dirfd, pathname, flags, va_arg(args, int));
+		va_end(args);
+	}
+	else {
+		rc = trace_off.open(dirfd, pathname, flags);
+	}
+	if (rc != -1) {
+		trace_open_common("openat", rc, pathname, flags);
+	}
+	return rc;
+}
+
 /* TODO: dup3() */
 /* TODO: accept4() + accept() args */
 /* TODO: inotify_init1() */
@@ -683,6 +693,7 @@ static int trace_pipe2(int pipefd[2], int flags)
 static trace_t trace_on = {
 	.open = trace_open,
 	.open64 = trace_open64,
+	.openat = trace_openat,
 	.close = trace_close,
 	.dup2 = trace_dup2,
 	.socket = trace_socket,
@@ -734,6 +745,21 @@ int open64(const char* pathname, int flags, ...)
 	}
 	else {
 		BT_EXECUTE_LOCKED(rc = trace_rt->open64(pathname, flags), trace_off.open64(pathname, flags));
+	}
+	return rc;
+}
+
+int openat(int dirfd, const char* pathname, int flags, ...)
+{
+	int rc;
+	if (flags & O_CREAT) {
+		va_list args;
+		va_start(args, flags);
+		trace_rt->openat(dirfd, pathname, flags, va_arg(args, int));
+		va_end(args);
+	}
+	else {
+		trace_rt->openat(dirfd, pathname, flags);
 	}
 	return rc;
 }
@@ -902,6 +928,22 @@ static int init_open64(const char* pathname, int flags, ...)
 	return rc;
 }
 
+static int init_openat(int dirfd, const char* pathname, int flags, ...)
+{
+	trace_initialize();
+	int rc = 0;
+	if (flags & O_CREAT) {
+		va_list args;
+		va_start(args, flags);
+		rc = trace_init_rt->openat(dirfd, pathname, flags, va_arg(args, int));
+		va_end(args);
+	}
+	else {
+		rc = trace_init_rt->openat(dirfd, pathname, flags);
+	}
+	return rc;
+}
+
 static int init_close(int fd)
 {
 	trace_initialize();
@@ -1032,6 +1074,7 @@ static int init_pipe2(int pipefd[2], int flags)
 static trace_t trace_init = {
 	.open = init_open,
 	.open64 = init_open64,
+	.openat = init_openat,
 	.close = init_close,
 	.dup2 = init_dup2,
 	.socket = init_socket,
