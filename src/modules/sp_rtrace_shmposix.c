@@ -713,20 +713,15 @@ static int trace_creat(const char *pathname, mode_t mode)
 }
 
 
-static void* trace_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset)
+static void trace_mmap_common(const char *name, int rc, void *addr, size_t length, int prot, int flags, int fd, off64_t offset)
 {
-	void* rc = trace_off.mmap(addr, length, prot, flags, fd, offset);
-	if (rc == (void *) -1) {
-		return rc;
-	}
-
 	addr_store((pointer_t)rc, fd);
 	fdreg_node_t* pfd = fdreg_get_fd(fd);
 
 	module_fcall_t call = {
 		.type = SP_RTRACE_FTYPE_ALLOC,
 		.res_type_id = (pfd ? (pfd->type == FD_POSIX ? res_pshmmap.id : res_fshmmap.id) : res_shmmap.id),
-		.name = "mmap",
+		.name = name,
 		.res_id = (pointer_t)rc,
 		.res_size = (size_t)length,
 	};
@@ -735,7 +730,7 @@ static void* trace_mmap(void *addr, size_t length, int prot, int flags, int fd, 
 	char arg_prot[16]; snprintf(arg_prot, sizeof(arg_prot), "0x%x", prot);
 	char arg_flags[16]; snprintf(arg_flags, sizeof(arg_flags), "0x%x", flags);
 	char arg_fd[16]; snprintf(arg_fd, sizeof(arg_fd), "0x%x", fd);
-	char arg_offset[16]; snprintf(arg_offset, sizeof(arg_offset), "0x%lx", offset);
+	char arg_offset[16]; snprintf(arg_offset, sizeof(arg_offset), "0x%llx", offset);
 	char arg_mode[16];
 	module_farg_t args[] = {
 		{.name="length", .value=arg_length},
@@ -755,52 +750,24 @@ static void* trace_mmap(void *addr, size_t length, int prot, int flags, int fd, 
 		snprintf(arg_mode, sizeof(arg_mode), "0x%x", pfd->mode);
 	}
 	sp_rtrace_write_function_call(&call, NULL, args);
-	return rc;
 }
 
 
-static void* trace_mmap2(void *addr, size_t length, int prot, int flags, int fd, off_t pgoffset)
+static void* trace_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset)
 {
-	void* rc = trace_off.mmap2(addr, length, prot, flags, fd, pgoffset);
-	if (rc == (void *) -1) {
-		return rc;
+	void* rc = trace_off.mmap(addr, length, prot, flags, fd, offset);
+	if (rc != (void *) -1) {
+		trace_mmap_common("mmap", rc, addr, length, prot, flags, fd, offset);
 	}
+	return rc;
+}
 
-	addr_store((pointer_t)rc, fd);
-	fdreg_node_t* pfd = fdreg_get_fd(fd);
-
-	module_fcall_t call = {
-		.type = SP_RTRACE_FTYPE_ALLOC,
-		.res_type_id = (pfd ? (pfd->type == FD_POSIX ? res_pshmmap.id : res_fshmmap.id) : res_shmmap.id),
-		.name = "mmap2",
-		.res_id = (pointer_t)rc,
-		.res_size = (size_t)length,
-	};
-
-	char arg_length[16]; snprintf(arg_length, sizeof(arg_length), "0x%lx", (unsigned long)length);
-	char arg_prot[16]; snprintf(arg_prot, sizeof(arg_prot), "0x%x", prot);
-	char arg_flags[16]; snprintf(arg_flags, sizeof(arg_flags), "0x%x", flags);
-	char arg_fd[16]; snprintf(arg_fd, sizeof(arg_fd), "0x%x", fd);
-	char arg_offset[16]; snprintf(arg_offset, sizeof(arg_offset), "0x%lx", pgoffset);
-	char arg_mode[16];
-	module_farg_t args[] = {
-		{.name="length", .value=arg_length},
-		{.name="prot", .value=arg_prot},
-		{.name="flags", .value=arg_flags},
-		{.name="fd", .value=arg_fd},
-		{.name="offset", .value=arg_offset},
-		{.name=NULL, .value=NULL}, // reseverd for fd name
-		{.name=NULL, .value=NULL}, // reserved for fd mode
-		{.name=NULL, .value=NULL}
-	};
-	if (pfd) {
-		args[5].name = "name";
-		args[5].value = pfd->name;
-		args[6].name = "mode";
-		args[6].value = arg_mode;
-		snprintf(arg_mode, sizeof(arg_mode), "0x%x", pfd->mode);
+static void* trace_mmap2(void *addr, size_t length, int prot, int flags, int fd, off_t offset)
+{
+	void* rc = trace_off.mmap2(addr, length, prot, flags, fd, offset);
+	if (rc != (void *) -1) {
+		trace_mmap_common("mmap2", rc, addr, length, prot, flags, fd, offset);
 	}
-	sp_rtrace_write_function_call(&call, NULL, args);
 	return rc;
 }
 
@@ -808,47 +775,10 @@ static void* trace_mmap2(void *addr, size_t length, int prot, int flags, int fd,
 static void* trace_mmap64(void *addr, size_t length, int prot, int flags, int fd, off64_t offset)
 {
 	void* rc = trace_off.mmap64(addr, length, prot, flags, fd, offset);
-	if (rc == (void *) -1) {
-		return rc;
+	if (rc != (void *) -1) {
+		trace_mmap_common("mmap64", rc, addr, length, prot, flags, fd, offset);
 	}
-
-	addr_store((pointer_t)rc, fd);
-	fdreg_node_t* pfd = fdreg_get_fd(fd);
-
-	module_fcall_t call = {
-		.type = SP_RTRACE_FTYPE_ALLOC,
-		.res_type_id = (pfd ? (pfd->type == FD_POSIX ? res_pshmmap.id : res_fshmmap.id) : res_shmmap.id),
-		.name = "mmap64",
-		.res_id = (pointer_t)rc,
-		.res_size = (size_t)length,
-	};
-
-	char arg_length[16]; snprintf(arg_length, sizeof(arg_length), "0x%lx", (unsigned long)length);
-	char arg_prot[16]; snprintf(arg_prot, sizeof(arg_prot), "0x%x", prot);
-	char arg_flags[16]; snprintf(arg_flags, sizeof(arg_flags), "0x%x", flags);
-	char arg_fd[16]; snprintf(arg_fd, sizeof(arg_fd), "0x%x", fd);
-	char arg_offset[16]; snprintf(arg_offset, sizeof(arg_offset), "0x%llx", (unsigned long long)offset);
-	char arg_mode[16];
-	module_farg_t args[] = {
-		{.name="length", .value=arg_length},
-		{.name="prot", .value=arg_prot},
-		{.name="flags", .value=arg_flags},
-		{.name="fd", .value=arg_fd},
-		{.name="offset", .value=arg_offset},
-		{.name=NULL, .value=NULL}, // reserved for fd name
-		{.name=NULL, .value=NULL}, // reserved for fd mode
-		{.name=NULL, .value=NULL}
-	};
-	if (pfd) {
-		args[5].name = "name";
-		args[5].value = pfd->name;
-		args[6].name = "mode";
-		args[6].value = arg_mode;
-		snprintf(arg_mode, sizeof(arg_mode), "0x%x", pfd->mode);
-	}
-	sp_rtrace_write_function_call(&call, NULL, args);
 	return rc;
-
 }
 
 
