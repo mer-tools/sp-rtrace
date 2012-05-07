@@ -230,9 +230,6 @@ static int trace_open(const char* pathname, int flags, ...)
 	return rc;
 }
 
-/*
- * tracing functions
- */
 static int trace_open64(const char* pathname, int flags, ...)
 {
 	int rc = 0;
@@ -268,6 +265,15 @@ static int trace_open64(const char* pathname, int flags, ...)
 	return rc;
 }
 
+/* TODO: openat() */
+/* TODO: dup3() */
+/* TODO: accept4() + accept() args */
+/* TODO: inotify_init1() */
+/* TODO: eventfd() */
+/* TODO: signalfd() */
+/* TODO: timerfd_create() */
+/* TODO: opoll_create() */
+/* TODO: opoll_create1() */
 
 static int trace_close(int fd)
 {
@@ -583,23 +589,17 @@ static int trace_socketpair(int domain, int type, int protocol, int sv[2])
 				{.name = NULL, .value = NULL}
 		};
 
-		module_fcall_t call1 = {
+		module_fcall_t call = {
 				.type = SP_RTRACE_FTYPE_ALLOC,
 				.res_type_id = res_fd.id,
 				.name = "socketpair",
 				.res_size = 1,
 				.res_id = (pointer_t)sv[0],
 		};
-		sp_rtrace_write_function_call(&call1, NULL, args);
+		sp_rtrace_write_function_call(&call, NULL, args);
 
-		module_fcall_t call2 = {
-				.type = SP_RTRACE_FTYPE_ALLOC,
-				.res_type_id = res_fd.id,
-				.name = "socketpair",
-				.res_size = 1,
-				.res_id = (pointer_t)sv[1],
-		};
-		sp_rtrace_write_function_call(&call2, NULL, args);
+		call.res_id = (pointer_t)sv[1];
+		sp_rtrace_write_function_call(&call, NULL, args);
 	}
 	return rc;
 }
@@ -624,23 +624,17 @@ static int trace_pipe(int pipefd[2])
 {
 	int rc = trace_off.pipe(pipefd);
 	if (rc != -1) {
-		module_fcall_t call1 = {
+		module_fcall_t call = {
 				.type = SP_RTRACE_FTYPE_ALLOC,
 				.res_type_id = res_fd.id,
 				.name = "pipe",
 				.res_size = 1,
 				.res_id = (pointer_t)pipefd[0],
 		};
-		sp_rtrace_write_function_call(&call1, NULL, NULL);
+		sp_rtrace_write_function_call(&call, NULL, NULL);
 
-		module_fcall_t call2 = {
-				.type = SP_RTRACE_FTYPE_ALLOC,
-				.res_type_id = res_fd.id,
-				.name = "pipe",
-				.res_size = 1,
-				.res_id = (pointer_t)pipefd[1],
-		};
-		sp_rtrace_write_function_call(&call2, NULL, NULL);
+		call.res_id = (pointer_t)pipefd[1];
+		sp_rtrace_write_function_call(&call, NULL, NULL);
 	}
 	return rc;
 }
@@ -649,23 +643,23 @@ static int trace_pipe2(int pipefd[2], int flags)
 {
 	int rc = trace_off.pipe2(pipefd, flags);
 	if (rc != -1) {
-		module_fcall_t call1 = {
+		char flags_s[16];
+		snprintf(flags_s, sizeof(flags_s), "0x%x", flags);
+		module_farg_t args[] = {
+				{.name = "flags", .value = flags_s},
+				{.name = NULL, .value = NULL}
+		};
+		module_fcall_t call = {
 				.type = SP_RTRACE_FTYPE_ALLOC,
 				.res_type_id = res_fd.id,
 				.name = "pipe2",
 				.res_size = 1,
 				.res_id = (pointer_t)pipefd[0],
 		};
-		sp_rtrace_write_function_call(&call1, NULL, NULL);
+		sp_rtrace_write_function_call(&call, NULL, args);
 
-		module_fcall_t call2 = {
-				.type = SP_RTRACE_FTYPE_ALLOC,
-				.res_type_id = res_fd.id,
-				.name = "pipe2",
-				.res_size = 1,
-				.res_id = (pointer_t)pipefd[1],
-		};
-		sp_rtrace_write_function_call(&call2, NULL, NULL);
+		call.res_id = (pointer_t)pipefd[1];
+		sp_rtrace_write_function_call(&call, NULL, args);
 	}
 	return rc;
 }
