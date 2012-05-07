@@ -597,34 +597,20 @@ static void trace_initialize(void)
 static int trace_shm_open(const char *name, int oflag, mode_t mode)
 {
 	int rc = trace_off.shm_open(name, oflag, mode);
-	if (rc != -1) {
-		fdreg_store_fd(rc, name, FD_POSIX, oflag);
+	if (rc < 0) {
+		return rc;
+	}
+	fdreg_store_fd(rc, name, FD_POSIX, oflag);
 
-		char arg_oflag[16]; snprintf(arg_oflag, sizeof(arg_oflag), "0x%x", oflag);
-		char arg_mode[16]; snprintf(arg_mode, sizeof(arg_mode), "0x%x", mode);
+	char arg_oflag[16]; snprintf(arg_oflag, sizeof(arg_oflag), "0x%x", oflag);
+	char arg_mode[16]; snprintf(arg_mode, sizeof(arg_mode), "0x%x", mode);
 
-		if (oflag & O_CREAT) {
-			module_fcall_t call = {
-				.type = SP_RTRACE_FTYPE_ALLOC,
-				.res_type_id = res_pshmobj.id,
-				.name = "shm_open",
-				.res_id = (pointer_t)nreg_get_hash(name),
-				.res_size = (size_t)1,
-			};
-
-			module_farg_t args[] = {
-				{.name="name", .value=name},
-				{.name="oflag", .value=arg_oflag},
-				{.name="mode", .value=arg_mode},
-				{.name=NULL, .value=NULL}
-			};
-			sp_rtrace_write_function_call(&call, NULL, args);
-		}
+	if (oflag & O_CREAT) {
 		module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type_id = res_pshmfd.id,
+			.res_type_id = res_pshmobj.id,
 			.name = "shm_open",
-			.res_id = (pointer_t)rc,
+			.res_id = (pointer_t)nreg_get_hash(name),
 			.res_size = (size_t)1,
 		};
 
@@ -636,6 +622,21 @@ static int trace_shm_open(const char *name, int oflag, mode_t mode)
 		};
 		sp_rtrace_write_function_call(&call, NULL, args);
 	}
+	module_fcall_t call = {
+		.type = SP_RTRACE_FTYPE_ALLOC,
+		.res_type_id = res_pshmfd.id,
+		.name = "shm_open",
+		.res_id = (pointer_t)rc,
+		.res_size = (size_t)1,
+	};
+
+	module_farg_t args[] = {
+		{.name="name", .value=name},
+		{.name="oflag", .value=arg_oflag},
+		{.name="mode", .value=arg_mode},
+		{.name=NULL, .value=NULL}
+	};
+	sp_rtrace_write_function_call(&call, NULL, args);
 	return rc;
 }
 
