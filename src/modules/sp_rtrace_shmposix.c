@@ -714,7 +714,7 @@ static int trace_creat(const char *pathname, mode_t mode)
 }
 
 
-static void trace_mmap_common(const char *name, int rc, void *addr, size_t length, int prot, int flags, int fd, off64_t offset)
+static void trace_mmap_common(const char *name, void *rc, size_t length, int prot, int flags, int fd, off64_t offset)
 {
 	addr_store((pointer_t)rc, fd);
 	fdreg_node_t* pfd = fdreg_get_fd(fd);
@@ -758,7 +758,7 @@ static void* trace_mmap(void *addr, size_t length, int prot, int flags, int fd, 
 {
 	void* rc = trace_off.mmap(addr, length, prot, flags, fd, offset);
 	if (rc != (void *) -1) {
-		trace_mmap_common("mmap", rc, addr, length, prot, flags, fd, offset);
+		trace_mmap_common("mmap", rc, length, prot, flags, fd, offset);
 	}
 	return rc;
 }
@@ -767,7 +767,7 @@ static void* trace_mmap2(void *addr, size_t length, int prot, int flags, int fd,
 {
 	void* rc = trace_off.mmap2(addr, length, prot, flags, fd, offset);
 	if (rc != (void *) -1) {
-		trace_mmap_common("mmap2", rc, addr, length, prot, flags, fd, offset);
+		trace_mmap_common("mmap2", rc, length, prot, flags, fd, offset);
 	}
 	return rc;
 }
@@ -777,7 +777,7 @@ static void* trace_mmap64(void *addr, size_t length, int prot, int flags, int fd
 {
 	void* rc = trace_off.mmap64(addr, length, prot, flags, fd, offset);
 	if (rc != (void *) -1) {
-		trace_mmap_common("mmap64", rc, addr, length, prot, flags, fd, offset);
+		trace_mmap_common("mmap64", rc, length, prot, flags, fd, offset);
 	}
 	return rc;
 }
