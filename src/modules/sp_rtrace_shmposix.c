@@ -727,28 +727,35 @@ static void trace_mmap_common(const char *name, void *rc, size_t length, int pro
 		.res_size = (size_t)length,
 	};
 
-	char arg_length[16]; snprintf(arg_length, sizeof(arg_length), "0x%lx", (unsigned long)length);
-	char arg_prot[16]; snprintf(arg_prot, sizeof(arg_prot), "0x%x", prot);
-	char arg_flags[16]; snprintf(arg_flags, sizeof(arg_flags), "0x%x", flags);
-	char arg_fd[16]; snprintf(arg_fd, sizeof(arg_fd), "0x%x", fd);
-	char arg_offset[16]; snprintf(arg_offset, sizeof(arg_offset), "0x%llx", offset);
-	char arg_mode[16];
+	char arg_length[16], arg_prot[16], arg_flags[16];
+	char arg_fd[16], arg_offset[16], arg_mode[16];
+	snprintf(arg_length, sizeof(arg_length), "0x%lx", (unsigned long)length);
+	snprintf(arg_prot, sizeof(arg_prot), "0x%x", prot);
+	snprintf(arg_flags, sizeof(arg_flags), "0x%x", flags);
 	module_farg_t args[] = {
 		{.name="length", .value=arg_length},
 		{.name="prot", .value=arg_prot},
 		{.name="flags", .value=arg_flags},
-		{.name="fd", .value=arg_fd},
-		{.name="offset", .value=arg_offset},
+		{.name=NULL, .value=NULL}, // reserved for fd number
+		{.name=NULL, .value=NULL}, // reserved for fd offset
 		{.name=NULL, .value=NULL}, // reserved for fd name
 		{.name=NULL, .value=NULL}, // reserved for fd mode
 		{.name=NULL, .value=NULL}
 	};
-	if (pfd) {
-		args[5].name = "name";
-		args[5].value = pfd->name;
-		args[6].name = "mode";
-		args[6].value = arg_mode;
-		snprintf(arg_mode, sizeof(arg_mode), "0x%x", pfd->mode);
+	if (!(flags & (MAP_ANONYMOUS | MAP_ANON))) {
+		snprintf(arg_fd, sizeof(arg_fd), "%d", fd);
+		snprintf(arg_offset, sizeof(arg_offset), "0x%llx", offset);
+		args[3].name = "fd";
+		args[3].value = arg_fd;
+		args[4].name = "offset";
+		args[4].value = arg_offset;
+		if (pfd) {
+			snprintf(arg_mode, sizeof(arg_mode), "0x%x", pfd->mode);
+			args[5].name = "name";
+			args[5].value = pfd->name;
+			args[6].name = "mode";
+			args[6].value = arg_mode;
+		}
 	}
 	sp_rtrace_write_function_call(&call, NULL, args);
 }
@@ -804,7 +811,7 @@ static int trace_munmap(void *addr, size_t length)
 		.res_size = (size_t)0,
 	};
 
-	char arg_length[16]; snprintf(arg_length, sizeof(arg_length), "%li", (unsigned long)length);
+	char arg_length[16]; snprintf(arg_length, sizeof(arg_length), "0x%lx", (unsigned long)length);
 	module_farg_t args[] = {
 		{.name="length", .value=arg_length},
 		{.name=NULL, .value=NULL}
