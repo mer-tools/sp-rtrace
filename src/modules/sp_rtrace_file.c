@@ -85,6 +85,7 @@ typedef int (*open64_t)(const char* pathname, int flags, ...);
 typedef int (*openat_t)(int dirfd, const char* pathname, int flags, ...);
 typedef int (*close_t)(int fd);
 typedef int (*dup2_t)(int oldfd, int newfd);
+typedef int (*dup3_t)(int oldfd, int newfd, int flags);
 typedef int (*socket_t)(int domain, int type, int protocol);
 typedef FILE* (*fopen_t)(const char *path, const char *mode);
 typedef FILE* (*fdopen_t)(int fd, const char *mode);
@@ -113,6 +114,7 @@ typedef struct {
 	openat_t openat;
 	close_t close;
 	dup2_t dup2;
+	dup3_t dup3;
 	socket_t socket;
 	creat_t creat;
 	accept_t accept;
@@ -164,6 +166,7 @@ static void trace_initialize(void)
 			trace_off.openat = (openat_t)dlsym(RTLD_NEXT, "openat");
 			trace_off.close = (close_t)dlsym(RTLD_NEXT, "close");
 			trace_off.dup2 = (dup2_t)dlsym(RTLD_NEXT, "dup2");
+			trace_off.dup3 = (dup3_t)dlsym(RTLD_NEXT, "dup3");
 			trace_off.socket = (socket_t)dlsym(RTLD_NEXT, "socket");
 			trace_off.fopen = (fopen_t)dlsym(RTLD_NEXT, "fopen");
 			trace_off.fdopen = (fdopen_t)dlsym(RTLD_NEXT, "fdopen");
@@ -280,13 +283,12 @@ static int trace_openat(int dirfd, const char* pathname, int flags, ...)
 	return rc;
 }
 
-/* TODO: dup3() */
 /* TODO: inotify_init1() */
 /* TODO: eventfd() */
 /* TODO: signalfd() */
 /* TODO: timerfd_create() */
-/* TODO: opoll_create() */
-/* TODO: opoll_create1() */
+/* TODO: epoll_create() */
+/* TODO: epoll_create1() */
 
 static int trace_close(int fd)
 {
@@ -305,24 +307,40 @@ static int trace_close(int fd)
 	return rc;
 }
 
+static void trace_dup_common(const char* name, int oldfd, int newfd, int retfd)
+{
+	char oldfd_s[16]; 
+	sprintf(oldfd_s, "%d", oldfd);
+	module_farg_t args[] = {
+		{.name = "oldfd", .value = oldfd_s},
+		{.name = NULL, .value = NULL}
+	};
+	if (newfd >= 0) {
+		/* newfd is first closed if it was already open */
+		module_fcall_t call1 = {
+			.type = SP_RTRACE_FTYPE_FREE,
+			.res_type_id = res_fd.id,
+			.name = name,
+			.res_size = 0,
+			.res_id = (pointer_t)newfd,
+		};
+		sp_rtrace_write_function_call(&call1, NULL, args);
+	}
+	module_fcall_t call2 = {
+		.type = SP_RTRACE_FTYPE_ALLOC,
+		.res_type_id = res_fd.id,
+		.name = name,
+		.res_size = 1,
+		.res_id = (pointer_t)retfd,
+	};
+	sp_rtrace_write_function_call(&call2, NULL, args);
+}
+
 static int trace_dup(int oldfd)
 {
 	int rc = trace_off.dup(oldfd);
 	if (rc != -1) {
-		char oldfd_s[16]; 
-		sprintf(oldfd_s, "%d", oldfd);
-		module_farg_t args[] = {
-				{.name = "oldfd", .value = oldfd_s},
-				{.name = NULL, .value = NULL}
-		};
-		module_fcall_t call = {
-				.type = SP_RTRACE_FTYPE_ALLOC,
-				.res_type_id = res_fd.id,
-				.name = "dup",
-				.res_size = 1,
-				.res_id = (pointer_t)rc,
-		};
-		sp_rtrace_write_function_call(&call, NULL, args);
+		trace_dup_common("dup", oldfd, -1, rc);
 	}
 	return rc;
 }
@@ -330,33 +348,18 @@ static int trace_dup(int oldfd)
 static int trace_dup2(int oldfd, int newfd)
 {
 	int rc = trace_off.dup2(oldfd, newfd);
-	if (rc < 0 || oldfd == newfd) {
-		return rc;
+	if (rc != -1 && oldfd != newfd) {
+		trace_dup_common("dup2", oldfd, newfd, rc);
 	}
-	char oldfd_s[16]; 
-	sprintf(oldfd_s, "%d", oldfd);
-	module_farg_t args[] = {
-		{.name = "oldfd", .value = oldfd_s},
-		{.name = NULL, .value = NULL}
-	};
-	/* newfd is first closed if it was already open */
-	module_fcall_t call1 = {
-		.type = SP_RTRACE_FTYPE_FREE,
-		.res_type_id = res_fd.id,
-		.name = "dup2",
-		.res_size = 0,
-		.res_id = (pointer_t)newfd,
-	};
-	sp_rtrace_write_function_call(&call1, NULL, args);
+	return rc;
+}
 
-	module_fcall_t call2 = {
-		.type = SP_RTRACE_FTYPE_ALLOC,
-		.res_type_id = res_fd.id,
-		.name = "dup2",
-		.res_size = 1,
-		.res_id = (pointer_t)rc,
-	};
-	sp_rtrace_write_function_call(&call2, NULL, args);
+static int trace_dup3(int oldfd, int newfd, int flags)
+{
+	int rc = trace_off.dup3(oldfd, newfd, flags);
+	if (rc != -1 && oldfd != newfd) {
+		trace_dup_common("dup3", oldfd, newfd, rc);
+	}
 	return rc;
 }
 
@@ -721,6 +724,7 @@ static trace_t trace_on = {
 	.openat = trace_openat,
 	.close = trace_close,
 	.dup2 = trace_dup2,
+	.dup3 = trace_dup3,
 	.socket = trace_socket,
 	.fopen = trace_fopen,
 	.fdopen = trace_fdopen,
@@ -801,6 +805,11 @@ int close(int fd)
 int dup2(int oldfd, int newfd)
 {
 	return trace_rt->dup2(oldfd, newfd);
+}
+
+int dup3(int oldfd, int newfd, int flags)
+{
+	return trace_rt->dup3(oldfd, newfd, flags);
 }
 
 int socket(int domain, int type, int protocol)
@@ -987,6 +996,12 @@ static int init_dup2(int oldfd, int newfd)
 	return trace_init_rt->dup2(oldfd, newfd);
 }
 
+static int init_dup3(int oldfd, int newfd, int flags)
+{
+	trace_initialize();
+	return trace_init_rt->dup3(oldfd, newfd, flags);
+}
+
 static int init_socket(int domain, int type, int protocol)
 {
 	trace_initialize();
@@ -1114,6 +1129,7 @@ static trace_t trace_init = {
 	.openat = init_openat,
 	.close = init_close,
 	.dup2 = init_dup2,
+	.dup3 = init_dup3,
 	.socket = init_socket,
 	.fopen = init_fopen,
 	.fdopen = init_fdopen,
