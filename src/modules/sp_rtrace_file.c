@@ -37,6 +37,7 @@
 #include <sys/inotify.h>
 #include <sys/eventfd.h>
 #include <sys/signalfd.h>
+#include <sys/timerfd.h>
 #include <dlfcn.h>
 #include <stdarg.h>
 #include <unistd.h>
@@ -104,6 +105,7 @@ typedef int (*inotify_init_t)(void);
 typedef int (*inotify_init1_t)(int flags);
 typedef int (*rt_eventfd_t)(int initval, int flags);
 typedef int (*signalfd_t)(int fd, const sigset_t *mask, int flags);
+typedef int (*timerfd_create_t)(int clockid, int flags);
 typedef int (*pipe_t)(int pipefd[2]);
 typedef int (*pipe2_t)(int pipefd[2], int flags);
 
@@ -131,6 +133,7 @@ typedef struct {
 	inotify_init1_t inotify_init1;
 	rt_eventfd_t eventfd;
 	signalfd_t signalfd;
+	timerfd_create_t timerfd_create;
 	pipe_t pipe;
 	pipe2_t pipe2;
 } trace_t;
@@ -191,6 +194,7 @@ static void trace_initialize(void)
 			trace_off.inotify_init1 = (inotify_init1_t)dlsym(RTLD_NEXT, "inotify_init1");
 			trace_off.eventfd = (rt_eventfd_t)dlsym(RTLD_NEXT, "eventfd");
 			trace_off.signalfd = (signalfd_t)dlsym(RTLD_NEXT, "signalfd");
+			trace_off.timerfd_create = (timerfd_create_t)dlsym(RTLD_NEXT, "timerfd_create");
 			trace_off.pipe = (pipe_t)dlsym(RTLD_NEXT, "pipe");
 			trace_off.pipe2 = (pipe2_t)dlsym(RTLD_NEXT, "pipe2");
 			init_mode = MODULE_LOADED;
@@ -294,8 +298,6 @@ static int trace_openat(int dirfd, const char* pathname, int flags, ...)
 	return rc;
 }
 
-/* TODO: signalfd() */
-/* TODO: timerfd_create() */
 /* TODO: epoll_create() */
 /* TODO: epoll_create1() */
 
@@ -714,6 +716,15 @@ static int trace_signalfd(int fd, const sigset_t *mask, int flags)
 	return rc;
 }
 
+static int trace_timerfd_create(int clockid, int flags)
+{
+	int rc = trace_off.timerfd_create(clockid, flags);
+	if (rc != -1) {
+		trace_fd_common("timerfd_create", rc);
+	}
+	return rc;
+}
+
 static int trace_pipe(int pipefd[2])
 {
 	int rc = trace_off.pipe(pipefd);
@@ -781,6 +792,7 @@ static trace_t trace_on = {
 	.inotify_init = trace_inotify_init,
 	.inotify_init1 = trace_inotify_init1,
 	.eventfd = trace_eventfd,
+	.timerfd_create = trace_timerfd_create,
 	.signalfd = trace_signalfd,
 	.pipe = trace_pipe,
 	.pipe2 = trace_pipe2,
@@ -977,6 +989,11 @@ int eventfd(int initval, int flags)
 int signalfd(int fd, const sigset_t *mask, int flags)
 {
 	return trace_rt->signalfd(fd, mask, flags);
+}
+
+int timerfd_create(int clockid, int flags)
+{
+	return trace_rt->timerfd_create(clockid, flags);
 }
 
 int pipe(int pipefd[2])
@@ -1187,6 +1204,12 @@ static int init_signalfd(int fd, const sigset_t *mask, int flags)
 	return trace_init_rt->signalfd(fd, mask, flags);
 }
 
+static int init_timerfd_create(int clockid, int flags)
+{
+	trace_initialize();
+	return trace_init_rt->timerfd_create(clockid, flags);
+}
+
 static int init_pipe(int pipefd[2])
 {
 	trace_initialize();
@@ -1223,6 +1246,7 @@ static trace_t trace_init = {
 	.inotify_init1 = init_inotify_init1,
 	.eventfd = init_eventfd,
 	.signalfd = init_signalfd,
+	.timerfd_create = init_timerfd_create,
 	.pipe = init_pipe,
 	.pipe2 = init_pipe2,
 };
