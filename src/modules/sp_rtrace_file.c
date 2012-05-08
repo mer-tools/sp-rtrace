@@ -29,6 +29,7 @@
  */
 #include <stdio.h>
 #include <fcntl.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -109,6 +110,8 @@ typedef int (*signalfd_t)(int fd, const sigset_t *mask, int flags);
 typedef int (*timerfd_create_t)(int clockid, int flags);
 typedef int (*epoll_create_t)(int size);
 typedef int (*epoll_create1_t)(int flags);
+typedef int (*posix_openpt_t)(int flags);
+typedef int (*getpt_t)(void);
 typedef int (*pipe_t)(int pipefd[2]);
 typedef int (*pipe2_t)(int pipefd[2], int flags);
 
@@ -139,6 +142,8 @@ typedef struct {
 	timerfd_create_t timerfd_create;
 	epoll_create_t epoll_create;
 	epoll_create1_t epoll_create1;
+	posix_openpt_t posix_openpt;
+	getpt_t getpt;
 	pipe_t pipe;
 	pipe2_t pipe2;
 } trace_t;
@@ -202,6 +207,8 @@ static void trace_initialize(void)
 			trace_off.timerfd_create = (timerfd_create_t)dlsym(RTLD_NEXT, "timerfd_create");
 			trace_off.epoll_create = (epoll_create_t)dlsym(RTLD_NEXT, "epoll_create");
 			trace_off.epoll_create1 = (epoll_create1_t)dlsym(RTLD_NEXT, "epoll1_create");
+			trace_off.posix_openpt = (posix_openpt_t)dlsym(RTLD_NEXT, "posix_openpt");
+			trace_off.getpt = (getpt_t)dlsym(RTLD_NEXT, "getpt");
 			trace_off.pipe = (pipe_t)dlsym(RTLD_NEXT, "pipe");
 			trace_off.pipe2 = (pipe2_t)dlsym(RTLD_NEXT, "pipe2");
 			init_mode = MODULE_LOADED;
@@ -755,6 +762,24 @@ static int trace_epoll_create1(int flags)
 	return rc;
 }
 
+static int trace_posix_openpt(int flags)
+{
+	int rc = trace_off.posix_openpt(flags);
+	if (rc != -1) {
+		trace_fd_common("posix_openpt", rc);
+	}
+	return rc;
+}
+
+static int trace_getpt(void)
+{
+	int rc = trace_off.getpt();
+	if (rc != -1) {
+		trace_fd_common("getpt", rc);
+	}
+	return rc;
+}
+
 static int trace_pipe(int pipefd[2])
 {
 	int rc = trace_off.pipe(pipefd);
@@ -826,6 +851,8 @@ static trace_t trace_on = {
 	.timerfd_create = trace_timerfd_create,
 	.epoll_create = epoll_create,
 	.epoll_create1 = epoll_create1,
+	.posix_openpt = trace_posix_openpt,
+	.getpt = trace_getpt,
 	.pipe = trace_pipe,
 	.pipe2 = trace_pipe2,
 };
@@ -1036,6 +1063,16 @@ int epoll_create(int size)
 int epoll_create1(int flags)
 {
 	return trace_rt->epoll_create1(flags);
+}
+
+int posix_openpt(int flags)
+{
+	return trace_rt->posix_openpt(flags);
+}
+
+int getpt(void)
+{
+	return trace_rt->getpt();
 }
 
 int pipe(int pipefd[2])
@@ -1264,6 +1301,18 @@ static int init_epoll_create1(int flags)
 	return trace_init_rt->epoll_create1(flags);
 }
 
+static int init_posix_openpt(int flags)
+{
+	trace_initialize();
+	return trace_init_rt->posix_openpt(flags);
+}
+
+static int init_getpt(void)
+{
+	trace_initialize();
+	return trace_init_rt->getpt();
+}
+
 static int init_pipe(int pipefd[2])
 {
 	trace_initialize();
@@ -1303,6 +1352,8 @@ static trace_t trace_init = {
 	.timerfd_create = init_timerfd_create,
 	.epoll_create = init_epoll_create,
 	.epoll_create1 = init_epoll_create1,
+	.posix_openpt = init_posix_openpt,
+	.getpt = init_getpt,
 	.pipe = init_pipe,
 	.pipe2 = init_pipe2,
 };
