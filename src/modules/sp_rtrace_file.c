@@ -99,6 +99,7 @@ typedef int (*dup_t)(int oldfd);
 typedef int (*fcntl_t)(int fd, int cmd, ...);
 typedef int (*socketpair_t)(int domain, int type, int protocol, int sv[2]);
 typedef int (*inotify_init_t)(void);
+typedef int (*inotify_init1_t)(int flags);
 typedef int (*pipe_t)(int pipefd[2]);
 typedef int (*pipe2_t)(int pipefd[2], int flags);
 
@@ -123,6 +124,7 @@ typedef struct {
 	fcntl_t fcntl;
 	socketpair_t socketpair;
 	inotify_init_t inotify_init;
+	inotify_init1_t inotify_init1;
 	pipe_t pipe;
 	pipe2_t pipe2;
 } trace_t;
@@ -165,6 +167,7 @@ static void trace_initialize(void)
 			trace_off.open64 = (open_t)dlsym(RTLD_NEXT, "open64");
 			trace_off.openat = (openat_t)dlsym(RTLD_NEXT, "openat");
 			trace_off.close = (close_t)dlsym(RTLD_NEXT, "close");
+			trace_off.dup = (dup_t)dlsym(RTLD_NEXT, "dup");
 			trace_off.dup2 = (dup2_t)dlsym(RTLD_NEXT, "dup2");
 			trace_off.dup3 = (dup3_t)dlsym(RTLD_NEXT, "dup3");
 			trace_off.socket = (socket_t)dlsym(RTLD_NEXT, "socket");
@@ -176,10 +179,10 @@ static void trace_initialize(void)
 			trace_off.creat = (creat_t)dlsym(RTLD_NEXT, "creat");
 			trace_off.accept = (accept_t)dlsym(RTLD_NEXT, "accept");
 			trace_off.accept4 = (accept4_t)dlsym(RTLD_NEXT, "accept4");
-			trace_off.dup = (dup_t)dlsym(RTLD_NEXT, "dup");
 			trace_off.fcntl = (fcntl_t)dlsym(RTLD_NEXT, "fcntl");
 			trace_off.socketpair = (socketpair_t)dlsym(RTLD_NEXT, "socketpair");
 			trace_off.inotify_init = (inotify_init_t)dlsym(RTLD_NEXT, "inotify_init");
+			trace_off.inotify_init1 = (inotify_init1_t)dlsym(RTLD_NEXT, "inotify_init1");
 			trace_off.pipe = (pipe_t)dlsym(RTLD_NEXT, "pipe");
 			trace_off.pipe2 = (pipe2_t)dlsym(RTLD_NEXT, "pipe2");
 			init_mode = MODULE_LOADED;
@@ -283,7 +286,6 @@ static int trace_openat(int dirfd, const char* pathname, int flags, ...)
 	return rc;
 }
 
-/* TODO: inotify_init1() */
 /* TODO: eventfd() */
 /* TODO: signalfd() */
 /* TODO: timerfd_create() */
@@ -657,18 +659,32 @@ static int trace_socketpair(int domain, int type, int protocol, int sv[2])
 	return rc;
 }
 
+static void trace_inotify_common(const char *name, int fd)
+{
+	module_fcall_t call = {
+		.type = SP_RTRACE_FTYPE_ALLOC,
+		.res_type_id = res_fd.id,
+		.name = name,
+		.res_size = 1,
+		.res_id = (pointer_t)fd,
+	};
+	sp_rtrace_write_function_call(&call, NULL, NULL);
+}
+
 static int trace_inotify_init(void)
 {
 	int rc = trace_off.inotify_init();
 	if (rc != -1) {
-		module_fcall_t call = {
-				.type = SP_RTRACE_FTYPE_ALLOC,
-				.res_type_id = res_fd.id,
-				.name = "inotify_init",
-				.res_size = 1,
-				.res_id = (pointer_t)rc,
-		};
-		sp_rtrace_write_function_call(&call, NULL, NULL);
+		trace_inotify_common("inotify_init", rc);
+	}
+	return rc;
+}
+
+static int trace_inotify_init1(int flags)
+{
+	int rc = trace_off.inotify_init1(flags);
+	if (rc != -1) {
+		trace_inotify_common("inotify_init1", rc);
 	}
 	return rc;
 }
@@ -738,6 +754,7 @@ static trace_t trace_on = {
 	.fcntl = trace_fcntl,
 	.socketpair = trace_socketpair,
 	.inotify_init = trace_inotify_init,
+	.inotify_init1 = trace_inotify_init1,
 	.pipe = trace_pipe,
 	.pipe2 = trace_pipe2,
 };
@@ -918,6 +935,11 @@ int socketpair(int domain, int type, int protocol, int sv[2])
 int inotify_init(void)
 {
 	return trace_rt->inotify_init();
+}
+
+int inotify_init1(int flags)
+{
+	return trace_rt->inotify_init1(flags);
 }
 
 int pipe(int pipefd[2])
@@ -1110,6 +1132,12 @@ static int init_inotify_init(void)
 	return trace_init_rt->inotify_init();
 }
 
+static int init_inotify_init1(int flags)
+{
+	trace_initialize();
+	return trace_init_rt->inotify_init1(flags);
+}
+
 static int init_pipe(int pipefd[2])
 {
 	trace_initialize();
@@ -1128,6 +1156,7 @@ static trace_t trace_init = {
 	.open64 = init_open64,
 	.openat = init_openat,
 	.close = init_close,
+	.dup = init_dup,
 	.dup2 = init_dup2,
 	.dup3 = init_dup3,
 	.socket = init_socket,
@@ -1139,10 +1168,10 @@ static trace_t trace_init = {
 	.creat = init_creat,
 	.accept = init_accept,
 	.accept4 = init_accept4,
-	.dup = init_dup,
 	.fcntl = init_fcntl,
 	.socketpair = init_socketpair,
 	.inotify_init = init_inotify_init,
+	.inotify_init1 = init_inotify_init1,
 	.pipe = init_pipe,
 	.pipe2 = init_pipe2,
 };
