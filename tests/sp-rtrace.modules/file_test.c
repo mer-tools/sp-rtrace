@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -32,27 +32,48 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <fcntl.h>
+#include <sys/un.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
 #include <sys/inotify.h>
+#include <sys/eventfd.h>
+#include <signal.h>
+#include <sys/signalfd.h>
+#include <sys/timerfd.h>
+#include <sys/epoll.h>
+#include <dirent.h>
 
-#define OUTPUT_FILENAME  "./file_out"
+#define OUTPUT_FILENAME  "file_out"
+#define SOCKNAME "accept4-test"
+#define MAXLISTENQUEUE 1
 
-void test_fd()
+
+void test_fd(void)
 {
 	int fd = creat(OUTPUT_FILENAME, 0666);
 	close(fd);
 	fd = open64(OUTPUT_FILENAME, O_RDONLY);
 	close(fd);
+
 	fd = open(OUTPUT_FILENAME, O_RDONLY);
-	int fd2 = dup(fd);
-	int fd3 = fcntl(fd, F_DUPFD, 10);
+	int fd2 = dup2(fd, 40);
+	int fd3 = dup3(fd, 60, O_CLOEXEC);
+	int fd4 = dup(fd3);
+	close(fd2);
 	close(fd3);
-	dup2(fd2, fd2);
+	close(fd4);
+
+	fd2 = fcntl(fd, F_DUPFD, 80);
 	close(fd);
-	
+	/* closing this stream closes also pointed FD */
 	FILE* fp = fdopen(fd2, "r");
 	fclose(fp);
+
+	DIR *dir = opendir(".");
+	fd = openat(dirfd(dir), OUTPUT_FILENAME, O_RDONLY);
+	close(fd);
+	closedir(dir);
 
 	int fds[2];
 	pipe(fds);
@@ -64,28 +85,146 @@ void test_fd()
 	close(fds[1]);
 }
 
-void test_socket()
+
+static int serversocket(void)
 {
-	int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-	close(sockfd);
+	int sh, conn;
+	socklen_t rlen;
+	struct sockaddr_un addr;
+	struct sockaddr_in raddr;
+
+	if ((sh = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
+		perror("server: socket()");
+		return -1;
+	}
+
+	memset(&addr, 0, sizeof(struct sockaddr_un));
+	strncpy(addr.sun_path, SOCKNAME, sizeof(addr.sun_path) - 1);
+	if (access(addr.sun_path, F_OK) == 0) {
+		fprintf(stderr, "server: socket '%s' already exists, removing...\n", addr.sun_path);
+		if (unlink(addr.sun_path) < 0) {
+			perror("server: unlink()");
+			return -1;
+		}
+	}
+
+	addr.sun_family = AF_UNIX;
+	if (bind(sh, &addr, sizeof(struct sockaddr_un))) {
+		perror("server: bind() for " SOCKNAME);
+		close(sh);
+		return -1;
+	}
+
+	if (listen(sh, MAXLISTENQUEUE)) {
+		perror("server: listen()");
+		close(sh);
+		return -1;
+	}
+
+	raddr.sin_addr.s_addr = 0;
+	rlen = sizeof(struct sockaddr);
+	if ((conn = accept4(sh, &raddr, &rlen, SOCK_CLOEXEC)) < 0) {
+		perror("server: accept()");
+		return -1;
+	}
+	close(sh);
+	if (unlink(addr.sun_path) < 0) {
+		perror("server: unlink()");
+	}
+	return conn;
+}
+
+
+static int clientsocket(void)
+{
+	int sh;
+	struct sockaddr_un addr;
 	
+	if ((sh = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
+		perror("client: socket()");
+		return -1;
+	}
+	memset(&addr, 0, sizeof(struct sockaddr_un));
+	strncpy(addr.sun_path, SOCKNAME, sizeof(addr.sun_path) - 1);
+	addr.sun_family = AF_UNIX;
+	if (connect(sh, &addr, sizeof(struct sockaddr_un))) {
+		perror("client: connect() for " SOCKNAME);
+		return -1;
+	}
+	return sh;
+}
+
+void test_socket(void)
+{
+	int sock;
+	pid_t pid;
 	int sockfds[2];
+
 	socketpair(AF_UNIX, SOCK_STREAM, 0, sockfds);
 	close(sockfds[0]);
 	close(sockfds[1]);
+
+	pid = fork();
+	if (pid < 0) {
+		perror("fork");
+		return;
+	}
+	if (!pid) {
+		/* child process */
+		sleep(1);
+		sock = clientsocket();
+		if (sock < 0) {
+			fprintf(stderr, "ERROR: client failed to get connection!\n");
+		} else {
+			printf("SUCCESS: client got connection: %d!\n", sock);
+			close(sock);
+		}
+		exit(0);
+	}
+	/* parent */
+	sock = serversocket();
+	if (sock < 0) {
+		fprintf(stderr, "ERROR: server failed to get connection!\n");
+	} else {
+		printf("SUCCESS: server got connection: %d!\n", sock);
+		close(sock);
+	}
 }
 
-void test_inotify()
+void test_fd_special(void)
 {
-	int fd = inotify_init();
-	close(fd);
+	int fd1 = inotify_init();
+	int fd2 = inotify_init1(IN_CLOEXEC);
+	close(fd2);
+	close(fd1);
+
+	fd1 = epoll_create(8);
+	fd2 = epoll_create1(EPOLL_CLOEXEC);
+	close(fd1);
+	close(fd2);
+
+	int fd3;
+	sigset_t mask;
+	sigemptyset(&mask);
+	sigaddset(&mask, SIGCONT);
+	fd1 = signalfd(-1, &mask, 0);
+	fd2 = timerfd_create(CLOCK_MONOTONIC, 0);
+	fd3 = eventfd(0, 0);
+	close(fd1);
+	close(fd2);
+	close(fd3);
+
+	fd1 = getpt();
+	fd2 = posix_openpt(0);
+	close(fd1);
+	close(fd2);
 }
 
 
-void test_fp()
+void test_fp(void)
 {
-	FILE* fp = fopen(OUTPUT_FILENAME, "r");
-	FILE* fp2 = freopen(OUTPUT_FILENAME, "w+", fp);
+	FILE* fp1 = fopen(OUTPUT_FILENAME, "r");
+	FILE* fp2 = freopen(OUTPUT_FILENAME, "w+", fp1);
 	fcloseall();
 }
 
@@ -93,7 +232,7 @@ int main()
 {
 	test_fd();
 	test_socket();
-	test_inotify();
+	test_fd_special();
 	test_fp();
 	
 	sleep (1);
