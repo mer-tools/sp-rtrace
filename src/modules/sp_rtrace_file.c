@@ -227,10 +227,36 @@ static void trace_initialize(void)
 /*
  * tracing functions
  */
+
+static int trace_creat(const char *pathname, mode_t mode)
+{
+	int rc = trace_off.creat(pathname, mode);
+	if (rc != -1) {
+		char mode_s[16];
+		sprintf(mode_s, "0x%x", mode);
+
+		module_fcall_t call = {
+				.type = SP_RTRACE_FTYPE_ALLOC,
+				.res_type_id = res_fd.id,
+				.name = "creat",
+				.res_size = 1,
+				.res_id = (pointer_t)rc,
+		};
+		module_farg_t args[] = {
+				{.name = "path", .value = pathname},
+				{.name = "mode", .value = mode_s},
+				{.name = NULL, .value = NULL}
+		};
+		sp_rtrace_write_function_call(&call, NULL, args);
+	}
+	return rc;
+}
+
+/* code common to all open*() traces */
 static void trace_open_common(const char* name, int fd, const char* path, int flags)
 {
 	char flags_s[16];
-	sprintf(flags_s, "%x", flags);
+	sprintf(flags_s, "0x%x", flags);
 
 	module_fcall_t call = {
 		.type = SP_RTRACE_FTYPE_ALLOC,
@@ -322,6 +348,7 @@ static int trace_close(int fd)
 	return rc;
 }
 
+/* code common to all dup*() traces */
 static void trace_dup_common(const char* name, int oldfd, int newfd, int retfd)
 {
 	char oldfd_s[16]; 
@@ -433,6 +460,9 @@ static FILE *trace_fdopen(int fd, const char *mode)
 	if (rc) {
 		char fd_s[32];
 		sprintf(fd_s, "%d", fd);
+		/* The file  descriptor is not dup'ed, but it will be
+		 * closed when the stream created by fdopen() is closed.
+		 */
 		module_fcall_t call1 = {
 				.type = SP_RTRACE_FTYPE_FREE,
 				.res_type_id = res_fd.id,
@@ -523,30 +553,7 @@ static int trace_fcloseall(void)
 	return rc;
 }
 
-static int trace_creat(const char *pathname, mode_t mode)
-{
-	int rc = trace_off.creat(pathname, mode);
-	if (rc != -1) {
-		char mode_s[16];
-		sprintf(mode_s, "0x%x", mode);
-
-		module_fcall_t call = {
-				.type = SP_RTRACE_FTYPE_ALLOC,
-				.res_type_id = res_fd.id,
-				.name = "creat",
-				.res_size = 1,
-				.res_id = (pointer_t)rc,
-		};
-		module_farg_t args[] = {
-				{.name = "path", .value = pathname},
-				{.name = "mode", .value = mode_s},
-				{.name = NULL, .value = NULL}
-		};
-		sp_rtrace_write_function_call(&call, NULL, args);
-	}
-	return rc;
-}
-
+/* code common to both accept*() traces */
 static void trace_accept_common(int fd, const char *name, struct sockaddr *addr)
 {
 	module_farg_t args[] = {
@@ -672,6 +679,7 @@ static int trace_socketpair(int domain, int type, int protocol, int sv[2])
 	return rc;
 }
 
+/* code common to misc *fd*() traces */
 static void trace_fd_common(const char *name, int fd)
 {
 	module_fcall_t call = {
@@ -983,7 +991,7 @@ int fcntl(int fd, int cmd, ...)
 		}
 
 		default: {
-			fprintf(stderr, "ERROR: Unknown fcntl command: %d (%x)\n", cmd, cmd);
+			fprintf(stderr, "ERROR: Unknown fcntl command: %d (0x%x)\n", cmd, cmd);
 			exit (-1);
 		}
 	}
