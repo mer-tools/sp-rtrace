@@ -35,6 +35,7 @@
 #include <sys/un.h>
 #include <sys/socket.h>
 #include <sys/inotify.h>
+#include <sys/eventfd.h>
 #include <dlfcn.h>
 #include <stdarg.h>
 #include <unistd.h>
@@ -100,6 +101,7 @@ typedef int (*fcntl_t)(int fd, int cmd, ...);
 typedef int (*socketpair_t)(int domain, int type, int protocol, int sv[2]);
 typedef int (*inotify_init_t)(void);
 typedef int (*inotify_init1_t)(int flags);
+typedef int (*rt_eventfd_t)(int initval, int flags);
 typedef int (*pipe_t)(int pipefd[2]);
 typedef int (*pipe2_t)(int pipefd[2], int flags);
 
@@ -125,6 +127,7 @@ typedef struct {
 	socketpair_t socketpair;
 	inotify_init_t inotify_init;
 	inotify_init1_t inotify_init1;
+	rt_eventfd_t eventfd;
 	pipe_t pipe;
 	pipe2_t pipe2;
 } trace_t;
@@ -183,6 +186,7 @@ static void trace_initialize(void)
 			trace_off.socketpair = (socketpair_t)dlsym(RTLD_NEXT, "socketpair");
 			trace_off.inotify_init = (inotify_init_t)dlsym(RTLD_NEXT, "inotify_init");
 			trace_off.inotify_init1 = (inotify_init1_t)dlsym(RTLD_NEXT, "inotify_init1");
+			trace_off.eventfd = (rt_eventfd_t)dlsym(RTLD_NEXT, "eventfd");
 			trace_off.pipe = (pipe_t)dlsym(RTLD_NEXT, "pipe");
 			trace_off.pipe2 = (pipe2_t)dlsym(RTLD_NEXT, "pipe2");
 			init_mode = MODULE_LOADED;
@@ -286,7 +290,6 @@ static int trace_openat(int dirfd, const char* pathname, int flags, ...)
 	return rc;
 }
 
-/* TODO: eventfd() */
 /* TODO: signalfd() */
 /* TODO: timerfd_create() */
 /* TODO: epoll_create() */
@@ -659,7 +662,7 @@ static int trace_socketpair(int domain, int type, int protocol, int sv[2])
 	return rc;
 }
 
-static void trace_inotify_common(const char *name, int fd)
+static void trace_fd_common(const char *name, int fd)
 {
 	module_fcall_t call = {
 		.type = SP_RTRACE_FTYPE_ALLOC,
@@ -675,7 +678,7 @@ static int trace_inotify_init(void)
 {
 	int rc = trace_off.inotify_init();
 	if (rc != -1) {
-		trace_inotify_common("inotify_init", rc);
+		trace_fd_common("inotify_init", rc);
 	}
 	return rc;
 }
@@ -684,7 +687,16 @@ static int trace_inotify_init1(int flags)
 {
 	int rc = trace_off.inotify_init1(flags);
 	if (rc != -1) {
-		trace_inotify_common("inotify_init1", rc);
+		trace_fd_common("inotify_init1", rc);
+	}
+	return rc;
+}
+
+static int trace_eventfd(int initval, int flags)
+{
+	int rc = trace_off.eventfd(initval, flags);
+	if (rc != -1) {
+		trace_fd_common("eventfd", rc);
 	}
 	return rc;
 }
@@ -755,6 +767,7 @@ static trace_t trace_on = {
 	.socketpair = trace_socketpair,
 	.inotify_init = trace_inotify_init,
 	.inotify_init1 = trace_inotify_init1,
+	.eventfd = trace_eventfd,
 	.pipe = trace_pipe,
 	.pipe2 = trace_pipe2,
 };
@@ -940,6 +953,11 @@ int inotify_init(void)
 int inotify_init1(int flags)
 {
 	return trace_rt->inotify_init1(flags);
+}
+
+int eventfd(int initval, int flags)
+{
+	return trace_rt->eventfd(initval, flags);
 }
 
 int pipe(int pipefd[2])
@@ -1138,6 +1156,12 @@ static int init_inotify_init1(int flags)
 	return trace_init_rt->inotify_init1(flags);
 }
 
+static int init_eventfd(int initval, int flags)
+{
+	trace_initialize();
+	return trace_init_rt->eventfd(initval, flags);
+}
+
 static int init_pipe(int pipefd[2])
 {
 	trace_initialize();
@@ -1172,6 +1196,7 @@ static trace_t trace_init = {
 	.socketpair = init_socketpair,
 	.inotify_init = init_inotify_init,
 	.inotify_init1 = init_inotify_init1,
+	.eventfd = init_eventfd,
 	.pipe = init_pipe,
 	.pipe2 = init_pipe2,
 };
