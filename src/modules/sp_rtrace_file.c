@@ -38,6 +38,7 @@
 #include <sys/eventfd.h>
 #include <sys/signalfd.h>
 #include <sys/timerfd.h>
+#include <sys/epoll.h>
 #include <dlfcn.h>
 #include <stdarg.h>
 #include <unistd.h>
@@ -106,6 +107,8 @@ typedef int (*inotify_init1_t)(int flags);
 typedef int (*rt_eventfd_t)(int initval, int flags);
 typedef int (*signalfd_t)(int fd, const sigset_t *mask, int flags);
 typedef int (*timerfd_create_t)(int clockid, int flags);
+typedef int (*epoll_create_t)(int size);
+typedef int (*epoll_create1_t)(int flags);
 typedef int (*pipe_t)(int pipefd[2]);
 typedef int (*pipe2_t)(int pipefd[2], int flags);
 
@@ -134,6 +137,8 @@ typedef struct {
 	rt_eventfd_t eventfd;
 	signalfd_t signalfd;
 	timerfd_create_t timerfd_create;
+	epoll_create_t epoll_create;
+	epoll_create1_t epoll_create1;
 	pipe_t pipe;
 	pipe2_t pipe2;
 } trace_t;
@@ -195,6 +200,8 @@ static void trace_initialize(void)
 			trace_off.eventfd = (rt_eventfd_t)dlsym(RTLD_NEXT, "eventfd");
 			trace_off.signalfd = (signalfd_t)dlsym(RTLD_NEXT, "signalfd");
 			trace_off.timerfd_create = (timerfd_create_t)dlsym(RTLD_NEXT, "timerfd_create");
+			trace_off.epoll_create = (epoll_create_t)dlsym(RTLD_NEXT, "epoll_create");
+			trace_off.epoll_create1 = (epoll_create1_t)dlsym(RTLD_NEXT, "epoll1_create");
 			trace_off.pipe = (pipe_t)dlsym(RTLD_NEXT, "pipe");
 			trace_off.pipe2 = (pipe2_t)dlsym(RTLD_NEXT, "pipe2");
 			init_mode = MODULE_LOADED;
@@ -297,9 +304,6 @@ static int trace_openat(int dirfd, const char* pathname, int flags, ...)
 	}
 	return rc;
 }
-
-/* TODO: epoll_create() */
-/* TODO: epoll_create1() */
 
 static int trace_close(int fd)
 {
@@ -725,6 +729,24 @@ static int trace_timerfd_create(int clockid, int flags)
 	return rc;
 }
 
+static int trace_epoll_create(int size)
+{
+	int rc = trace_off.epoll_create(size);
+	if (rc != -1) {
+		trace_fd_common("epoll_create", rc);
+	}
+	return rc;
+}
+
+static int trace_epoll_create1(int flags)
+{
+	int rc = trace_off.epoll_create1(flags);
+	if (rc != -1) {
+		trace_fd_common("epoll_create1", rc);
+	}
+	return rc;
+}
+
 static int trace_pipe(int pipefd[2])
 {
 	int rc = trace_off.pipe(pipefd);
@@ -792,8 +814,10 @@ static trace_t trace_on = {
 	.inotify_init = trace_inotify_init,
 	.inotify_init1 = trace_inotify_init1,
 	.eventfd = trace_eventfd,
-	.timerfd_create = trace_timerfd_create,
 	.signalfd = trace_signalfd,
+	.timerfd_create = trace_timerfd_create,
+	.epoll_create = epoll_create,
+	.epoll_create1 = epoll_create1,
 	.pipe = trace_pipe,
 	.pipe2 = trace_pipe2,
 };
@@ -994,6 +1018,16 @@ int signalfd(int fd, const sigset_t *mask, int flags)
 int timerfd_create(int clockid, int flags)
 {
 	return trace_rt->timerfd_create(clockid, flags);
+}
+
+int epoll_create(int size)
+{
+	return trace_rt->epoll_create(size);
+}
+
+int epoll_create1(int flags)
+{
+	return trace_rt->epoll_create1(flags);
 }
 
 int pipe(int pipefd[2])
@@ -1210,6 +1244,18 @@ static int init_timerfd_create(int clockid, int flags)
 	return trace_init_rt->timerfd_create(clockid, flags);
 }
 
+static int init_epoll_create(int size)
+{
+	trace_initialize();
+	return trace_init_rt->epoll_create(size);
+}
+
+static int init_epoll_create1(int flags)
+{
+	trace_initialize();
+	return trace_init_rt->epoll_create1(flags);
+}
+
 static int init_pipe(int pipefd[2])
 {
 	trace_initialize();
@@ -1247,6 +1293,8 @@ static trace_t trace_init = {
 	.eventfd = init_eventfd,
 	.signalfd = init_signalfd,
 	.timerfd_create = init_timerfd_create,
+	.epoll_create = init_epoll_create,
+	.epoll_create1 = init_epoll_create1,
 	.pipe = init_pipe,
 	.pipe2 = init_pipe2,
 };
