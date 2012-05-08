@@ -869,7 +869,7 @@ int open(const char* pathname, int flags, ...)
 		va_start(args, flags);
 		mode = va_arg(args, int);
 		va_end(args);
-		BT_EXECUTE_LOCKED(rc = trace_rt->open(pathname, flags, va_arg(args, int)), trace_off.open(pathname, flags, mode));
+		BT_EXECUTE_LOCKED(rc = trace_rt->open(pathname, flags, mode), trace_off.open(pathname, flags, mode));
 	}
 	else {
 		BT_EXECUTE_LOCKED(rc = trace_rt->open(pathname, flags), trace_off.open(pathname, flags));
@@ -886,7 +886,7 @@ int open64(const char* pathname, int flags, ...)
 		va_start(args, flags);
 		mode = va_arg(args, int);
 		va_end(args);
-		BT_EXECUTE_LOCKED(rc = trace_rt->open64(pathname, flags, va_arg(args, int)), trace_off.open64(pathname, flags, mode));
+		BT_EXECUTE_LOCKED(rc = trace_rt->open64(pathname, flags, mode), trace_off.open64(pathname, flags, mode));
 	}
 	else {
 		BT_EXECUTE_LOCKED(rc = trace_rt->open64(pathname, flags), trace_off.open64(pathname, flags));
@@ -1104,9 +1104,6 @@ static int init_open(const char* pathname, int flags, ...)
 	return rc;
 }
 
-/*
- * Initialization functions.
- */
 static int init_open64(const char* pathname, int flags, ...)
 {
 	trace_initialize();
