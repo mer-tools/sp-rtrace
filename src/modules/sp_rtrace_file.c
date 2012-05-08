@@ -32,6 +32,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/un.h>
 #include <sys/socket.h>
 #include <sys/inotify.h>
 #include <dlfcn.h>
@@ -92,6 +93,7 @@ typedef int (*fclose_t)(FILE *fp);
 typedef int (*fcloseall_t)(void);
 typedef int (*creat_t)(const char *pathname, mode_t mode);
 typedef int (*accept_t)(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+typedef int (*accept4_t)(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags);
 typedef int (*dup_t)(int oldfd);
 typedef int (*fcntl_t)(int fd, int cmd, ...);
 typedef int (*socketpair_t)(int domain, int type, int protocol, int sv[2]);
@@ -114,6 +116,7 @@ typedef struct {
 	socket_t socket;
 	creat_t creat;
 	accept_t accept;
+	accept4_t accept4;
 	dup_t dup;
 	fcntl_t fcntl;
 	socketpair_t socketpair;
@@ -169,6 +172,7 @@ static void trace_initialize(void)
 			trace_off.fcloseall = (fcloseall_t)dlsym(RTLD_NEXT, "fcloseall");
 			trace_off.creat = (creat_t)dlsym(RTLD_NEXT, "creat");
 			trace_off.accept = (accept_t)dlsym(RTLD_NEXT, "accept");
+			trace_off.accept4 = (accept4_t)dlsym(RTLD_NEXT, "accept4");
 			trace_off.dup = (dup_t)dlsym(RTLD_NEXT, "dup");
 			trace_off.fcntl = (fcntl_t)dlsym(RTLD_NEXT, "fcntl");
 			trace_off.socketpair = (socketpair_t)dlsym(RTLD_NEXT, "socketpair");
@@ -277,7 +281,6 @@ static int trace_openat(int dirfd, const char* pathname, int flags, ...)
 }
 
 /* TODO: dup3() */
-/* TODO: accept4() + accept() args */
 /* TODO: inotify_init1() */
 /* TODO: eventfd() */
 /* TODO: signalfd() */
@@ -526,18 +529,40 @@ static int trace_creat(const char *pathname, mode_t mode)
 	return rc;
 }
 
+static void trace_accept_common(int fd, const char *name, struct sockaddr *addr)
+{
+	module_farg_t args[] = {
+		{.name = NULL, .value = NULL},
+		{.name = NULL, .value = NULL}
+	};
+	if (addr && addr->sa_family == AF_UNIX) {
+		args[0].name = "path";
+		args[0].value = ((struct sockaddr_un*)addr)->sun_path;
+	}
+	module_fcall_t call = {
+		.type = SP_RTRACE_FTYPE_ALLOC,
+		.res_type_id = res_fd.id,
+		.name = name,
+		.res_size = 1,
+		.res_id = (pointer_t)fd,
+	};
+	sp_rtrace_write_function_call(&call, NULL, args);
+}
+
 static int trace_accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
 {
 	int rc = trace_off.accept(sockfd, addr, addrlen);
 	if (rc != -1) {
-		module_fcall_t call = {
-				.type = SP_RTRACE_FTYPE_ALLOC,
-				.res_type_id = res_fd.id,
-				.name = "accept",
-				.res_size = 1,
-				.res_id = (pointer_t)rc,
-		};
-		sp_rtrace_write_function_call(&call, NULL, NULL);
+		trace_accept_common(rc, "accept", addr);
+	}
+	return rc;
+}
+
+static int trace_accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags)
+{
+	int rc = trace_off.accept4(sockfd, addr, addrlen, flags);
+	if (rc != -1) {
+		trace_accept_common(rc, "accept4", addr);
 	}
 	return rc;
 }
@@ -704,6 +729,7 @@ static trace_t trace_on = {
 	.fcloseall = trace_fcloseall,
 	.creat = trace_creat,
 	.accept = trace_accept,
+	.accept4 = trace_accept4,
 	.dup = trace_dup,
 	.fcntl = trace_fcntl,
 	.socketpair = trace_socketpair,
@@ -815,6 +841,11 @@ int creat(const char *pathname, mode_t mode)
 int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
 {
 	return trace_rt->accept(sockfd, addr, addrlen);
+}
+
+int accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags)
+{
+	return trace_rt->accept4(sockfd, addr, addrlen, flags);
 }
 
 int dup(int oldfd)
@@ -1004,6 +1035,12 @@ static int init_accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
 	return trace_init_rt->accept(sockfd, addr, addrlen);
 }
 
+static int init_accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags)
+{
+	trace_initialize();
+	return trace_init_rt->accept4(sockfd, addr, addrlen, flags);
+}
+
 static int init_dup(int oldfd)
 {
 	trace_initialize();
@@ -1085,6 +1122,7 @@ static trace_t trace_init = {
 	.fcloseall = init_fcloseall,
 	.creat = init_creat,
 	.accept = init_accept,
+	.accept4 = init_accept4,
 	.dup = init_dup,
 	.fcntl = init_fcntl,
 	.socketpair = init_socketpair,
