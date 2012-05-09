@@ -1,3 +1,17 @@
+sp-rtrace (devel), -- May 2012:
+  * sp-rtrace module API change and code refactoring
+    - exits with error if resolving of any of the functions
+      that module overloads fails
+  * Large number of missing functions added to the file module
+    and some corner case issues fixed in it
+  * More readable & consistent function arguments (for callgraphs),
+    all FDs are decimals and hex numbers are prefixed with 0x
+  * New rtrace-function-address and rtrace-alloc-sizes helper scripts
+  * Large number of extra compiler warnings enabled and fixed,
+    fixes to error handling
+  * Fix test-suite tests and it on certain errors killing whole
+    desktop session
+
 sp-rtrace (1.9), 20 Mar 2012:
   * Fixes for 64-bit hosts
   * rtrace-graphs-overview fix for (Ubuntu) Dash shell printf
