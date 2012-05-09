@@ -533,8 +533,7 @@ static void write_initial_data(void)
 	write_module_info(&def_module);
 	/* write MI packets for all tracing modules */
 	for (i = 0; i < rtrace_module_index; i++) {
-		rtrace_module_t* module = &rtrace_modules[i];
-		write_module_info(module);
+		write_module_info(&rtrace_modules[i]);
 	}
 	/* write resource registry records */
 	for (i = 0; i < rtrace_resource_index; i++) {
