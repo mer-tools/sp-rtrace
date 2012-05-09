@@ -44,50 +44,12 @@
 
 #include "common/sp_rtrace_proto.h"
 
+#define ALIGN_TO_4KB (size) (((size)+4095) & 0xFFFFFC00)
+
 /* some of the info is needed also afterwards,
  * so this is disabled for now
  */
 #define DO_CLEANUP 0
-
-/* Module information */
-static sp_rtrace_module_info_t module_info = {
-		.type = MODULE_TYPE_PRELOAD,
-		.version_major = 1,
-		.version_minor = 0,
-		.name = "shmposix",
-		.description = "Posix shared memory tracking module.",
-};
-
-/* resource identifiers */
-static module_resource_t res_pshmmap = {
-	.type = "pshmmap",
-	.desc = "posix shared memory mapping",
-	.flags = SP_RTRACE_RESOURCE_DEFAULT,
-};
-
-static module_resource_t res_fshmmap = {
-	.type = "fshmmap",
-	.desc = "file mapping",
-	.flags = SP_RTRACE_RESOURCE_DEFAULT,
-};
-
-static module_resource_t res_shmmap = {
-	.type = "shmmap",
-	.desc = "generic memory mapping",
-	.flags = SP_RTRACE_RESOURCE_DEFAULT,
-};
-
-static module_resource_t res_pshmobj = {
-	.type = "pshmobj",
-	.desc = "posix shared memory object",
-	.flags = SP_RTRACE_RESOURCE_DEFAULT,
-};
-
-static module_resource_t res_pshmfd = {
-	.type = "pshmfd",
-	.desc = "opened posix shared memory object",
-	.flags = SP_RTRACE_RESOURCE_DEFAULT,
-};
 
 
  /*
@@ -130,6 +92,48 @@ static trace_t* trace_rt = &trace_init;
 
 /* Initialization runtime function references */
 static trace_t* trace_init_rt = &trace_off;
+
+/* Module information */
+static const sp_rtrace_module_info_t module_info = {
+	.type = MODULE_TYPE_PRELOAD,
+	.version_major = 1,
+	.version_minor = 0,
+	.symcount = sizeof(trace_t)/sizeof(pointer_t),
+	.symtable = (const pointer_t*)&trace_off,
+	.name = "shmposix",
+	.description = "Posix shared memory tracking module.",
+};
+
+/* resource identifiers */
+static module_resource_t res_pshmmap = {
+	.type = "pshmmap",
+	.desc = "posix shared memory mapping",
+	.flags = SP_RTRACE_RESOURCE_DEFAULT,
+};
+
+static module_resource_t res_fshmmap = {
+	.type = "fshmmap",
+	.desc = "file mapping",
+	.flags = SP_RTRACE_RESOURCE_DEFAULT,
+};
+
+static module_resource_t res_shmmap = {
+	.type = "shmmap",
+	.desc = "generic memory mapping",
+	.flags = SP_RTRACE_RESOURCE_DEFAULT,
+};
+
+static module_resource_t res_pshmobj = {
+	.type = "pshmobj",
+	.desc = "posix shared memory object",
+	.flags = SP_RTRACE_RESOURCE_DEFAULT,
+};
+
+static module_resource_t res_pshmfd = {
+	.type = "pshmfd",
+	.desc = "opened posix shared memory object",
+	.flags = SP_RTRACE_RESOURCE_DEFAULT,
+};
 
 
 /*
@@ -577,7 +581,7 @@ static void trace_initialize(void)
 			if (sp_rtrace_initialize() && init_mode == MODULE_LOADED) {
 				init_mode = MODULE_READY;
 
-				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
+				sp_rtrace_register_module(&module_info, enable_tracing);
 				sp_rtrace_register_resource(&res_pshmmap);
 				sp_rtrace_register_resource(&res_fshmmap);
 				sp_rtrace_register_resource(&res_shmmap);

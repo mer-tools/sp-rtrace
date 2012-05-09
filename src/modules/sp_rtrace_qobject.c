@@ -46,23 +46,7 @@
 #include "common/htable.h"
 
 
-
-/* Module information */
-static sp_rtrace_module_info_t module_info = {
-		MODULE_TYPE_PRELOAD,
-		1,
-		0,
-		"qobject",
-		"QObject tracking module. Tracks construction and destruction of QObject based class instances.",
-};
-
 #define QOBJECT_RES_SIZE	1
-
-static module_resource_t res_qobject = {
-		.type = "qobject",
-		.desc = "QObject instance",
-		.flags = SP_RTRACE_RESOURCE_DEFAULT,
-};
 
 /* target function prototypes */
 typedef void (*qobject_dtor0_t)(void* self);
@@ -108,6 +92,23 @@ static trace_t* trace_rt = &trace_init;
 /* Initialization runtime function references */
 static trace_t* trace_init_rt = &trace_off;
 
+/* Module information */
+static const sp_rtrace_module_info_t module_info = {
+	MODULE_TYPE_PRELOAD,
+	1,
+	0,
+	.symcount = sizeof(trace_t)/sizeof(pointer_t),
+	.symtable = (const pointer_t*)&trace_off,
+	"qobject",
+	"QObject tracking module. Tracks construction and destruction of QObject based class instances.",
+};
+
+static module_resource_t res_qobject = {
+	.type = "qobject",
+	.desc = "QObject instance",
+	.flags = SP_RTRACE_RESOURCE_DEFAULT,
+};
+
 
 /**
  * Enables/disables tracing.
@@ -152,7 +153,7 @@ static void trace_initialize(void)
 
 		case MODULE_LOADED: {
 			if (sp_rtrace_initialize()) {
-				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
+				sp_rtrace_register_module(&module_info, enable_tracing);
 				sp_rtrace_register_resource(&res_qobject);
 				trace_init_rt = trace_rt;
 				init_mode = MODULE_READY;

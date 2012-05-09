@@ -46,40 +46,10 @@
 #include "common/htable.h"
 
 
-/* Module information */
-static sp_rtrace_module_info_t module_info = {
-		.type = MODULE_TYPE_PRELOAD,
-		.version_major = 1,
-		.version_minor = 0,
-		.name = "shmsysv",
-		.description = "Shared memory segment tracking module. "
-				       "Tracks shared memory segment creation and destruction by "
-				       "the current process.",
-};
-
-static module_resource_t res_segment = {
-		.type = "segment",
-		.desc = "shared memory segment",
-		.flags = SP_RTRACE_RESOURCE_REFCOUNT,
-};
-
-static module_resource_t res_address = {
-		.type = "address",
-		.desc = "shared memory attachments",
-		.flags = SP_RTRACE_RESOURCE_DEFAULT,
-};
-
-static module_resource_t res_control = {
-		.type = "control",
-		.desc = "shared memory segment control operation",
-		.flags = SP_RTRACE_RESOURCE_DEFAULT,
-};
-
-#
 #ifdef __amd64__
  #define IPC_64  0x00
 #else
- #define IPC_64 	  0x100
+ #define IPC_64  0x100
 #endif
 
 /*
@@ -172,6 +142,39 @@ static trace_t* trace_rt = &trace_init;
 /* Initialization runtime function references */
 static trace_t* trace_init_rt = &trace_off;
 
+
+/* Module information */
+static const sp_rtrace_module_info_t module_info = {
+	.type = MODULE_TYPE_PRELOAD,
+	.version_major = 1,
+	.version_minor = 0,
+	.symcount = sizeof(trace_t)/sizeof(pointer_t),
+	.symtable = (const pointer_t*)&trace_off,
+	.name = "shmsysv",
+	.description = "Shared memory segment tracking module. "
+		       "Tracks shared memory segment creation and destruction by "
+		       "the current process.",
+};
+
+static module_resource_t res_segment = {
+	.type = "segment",
+	.desc = "shared memory segment",
+	.flags = SP_RTRACE_RESOURCE_REFCOUNT,
+};
+
+static module_resource_t res_address = {
+	.type = "address",
+	.desc = "shared memory attachments",
+	.flags = SP_RTRACE_RESOURCE_DEFAULT,
+};
+
+static module_resource_t res_control = {
+	.type = "control",
+	.desc = "shared memory segment control operation",
+	.flags = SP_RTRACE_RESOURCE_DEFAULT,
+};
+
+
 /**
  * Enables/disables tracing.
  *
@@ -206,7 +209,7 @@ static void trace_initialize(void)
 
 		case MODULE_LOADED: {
 			if (sp_rtrace_initialize()) {
-				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
+				sp_rtrace_register_module(&module_info, enable_tracing);
 				sp_rtrace_register_resource(&res_segment);
 				sp_rtrace_register_resource(&res_address);
 				sp_rtrace_register_resource(&res_control);

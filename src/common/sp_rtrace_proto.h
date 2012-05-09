@@ -325,6 +325,8 @@ typedef struct {
 	int type;
 	int version_major;
 	int version_minor;
+	unsigned int symcount;
+	const pointer_t *symtable;
 	const char* name;
 	const char* description;
 } sp_rtrace_module_info_t;

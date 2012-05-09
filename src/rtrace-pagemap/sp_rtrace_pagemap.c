@@ -70,13 +70,15 @@
 
 /* Module information */
 static sp_rtrace_module_info_t module_info = {
-		.type = MODULE_TYPE_PRELOAD,
-		.version_major = 1,
-		.version_minor = 0,
-		.name = "pagemap",
-		.description = "Memory page utilization module. "
-				       "Finds rw pages containing only zero bytes and attaches page mapping data "
-				       "from /proc/pid/pagemap and /proc/pageflags.",
+	.type = MODULE_TYPE_PRELOAD,
+	.version_major = 1,
+	.version_minor = 0,
+	.symcount = 0,
+	.symtable = NULL,
+	.name = "pagemap",
+	.description = "Memory page utilization module. "
+	               "Finds rw pages containing only zero bytes and attaches page mapping data "
+		       "from /proc/pid/pagemap and /proc/pageflags.",
 };
 
 static bool trace_enabled = false;
@@ -562,7 +564,7 @@ static void trace_pagemap_fini(void) __attribute__((destructor));
 
 static void trace_pagemap_init(void)
 {
-	sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
+	sp_rtrace_register_module(&module_info, enable_tracing);
 }
 
 static void trace_pagemap_fini(void)

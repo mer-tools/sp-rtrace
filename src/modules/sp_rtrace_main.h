@@ -93,14 +93,11 @@ typedef void (*sp_rtrace_enable_tracing_t)(bool);
  * The main module uses registered functions to disable tracing in all modules before
  * calling some libc functions (for example backtrace). Or some functions might end
  * in infinite recursion.
- * @param[in] name          the module name.
- * @param[in] vmajor        the module version major number.
- * @param[in] vminor        the module version minor number.
+ * @param[in] info          pointer to the module information structure.
  * @param[in] enable_func   the trace enabling/disabling function.
  * @return                  the module id or 0 if module registry is full.
  */
-unsigned int sp_rtrace_register_module(const char* name, unsigned char vmajor, unsigned char vminor,
-		sp_rtrace_enable_tracing_t enable_func);
+unsigned int sp_rtrace_register_module(const sp_rtrace_module_info_t *info, sp_rtrace_enable_tracing_t enable_func);
 
 
 /**
@@ -113,6 +110,7 @@ unsigned int sp_rtrace_register_module(const char* name, unsigned char vmajor, u
  * Note that the resource type and desc values must refer to preallocated
  * strings (either static or dynamic), which must not be freed until the module
  * is unloaded.
+ * Resource ID is written to given resource structure.
  * @param[in,out] resource in  - the resource data.
  *                         out - the resource identifier.
  * @return                 the resource type id or 0 if resource registry is full.

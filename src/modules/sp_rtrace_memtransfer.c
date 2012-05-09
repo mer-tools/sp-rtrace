@@ -79,23 +79,6 @@ char *strndupa(const char *s, size_t n);
  #undef mempcpy
 #endif
 
-/* Module information */
-static sp_rtrace_module_info_t module_info = {
-		.type = MODULE_TYPE_PRELOAD,
-		.version_major = 1,
-		.version_minor = 0,
-		.name = "memtransfer",
-		.description = "Memory transfer operation tracking module. "
-				       "Tracks calls of the functions that results in changing memtransfer "
-				       "blocks (strcpy, memmove, memset etc).",
-};
-
-static module_resource_t res_memtransfer = {
-		.type = "memtransfer",
-		.desc = "memory transfer operations in bytes",
-		.flags = SP_RTRACE_RESOURCE_DEFAULT,
-};
-
 
 /* Target function prototypes */
 typedef char* (*strcpy_t)(char* dst, const char* src);
@@ -179,6 +162,26 @@ static trace_t* trace_rt = &trace_init;
 /* Initialization runtime function references */
 static trace_t* trace_init_rt = &trace_off;
 
+/* Module information */
+static const sp_rtrace_module_info_t module_info = {
+	.type = MODULE_TYPE_PRELOAD,
+	.version_major = 1,
+	.version_minor = 0,
+	.symcount = sizeof(trace_t)/sizeof(pointer_t),
+	.symtable = (const pointer_t*)&trace_off,
+	.name = "memtransfer",
+	.description = "Memory transfer operation tracking module. "
+		        "Tracks calls of the functions that results in changing memtransfer "
+		        "blocks (strcpy, memmove, memset etc).",
+};
+
+static module_resource_t res_memtransfer = {
+	.type = "memtransfer",
+	.desc = "memory transfer operations in bytes",
+	.flags = SP_RTRACE_RESOURCE_DEFAULT,
+};
+
+
 /**
  * Enables/disables tracing.
  *
@@ -238,7 +241,7 @@ static void trace_initialize(void)
 
 		case MODULE_LOADED: {
 			if (sp_rtrace_initialize()) {
-				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
+				sp_rtrace_register_module(&module_info, enable_tracing);
 				sp_rtrace_register_resource(&res_memtransfer);
 				trace_init_rt = trace_rt;
 				init_mode = MODULE_READY;

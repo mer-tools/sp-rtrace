@@ -49,28 +49,6 @@
 
 #include "common/sp_rtrace_proto.h"
 
-/* Module information */
-static sp_rtrace_module_info_t module_info = {
-		.type = MODULE_TYPE_PRELOAD,
-		.version_major = 1,
-		.version_minor = 0,
-		.name = "file",
-		.description = "File operation tracking module. "
-				       "Tracks file opening/closing operations.",
-};
-
-static module_resource_t res_fd = {
-		.type = "fd",
-		.desc = "file descriptor",
-		.flags = SP_RTRACE_RESOURCE_DEFAULT,
-};
-
-static module_resource_t res_fp = {
-		.type = "fp",
-		.desc = "file pointer",
-		.flags = SP_RTRACE_RESOURCE_DEFAULT,
-};
-
 
 /* required for glibc < v2.11 */
 #ifndef F_GETOWN_EX
@@ -161,6 +139,32 @@ static trace_t* trace_rt = &trace_init;
 /* Initialization runtime function references */
 static trace_t* trace_init_rt = &trace_off;
 
+
+/* Module information */
+static const sp_rtrace_module_info_t module_info = {
+	.type = MODULE_TYPE_PRELOAD,
+	.version_major = 1,
+	.version_minor = 0,
+	.symcount = sizeof(trace_t)/sizeof(pointer_t),
+	.symtable = (const pointer_t*)&trace_off,
+	.name = "file",
+	.description = "File operation tracking module. "
+		       "Tracks file opening/closing operations.",
+};
+
+static module_resource_t res_fd = {
+	.type = "fd",
+	.desc = "file descriptor",
+	.flags = SP_RTRACE_RESOURCE_DEFAULT,
+};
+
+static module_resource_t res_fp = {
+	.type = "fp",
+	.desc = "file pointer",
+	.flags = SP_RTRACE_RESOURCE_DEFAULT,
+};
+
+
 /**
  * Enables/disables tracing.
  *
@@ -220,7 +224,7 @@ static void trace_initialize(void)
 			if (sp_rtrace_initialize() && init_mode == MODULE_LOADED) {
 				init_mode = MODULE_READY;
 
-				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
+				sp_rtrace_register_module(&module_info, enable_tracing);
 				sp_rtrace_register_resource(&res_fd);
 				sp_rtrace_register_resource(&res_fp);
 				trace_init_rt = trace_rt;

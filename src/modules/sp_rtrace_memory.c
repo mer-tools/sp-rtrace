@@ -45,22 +45,6 @@
 
 //#define MSG(text) {	char buffer[] = ">>>" text "\n"; if(write(STDERR_FILENO, buffer, sizeof(buffer))){}; }
 
-/* Module information */
-static sp_rtrace_module_info_t module_info = {
-		.type = MODULE_TYPE_PRELOAD,
-		.version_major = 1,
-		.version_minor = 0,
-		.name = "memory",
-		.description = "Memory allocation/deallocation tracking module. "
-				       "Tracks calls of malloc, calloc, realloc, posix_memalign "
-				       "and free functions.",
-};
-
-static module_resource_t res_memory = {
-		.type = "memory",
-		.desc = "memory allocation in bytes",
-		.flags = SP_RTRACE_RESOURCE_DEFAULT,
-};
 
 /* Internal allocation function emulation heap.
  * Used before the module is fully initialized.
@@ -110,6 +94,26 @@ static trace_t* trace_rt = &trace_init;
 /* Initialization runtime function references */
 static trace_t* trace_init_rt = &trace_off;
 
+/* Module information */
+static const sp_rtrace_module_info_t module_info = {
+	.type = MODULE_TYPE_PRELOAD,
+	.version_major = 1,
+	.version_minor = 0,
+	.symcount = sizeof(trace_t)/sizeof(pointer_t),
+	.symtable = (const pointer_t*)&trace_off,
+	.name = "memory",
+	.description = "Memory allocation/deallocation tracking module. "
+		       "Tracks calls of malloc, calloc, realloc, posix_memalign "
+		       "and free functions.",
+};
+
+static module_resource_t res_memory = {
+	.type = "memory",
+	.desc = "memory allocation in bytes",
+	.flags = SP_RTRACE_RESOURCE_DEFAULT,
+};
+
+
 /**
  * Enables/disables tracing.
  *
@@ -146,7 +150,7 @@ static void trace_initialize(void)
 			if (sp_rtrace_initialize()) {
 				init_mode = MODULE_READY;
 
-				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
+				sp_rtrace_register_module(&module_info, enable_tracing);
 				sp_rtrace_register_resource(&res_memory);
 				trace_init_rt = trace_rt;
 

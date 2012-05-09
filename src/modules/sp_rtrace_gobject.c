@@ -42,22 +42,6 @@
 
 #include "common/sp_rtrace_proto.h"
 
-/* Module information */
-static sp_rtrace_module_info_t module_info = {
-		.type = MODULE_TYPE_PRELOAD,
-		.version_major = 1,
-		.version_minor = 0,
-		.name = "gobject",
-		.description = "GObject tracking module. Tracks GObject references.",
-};
-
-
-static module_resource_t res_gobject = {
-		.type = "gobject",
-		.desc = "GObject instance",
-		.flags = SP_RTRACE_RESOURCE_REFCOUNT,
-};
-
 
  /*
   * file module function set
@@ -87,6 +71,24 @@ static trace_t* trace_rt = &trace_init;
 
 /* Initialization runtime function references */
 static trace_t* trace_init_rt = &trace_off;
+
+/* Module information */
+static const sp_rtrace_module_info_t module_info = {
+	.type = MODULE_TYPE_PRELOAD,
+	.version_major = 1,
+	.version_minor = 0,
+	.symcount = sizeof(trace_t)/sizeof(pointer_t),
+	.symtable = (const pointer_t*)&trace_off,
+	.name = "gobject",
+	.description = "GObject tracking module. Tracks GObject references.",
+};
+
+static module_resource_t res_gobject = {
+	.type = "gobject",
+	.desc = "GObject instance",
+	.flags = SP_RTRACE_RESOURCE_REFCOUNT,
+};
+
 
 /**
  * Enables/disables tracing.
@@ -120,7 +122,7 @@ static void trace_initialize(void)
 
 		case MODULE_LOADED: {
 			if (sp_rtrace_initialize()) {
-				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
+				sp_rtrace_register_module(&module_info, enable_tracing);
 				sp_rtrace_register_resource(&res_gobject);
 				trace_init_rt = trace_rt;
 				init_mode = MODULE_READY;

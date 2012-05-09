@@ -51,13 +51,13 @@
 #include "libunwind_support.h"
 
 /* module information */
-static sp_rtrace_module_info_t module_info = {
-		.type = MODULE_TYPE_UNDEFINED,
-		.version_major = 1,
-		.version_minor = 0,
-		.name = "main",
-		.description = "Main tracing module providing pre-processor "
-				       "communication and other tracing module management.",
+static const sp_rtrace_module_info_t module_info = {
+	.type = MODULE_TYPE_UNDEFINED,
+	.version_major = 1,
+	.version_minor = 0,
+	.name = "main",
+	.description = "Main tracing module providing pre-processor "
+		       "communication and other tracing module management.",
 };
 
 /* */
@@ -120,10 +120,10 @@ sp_rtrace_options_t* sp_rtrace_options = &rtrace_main_options;
  * initialization and pass its trace enable/disable function.
  */
 typedef struct rtrace_module_t {
-    const char* name;
-    int id;
-    unsigned char vmajor;
-    unsigned char vminor;
+	const char* name;
+	int id;
+	unsigned char vmajor;
+	unsigned char vminor;
 	sp_rtrace_enable_tracing_t enable;
 } rtrace_module_t;
 
@@ -388,14 +388,14 @@ static void get_proc_name(char* out, size_t size)
  * @param[in] minor   the module version number (minor).
  * @return            the number of bytes written.
  */
-static int write_module_info(int id, const char* name, unsigned char major, unsigned char minor)
+static int write_module_info(const rtrace_module_t *module)
 {
-    if (!sp_rtrace_options->enable) return 0;
-    PACKET_INIT(SP_RTRACE_PROTO_MODULE_INFO);
-    PACKET_WRITE(dword, id);
-    PACKET_WRITE(dword, (major << 16) | minor);
-    PACKET_WRITE(string, name);
-    PACKET_FINISH();
+	if (!sp_rtrace_options->enable) return 0;
+	PACKET_INIT(SP_RTRACE_PROTO_MODULE_INFO);
+	PACKET_WRITE(dword, module->id);
+	PACKET_WRITE(dword, (module->vmajor << 16) | module->vminor);
+	PACKET_WRITE(string, module->name);
+	PACKET_FINISH();
 }
 
 
@@ -518,22 +518,28 @@ static int write_heap_info(void)
  */
 static void write_initial_data(void)
 {
-    unsigned int i;
+	rtrace_module_t def_module = {
+		.id = 0, 
+		.name = module_info.name,
+		.vmajor = module_info.version_major,
+		.vminor = module_info.version_minor
+	};
+	unsigned int i;
 
 	pipe_buffer_reset();
 	write_handshake(SP_RTRACE_PROTO_VERSION_MAJOR, SP_RTRACE_PROTO_VERSION_MINOR, BUILD_ARCH);
 	write_output_settings(sp_rtrace_options->output_dir, sp_rtrace_options->postproc);
 	write_process_info();
-	write_module_info(0, module_info.name, module_info.version_major, module_info.version_minor);
+	write_module_info(&def_module);
 	/* write MI packets for all tracing modules */
 	for (i = 0; i < rtrace_module_index; i++) {
 		rtrace_module_t* module = &rtrace_modules[i];
-	    write_module_info(module->id, module->name, module->vmajor, module->vminor);
-    }
+		write_module_info(module);
+	}
 	/* write resource registry records */
 	for (i = 0; i < rtrace_resource_index; i++) {
-	    write_resource_registry(&rtrace_resources[i]);
-    }
+		write_resource_registry(&rtrace_resources[i]);
+	}
 
 	sp_rtrace_write_new_library("*");
 	pipe_buffer_flush();
@@ -764,8 +770,8 @@ int sp_rtrace_write_function_call(const module_fcall_t* call, const module_ftrac
 
 	pointer_t bt_frames[256];
 	module_ftrace_t trace_data = {
-			.nframes = 0,
-			.frames = bt_frames + BT_SKIP_TOP,
+		.nframes = 0,
+		.frames = bt_frames + BT_SKIP_TOP,
 	};
 
 	if (!trace && sp_rtrace_options->backtrace_depth && filter_validate(sp_rtrace_options->filter, call)) {
@@ -844,23 +850,33 @@ int sp_rtrace_write_function_call(const module_fcall_t* call, const module_ftrac
 	PACKET_FINISH();
 }
 
-unsigned int sp_rtrace_register_module(const char* name, unsigned char vmajor, unsigned char vminor, sp_rtrace_enable_tracing_t enable_func)
+unsigned int sp_rtrace_register_module(const sp_rtrace_module_info_t *info, sp_rtrace_enable_tracing_t enable_func)
 {
+	int i, ok = 1;
+	for (i = 0; i < info->symcount; i++) {
+		if (!info->symtable[i]) {
+			fprintf(stderr, "ERROR: sp-rtrace %s module traced function pointer %d couldn't be resolved!\n", info->name, i);
+			ok = 0;
+		}
+	}
+	if (!ok) {
+		exit(-1);
+	}
 	if (rtrace_module_index >= ARRAY_SIZE(rtrace_modules)) {
 		return 0;
 	}
 	rtrace_module_t* module = &rtrace_modules[rtrace_module_index];
 	module->enable = enable_func;
-	module->vmajor = vmajor;
-	module->vminor = vminor;
-    module->name = name;
-    module->id = (1 << rtrace_module_index++);
-    module->enable(sp_rtrace_options->enable);
+	module->vmajor = info->version_major;
+	module->vminor = info->version_minor;
+	module->name = info->name;
+	module->id = (1 << rtrace_module_index++);
+	module->enable(sp_rtrace_options->enable);
 
 	/* If the tracing has been already enabled,
 	 *  write module info packet for the registered module */
 	if (sp_rtrace_options->enable) {
-		write_module_info(module->id, name, vmajor, vminor);
+		write_module_info(module);
 	}
 	return module->id;
 }
@@ -871,17 +887,17 @@ unsigned int sp_rtrace_register_resource(module_resource_t* resource)
 	 * the registered id. */
 	unsigned int i;
 	for (i = 0; i < rtrace_resource_index; i++) {
-	   if (!strcmp(rtrace_resources[i].type, resource->type)) {
-		   resource->id = rtrace_resources[i].id;
-		   return resource->id;
-	   }
-    }
+		if (!strcmp(rtrace_resources[i].type, resource->type)) {
+			resource->id = rtrace_resources[i].id;
+			return resource->id;
+		}
+	}
 
 	/* Register new resource type */
 	if (rtrace_resource_index >= ARRAY_SIZE(rtrace_resources)) {
 		return -1;
 	}
-    resource->id = rtrace_resource_index + 1;
+	resource->id = rtrace_resource_index + 1;
 	rtrace_resources[rtrace_resource_index++] = *resource;
 	if (sp_rtrace_options->enable) {
 		write_resource_registry(resource);
