@@ -53,6 +53,9 @@
 /* the name used for unknown symbols */
 #define UNKNOWN_SYMBOL    "in ??"
 
+/* same as in bfd header except for bogus (char*) cast */
+#define bfd_get_const_filename(abfd) (abfd)->filename
+
 /* 64 bit compatibility */
 
 #ifndef __amd64__
@@ -402,7 +405,7 @@ static int rs_load_symbols(rs_cache_record_t* rec, const char* filename)
 		}
 		/* read the symbol table from opened file */
 		if ((bfd_get_file_flags (rec->file) & HAS_SYMS) == 0) {
-			msg_error("no symbols in %s\n", bfd_get_filename(rec->file));
+			msg_error("no symbols in %s\n", bfd_get_const_filename(rec->file));
 			return -EINVAL;
 		}
 
@@ -444,7 +447,7 @@ static int rs_load_symbols(rs_cache_record_t* rec, const char* filename)
 	}
 
 	if (symcount < 0) {
-		msg_error("%s: %s\n", bfd_get_filename(rec->file), bfd_errmsg(bfd_get_error()));
+		msg_error("%s: %s\n", bfd_get_const_filename(rec->file), bfd_errmsg(bfd_get_error()));
 		return -EINVAL;
 	}
 	rec->symcount = symcount;
