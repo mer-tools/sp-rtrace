@@ -206,7 +206,7 @@ static void trace_initialize(void)
 			trace_off.signalfd = (signalfd_t)dlsym(RTLD_NEXT, "signalfd");
 			trace_off.timerfd_create = (timerfd_create_t)dlsym(RTLD_NEXT, "timerfd_create");
 			trace_off.epoll_create = (epoll_create_t)dlsym(RTLD_NEXT, "epoll_create");
-			trace_off.epoll_create1 = (epoll_create1_t)dlsym(RTLD_NEXT, "epoll1_create");
+			trace_off.epoll_create1 = (epoll_create1_t)dlsym(RTLD_NEXT, "epoll_create1");
 			trace_off.posix_openpt = (posix_openpt_t)dlsym(RTLD_NEXT, "posix_openpt");
 			trace_off.getpt = (getpt_t)dlsym(RTLD_NEXT, "getpt");
 			trace_off.pipe = (pipe_t)dlsym(RTLD_NEXT, "pipe");
@@ -567,7 +567,11 @@ static void trace_accept_common(int fd, const char *name, struct sockaddr *addr)
 		{.name = NULL, .value = NULL},
 		{.name = NULL, .value = NULL}
 	};
-	if (addr && addr->sa_family == AF_UNIX) {
+	/* unix socket address with valid nil-terminated name string?
+	 * (use sun_path as it's larger than BSD sa_data)
+	 */
+	if (addr && addr->sa_family == AF_UNIX &&
+	    memchr(addr->sa_data, '\0', sizeof(((struct sockaddr_un*)addr)->sun_path))) {
 		args[0].name = "path";
 		args[0].value = ((struct sockaddr_un*)addr)->sun_path;
 	}
@@ -609,6 +613,10 @@ static int trace_fcntl(int fd, int cmd, ...)
 		case F_SETFL:
 		case F_SETLK:
 		case F_SETLKW:
+#ifndef __amd64__
+		case F_SETLK64:
+		case F_SETLKW64:
+#endif
 		case F_GETLK:
 		case F_SETOWN:
 		case F_GETOWN_EX:
@@ -646,7 +654,7 @@ static int trace_fcntl(int fd, int cmd, ...)
 		}
 
 		default: {
-			fprintf(stderr, "SP-RTRACE: fcntl(%d, %d, ...) potentially missing arg emulation!\n", fd, cmd);
+			/* rest of fcntl operations recognized by the trap fcntl() function */
 			rc = trace_off.fcntl(fd, cmd);
 			break;
 		}
@@ -1018,7 +1026,7 @@ int fcntl(int fd, int cmd, ...)
 		}
 
 		default: {
-			fprintf(stderr, "ERROR: Unknown fcntl command: %d (0x%x)\n", cmd, cmd);
+			fprintf(stderr, "ERROR: unknown sp-rtrace file module fcntl command: %d (0x%x)\n", cmd, cmd);
 			exit (-1);
 		}
 	}
@@ -1226,6 +1234,10 @@ static int init_fcntl(int fd, int cmd, ...)
 		case F_SETFL:
 		case F_SETLK:
 		case F_SETLKW:
+#ifndef __amd64__
+		case F_SETLK64:
+		case F_SETLKW64:
+#endif
 		case F_GETLK:
 		case F_SETOWN:
 		case F_GETOWN_EX:
