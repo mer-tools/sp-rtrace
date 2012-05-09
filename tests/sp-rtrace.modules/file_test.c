@@ -51,15 +51,18 @@
 
 void test_fd(void)
 {
-	int fd = creat(OUTPUT_FILENAME, 0666);
+	FILE* fp;
+	int fd, fd2, fd3, fd4, fds[2];
+
+	fd = creat(OUTPUT_FILENAME, 0666);
 	close(fd);
 	fd = open64(OUTPUT_FILENAME, O_RDONLY);
 	close(fd);
 
 	fd = open(OUTPUT_FILENAME, O_RDONLY);
-	int fd2 = dup2(fd, 40);
-	int fd3 = dup3(fd, 60, O_CLOEXEC);
-	int fd4 = dup(fd3);
+	fd2 = dup2(fd, 40);
+	fd3 = dup3(fd, 60, O_CLOEXEC);
+	fd4 = dup(fd2);
 	close(fd2);
 	close(fd3);
 	close(fd4);
@@ -67,7 +70,7 @@ void test_fd(void)
 	fd2 = fcntl(fd, F_DUPFD, 80);
 	close(fd);
 	/* closing this stream closes also pointed FD */
-	FILE* fp = fdopen(fd2, "r");
+	fp = fdopen(fd2, "r");
 	fclose(fp);
 
 	DIR *dir = opendir(".");
@@ -75,7 +78,6 @@ void test_fd(void)
 	close(fd);
 	closedir(dir);
 
-	int fds[2];
 	pipe(fds);
 	close(fds[0]);
 	close(fds[1]);
@@ -193,8 +195,11 @@ void test_socket(void)
 
 void test_fd_special(void)
 {
-	int fd1 = inotify_init();
-	int fd2 = inotify_init1(IN_CLOEXEC);
+	sigset_t mask;
+	int fd1, fd2, fd3;
+
+	fd1 = inotify_init();
+	fd2 = inotify_init1(IN_CLOEXEC);
 	close(fd2);
 	close(fd1);
 
@@ -203,8 +208,6 @@ void test_fd_special(void)
 	close(fd1);
 	close(fd2);
 
-	int fd3;
-	sigset_t mask;
 	sigemptyset(&mask);
 	sigaddset(&mask, SIGCONT);
 	fd1 = signalfd(-1, &mask, 0);
@@ -223,8 +226,9 @@ void test_fd_special(void)
 
 void test_fp(void)
 {
-	FILE* fp1 = fopen(OUTPUT_FILENAME, "r");
-	FILE* fp2 = freopen(OUTPUT_FILENAME, "w+", fp1);
+	FILE *fp1, *fp2;
+	fp1 = fopen(OUTPUT_FILENAME, "r");
+	fp2 = freopen(OUTPUT_FILENAME, "w+", fp1);
 	fcloseall();
 }
 
@@ -236,5 +240,6 @@ int main()
 	test_fp();
 	
 	sleep (1);
+	unlink(OUTPUT_FILENAME);
 	return 0;
 }
