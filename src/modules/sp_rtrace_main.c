@@ -851,7 +851,7 @@ int sp_rtrace_write_function_call(const module_fcall_t* call, const module_ftrac
 
 unsigned int sp_rtrace_register_module(const sp_rtrace_module_info_t *info, sp_rtrace_enable_tracing_t enable_func)
 {
-	int i, ok = 1;
+	unsigned int i, ok = 1;
 	for (i = 0; i < info->symcount; i++) {
 		if (!info->symtable[i]) {
 			fprintf(stderr, "ERROR: sp-rtrace %s module traced function pointer %d couldn't be resolved!\n", info->name, i);
