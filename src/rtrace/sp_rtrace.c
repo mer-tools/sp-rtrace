@@ -288,12 +288,13 @@ static int open_postproc_pipe(void)
 		dup2(fd[0], STDIN_FILENO);
 
 		/* create post-process argument list */
-		const char* argv[32];
+		char* argv[32];
+		char argv0[] = SP_RTRACE_POSTPROC;
 		char* ptr = rtrace_options.postproc;
 		int argc = 0;
 		char output_dir[512];
 		
-		argv[argc++] = SP_RTRACE_POSTPROC;
+		argv[argc++] = argv0;
 		/* forward --output-dir option to post-processor */
 		if (rtrace_options.output_dir) {
 			snprintf(output_dir, sizeof(output_dir), "--output-dir=%s", rtrace_options.output_dir);
