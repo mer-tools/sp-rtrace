@@ -373,12 +373,6 @@ static int trace_close(int fd)
 /* code common to all dup*() traces */
 static void trace_dup_common(const char* name, int oldfd, int newfd, int retfd)
 {
-	char oldfd_s[16]; 
-	sprintf(oldfd_s, "%d", oldfd);
-	module_farg_t args[] = {
-		{.name = "oldfd", .value = oldfd_s},
-		{.name = NULL, .value = NULL}
-	};
 	if (newfd >= 0) {
 		/* newfd is first closed if it was already open */
 		module_fcall_t call1 = {
@@ -388,8 +382,14 @@ static void trace_dup_common(const char* name, int oldfd, int newfd, int retfd)
 			.res_size = 0,
 			.res_id = (pointer_t)newfd,
 		};
-		sp_rtrace_write_function_call(&call1, NULL, args);
+		sp_rtrace_write_function_call(&call1, NULL, NULL);
 	}
+	char oldfd_s[16]; 
+	sprintf(oldfd_s, "%d", oldfd);
+	module_farg_t args[] = {
+		{.name = "oldfd", .value = oldfd_s},
+		{.name = NULL, .value = NULL}
+	};
 	module_fcall_t call2 = {
 		.type = SP_RTRACE_FTYPE_ALLOC,
 		.res_type_id = res_fd.id,
@@ -474,7 +474,7 @@ static int trace_fcntl(int fd, int cmd, ...)
 /* code common to socket*() functions */
 static void trace_socket_common(const char* name, int fd, int domain, int type, int protocol)
 {
-	char domain_s[64], type_s[64], protocol_s[64];
+	char domain_s[16], type_s[16], protocol_s[16];
 	snprintf(domain_s, sizeof(domain_s), "0x%x", domain);
 	snprintf(type_s, sizeof(type_s), "0x%x", type);
 	snprintf(protocol_s, sizeof(protocol_s), "0x%x", protocol);
@@ -583,6 +583,7 @@ static void trace_bind_common(const char *name, int fd, const struct sockaddr *a
 	default:
 		snprintf(last_sock_info, sizeof(last_sock_info), "0x%x", addr->sa_family);
 		args[0].value = last_sock_info;
+		args[1].value = NULL;
 	}
 
 	/* "create" new socket with more info */
@@ -615,22 +616,25 @@ static int trace_connect(int sockfd, const struct sockaddr *addr, socklen_t addr
 }
 
 /* code common to accept*() traces */
-static void trace_accept_common(const char *name, int fd)
+static void trace_accept_common(const char *name, int sockfd, int retfd)
 {
+	char sockfd_s[16];
+	snprintf(sockfd_s, sizeof(sockfd_s), "%d", sockfd);
 	module_farg_t args[] = {
+		{.name = "sockfd", .value = sockfd_s},
 		{.name = NULL, .value = NULL},
 		{.name = NULL, .value = NULL}
 	};
-	if (last_sock_fd == fd && last_sock_info[0]) {
-		args[0].name  = "path";
-		args[0].value = last_sock_info;
+	if (last_sock_fd == sockfd && last_sock_info[0]) {
+		args[1].name  = "path";
+		args[1].value = last_sock_info;
 	}
 	module_fcall_t call = {
 		.type = SP_RTRACE_FTYPE_ALLOC,
 		.res_type_id = res_fd.id,
 		.name = name,
 		.res_size = 1,
-		.res_id = (pointer_t)fd,
+		.res_id = (pointer_t)retfd,
 	};
 	sp_rtrace_write_function_call(&call, NULL, args);
 }
@@ -639,7 +643,7 @@ static int trace_accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
 {
 	int rc = trace_off.accept(sockfd, addr, addrlen);
 	if (rc != -1) {
-		trace_accept_common("accept", rc);
+		trace_accept_common("accept", sockfd, rc);
 	}
 	return rc;
 }
@@ -648,7 +652,7 @@ static int trace_accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, 
 {
 	int rc = trace_off.accept4(sockfd, addr, addrlen, flags);
 	if (rc != -1) {
-		trace_accept_common("accept4", rc);
+		trace_accept_common("accept4", sockfd, rc);
 	}
 	return rc;
 }
@@ -817,7 +821,7 @@ static FILE *trace_fdopen(int fd, const char *mode)
 {
 	FILE* rc = trace_off.fdopen(fd, mode);
 	if (rc) {
-		char fd_s[32];
+		char fd_s[16];
 		sprintf(fd_s, "%d", fd);
 		/* The file  descriptor is not dup'ed, but it will be
 		 * closed when the stream created by fdopen() is closed.
