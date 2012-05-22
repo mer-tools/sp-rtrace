@@ -40,6 +40,11 @@
 #include <sys/signalfd.h>
 #include <sys/timerfd.h>
 #include <sys/epoll.h>
+#include <net/ethernet.h>
+#include <netpacket/packet.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <linux/netlink.h>
 #include <dlfcn.h>
 #include <stdarg.h>
 #include <unistd.h>
@@ -74,6 +79,8 @@ typedef int (*dup3_t)(int oldfd, int newfd, int flags);
 typedef int (*fcntl_t)(int fd, int cmd, ...);
 typedef int (*socket_t)(int domain, int type, int protocol);
 typedef int (*socketpair_t)(int domain, int type, int protocol, int sv[2]);
+typedef int (*bind_t)(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+typedef int (*connect_t)(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
 typedef int (*accept_t)(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
 typedef int (*accept4_t)(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags);
 typedef int (*inotify_init_t)(void);
@@ -106,6 +113,8 @@ typedef struct {
 	fcntl_t fcntl;
 	socket_t socket;
 	socketpair_t socketpair;
+	bind_t bind;
+	connect_t connect;
 	accept_t accept;
 	accept4_t accept4;
 	inotify_init_t inotify_init;
@@ -197,6 +206,8 @@ static void trace_initialize(void)
 			trace_off.fcntl = (fcntl_t)dlsym(RTLD_NEXT, "fcntl");
 			trace_off.socket = (socket_t)dlsym(RTLD_NEXT, "socket");
 			trace_off.socketpair = (socketpair_t)dlsym(RTLD_NEXT, "socketpair");
+			trace_off.bind = (bind_t)dlsym(RTLD_NEXT, "bind");
+			trace_off.connect = (connect_t)dlsym(RTLD_NEXT, "connect");
 			trace_off.accept = (accept_t)dlsym(RTLD_NEXT, "accept");
 			trace_off.accept4 = (accept4_t)dlsym(RTLD_NEXT, "accept4");
 			trace_off.inotify_init = (inotify_init_t)dlsym(RTLD_NEXT, "inotify_init");
@@ -503,20 +514,116 @@ static int trace_socketpair(int domain, int type, int protocol, int sv[2])
 	return rc;
 }
 
-/* code common to both accept*() traces */
-static void trace_accept_common(int fd, const char *name, struct sockaddr *addr)
+static char last_sock_info[sizeof(struct sockaddr_un)];
+static int last_sock_fd = -1;
+
+/* code common to both connect() & bind() traces */
+static void trace_bind_common(const char *name, int fd, const struct sockaddr *addr, socklen_t addrlen)
+{
+	/* "remove" previous socket to "create" a new one
+	 * with more readable info of what it is.
+	 */
+	module_fcall_t call1 = {
+		.type = SP_RTRACE_FTYPE_FREE,
+		.res_type_id = res_fd.id,
+		.name = name,
+		.res_size = 0,
+		.res_id = (pointer_t)fd,
+	};
+	sp_rtrace_write_function_call(&call1, NULL, NULL);
+
+	last_sock_fd = fd;
+	last_sock_info[0] = '\0';
+	module_farg_t args[] = {
+		{.name = "family", .value = NULL},
+		{.name = NULL, .value = last_sock_info},
+		{.name = NULL, .value = NULL}
+	};
+	switch(addr->sa_family) {
+	case AF_UNIX:
+		args[0].value = "AF_UNIX";
+		args[1].name  = "path";
+		int maxlen = (addrlen < sizeof(last_sock_info) ? addrlen : sizeof(last_sock_info));
+		strncpy(last_sock_info, addr->sa_data, maxlen);
+		last_sock_info[sizeof(last_sock_info)-1] = '\0';
+		break;
+	case AF_INET:
+		args[0].value = "AF_INET";
+		args[1].name  = "address:port";
+		union {
+			uint32_t s_addr;
+			unsigned char byte[4];
+		} convert;
+		convert.s_addr = ((const struct sockaddr_in*)addr)->sin_addr.s_addr;
+		sprintf(last_sock_info, "%d.%d.%d.%d:%d",
+			convert.byte[0], convert.byte[1], convert.byte[2], convert.byte[3],
+			((const struct sockaddr_in*)addr)->sin_port);
+		break;
+	case AF_INET6:
+		args[0].value = "AF_INET6";
+		args[1].name  = "address/port";
+		unsigned const char *hex = ((const struct sockaddr_in6*)addr)->sin6_addr.s6_addr;
+		sprintf(last_sock_info, "%2x:%2x:%2x:%2x:%2x:%2x:%2x:%2x:%2x:%2x:%2x:%2x:%2x:%2x:%2x:%2x/%d",
+			hex[0], hex[1], hex[2], hex[3], hex[4], hex[5], hex[6], hex[7],
+			hex[8], hex[9], hex[10], hex[11], hex[12], hex[13], hex[14], hex[15],
+			((const struct sockaddr_in6*)addr)->sin6_port);
+		break;
+	case AF_NETLINK:
+		args[0].value = "AF_NETLINK";
+		args[1].name  = "dest-PID/socket";
+		sprintf(last_sock_info, "%d", ((const struct sockaddr_nl*)addr)->nl_pid);
+		break;
+	case AF_PACKET:
+		args[0].value = "AF_PACKET";
+		args[1].name  = "protocol:interface";
+		sprintf(last_sock_info, "0x%x:0x%x",
+			((const struct sockaddr_ll*)addr)->sll_protocol,
+			((const struct sockaddr_ll*)addr)->sll_ifindex);
+		break;
+	default:
+		snprintf(last_sock_info, sizeof(last_sock_info), "0x%x", addr->sa_family);
+		args[0].value = last_sock_info;
+	}
+
+	/* "create" new socket with more info */
+	module_fcall_t call2 = {
+		.type = SP_RTRACE_FTYPE_ALLOC,
+		.res_type_id = res_fd.id,
+		.name = name,
+		.res_size = 0,
+		.res_id = (pointer_t)fd,
+	};
+	sp_rtrace_write_function_call(&call2, NULL, args);
+}
+
+static int trace_bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
+{
+	int rc = trace_off.bind(sockfd, addr, addrlen);
+	if (rc == 0) {
+		trace_bind_common("bind", sockfd, addr, addrlen);
+	}
+	return rc;
+}
+
+static int trace_connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
+{
+	int rc = trace_off.connect(sockfd, addr, addrlen);
+	if (rc == 0) {
+		trace_bind_common("connect", sockfd, addr, addrlen);
+	}
+	return rc;
+}
+
+/* code common to accept*() traces */
+static void trace_accept_common(const char *name, int fd)
 {
 	module_farg_t args[] = {
 		{.name = NULL, .value = NULL},
 		{.name = NULL, .value = NULL}
 	};
-	/* unix socket address with valid nil-terminated name string?
-	 * (use sun_path as it's larger than BSD sa_data)
-	 */
-	if (addr && addr->sa_family == AF_UNIX &&
-	    memchr(addr->sa_data, '\0', sizeof(((struct sockaddr_un*)addr)->sun_path))) {
-		args[0].name = "path";
-		args[0].value = ((struct sockaddr_un*)addr)->sun_path;
+	if (last_sock_fd == fd && last_sock_info[0]) {
+		args[0].name  = "path";
+		args[0].value = last_sock_info;
 	}
 	module_fcall_t call = {
 		.type = SP_RTRACE_FTYPE_ALLOC,
@@ -532,7 +639,7 @@ static int trace_accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
 {
 	int rc = trace_off.accept(sockfd, addr, addrlen);
 	if (rc != -1) {
-		trace_accept_common(rc, "accept", addr);
+		trace_accept_common("accept", rc);
 	}
 	return rc;
 }
@@ -541,7 +648,7 @@ static int trace_accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, 
 {
 	int rc = trace_off.accept4(sockfd, addr, addrlen, flags);
 	if (rc != -1) {
-		trace_accept_common(rc, "accept4", addr);
+		trace_accept_common("accept4", rc);
 	}
 	return rc;
 }
@@ -796,6 +903,8 @@ static trace_t trace_on = {
 	.fcntl = trace_fcntl,
 	.socket = trace_socket,
 	.socketpair = trace_socketpair,
+	.bind = trace_bind,
+	.connect = trace_connect,
 	.accept = trace_accept,
 	.accept4 = trace_accept4,
 	.inotify_init = trace_inotify_init,
@@ -952,6 +1061,16 @@ int socket(int domain, int type, int protocol)
 int socketpair(int domain, int type, int protocol, int sv[2])
 {
 	return trace_rt->socketpair(domain, type, protocol, sv);
+}
+
+int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
+{
+	return trace_rt->bind(sockfd, addr, addrlen);
+}
+
+int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
+{
+	return trace_rt->connect(sockfd, addr, addrlen);
 }
 
 int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
@@ -1177,6 +1296,18 @@ static int init_socketpair(int domain, int type, int protocol, int sv[2])
 	return trace_init_rt->socketpair(domain, type, protocol, sv);
 }
 
+static int init_bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
+{
+	trace_initialize();
+	return trace_init_rt->bind(sockfd, addr, addrlen);
+}
+
+static int init_connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
+{
+	trace_initialize();
+	return trace_init_rt->connect(sockfd, addr, addrlen);
+}
+
 static int init_accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
 {
 	trace_initialize();
@@ -1298,6 +1429,8 @@ static trace_t trace_init = {
 	.fcntl = init_fcntl,
 	.socket = init_socket,
 	.socketpair = init_socketpair,
+	.bind = init_bind,
+	.connect = init_connect,
 	.accept = init_accept,
 	.accept4 = init_accept4,
 	.inotify_init = init_inotify_init,
