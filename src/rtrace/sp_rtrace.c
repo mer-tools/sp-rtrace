@@ -563,14 +563,14 @@ static void toggle_child_processes(int pid)
 				char cmdline[PATH_MAX];
 				snprintf(cmdline, sizeof(cmdline), "/proc/%i/cmdline", cpid);
 				int fd = open(cmdline, O_RDONLY);
+				cmdline[0] = '\0';
 				if (fd) {
-					read(fd, cmdline, sizeof(cmdline));
+					(void)read(fd, cmdline, sizeof(cmdline));
 					close(fd);
 				}
-				else {
-					cmdline[0] = '\0';
+				if (!strstr(cmdline, SP_RTRACE_PREPROC)) {
+					toggle_child_process(cpid);
 				}
-				if (!strstr(cmdline, SP_RTRACE_PREPROC)) toggle_child_process(cpid);
 			}
 		}
 	}
