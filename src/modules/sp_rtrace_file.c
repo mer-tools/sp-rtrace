@@ -64,6 +64,29 @@
  #define F_SETOWN_EX	15
 #endif
 
+#define MAX_FD_COUNT 1024
+
+typedef enum {
+	FD_TYPE_UNKNOWN = 0,
+	FD_TYPE_CLOSED,
+	FD_TYPE_FILE,
+	FD_TYPE_SOCKET,
+	FD_TYPE_INOTIFY,
+	FD_TYPE_EVENTFD,
+	FD_TYPE_SIGNALFD,
+	FD_TYPE_TIMERFD,
+	FD_TYPE_EPOLL,
+	FD_TYPE_PTY,
+	FD_TYPE_PIPE,
+	FD_TYPE_COUNT
+} rt_fd_t;
+
+static const char *rt_fd_strings[FD_TYPE_COUNT] = {
+	"(unknown)", "(closed)", "file", "socket", "inotify", "eventfd",
+	"signalfd", "timerfd", "epoll", "pty", "pipe"
+};
+static rt_fd_t rt_fds[MAX_FD_COUNT];
+
  /*
   * file module function set
   */
@@ -244,6 +267,35 @@ static void trace_initialize(void)
 			}
 		}
 	}
+	memset(rt_fds, FD_TYPE_UNKNOWN, sizeof(rt_fds));
+}
+
+static void set_fd(int fd, rt_fd_t type)
+{
+	if (fd < MAX_FD_COUNT) {
+		rt_fds[fd] = type;
+	} else {
+		fprintf(stderr, "WARNING: sp-rtrace file module max FD value exeeded (%d > %d)!\n", fd, MAX_FD_COUNT);
+	}
+}
+
+static rt_fd_t get_fd(int fd)
+{
+	if (fd < MAX_FD_COUNT) {
+		return rt_fds[fd];
+	} else {
+		fprintf(stderr, "WARNING: sp-rtrace file module max FD value exeeded (%d > %d)!\n", fd, MAX_FD_COUNT);
+		return FD_TYPE_UNKNOWN;
+	}
+}
+
+static const char *get_fd_string(rt_fd_t type)
+{
+	if (type < FD_TYPE_COUNT) {
+		return rt_fd_strings[type];
+	} else {
+		abort();
+	}
 }
 
 /*
@@ -270,6 +322,7 @@ static int trace_creat(const char *pathname, mode_t mode)
 				{.name = NULL, .value = NULL}
 		};
 		sp_rtrace_write_function_call(&call, NULL, args);
+		set_fd(rc, FD_TYPE_FILE);
 	}
 	return rc;
 }
@@ -293,6 +346,7 @@ static void trace_open_common(const char* name, int fd, const char* path, int fl
 		{.name = NULL, .value = NULL}
 	};
 	sp_rtrace_write_function_call(&call, NULL, args);
+	set_fd(fd, FD_TYPE_FILE);
 }
 
 static int trace_open(const char* pathname, int flags, ...)
@@ -366,6 +420,7 @@ static int trace_close(int fd)
 				.res_id = (pointer_t)fd,
 		};
 		sp_rtrace_write_function_call(&call, NULL, NULL);
+		set_fd(rc, FD_TYPE_CLOSED);
 	}
 	return rc;
 }
@@ -373,8 +428,8 @@ static int trace_close(int fd)
 /* code common to all dup*() traces */
 static void trace_dup_common(const char* name, int oldfd, int newfd, int retfd)
 {
-	if (newfd >= 0) {
-		/* newfd is first closed if it was already open */
+	if (newfd >= 0 && newfd == retfd) {
+		/* newfd is closed if it was already open */
 		module_fcall_t call1 = {
 			.type = SP_RTRACE_FTYPE_FREE,
 			.res_type_id = res_fd.id,
@@ -385,9 +440,11 @@ static void trace_dup_common(const char* name, int oldfd, int newfd, int retfd)
 		sp_rtrace_write_function_call(&call1, NULL, NULL);
 	}
 	char oldfd_s[16]; 
+	rt_fd_t fdtype = get_fd(oldfd);
 	sprintf(oldfd_s, "%d", oldfd);
 	module_farg_t args[] = {
 		{.name = "oldfd", .value = oldfd_s},
+		{.name = "type", .value = get_fd_string(fdtype)},
 		{.name = NULL, .value = NULL}
 	};
 	module_fcall_t call2 = {
@@ -398,6 +455,7 @@ static void trace_dup_common(const char* name, int oldfd, int newfd, int retfd)
 		.res_id = (pointer_t)retfd,
 	};
 	sp_rtrace_write_function_call(&call2, NULL, args);
+	set_fd(retfd, fdtype);
 }
 
 static int trace_dup(int oldfd)
@@ -493,6 +551,7 @@ static void trace_socket_common(const char* name, int fd, int domain, int type, 
 		{.name = NULL, .value = NULL}
 	};
 	sp_rtrace_write_function_call(&call, NULL, args);
+	set_fd(fd, FD_TYPE_SOCKET);
 }
 
 static int trace_socket(int domain, int type, int protocol)
@@ -514,7 +573,7 @@ static int trace_socketpair(int domain, int type, int protocol, int sv[2])
 	return rc;
 }
 
-static char last_sock_info[sizeof(struct sockaddr_un)];
+static char last_sock_info[sizeof(struct sockaddr_un)]; /* should be at least 64-bytes for IPv6 address */
 static int last_sock_fd = -1;
 
 /* code common to both connect() & bind() traces */
@@ -595,6 +654,7 @@ static void trace_bind_common(const char *name, int fd, const struct sockaddr *a
 		.res_id = (pointer_t)fd,
 	};
 	sp_rtrace_write_function_call(&call2, NULL, args);
+	set_fd(fd, FD_TYPE_SOCKET);	/* reset just in case */
 }
 
 static int trace_bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
@@ -625,7 +685,7 @@ static void trace_accept_common(const char *name, int sockfd, int retfd)
 		{.name = NULL, .value = NULL},
 		{.name = NULL, .value = NULL}
 	};
-	if (last_sock_fd == sockfd && last_sock_info[0]) {
+	if (get_fd(sockfd) == FD_TYPE_SOCKET && last_sock_fd == sockfd && last_sock_info[0]) {
 		args[1].name  = "path";
 		args[1].value = last_sock_info;
 	}
@@ -637,6 +697,7 @@ static void trace_accept_common(const char *name, int sockfd, int retfd)
 		.res_id = (pointer_t)retfd,
 	};
 	sp_rtrace_write_function_call(&call, NULL, args);
+	set_fd(retfd, FD_TYPE_SOCKET);
 }
 
 static int trace_accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
@@ -658,7 +719,7 @@ static int trace_accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, 
 }
 
 /* code common to misc *fd*(), without flags traces */
-static void trace_fd_common(const char *name, int fd)
+static void trace_fd_common(const char *name, rt_fd_t type, int fd)
 {
 	module_fcall_t call = {
 		.type = SP_RTRACE_FTYPE_ALLOC,
@@ -668,10 +729,11 @@ static void trace_fd_common(const char *name, int fd)
 		.res_id = (pointer_t)fd,
 	};
 	sp_rtrace_write_function_call(&call, NULL, NULL);
+	set_fd(fd, type);
 }
 
 /* code common to misc *fd*(), with flags traces */
-static void trace_fd_common_flags(const char *name, int fd, int flags)
+static void trace_fd_common_flags(const char *name, rt_fd_t type, int fd, int flags)
 {
 	char flags_s[16];
 	snprintf(flags_s, sizeof(flags_s), "0x%x", flags);
@@ -687,13 +749,14 @@ static void trace_fd_common_flags(const char *name, int fd, int flags)
 		.res_id = (pointer_t)fd,
 	};
 	sp_rtrace_write_function_call(&call, NULL, args);
+	set_fd(fd, type);
 }
 
 static int trace_inotify_init(void)
 {
 	int rc = trace_off.inotify_init();
 	if (rc != -1) {
-		trace_fd_common("inotify_init", rc);
+		trace_fd_common("inotify_init", FD_TYPE_INOTIFY, rc);
 	}
 	return rc;
 }
@@ -702,7 +765,7 @@ static int trace_inotify_init1(int flags)
 {
 	int rc = trace_off.inotify_init1(flags);
 	if (rc != -1) {
-		trace_fd_common_flags("inotify_init1", rc, flags);
+		trace_fd_common_flags("inotify_init1", FD_TYPE_INOTIFY, rc, flags);
 	}
 	return rc;
 }
@@ -711,7 +774,7 @@ static int trace_eventfd(int initval, int flags)
 {
 	int rc = trace_off.eventfd(initval, flags);
 	if (rc != -1) {
-		trace_fd_common_flags("eventfd", rc, flags);
+		trace_fd_common_flags("eventfd", FD_TYPE_EVENTFD, rc, flags);
 	}
 	return rc;
 }
@@ -720,7 +783,7 @@ static int trace_signalfd(int fd, const sigset_t *mask, int flags)
 {
 	int rc = trace_off.signalfd(fd, mask, flags);
 	if (fd == -1 && rc != -1) {
-		trace_fd_common_flags("signalfd", rc, flags);
+		trace_fd_common_flags("signalfd", FD_TYPE_SIGNALFD, rc, flags);
 	}
 	return rc;
 }
@@ -729,7 +792,7 @@ static int trace_timerfd_create(int clockid, int flags)
 {
 	int rc = trace_off.timerfd_create(clockid, flags);
 	if (rc != -1) {
-		trace_fd_common_flags("timerfd_create", rc, flags);
+		trace_fd_common_flags("timerfd_create", FD_TYPE_TIMERFD, rc, flags);
 	}
 	return rc;
 }
@@ -738,7 +801,7 @@ static int trace_epoll_create(int size)
 {
 	int rc = trace_off.epoll_create(size);
 	if (rc != -1) {
-		trace_fd_common("epoll_create", rc);
+		trace_fd_common("epoll_create", FD_TYPE_EPOLL, rc);
 	}
 	return rc;
 }
@@ -747,7 +810,7 @@ static int trace_epoll_create1(int flags)
 {
 	int rc = trace_off.epoll_create1(flags);
 	if (rc != -1) {
-		trace_fd_common_flags("epoll_create1", rc, flags);
+		trace_fd_common_flags("epoll_create1", FD_TYPE_EPOLL, rc, flags);
 	}
 	return rc;
 }
@@ -756,7 +819,7 @@ static int trace_getpt(void)
 {
 	int rc = trace_off.getpt();
 	if (rc != -1) {
-		trace_fd_common("getpt", rc);
+		trace_fd_common("getpt", FD_TYPE_PTY, rc);
 	}
 	return rc;
 }
@@ -765,7 +828,7 @@ static int trace_posix_openpt(int flags)
 {
 	int rc = trace_off.posix_openpt(flags);
 	if (rc != -1) {
-		trace_fd_common_flags("posix_openpt", rc, flags);
+		trace_fd_common_flags("posix_openpt", FD_TYPE_PTY, rc, flags);
 	}
 	return rc;
 }
@@ -774,8 +837,8 @@ static int trace_pipe(int pipefd[2])
 {
 	int rc = trace_off.pipe(pipefd);
 	if (rc != -1) {
-		trace_fd_common("pipe", pipefd[0]);
-		trace_fd_common("pipe", pipefd[1]);
+		trace_fd_common("pipe", FD_TYPE_PIPE, pipefd[0]);
+		trace_fd_common("pipe", FD_TYPE_PIPE, pipefd[1]);
 	}
 	return rc;
 }
@@ -784,8 +847,8 @@ static int trace_pipe2(int pipefd[2], int flags)
 {
 	int rc = trace_off.pipe2(pipefd, flags);
 	if (rc != -1) {
-		trace_fd_common_flags("pipe2", pipefd[0], flags);
-		trace_fd_common_flags("pipe2", pipefd[1], flags);
+		trace_fd_common_flags("pipe2", FD_TYPE_PIPE, pipefd[0], flags);
+		trace_fd_common_flags("pipe2", FD_TYPE_PIPE, pipefd[1], flags);
 	}
 	return rc;
 }
@@ -834,6 +897,7 @@ static FILE *trace_fdopen(int fd, const char *mode)
 				.res_id = (pointer_t)fd,
 		};
 		sp_rtrace_write_function_call(&call1, NULL, NULL);
+		set_fd(fd, FD_TYPE_CLOSED);
 
 		module_fcall_t call2 = {
 				.type = SP_RTRACE_FTYPE_ALLOC,
