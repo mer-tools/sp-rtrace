@@ -120,6 +120,8 @@ typedef int (*pipe2_t)(int pipefd[2], int flags);
 typedef FILE* (*fopen_t)(const char *path, const char *mode);
 typedef FILE* (*fdopen_t)(int fd, const char *mode);
 typedef FILE* (*freopen_t)(const char *path, const char *mode, FILE *stream);
+typedef FILE* (*popen_t)(const char *command, const char *type);
+typedef int (*pclose_t)(FILE *fp);
 typedef int (*fclose_t)(FILE *fp);
 typedef int (*fcloseall_t)(void);
 
@@ -154,6 +156,8 @@ typedef struct {
 	fopen_t fopen;
 	fdopen_t fdopen;
 	freopen_t freopen;
+	popen_t popen;
+	pclose_t pclose;
 	fclose_t fclose;
 	fcloseall_t fcloseall;
 } trace_t;
@@ -247,6 +251,8 @@ static void trace_initialize(void)
 			trace_off.fopen = (fopen_t)dlsym(RTLD_NEXT, "fopen");
 			trace_off.fdopen = (fdopen_t)dlsym(RTLD_NEXT, "fdopen");
 			trace_off.freopen = (freopen_t)dlsym(RTLD_NEXT, "freopen");
+			trace_off.popen = (popen_t)dlsym(RTLD_NEXT, "popen");
+			trace_off.pclose = (pclose_t)dlsym(RTLD_NEXT, "pclose");
 			trace_off.fclose = (fclose_t)dlsym(RTLD_NEXT, "fclose");
 			trace_off.fcloseall = (fcloseall_t)dlsym(RTLD_NEXT, "fcloseall");
 			init_mode = MODULE_LOADED;
@@ -940,6 +946,24 @@ static FILE *trace_freopen(const char *path, const char *mode, FILE *stream)
 	return rc;
 }
 
+static FILE *trace_popen(const char *command, const char *type)
+{
+	FILE* rc = trace_off.popen(command, type);
+	if (rc) {
+		trace_fopen_common("popen", rc, command, type);
+	}
+	return rc;
+}
+
+static int trace_pclose(FILE *fp)
+{
+	int rc = trace_off.pclose(fp);
+	if (rc == 0) {
+		trace_fclose_common("pclose", fp);
+	}
+	return rc;
+}
+
 static int trace_fclose(FILE *fp)
 {
 	int rc = trace_off.fclose(fp);
@@ -989,6 +1013,8 @@ static trace_t trace_on = {
 	.fopen = trace_fopen,
 	.fdopen = trace_fdopen,
 	.freopen = trace_freopen,
+	.popen = trace_popen,
+	.pclose = trace_pclose,
 	.fclose = trace_fclose,
 	.fcloseall = trace_fcloseall,
 };
@@ -1219,6 +1245,16 @@ FILE *fdopen(int fd, const char *mode)
 FILE *freopen(const char *path, const char *mode, FILE *stream)
 {
 	return trace_rt->freopen(path, mode, stream);
+}
+
+FILE *popen(const char *command, const char *type)
+{
+	return trace_rt->popen(command, type);
+}
+
+int pclose(FILE *fp)
+{
+	return trace_rt->pclose(fp);
 }
 
 int fclose(FILE *fp)
@@ -1472,6 +1508,18 @@ static FILE *init_freopen(const char *path, const char *mode, FILE *stream)
 	return trace_init_rt->freopen(path, mode, stream);
 }
 
+FILE *init_popen(const char *command, const char *type)
+{
+	trace_initialize();
+	return trace_init_rt->popen(command, type);
+}
+
+static int init_pclose(FILE *fp)
+{
+	trace_initialize();
+	return trace_init_rt->pclose(fp);
+}
+
 static int init_fclose(FILE *fp)
 {
 	trace_initialize();
@@ -1515,6 +1563,8 @@ static trace_t trace_init = {
 	.fopen = init_fopen,
 	.fdopen = init_fdopen,
 	.freopen = init_freopen,
+	.popen = init_popen,
+	.pclose = init_pclose,
 	.fclose = init_fclose,
 	.fcloseall = init_fcloseall,
 };
