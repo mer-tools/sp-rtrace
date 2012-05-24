@@ -179,6 +179,10 @@
 # - Rename&reuse refs to only_counts to indicate kBs aren't needed
 # 2012-03-20:
 # - Fix max size limit
+# 2012-05-24:
+# - Consider traced functions for --include-only option too, not
+#   just functions in backtrace
+# - Add trace info like process name to callgraph
 #
 # Originally this file (alloc-tree) was a part of libleaks package, but
 # renamed and moved to the sp-rtrace package during libleaks redesign.
@@ -333,6 +337,7 @@ class Node:
 class Graph:
     def __init__(self):
         # filled through .update()
+        self.info = None
         self.trace_id = 0       # trace count, used as trace ID, start from 1
         self.recursed = 0       # count of recursed functions
         self.nodes = {}         # all nodes in the backtraces
@@ -531,7 +536,18 @@ class Rtrace:
         self.free_pattern  = re.compile("^[0-9]+\.( @[0-9a-fA-F]+|)( \[[^]]+\]|) ([a-zA-Z_].+)\((0x[a-fA-F0-9]+)\)")
         # format: at <source file>:<line nro>
         self.gdb_src_pattern = re.compile(".* at ([^:]+):([0-9]+)$")
-        self.leaks = open(tracefile)
+        self.leaksfile = open(tracefile)
+        self.get_info()
+
+    def get_info(self):
+        "get process/trace information from first trace file line"
+        line = self.leaksfile.readline().split(',')
+        info = { 'process': "UNKNOWN", 'pid': "0" }
+        for item in line:
+            if '=' in item:
+                name,value = item.strip().split('=')
+                info[name] = value
+        self.info = info
 
     def libname_strip(self, libname):
         "returns library name stripped of 'lib' prefix and '.so*' postfix"
@@ -651,6 +667,7 @@ class Rtrace:
 
     def parse(self, graph, options):
         "return parsed graph out of the given rtrace report"
+        graph.info = self.info
         only_counts = options.only_counts
         top = 0     # highest allocation address/ID for current backtrace
         nonames = 0 # backtrace lines without function name
@@ -666,7 +683,7 @@ class Rtrace:
         skip = False    # whether to skip rest of the current backtrace
         stack = False   # whether current alloc/free includes stack frames
         include = False # whether to include this backtrace
-        for line in self.leaks:
+        for line in self.leaksfile:
             # new backtrace?
             if line[0] in "0123456789":
                 oldname = name
@@ -715,6 +732,9 @@ class Rtrace:
                     skip = False
                     stack = False
                     include = False
+                    for fun in options.include_funs:
+                        if name.startswith(fun):
+                            include = True
                 elif argkeys:
                     # add sizes for previous args from this backtrace
                     argsizes.append(sizes)
@@ -810,9 +830,23 @@ class GraphvizReport:
             self.strip_args = None
         else:
             self.strip_args = re.compile("\(.*\)")
+        self.parse_info(graph.info)
         # these need to be overridden in subclasses
         self.heading = ""
-    
+
+    def parse_info(self, traceinfo):
+        keys = traceinfo.keys()
+        keys.sort()
+        info = None
+        for key in keys:
+            if key not in ('arch', 'filter', 'pid', 'process', 'timestamp'):
+                continue
+            if info:
+                info += ", %s=%s" % (key, traceinfo[key])
+            else:
+                info = "%s=%s" % (key, traceinfo[key])
+        self.info = info
+
     def header(self):
         "output GraphViz header with help, layout and style options"
         print """
@@ -841,8 +875,8 @@ node [shape="ellipse"];
 edge [dir="forward" arrowsize="2"];
 
 labelloc="t";
-label="%s";
-""" % self.heading
+label="%s\\n\\n(%s)";
+""" % (self.heading, self.info)
 
     def footer(self):
         "output GraphViz footer"
@@ -1010,7 +1044,7 @@ class Options:
     "command line option help, parsing and storage"
     cluster = []        # which libraries should be clustered
     include_funs = []   # include only backtraces matching these functions
-    include_args = []   # include only backtraces with functions matching these args
+    include_args = []   # include only backtraces with functions having these args
     ignore = []         # prefixes of functions to ignore in the backtraces
     ignore_middle = []  # substrings of function to ignore in the backtraces
     noignore = []       # prefixes of functions not to ignore
@@ -1217,7 +1251,7 @@ class Options:
         debug("keep_types = %s (show C++ method signature args?)" % self.bool_str(self.keep_types))
         self.show_list(self.cluster, "Cluster functions within given sources/libs together")
         self.show_list(self.include_funs, "Include only backtraces having node(s) which names start with these prefixes")
-        self.show_list(self.include_args, "Include only backtraces which traced functions args match these")
+        self.show_list(self.include_args, "Include only backtraces which traced functions contain these args")
         self.show_list(self.ignore, "Ignore in backtraces nodes which names have these prefixes")
         self.show_list(self.ignore_middle, "Ignore in backtraces nodes which names have these substrings")
         self.show_list(self.noignore, "However, do not ignore nodes which names have these prefixes")
