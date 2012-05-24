@@ -1,14 +1,19 @@
-sp-rtrace (devel), -- May 2012:
+sp-rtrace (devel), -- --- 2012:
   * sp-rtrace module API change and code refactoring
     - exits with error if resolving of any of the functions
       that module overloads fails
-  * Large number of missing functions added to the file module
-    and some corner case issues fixed in it
+  * Large number of missing functions added to the file module,
+    more info for sockets (extracted from bind/connect calls),
+    and some corner case issues fixed in the module
   * More readable & consistent function arguments (for callgraphs),
     all FDs are decimals and hex numbers are prefixed with 0x
+  * Callgraph includes process name etc to callgraph, --include-only
+    option acts on traced functions too
   * New rtrace-function-address and rtrace-alloc-sizes helper scripts
   * Large number of extra compiler warnings enabled and fixed,
     fixes to error handling
+  * Large code reductions in modules by grouping similar trace
+    functions and using common helpers for printing their trace data
   * Fix test-suite tests and it on certain errors killing whole
     desktop session
 
