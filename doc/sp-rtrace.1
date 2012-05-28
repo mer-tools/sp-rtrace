@@ -30,29 +30,33 @@ By default the home directory is used. Specifying stdout will force
 post-processor to use standard output.
 .TP
 \fI--manage-preproc\fP (\fI-m\fP)
-Specifies the use of "managed mode".  In managed mode invoked sp-rtrace
-exits after starting the traced process, as the pre-processor sp-rtrace
-instance will then be launched internally when needed.
+Specifies the use of "managed mode".  Needed for tracing sub-processes
+and in some other cases.
 
-In non-managed mode the main tracing module tries to connect to a
-named pipe (/tmp/rtrace-<pid>) created by pre-processor. But if
-tracing of the sub-processes right after they're forked is required,
-or there are problems in establishing data connection through named
-pipe (e.g. because there are intermediate processes which result in
-the started and traced processes PIDs not matching), or traced process
-controls all terminal output, managed mode should be used.
+In managed mode invoked sp-rtrace exits after starting the traced
+process, as the pre-processor sp-rtrace instance will then be launched
+internally when needed.
 
-Because sp-rtrace process used for the data pre-processing is in
-managed mode started by the tracing module, pre-processor standard
-input can be used instead of named pipes.  Another difference to
-non-managed mode is that stopping tracing in managed mode terminates
-the pre-processor and causes SIGCHLD signal to be sent the traced
-process, which can affect its behavior.
+In non-managed mode the main tracing module tries to connect to
+a named pipe (/tmp/rtrace-<pid>) created by pre-processor. But if
+tracing of the sub-processes is required, or there are problems in
+establishing data connection through named pipe (e.g. because there
+are intermediate processes which result in the started and traced
+processes PIDs not matching), or traced process controls all terminal
+output, managed mode needs to be used.
+
+Because in managed mode sp-rtrace process used for the data
+pre-processing is started by the tracing module, pre-processor
+standard input can be used instead of named pipes.  Another difference
+to non-managed mode is that stopping tracing in managed mode
+terminates the pre-processor and causes SIGCHLD signal to be sent
+the traced process, which can affect its behavior.
 
 Managed mode must be used also when the target process needs to
 enable/disable tracing by sending toggle signal to itself.
 
-By default the managed mode is not used.
+By default the managed mode (and tracing of child processes)
+is not used.
 
 .TP
 \fI--toggle-signal\fP=<signal> (\fI-S\fP <signal>)

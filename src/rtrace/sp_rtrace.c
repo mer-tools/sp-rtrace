@@ -115,7 +115,7 @@ static void display_usage(void)
 	       "  Where the <options> are:\n"
 	       "  -o <outputdir>  - the directory for output files\n"
 	       "  -m              - instruct tracing module to start its own pre-processor\n"
-	       "                    process for data handling\n"
+	       "                    processes for data handling, needed for sub-process tracing\n"
 	       "  -e <modules>    - a list of LD_PRELOAD tracing modules, separated by ':'\n"
 	       "  -s              - enable tracing immediately at start\n"
 	       "  -b <depth>      - the maximum number of function addresses in stack trace\n"

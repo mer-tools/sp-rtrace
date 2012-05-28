@@ -566,7 +566,7 @@ void* dlopen(const char* library, int flag)
 }
 
 /**
- * SIGUSR1 handler. Enables/disables tracing
+ * Signal handler for enabling/disabling tracing
  */
 static void signal_toggle_tracing(int signo __attribute((unused)))
 {
@@ -968,6 +968,9 @@ bool sp_rtrace_initialize(void)
 		if (env_manage_preproc && *env_manage_preproc == '1') {
 			sp_rtrace_options->manage_preproc = true;
 			LOG("manage_preproc=%d", sp_rtrace_options->manage_preproc);
+		} else {
+			/* don't propagate non-managed sp-rtrace to child processes */
+			unsetenv("LD_PRELOAD");
 		}
 
 		/* read post-processor options */
