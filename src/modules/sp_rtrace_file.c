@@ -1508,7 +1508,7 @@ static FILE *init_freopen(const char *path, const char *mode, FILE *stream)
 	return trace_init_rt->freopen(path, mode, stream);
 }
 
-FILE *init_popen(const char *command, const char *type)
+static FILE *init_popen(const char *command, const char *type)
 {
 	trace_initialize();
 	return trace_init_rt->popen(command, type);
