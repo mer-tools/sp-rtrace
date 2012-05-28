@@ -230,10 +230,8 @@ void test_fp(void)
 	fp1 = fopen(OUTPUT_FILENAME, "r");
 	fp2 = freopen(OUTPUT_FILENAME, "w+", fp1);
 	fclose(fp1);
-#if 0	/* would need to be tested with managed mode */
 	fp1 = popen("echo", "re");
 	pclose(fp1);
-#endif
 	fcloseall();
 }
 

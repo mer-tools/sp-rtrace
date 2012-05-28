@@ -30,13 +30,11 @@ set src_opts "-O0"
 proc test_file_module { args } {
 	test_module file creat:1 close:1 open64:1 open:1 dup:1 dup2:1 \
 		dup3:1 fcntl:1 fdopen:1 fclose:1 openat:1 pipe:1 pipe2:1 \
-		socketpair:1 socket:1 accept4:1 inotify_init:1 inotify_init1:1 \
-		epoll_create:1 epoll_create1:1 signalfd:1 timerfd_create:1 \
-		eventfd:1 posix_openpt:1 getpt:1 fopen:1 freopen:1 fclose:1 \
-		fcloseall:1
+		socketpair:1 socket:1 connect:1 bind:1 accept4:1 \
+		inotify_init:1 inotify_init1:1 epoll_create:1 epoll_create1:1 \
+		signalfd:1 timerfd_create:1 eventfd:1 posix_openpt:1 getpt:1 \
+		fopen:1 freopen:1 fclose:1 fcloseall:1 popen:1 # pclose:1
 }
-
-#  popen:1, pclose:1 would need sp-rtrace managed mode use
 
 set result [rt_compile $src_dir $out_file $src_deps $src_opts]
 if { $result == "" } {
