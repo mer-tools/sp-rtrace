@@ -185,7 +185,7 @@ static const sp_rtrace_module_info_t module_info = {
 	.symtable = (const pointer_t*)&trace_off,
 	.name = "file",
 	.description = "File operation tracking module. "
-		       "Tracks file opening/closing operations.",
+		       "Tracks functions opening and closing file descriptors or FILE pointers.",
 };
 
 static module_resource_t res_fd = {

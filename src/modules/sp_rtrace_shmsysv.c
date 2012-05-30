@@ -152,8 +152,7 @@ static const sp_rtrace_module_info_t module_info = {
 	.symtable = (const pointer_t*)&trace_off,
 	.name = "shmsysv",
 	.description = "Shared memory segment tracking module. "
-		       "Tracks shared memory segment creation and destruction by "
-		       "the current process.",
+		       "Tracks shared memory segment creation and destruction.",
 };
 
 static module_resource_t res_segment = {

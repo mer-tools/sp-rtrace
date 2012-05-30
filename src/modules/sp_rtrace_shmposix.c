@@ -101,7 +101,7 @@ static const sp_rtrace_module_info_t module_info = {
 	.symcount = sizeof(trace_t)/sizeof(pointer_t),
 	.symtable = (const pointer_t*)&trace_off,
 	.name = "shmposix",
-	.description = "Posix shared memory tracking module.",
+	.description = "Posix shared memory tracking module. Tracks mmap() etc.",
 };
 
 /* resource identifiers */

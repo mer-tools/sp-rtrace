@@ -171,8 +171,7 @@ static const sp_rtrace_module_info_t module_info = {
 	.symtable = (const pointer_t*)&trace_off,
 	.name = "memtransfer",
 	.description = "Memory transfer operation tracking module. "
-		        "Tracks calls of the functions that results in changing memtransfer "
-		        "blocks (strcpy, memmove, memset etc).",
+		       "Tracks functions that read/write memory blocks (strcpy, memset, wmemmove etc).",
 };
 
 static module_resource_t res_memtransfer = {
