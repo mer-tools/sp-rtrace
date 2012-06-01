@@ -90,28 +90,28 @@ typedef struct {
   *
   * @param[in] rec    the cache record to free.
   */
- static void rs_cache_record_clear(rs_cache_record_t* rec)
- {
- 	if (rec->symbols) {
- 		free(rec->symbols);
- 		rec->symbols = NULL;
- 	}
- 	if (rec->file) {
- 		bfd_close(rec->file);
- 		rec->file = NULL;
- 	}
- 	if (rec->dbg_name) {
- 		free(rec->dbg_name);
- 		rec->dbg_name = NULL;
- 	}
- 	if (rec->fd) {
- 		munmap(rec->image, rec->image_size);
- 		close(rec->fd);
- 		rec->fd = 0;
- 		rec->image = NULL;
- 	}
- 	rec->mmap = NULL;
- }
+static void rs_cache_record_clear(rs_cache_record_t* rec)
+{
+	if (rec->symbols) {
+		free(rec->symbols);
+		rec->symbols = NULL;
+	}
+	if (rec->file) {
+		bfd_close(rec->file);
+		rec->file = NULL;
+	}
+	if (rec->dbg_name) {
+		free(rec->dbg_name);
+		rec->dbg_name = NULL;
+	}
+	if (rec->fd) {
+		munmap(rec->image, rec->image_size);
+		close(rec->fd);
+		rec->fd = 0;
+		rec->image = NULL;
+	}
+	rec->mmap = NULL;
+}
 
 /*
  * Memory mapping support

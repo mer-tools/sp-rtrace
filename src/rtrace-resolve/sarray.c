@@ -42,9 +42,9 @@ int sarray_init(sarray_t* array, int limit, op_binary_t do_compare)
 
 void sarray_free(sarray_t* array, op_unary_t free_item)
 {
-    if (free_item) {
-        sarray_foreach(array, free_item);
-    }
+	if (free_item) {
+		sarray_foreach(array, free_item);
+	}
 	free(array->data);
 }
 

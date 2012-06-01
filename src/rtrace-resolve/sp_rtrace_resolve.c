@@ -95,25 +95,25 @@ static void free_options(void)
 
 static void display_usage(void)
 {
-	printf( "sp-rtrace-resolve name resolver is used for stack trace function\n"
-			"name resolving. It accepts text output produced by post-processor\n"
-			"or itself and generates the same format text data.\n"
-			"Usage: sp-rtrace-resolve [<options>]\n"
-			"where <options> are:\n"
-			"  -i <path>    - the input file path. Standard input used by default.\n"
-			"  -o <path>    - the output file path. Standard output is used by default.\n"
-			"  -m <mode>    - The operation mode, where <mode> can be either multi-pass or\n"
-			"                 single-cache.\n"
-			"  -t <method>  - The resolving method, where <method> can be either elf or\n"
-			"                 bfd.\n"
-			"  -p           - keep the path of the source file (by default the path\n"
-			"                 is stripped leaving only the file name.\n"
-			"  -k           - keep resolved names (by default the resolved names\n"
-			"                 from input stream are ignored and the addresses are\n"
-			"                 always resolved again).\n"
-			"  -s           - specify guest OS root path for cross platform resolving.\n"
-			"  -h           - this help page.\n"
-	);
+	printf("sp-rtrace-resolve name resolver is used for stack trace function\n"
+	       "name resolving. It accepts text output produced by post-processor\n"
+	       "or itself and generates the same format text data.\n"
+	       "Usage: sp-rtrace-resolve [<options>]\n"
+	       "where <options> are:\n"
+	       "  -i <path>    - the input file path. Standard input used by default.\n"
+	       "  -o <path>    - the output file path. Standard output is used by default.\n"
+	       "  -m <mode>    - The operation mode, where <mode> can be either multi-pass or\n"
+	       "                 single-cache.\n"
+	       "  -t <method>  - The resolving method, where <method> can be either elf or\n"
+	       "                 bfd.\n"
+	       "  -p           - keep the path of the source file (by default the path\n"
+	       "                 is stripped leaving only the file name.\n"
+	       "  -k           - keep resolved names (by default the resolved names\n"
+	       "                 from input stream are ignored and the addresses are\n"
+	       "                 always resolved again).\n"
+	       "  -s           - specify guest OS root path for cross platform resolving.\n"
+	       "  -h           - this help page.\n"
+	      );
 }
 
 /**
@@ -200,7 +200,7 @@ static void parse_index_record(char* line, rs_cache_t* rs)
 		if (fgets(line, PATH_MAX, mmap->fout) == 0) {
 			fputs(line, stderr);
 			msg_error("multi-pass resolving failed, unexpected eof "
-							" of %s resolved data\n", mmap->module);
+			          " of %s resolved data\n", mmap->module);
 			exit(-1);
 		}
 	}
@@ -242,7 +242,7 @@ static void mmap_resolve_address_file(rs_mmap_t* mmap, rs_cache_t* rs)
 		char resolved_name[PATH_MAX] = "";
 		int n = sscanf(line, "\t0x%lx (%[^\n]",  &address, resolved_name);
 		if (n < 1) {
-				msg_warning("unexpected string in module address file: %s", line);
+			msg_warning("unexpected string in module address file: %s", line);
 		}
 		else {
 			if (n == 2) resolved_name[strlen(resolved_name) - 1] = '\0';
@@ -275,6 +275,7 @@ static void mmap_cleanup_tmp_files(rs_mmap_t* mmap)
 	sprintf(path, "rtrace.out.%s", ptr);
 	remove(path);
 }
+
 /**
  * Resolves backtrace addresses in @p fpin file and writes output
  * to @p fpout file.
@@ -288,7 +289,7 @@ static void do_resolve(FILE *fpin, FILE *fpout)
 	rs_cache_init(&rs);
 	char line[4096];
 
-    if (resolve_options.mode & MODE_MULTI_PASS) {
+	if (resolve_options.mode & MODE_MULTI_PASS) {
 		FILE* findex = fopen("rtrace.index", "w+");
 		if (!findex) {
 			msg_error("failed to create multi-pass index file\n");
@@ -333,8 +334,7 @@ static void do_resolve(FILE *fpin, FILE *fpout)
 		sarray_foreach(&rs.mmaps, (op_unary_t)mmap_cleanup_tmp_files);
 		fclose(findex);
 		remove("rtrace.index");
-	}
-	else {
+	} else {
 		while (fgets(line, sizeof(line), fpin)) {
 			if (resolver_abort) return;
 			const char* pout = NULL;
@@ -372,7 +372,7 @@ static void read_header(FILE* fpin, FILE* fpout)
 	/* check source stream architecture */
 	if (header.fields[SP_RTRACE_HEADER_ARCH] && strcmp(header.fields[SP_RTRACE_HEADER_ARCH], BUILD_ARCH)) {
 		msg_warning("Non native architecture: %s (expected %s).\n",
-				header.fields[SP_RTRACE_HEADER_ARCH], BUILD_ARCH);
+		            header.fields[SP_RTRACE_HEADER_ARCH], BUILD_ARCH);
 		if ( !resolve_options.root_path ) {
 			msg_error("Set guest system root path to attempt cross architecture resolving\n");
 			exit (-1);
@@ -401,7 +401,7 @@ static void resolve(void)
 		fpin = fopen(resolve_options.input_file, "r");
 		if (fpin == NULL) {
 			msg_error("failed to open input file %s (%s)\n",
-					resolve_options.input_file, strerror(errno));
+			          resolve_options.input_file, strerror(errno));
 			exit (-1);
 		}
 	}
@@ -409,19 +409,19 @@ static void resolve(void)
 		fpout = fopen(resolve_options.output_file, "w");
 		if (fpout == NULL) {
 			msg_error("failed to open input file %s (%s)\n",
-					resolve_options.input_file, strerror(errno));
+			          resolve_options.input_file, strerror(errno));
 			exit (-1);
 		}
 		printf("INFO: Created text log file %s\n", resolve_options.output_file);
 	}
-    /* initialize BFD library */
-    bfd_init();
-    if (namecache_alloc() != 0) {
-    	msg_error("failed to allocate resolved name cache\n");
-    	exit (-1);
-    }
+	/* initialize BFD library */
+	bfd_init();
+	if (namecache_alloc() != 0) {
+		msg_error("failed to allocate resolved name cache\n");
+		exit (-1);
+	}
 
-    read_header(fpin, fpout);
+	read_header(fpin, fpout);
 	do_resolve(fpin, fpout);
 
 	namecache_release();
