@@ -48,6 +48,26 @@
 #define SOCKNAME "accept4-test"
 #define MAXLISTENQUEUE 1
 
+static void do_exit(const char *name)
+{
+	perror(name);
+	fputs("exiting...\n", stderr);
+	exit(1);
+}
+static void assert_fp(const char *name, FILE *fp)
+{
+	fprintf(stderr, "%s -> %p\n", name, fp);
+	if (!fp) {
+		do_exit(name);
+	}
+}
+static void assert_fd(const char *name, int fd)
+{
+	fprintf(stderr, "%s -> %d\n", name, fd);
+	if (fd < 0) {
+		do_exit(name);
+	}
+}
 
 void test_fd(void)
 {
@@ -55,34 +75,43 @@ void test_fd(void)
 	int fd, fd2, fd3, fd4, fds[2];
 
 	fd = creat(OUTPUT_FILENAME, 0666);
+	assert_fd("creat", fd);
 	close(fd);
 	fd = open64(OUTPUT_FILENAME, O_RDONLY);
+	assert_fd("open64", fd);
 	close(fd);
 
 	fd = open(OUTPUT_FILENAME, O_RDONLY);
+	assert_fd("open", fd);
 	fd2 = dup2(fd, 40);
+	assert_fd("dup2", fd2);
 	fd3 = dup3(fd, 60, O_CLOEXEC);
+	assert_fd("dup3", fd3);
 	fd4 = dup(fd2);
+	assert_fd("dup", fd4);
 	close(fd2);
 	close(fd3);
 	close(fd4);
 
 	fd2 = fcntl(fd, F_DUPFD, 80);
+	assert_fd("fcntl", fd2);
 	close(fd);
 	/* closing this stream closes also pointed FD */
 	fp = fdopen(fd2, "r");
+	assert_fp("fdopen", fp);
 	fclose(fp);
 
 	DIR *dir = opendir(".");
 	fd = openat(dirfd(dir), OUTPUT_FILENAME, O_RDONLY);
+	assert_fd("openat", fd);
 	close(fd);
 	closedir(dir);
 
-	pipe(fds);
+	assert_fd("pipe", pipe(fds));
 	close(fds[0]);
 	close(fds[1]);
 
-	pipe2(fds, O_NONBLOCK);
+	assert_fd("pipe2", pipe2(fds, O_NONBLOCK));
 	close(fds[0]);
 	close(fds[1]);
 }
@@ -162,7 +191,7 @@ void test_socket(void)
 	pid_t pid;
 	int sockfds[2];
 
-	socketpair(AF_UNIX, SOCK_STREAM, 0, sockfds);
+	assert_fd("socketpair", socketpair(AF_UNIX, SOCK_STREAM, 0, sockfds));
 	close(sockfds[0]);
 	close(sockfds[1]);
 
@@ -199,26 +228,35 @@ void test_fd_special(void)
 	int fd1, fd2, fd3;
 
 	fd1 = inotify_init();
+	assert_fd("inotify_init", fd1);
 	fd2 = inotify_init1(IN_CLOEXEC);
+	assert_fd("inotify_init1", fd2);
 	close(fd2);
 	close(fd1);
 
 	fd1 = epoll_create(8);
+	assert_fd("epoll_create", fd1);
 	fd2 = epoll_create1(EPOLL_CLOEXEC);
+	assert_fd("epoll_create1", fd2);
 	close(fd1);
 	close(fd2);
 
 	sigemptyset(&mask);
 	sigaddset(&mask, SIGCONT);
 	fd1 = signalfd(-1, &mask, 0);
+	assert_fd("signalfd", fd1);
 	fd2 = timerfd_create(CLOCK_MONOTONIC, 0);
+	assert_fd("timerfd_create", fd2);
 	fd3 = eventfd(0, 0);
+	assert_fd("eventfd", fd3);
 	close(fd1);
 	close(fd2);
 	close(fd3);
 
 	fd1 = getpt();
-	fd2 = posix_openpt(0);
+	assert_fd("getpt", fd1);
+	fd2 = posix_openpt(O_RDWR | O_NOCTTY);
+	assert_fd("posix_openpt", fd2);
 	close(fd1);
 	close(fd2);
 }
@@ -228,9 +266,12 @@ void test_fp(void)
 {
 	FILE *fp1, *fp2;
 	fp1 = fopen(OUTPUT_FILENAME, "r");
-	fp2 = freopen(OUTPUT_FILENAME, "w+", fp1);
+	assert_fp("fopen", fp1);
+	fp2 = freopen(OUTPUT_FILENAME, "r+", stdin);
+	assert_fp("freopen", fp2);
 	fclose(fp1);
-	fp1 = popen("echo", "re");
+	fp1 = popen("/bin/echo", "r");
+	assert_fp("popen", fp1);
 	pclose(fp1);
 	fcloseall();
 }
