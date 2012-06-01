@@ -111,7 +111,7 @@ static void display_usage(void)
 	       "  -k           - keep resolved names (by default the resolved names\n"
 	       "                 from input stream are ignored and the addresses are\n"
 	       "                 always resolved again).\n"
-	       "  -s           - specify guest OS root path for cross platform resolving.\n"
+	       "  -s <path>    - specify guest OS root path for cross platform resolving.\n"
 	       "  -h           - this help page.\n"
 	      );
 }
