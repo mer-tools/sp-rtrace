@@ -475,14 +475,13 @@ static void read_binary_data(rd_t* rd, int fd)
 	char endianness = *(char*)&endian;
 	if (rd->hshake->endianness != endianness || sizeof(pointer_t) != rd->hshake->pointer_size) {
 		msg_error("unsupported architecture: endianess(%d:%d), pointer size(%d:%d)\n",
-				rd->hshake->endianness, endianness, rd->hshake->pointer_size, (int)sizeof(pointer_t));
+		          rd->hshake->endianness, endianness, rd->hshake->pointer_size, (int)sizeof(pointer_t));
 		fprintf(stderr, "This could happen when text file is being processed without correct format option.\n");
 		exit (-1);
 	}
 	if (strcmp(rd->hshake->arch, BUILD_ARCH)) {
-		msg_error("unsupported architecture: %s (expected %s)\n",
-				rd->hshake->arch, BUILD_ARCH);
-		exit (-1);
+		msg_warning("architecture mismatch: %s (expected %s)\n",
+		            rd->hshake->arch, BUILD_ARCH);
 	}
 	n -= data_len + 1;
 	ptr_in += data_len;
