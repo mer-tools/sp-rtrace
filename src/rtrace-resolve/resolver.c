@@ -43,6 +43,11 @@
 #include "common/msg.h"
 #include "namecache.h"
 
+#define DEBUG 1
+#if DEBUG
+# include <execinfo.h>
+#endif
+
 #define DMGL_PARAMS  (1 << 0) /* Include function args */
 #define DMGL_ANSI  (1 << 1)   /* Include const, volatile, etc */
 
@@ -114,6 +119,12 @@ const char* rs_host_path(const char* path)
 	}
 	if (strncmp(path, resolve_options.root_path, strlen(resolve_options.root_path)) == 0) {
 		msg_warning("double host path for %s\n", path);
+#if DEBUG
+		/* let's get backtrace */
+		void *addr[8];
+		int count = backtrace(addr, sizeof(addr)/sizeof(*addr));
+		backtrace_symbols_fd(addr, count, fileno(stderr));
+#endif
 		return path;
 	}
 	static char host_path[PATH_MAX];
@@ -455,9 +466,9 @@ static int rs_load_symbols(rs_cache_record_t* rec, const char* filename)
 		/* Use elf symbol table lookup, as the bfd_find_nearest_line returns bogus information
 		 * for global constructors when dynamic symbol tables are used.
 		 */
-		rec->fd = open(rs_host_path(filename), O_RDONLY);
+		rec->fd = open(filename, O_RDONLY);
 		if (rec->fd == -1) {
-			fprintf(stderr, "Failed to open image file %s\n", rs_host_path(filename));
+			fprintf(stderr, "Failed to open image file %s\n", filename);
 			return -EINVAL;
 		}
 		struct stat sb;
