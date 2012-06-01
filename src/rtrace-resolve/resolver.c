@@ -85,11 +85,48 @@ typedef struct {
 	unsigned int line;
 } symbol_info_t;
 
- /**
-  * Free resolver cache record.
-  *
-  * @param[in] rec    the cache record to free.
-  */
+
+/**
+ * File path without the resolve -s option path prefix.
+ *
+ * @param[in] path  the file path.
+ * @return          target path.
+ */
+static const char* rs_target_path(const char *path)
+{
+	if (!resolve_options.root_path || *path != '/') {
+		return path;
+	}
+	int len = strlen(resolve_options.root_path);
+	if (strncmp(path, resolve_options.root_path, len) == 0) {
+		path += len;
+		if (*path) {
+			path++;
+		}
+	}
+	return path;
+}
+
+const char* rs_host_path(const char* path)
+{
+	if (!resolve_options.root_path || *path != '/') {
+		return path;
+	}
+	if (strncmp(path, resolve_options.root_path, strlen(resolve_options.root_path)) == 0) {
+		msg_warning("double host path for %s\n", path);
+		return path;
+	}
+	static char host_path[PATH_MAX];
+	snprintf(host_path, PATH_MAX, "%s/%s", resolve_options.root_path, path);
+	return host_path;
+}
+
+
+/**
+ * Free resolver cache record.
+ *
+ * @param[in] rec    the cache record to free.
+ */
 static void rs_cache_record_clear(rs_cache_record_t* rec)
 {
 	if (rec->symbols) {
@@ -341,7 +378,7 @@ static int get_address_info(rs_cache_record_t* rec, pointer_t address, char* buf
 		if (sym->line) ptr_out += sprintf(ptr_out, ":%d", sym->line);
 	}
 	else {
-		ptr_out += sprintf(ptr_out, " from %s", rec->mmap->module);
+		ptr_out += sprintf(ptr_out, " from %s", rs_target_path(rec->mmap->module));
 	}
 	*ptr_out++ = '\n';
 	*ptr_out = '\0';
@@ -357,22 +394,21 @@ static int get_address_info(rs_cache_record_t* rec, pointer_t address, char* buf
  */
 static int rs_open_file(rs_cache_record_t* rec, const char* filename)
 {
-	rec->file = bfd_openr(rs_host_path(filename), TARGET);
+	rec->file = bfd_openr(filename, TARGET);
 
 	if (rec->file == NULL) {
-		msg_error("%s: %s\n", rs_host_path(filename), bfd_errmsg(bfd_get_error()));
+		msg_error("%s: %s\n", filename, bfd_errmsg(bfd_get_error()));
 		return -EINVAL;
 	}
 
 	if (!bfd_check_format (rec->file, bfd_object)) {
 		bfd_close(rec->file);
 		rec->file = NULL;
-		msg_error("file %s not in executable format\n", rs_host_path(filename));
+		msg_error("file %s not in executable format\n", filename);
 		return -EINVAL;
 	}
 	return 0;
 }
-
 
 
 /**
@@ -380,7 +416,7 @@ static int rs_open_file(rs_cache_record_t* rec, const char* filename)
  *
  * @param[in] rec       the resolver cache record.
  * @param[in] filename  the file to read from.
- * @return
+ * @return		0 - success.
  */
 static int rs_load_symbols(rs_cache_record_t* rec, const char* filename)
 {
@@ -494,13 +530,13 @@ const char* rs_resolve_address(rs_cache_t* rs, pointer_t address, const char* na
 			rs_cache_record_clear(map->cache);
 			if (rs_load_symbols(map->cache, map->module) < 0) {
 				rs_cache_record_clear(map->cache);
-				sprintf(buffer, "\t0x%lx from %s\n", address, map->module);
+				sprintf(buffer, "\t0x%lx from %s\n", address, rs_target_path(map->module));
 				break;
 			}
 			map->cache->mmap = map;
 		}
 		if (get_address_info(map->cache, address, buffer) < 0) {
-			sprintf(buffer, "\t0x%lx from %s\n", address, map->module);
+			sprintf(buffer, "\t0x%lx from %s\n", address, rs_target_path(map->module));
 			break;
 		}
 		break;
@@ -560,13 +596,4 @@ void rs_cache_free(rs_cache_t* rs)
 	sarray_free(&rs->mmaps, (op_unary_t)rs_mmap_free_node);
 
 	free(rs->mmaps_index);
-}
-
-
-const char* rs_host_path(const char* path)
-{
-	if (!resolve_options.root_path || *path != '/') return path;
-	static char host_path[PATH_MAX];
-	snprintf(host_path, PATH_MAX, "%s/%s", resolve_options.root_path, path);
-	return host_path;
 }

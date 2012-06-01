@@ -156,9 +156,17 @@ static const char* parse_mmap_record(const char* line, rs_cache_t* rs)
 	char module[PATH_MAX];
 	pointer_t from, to;
 	if (sscanf(line, ": %s => 0x%lx-0x%lx", module, &from, &to) == 3) {
-		rs_mmap_t* mmap = rs_mmap_add_module(rs, module, from, to,
+		const char *host_path = rs_host_path(module);
+		rs_mmap_t* mmap = rs_mmap_add_module(rs, host_path, from, to,
 				!(resolve_options.mode & MODE_FULL_CACHE));
-		if (mmap && (resolve_options.mode & MODE_MULTI_PASS)) {
+		if (!mmap) {
+			char* ptr = strchr(module, '/');
+			if (ptr) {
+				msg_error("failed to locate memory mapping: %s\n", host_path);
+			}
+			return line;
+		}
+		if (resolve_options.mode & MODE_MULTI_PASS) {
 			/* create module address files for multi-pass resolving */
 			char path[PATH_MAX];
 			char* ptr = strrchr(mmap->module, '/');
