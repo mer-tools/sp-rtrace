@@ -451,14 +451,8 @@ static int write_handshake(int major, int minor, const char* arch)
 static int write_output_settings(const char* output_dir, const char* postproc)
 {
 	PACKET_INIT(SP_RTRACE_PROTO_OUTPUT_SETTINGS);
-	if (sp_rtrace_options->manage_preproc) {
-		PACKET_WRITE(string, NULL);
-		PACKET_WRITE(string, NULL);
-	}
-	else {
-		PACKET_WRITE(string, output_dir);
-		PACKET_WRITE(string, postproc);
-	}
+	PACKET_WRITE(string, output_dir);
+	PACKET_WRITE(string, postproc);
 	PACKET_FINISH();
 }
 
