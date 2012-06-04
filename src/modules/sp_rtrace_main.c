@@ -993,9 +993,6 @@ bool sp_rtrace_initialize(void)
 				_stpncpy(out, env_output_dir, sizeof(sp_rtrace_options->output_dir) - (out - sp_rtrace_options->output_dir + 1));
 			}
 		}
-		else {
-			_stpncpy(sp_rtrace_options->output_dir, sp_rtrace_options->start_dir, sizeof(sp_rtrace_options->output_dir));
-		}
 		LOG("output_dir=%s", sp_rtrace_options->output_dir);
 
 		/* read tracing enable option */
