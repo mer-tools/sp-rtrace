@@ -522,23 +522,23 @@ static void enable_tracing(bool value)
 
 #if DEBUG_INFO
 		/* Copy /proc/self/pagemap, /proc/kpageflags files for debugging purposes */
+		{
+			sp_rtrace_get_out_filename("pagemap-pagemap", filename, sizeof(filename));
+			module_attachment_t file_pagemap = {
+					.name = "pagemap",
+					.path = filename,
+			};
+			sp_rtrace_copy_file("/proc/self/pagemap", filename);
+			sp_rtrace_write_attachment(&file_pagemap);
 
-		sp_rtrace_get_out_filename("pagemap-pagemap", filename, sizeof(filename));
-		module_attachment_t file_pagemap = {
-				.name = "pagemap",
-				.path = filename,
-		};
-		sp_rtrace_copy_file("/proc/self/pagemap", filename);
-		sp_rtrace_write_attachment(&file_pagemap);
-
-		sp_rtrace_get_out_filename("pagemap-kpageflags", filename, sizeof(filename));
-		module_attachment_t file_kpageflags = {
-				.name = "kpageflags",
-				.path = filename,
-		};
-		sp_rtrace_copy_file("/proc/kpageflags", filename);
-		sp_rtrace_write_attachment(&file_kpageflags);
-		*/
+			sp_rtrace_get_out_filename("pagemap-kpageflags", filename, sizeof(filename));
+			module_attachment_t file_kpageflags = {
+					.name = "kpageflags",
+					.path = filename,
+			};
+			sp_rtrace_copy_file("/proc/kpageflags", filename);
+			sp_rtrace_write_attachment(&file_kpageflags);
+		}
 
 
 		/* TODO: remove timing code before release */
