@@ -699,7 +699,7 @@ static int start_process(char* app, char* args[])
  * Start tracing for managed mode.
  *
  * In managed mode tracing module spawns its own sp-rtrace process
- * for data pre-preprocessing. Just set the environment and spawn
+ * for data pre-preprocessing. Just set the environment and exec
  * target process.
  * @param[in] app     the application to start.
  * @param[in] args    the application arguments.
@@ -707,14 +707,10 @@ static int start_process(char* app, char* args[])
  */
 static void start_process_managed(char* app, char* args[])
 {
-	int pid = fork();
-	if (pid == 0) {
-		setpgrp();
-		set_environment();
-		execvp(app, args);
-		msg_error("failed to start process %s (%s)\n", app, strerror(errno));
-		exit (-1);
-	}
+	set_environment();
+	execvp(app, args);
+	msg_error("failed to start process %s (%s)\n", app, strerror(errno));
+	exit (-1);
 }
 
 
