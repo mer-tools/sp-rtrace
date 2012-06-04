@@ -49,7 +49,6 @@
 #include <getopt.h>
 #include <errno.h>
 #include <limits.h>
-#include <stdio.h>
 #include <bfd.h>
 #include <libiberty.h>
 #include <stdbool.h>
@@ -454,7 +453,6 @@ static void sigint_handler(int sig __attribute((unused)))
 
 int main(int argc, char* argv[])
 {
-
 	/* install interrupt handler */
 	struct sigaction sa = {.sa_flags = 0, .sa_handler = sigint_handler};
 	sigemptyset(&sa.sa_mask);
@@ -539,6 +537,17 @@ int main(int argc, char* argv[])
 			break;
 
 		case 's':
+			/* code later on relies path being absolute,
+			 * with no trailing path separator
+			 */
+			if (optarg[strlen(optarg)] == '/') {
+				optarg[strlen(optarg)] = '\0';
+			}
+			if (optarg[0] != '/') {
+				msg_error("absolute path needed for guess OS root\n");
+				display_usage();
+				exit (-1);
+			}
 			resolve_options.root_path = strdup_a(optarg);
 			break;
 

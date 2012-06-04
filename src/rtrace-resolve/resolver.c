@@ -90,6 +90,57 @@ typedef struct {
 	unsigned int line;
 } symbol_info_t;
 
+/* BFD will read debug symbols from:
+ *   <host path>DEBUG_PATH<host path><binary path>
+ * In case "-s" option has set a host path, there
+ * needs to be a host path redirection symlink.
+ */
+#define DEBUG_PATH "/usr/lib/debug"
+
+/**
+ * If guest OS root given, check that its debugdir has
+ * required redirection for BFD to find the debug symbols.
+ */
+static void rs_check_debugdir(void)
+{
+	char tmppath[PATH_MAX];
+	char *path, *sep, *last;
+	int len;
+
+	path = resolve_options.root_path;
+	if (!path || *path != '/') {
+		return;
+	}
+	snprintf(tmppath, sizeof(tmppath), "%s%s%s", path, DEBUG_PATH, path);
+	if (access(tmppath, R_OK|X_OK) == 0) {
+		return;
+	}
+
+	/* output information error message and exit */
+	fprintf(stderr, "guest OS debug path redirection symlink is missing:\n  %s\n", tmppath);
+
+	last = strrchr(tmppath, '/');
+	*last++ = '\0';
+	fprintf(stderr, "please create it, e.g. with:\n"
+		"  mkdir -p %s\n  cd %s\n  ln -s ",
+		tmppath, tmppath);
+
+	len = strlen(path);
+	sep = tmppath;
+	/* get up to <host path><debug path> level */
+	for (;;) {
+		while (*sep == '/') {
+			sep++;
+		}
+		if (!(sep = strchr(sep, '/')) || sep-tmppath >= len) {
+			break;
+		}
+		fputs("../", stderr);
+	}
+	fprintf(stderr, " %s\n", last);
+
+	exit (-1);
+}
 
 /**
  * File path without the resolve -s option path prefix.
@@ -434,10 +485,15 @@ static int rs_load_symbols(rs_cache_record_t* rec, const char* filename)
 	long symcount = 0;
 	unsigned int size;
 	if (resolve_options.mode & MODE_BFD) {
+		static int checked = 0;
 
 		/* locate and open the symbol file */
 		if (rs_open_file(rec, filename) < 0) return -EINVAL;
 
+		if (!checked) {
+			rs_check_debugdir();
+			checked = 1;
+		}
 		rec->dbg_name = bfd_follow_gnu_debuglink (rec->file, rs_host_path(DEBUG_PATH));
 		if (rec->dbg_name) {
 			bfd_close(rec->file);
