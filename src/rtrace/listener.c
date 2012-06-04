@@ -326,7 +326,15 @@ int process_data()
 	dlist_init(&s_mmaps);
 	/* read and process the handshake packet */
 	n = read(fd_in, buffer, BUFFER_SIZE - 1);
-	if (n < 1) {
+	if (n == 0) {
+		/* Pipe was closed before any data was written. That normally can
+		 * happen only when toggle signal was sent to a process started
+		 * in managed mode. In such case sp-rtrace should quietly exit
+		 * and leave pipe/data handling to the main module. */
+		LOG("Input pipe was closed, target process working in managed mode");
+		return 0;
+	}
+	if (n < 0) {
 	    msg_error("failed to read data from pipe\n");
 	    return -1;
 	}

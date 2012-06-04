@@ -393,13 +393,15 @@ int rtrace_connect_output()
  */
 static void disconnect_output(void)
 {
-	close (fd_out);
-	if (rtrace_options.pid_postproc) {
-		int status;
-		waitpid(rtrace_options.pid_postproc, &status, 0);
-	}
-	else {
-		printf("INFO: Created binary log file %s\n", rtrace_options.output_file);
+	if (fd_out) {
+		close (fd_out);
+		if (rtrace_options.pid_postproc) {
+			int status;
+			waitpid(rtrace_options.pid_postproc, &status, 0);
+		}
+		else {
+			printf("INFO: Created binary log file %s\n", rtrace_options.output_file);
+		}
 	}
 }
 
@@ -582,6 +584,7 @@ static void toggle_child_processes(int pid)
 	closedir(dir);
 }
 
+
 /**
  * Checks if the specified process is being traced.
  * 
@@ -609,14 +612,62 @@ static bool is_process_traced(int pid)
 }
 
 /**
+ * Checks if trace is running for the specified process.
+ *
+ * This function checks both - normal and managed mode traces and
+ * returns true if any of them were detected.
+ * The normal mode trace is checked by verifying existence of the named
+ * pipe used to transfer trace data.
+ * The managed mode trace is checked by verifying if the target process
+ * has sp-rtrace child process used to pipe the trace data.
+ * @param pid
+ * @return
+ */
+static bool is_process_trace_running(int pid)
+{
+	char pipe_path[128];
+	/* First check if the named pipe for the process exist (normal mode check) */
+	snprintf(pipe_path, sizeof(pipe_path), SP_RTRACE_PIPE_PATTERN "%d", pid);
+	if (access(pipe_path, F_OK) == 0) return true;
+
+	/* Then check if the process has child process named sp-rtrace (manaed mode check) */
+	bool rc = false;
+	DIR* dir = opendir("/proc");
+	if (dir == NULL) {
+		msg_error("failed to open /proc/ directory\n");
+		return false;
+	}
+	struct dirent *de;
+	while ((de = readdir(dir)) != NULL) {
+		if (de->d_type == DT_DIR) {
+			int cpid = atoi(de->d_name);
+			if (cpid && is_child_process_of(cpid, pid)) {
+				char cmdline[PATH_MAX];
+				snprintf(cmdline, sizeof(cmdline), "/proc/%i/cmdline", cpid);
+				int fd = open(cmdline, O_RDONLY);
+				cmdline[0] = '\0';
+				if (fd) {
+					(void)read(fd, cmdline, sizeof(cmdline));
+					close(fd);
+				}
+				if (strstr(cmdline, SP_RTRACE_PREPROC)) {
+					rc = true;
+					break;
+				}
+			}
+		}
+	}
+	closedir(dir);
+	return rc;
+}
+
+/**
  * Toggles tracing for process rtrace_options.pid.
  *
  * @return             0 - success.
  */
 static void toggle_tracing(void)
 {
-	char pipe_path[128];
-
 	/* first check if the target process is launched in tracing mode */
 	if (!is_process_traced(rtrace_options.pid)) {
 		msg_error("process %d doesn't have sp-rtrace LD_PRELOAD module. Was it started with sp-rtrace tool?\n", rtrace_options.pid);
@@ -626,9 +677,8 @@ static void toggle_tracing(void)
 	if (rtrace_options.follow_forks) {
 		toggle_child_processes(rtrace_options.pid);
 	}
-	snprintf(pipe_path, sizeof(pipe_path), SP_RTRACE_PIPE_PATTERN "%d", rtrace_options.pid);
 
-	if (access(pipe_path, F_OK) == 0) {
+	if (is_process_trace_running(rtrace_options.pid)) {
 		stop_tracing();
 	} else {
 		begin_tracing();
