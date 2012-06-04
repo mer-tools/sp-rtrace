@@ -434,22 +434,17 @@ static int rs_load_symbols(rs_cache_record_t* rec, const char* filename)
 	long symcount = 0;
 	unsigned int size;
 	if (resolve_options.mode & MODE_BFD) {
-		const char *places[] = {".", "./.debug", "/usr/lib/debug", NULL};
 
 		/* locate and open the symbol file */
 		if (rs_open_file(rec, filename) < 0) return -EINVAL;
 
-		int idx = 0;
-		while (places[idx]) {
-			rec->dbg_name = bfd_follow_gnu_debuglink (rec->file, rs_host_path(places[idx]));
-			if (rec->dbg_name) {
-				bfd_close(rec->file);
-				int rc = rs_open_file(rec, rec->dbg_name);
-				if (rc < 0) return -EINVAL;
-				break;
-			}
-			idx++;
+		rec->dbg_name = bfd_follow_gnu_debuglink (rec->file, rs_host_path(DEBUG_PATH));
+		if (rec->dbg_name) {
+			bfd_close(rec->file);
+			int rc = rs_open_file(rec, rec->dbg_name);
+			if (rc < 0) return -EINVAL;
 		}
+
 		/* read the symbol table from opened file */
 		if ((bfd_get_file_flags (rec->file) & HAS_SYMS) == 0) {
 			msg_error("no symbols in %s\n", bfd_get_const_filename(rec->file));

@@ -31,6 +31,13 @@
 #include "common/sp_rtrace_proto.h"
 #include "sarray.h"
 
+/* debug symbols will be read from:
+ *   <host path>DEBUG_PATH<host path><binary path>
+ * In case "-s" option has set a host path, there
+ * needs to be a host path redirection symlink.
+ */
+#define DEBUG_PATH "/usr/lib/debug"
+
 struct rs_mmap_t;
 
 /**
