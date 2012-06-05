@@ -171,22 +171,24 @@ sp_rtrace_store_heap_info() was called during the trace.
 
   [hbottom]  - heap bottom (pointer);
   [htop]     - heap top (pointer);
-  [arena]    - the total size of memory allocated with sbrk by malloc, 
-  	       in bytes (dword).
-  [ordblks]  - the number of chunks not in use (dword).
-  [smblks]   - the number of number of fastbin blocks (dowrd).
-  [hblks]    - the total number of chunks allocated with mmap (dword).
-  [hblkhd]   - the total size of memory allocated with mmap, in bytes
+  [arena]    - the total size of non-mmapped bytes allocated
+               from system (dword).
+  [ordblks]  - the number of free chunks (dword).
+  [smblks]   - the number of fastbin blocks
+               (small non-reused freed chunks) (dword).
+  [hblks]    - the number of mmapped regions (dword).
+  [hblkhd]   - the total size of mmapped regions, in bytes
                (dword).
-  [usmblks]  - the maximum total allocated space (dword).
+  [usmblks]  - the maximum total allocated space (after trimming
+               this is larger than current total) (dword).
   [fsmblks]  - the space available in freed fastbin blocks (dword).
-  [uordblks] - the total size of memory occupied by chunks handed out
-               by malloc (dword).
-  [fordblks] - the total size of memory occupied by free (not in use)
-               chunks (dword).
-  [keepcost] - the size of the top-most releasable chunk that normally
-               borders the end of the heap (dword).
-  
+  [uordblks] - the total size of allocated memory, both normal and
+               mmapped (dword).
+  [fordblks] - the total size of free space (dword).
+  [keepcost] - the ideal total size of bytes that could be released
+               to system via malloc_trim() if paging restrictions
+               are ignored (dword).
+
 
 10. Output settings [OCFG]
 
