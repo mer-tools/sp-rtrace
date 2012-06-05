@@ -1,22 +1,34 @@
-.TH RTRACE-RENAME 1 "2010-08-03" "sp-rtrace"
+.TH RTRACE-RENAME 1 "2012-06-05" "sp-rtrace"
 .SH NAME
 rtrace-rename - renames rtrace files
 .SH SYNOPSIS
-rtrace-rename <PID1> <NAME1> [PID2] [NAME2] ...
+rtrace-rename [--force] <PID1> <NAME1> [PID2] [NAME2] ...
+rtrace-rename [--force] --binary
 .SH DESCRIPTION
-\fIrtrace-rename\fP renames sp-rtrace reports and
-their post-processed output files in the current directory from
-format 'PID[-INDEX].rtrace[.*]'to 'NAME[-INDEX].rtrace[.*]'
-format.
+\fIrtrace-rename\fP script has two modes for renaming sp-rtrace
+trace files.
 .PP
-If you have a lot of those files, this helps in finding and
-maintaining them.
+If you give it PID and NAME pairs, it renames both binary
+and ASCII trace files with 'PID[-INDEX].rtrace[.*]' names
+in the current directory to 'NAME[-INDEX].rtrace[.*]' format.
+.PP
+This mode is most useful when you have a lot of traces from the same
+binary (e.g. with increasing use-case repeats) and you want the trace
+file names to indicate the traced use-case.
+.PP
+If you give --binary option, script renames all the *.rtrace.txt ASCII
+trace files in the current directory so that the file names are
+prefixed by the name of the traced binary (taken from the trace file
+header).
+.PP
+This mode is most useful when have a lot of trace files from
+different binaries.
 .SH SEE ALSO
 .IR sp-rtrace (1),
 .IR rtrace-graphs-overview (1)
 and the other rtrace-* scripts.
 .SH COPYRIGHT
-Copyright (C) 2007,2010 Nokia Corporation.
+Copyright (C) 2007,2010,2012 Nokia Corporation.
 .PP
 This is free software.  You may redistribute copies of it under the
 terms of the GNU General Public License v2 included with the software.

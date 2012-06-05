@@ -47,15 +47,28 @@ rename_pattern()
 	fi
 }
 
-# check command line args
-if [ $# -lt 2 ]; then
+usage ()
+{
 	echo "Renames all (also post-processed) rtrace files"
-	echo "in the current directory from format 'PID.rtrace.*'"
-	echo "to 'NAME.rtrace.*' format."
-	echo "If --force is specified existing files (if any) will be overwritten"
+	echo "in the current directory from format 'PID.rtrace*'"
+	echo "to 'NAME.rtrace*' format."
 	echo
-	echo "usage: ${0##*/} [--force] <PID1> <NAME1> <PID2> <NAME2> ..."
+	echo "If --force is specified existing files (if any) will"
+	echo "be overwritten."
+	echo
+	echo "If --binary is specified, just prefix names of the files"
+	echo "with the binary name found in the file itself.  This"
+	echo "option works only in ASCII format traces (*.rtrace.txt)."
+	echo
+	echo "usage:"
+	echo "  ${0##*/} [--force] <PID1> <NAME1> <PID2> <NAME2> ..."
+	echo "  ${0##*/} [--force] --binary"
 	exit 1
+}
+
+# check command line args
+if [ $# -lt 1 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+	usage
 fi
 
 if [ "$1" = "--force" ]; then
@@ -65,16 +78,28 @@ fi
 
 count=0
 
-while true
-do
-	pid=$1
-	[ -z "$pid" ] && break
-	shift
-	name=$1
-	[ -z "$name" ] && break
-	shift
-	rename_pattern $pid.'rtrace*'
-	rename_pattern $pid-'*.rtrace*'
-done
+if [ "$1" = "--binary" ]; then
+	echo "renaming trace files based on binary name in trace header..."
+	for i in $(ls [0-9]*-[0-9]*.rtrace.txt); do
+		name=$(head -1 $i|cut -d, -f4|cut -d= -f2)
+		echo $i "->" ${name##*/}-$i
+		mv $i ${name##*/}-$i
+		count=$(($count+1))
+	done
+else
+	if [ $# -lt 2 ]; then usage; fi
+	echo "renaming trace files based on given PIDs and NAMEs..."
+	while true
+	do
+		pid=$1
+		[ -z "$pid" ] && break
+		shift
+		name=$1
+		[ -z "$name" ] && break
+		shift
+		rename_pattern $pid.'rtrace*'
+		rename_pattern $pid-'*.rtrace*'
+	done
+fi
 echo "Renamed $count files."
 exit 0
