@@ -106,11 +106,11 @@ static void display_usage(void)
 	       "  -t <method>  - The resolving method, where <method> can be either elf or\n"
 	       "                 bfd.\n"
 	       "  -p           - keep the path of the source file (by default the path\n"
-	       "                 is stripped leaving only the file name.\n"
+	       "                 is stripped leaving only the file name).\n"
 	       "  -k           - keep resolved names (by default the resolved names\n"
 	       "                 from input stream are ignored and the addresses are\n"
 	       "                 always resolved again).\n"
-	       "  -s <path>    - specify guest OS root path for cross platform resolving.\n"
+	       "  -r <path>    - specify guest OS root path for cross platform resolving.\n"
 	       "  -h           - this help page.\n"
 	      );
 }
@@ -470,14 +470,14 @@ int main(int argc, char* argv[])
 			 {"full-path", 0, 0, 'p'},
 			 {"keep-resolved", 0, 0, 'k'},
 			 {"quiet", 0, 0, 'q'},
-			 {"sysroot", 1, 0, 's'},
+			 {"root", 1, 0, 'r'},
 			 {0, 0, 0, 0},
 	};
 	/* parse command line options */
 	int opt;
 	opterr = 0;
 
-	while ( (opt = getopt_long(argc, argv, "i:o:hm:pkt:qs:", long_options, NULL)) != -1) {
+	while ( (opt = getopt_long(argc, argv, "i:o:hm:pkt:qr:", long_options, NULL)) != -1) {
 		switch(opt) {
 		case 'h':
 			display_usage();
@@ -536,7 +536,7 @@ int main(int argc, char* argv[])
 			msg_set_verbosity(MSG_ERROR);
 			break;
 
-		case 's':
+		case 'r':
 			/* code later on relies path being absolute,
 			 * with no trailing path separator
 			 */
@@ -544,7 +544,7 @@ int main(int argc, char* argv[])
 				optarg[strlen(optarg)] = '\0';
 			}
 			if (optarg[0] != '/') {
-				msg_error("absolute path needed for guess OS root\n");
+				msg_error("absolute path needed for guest OS root\n");
 				display_usage();
 				exit (-1);
 			}
