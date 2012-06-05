@@ -16,7 +16,7 @@ memory blocks (4KB is the minimum Linux and MMU HW memory page size).
 .PP
 As \fIsp-rtrace-allocmap\fP cannot directly process \fIsp-rtrace\fP data,
 this tool is normally used through the \fIrtrace-allocmap\fP or
-\fIsp-rtrace-allocmap-animate\fP scripts.
+\fIrtrace-allocmap-animate\fP scripts.
 .SH OPTIONS
 .TP
 \fB-s\fP
@@ -64,8 +64,8 @@ Input file overrides the command line options (it's parsed later) and 'base'
 should be set before anything else (program doesn't check this, the results
 will just be funny...).
 .SH SEE ALSO
-.IR leaks-allocmap (1),
-.IR leaks-allocmap-animate (1)
+.IR rtrace-allocmap (1),
+.IR rtrace-allocmap-animate (1)
 .SH COPYRIGHT
 Copyright (C) 2007,2010 Nokia Corporation.
 .PP
