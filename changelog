@@ -2,18 +2,32 @@ sp-rtrace (devel), -- --- 2012:
   * sp-rtrace module API change and code refactoring
     - exits with error if resolving of any of the functions
       that module overloads fails
+  * sp-rtrace managed mode (-m) doesn't anymore cause the traced
+    process to be fork()ed onto background and sp-rtrace exiting,
+    it's simple exec()ed.  sp-rtrace trace toggling (-t) doesn't
+    require specifying managed mode (-m)
+  * Resolver -s option fixed to work also outside Sratchbox and
+    gives errors when binaries referenced in trace aren't found
+  * Post-processor allow reading of binary traces from different
+    architecture if endianess and pointer sizes match
+  * Collecting heap information for allocmap in the memory module
+    is disabled unless sp-rtrace is run with SP_RTRACE_MALLINFO
+    environment variable set. This is because it slows down tracing
+    and it's mostly obsoleted by pagemap module/tool
   * Large number of missing functions added to the file module,
     more info for sockets (extracted from bind/connect calls),
     and some corner case issues fixed in the module
   * More readable & consistent function arguments (for callgraphs),
     all FDs are decimals and hex numbers are prefixed with 0x
+  * Large code reductions in modules by grouping similar trace
+    functions and using common helpers for printing their trace data
   * Callgraph includes process name etc to callgraph, --include-only
     option acts on traced functions too
+  * rtrace-rename can rename trace files based on the traced binary
+    name listed in the trace header
   * New rtrace-function-address and rtrace-alloc-sizes helper scripts
   * Large number of extra compiler warnings enabled and fixed,
     fixes to error handling
-  * Large code reductions in modules by grouping similar trace
-    functions and using common helpers for printing their trace data
   * Fix test-suite tests and it on certain errors killing whole
     desktop session
 
