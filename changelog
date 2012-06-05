@@ -6,8 +6,10 @@ sp-rtrace (devel), -- --- 2012:
     process to be fork()ed onto background and sp-rtrace exiting,
     it's simple exec()ed.  sp-rtrace trace toggling (-t) doesn't
     require specifying managed mode (-m)
-  * Resolver -s option fixed to work also outside Sratchbox and
-    gives errors when binaries referenced in trace aren't found
+  * Resolver -s/--sysroot option renamed to -r/--root and fixed to
+    work also outside Sratchbox. Give error if binary referenced
+    in trace isn't found
+  * Support resolver --root option in rtrace-graphs-* scripts
   * Post-processor allow reading of binary traces from different
     architecture if endianess and pointer sizes match
   * Collecting heap information for allocmap in the memory module
