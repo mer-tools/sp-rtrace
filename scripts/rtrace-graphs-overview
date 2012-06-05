@@ -5,7 +5,7 @@
 #
 # This file is part of sp-rtrace.
 #
-# Copyright (C) 2006-2007,2010-2011 by Nokia Corporation
+# Copyright (C) 2006-2007,2010-2012 by Nokia Corporation
 #
 # Contact: Eero Tamminen <eero.tamminen@nokia.com>
 #
@@ -71,6 +71,8 @@
 #   symbol table (much slower & memory hungry, but much better results)
 # 2012-02-29
 # - Workaround for Ubuntu's Dash shell printf
+# 2012-06-05
+# - Support --root option for resolving
 
 usage ()
 {
@@ -89,6 +91,11 @@ but in case you want to do the address resolving on another device
 processed ASCII trace files.  These won't be post-processed or
 resolved.
 
+With --root option, resolving is done based on root file system
+found at given path.  Note that <path>/usr/lib/debug<path>
+needs to symlink to to <path>/usr/lib/debug, otherwise
+using debug symbols for resolving won't work properly.
+
 If tools needed for producing the graphs or the intermediate files are
 missing, script will just provide the input files for these tools.
 The postprocessed files are named <basename>-<type>.<extension>.
@@ -96,13 +103,22 @@ The postprocessed files are named <basename>-<type>.<extension>.
 EOF
 	# ' <- jed editor shell-mode workaround
 
-	echo "usage: $name <resource trace files>"
+	echo "usage: $name [--root <path>] <resource trace files>"
 	echo
 	echo "ERROR: $1!"
 	exit 1
 }
 
-
+if [ "$1" = "--root" ]; then
+	if [ -z "$2" -o \! -d "$2" ]; then
+		usage "given '$2' root directory doesn't exist"
+	fi
+	root="--root $2"
+	shift
+	shift
+else
+	root=
+fi
 # args missing?
 if [ $# -lt 1 ]; then
 	usage "no resource trace files given"
@@ -356,8 +372,8 @@ for src in $binaries; do
 		continue
 	fi
 	# merge & remove leaks & resolve
-	echo "  sp-rtrace-postproc -cl < $src | sp-rtrace-resolve -mmulti-pass > $dst"
-	sp-rtrace-postproc -cl < $src | sp-rtrace-resolve -mmulti-pass > $dst
+	echo "  sp-rtrace-postproc -cl < $src | sp-rtrace-resolve $root -mmulti-pass > $dst"
+	sp-rtrace-postproc -cl < $src | sp-rtrace-resolve $root -mmulti-pass > $dst
 	if [ $? -eq 0 ]; then
 		callgraphs="$callgraphs $dst"
 	else
@@ -411,12 +427,12 @@ for src in $texts; do
 	if [ $? -eq 0 ]; then
 		echo "  Already resolved, doing just freed resources removal and backtrace"
 		echo "  merging, for speed reasons.  Remove 'resolve' flag from first line"
-		echo "  in trace to trigger resolving:"
+		echo "  in trace to trigger re-resolving:"
 		echo "  sp-rtrace-postproc -cl < $src > $dst"
 		sp-rtrace-postproc -cl < $src > $dst
 	else
-		echo "  sp-rtrace-postproc -cl < $src | sp-rtrace-resolve -mmulti-pass > $dst"
-		sp-rtrace-postproc -cl < $src | sp-rtrace-resolve -mmulti-pass > $dst
+		echo "  sp-rtrace-postproc -cl < $src | sp-rtrace-resolve $root -mmulti-pass > $dst"
+		sp-rtrace-postproc -cl < $src | sp-rtrace-resolve $root -mmulti-pass > $dst
 	fi
 	if [ $? -eq 0 ]; then
 		callgraphs="$callgraphs $dst"

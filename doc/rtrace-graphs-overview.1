@@ -1,8 +1,8 @@
-.TH RTRACE-GRAPHS-OVERVIEW 1 "2011-01-10" "sp-rtrace"
+.TH RTRACE-GRAPHS-OVERVIEW 1 "2012-06-05" "sp-rtrace"
 .SH NAME
 rtrace-graphs-overview - create overview graphs for rtrace reports
 .SH SYNOPSIS
-rtrace-graphs-overview <rtrace files>
+rtrace-graphs-overview [--root <path>] <rtrace files>
 .SH DESCRIPTION
 \fIrtrace-graphs-overview\fP is a helper script to generate several
 overview graphs of the given resource traces. Graphs include both
@@ -14,6 +14,11 @@ trace file, but in case you want to do the address resolving on
 another device (with correct binaries and debug symbols), it can
 also handle already processed ASCII trace files.  These won't be
 post-processed or re-resolved.
+.PP
+With --root option, resolving is done based on root file system
+found at given path.  Note that <path>/usr/lib/debug<path>
+needs to symlink to to <path>/usr/lib/debug, otherwise
+using debug symbols for resolving won't work properly.
 .PP
 If tools needed for producing the graphs or the intermediate steps are
 missing, script will just provide the input files for further steps.
@@ -59,7 +64,8 @@ Post-processing includes merging backtraces to speed up their processing
 for timeline and removing the backtraces to reduce the file size; for
 callgraphs removing freed allocations and resolving the function addresses
 in the backtraces.  Last one requires appropriate binaries, libraries and
-their debug symbols to be present where this is done.
+their debug symbols to be present, either in the system or at given
+\fI--root\fP path.
 .PP
 \fIrtrace-graphs-overview\fP gives \fIrtrace-calltree\fP options which
 should create reasonable graphs even for very complicated programs.
@@ -84,7 +90,7 @@ graphs.
 .IR gnuplot (1),
 .IR dot (1)
 .SH COPYRIGHT
-Copyright (C) 2007,2010,2011 Nokia Corporation.
+Copyright (C) 2007,2010-2012 Nokia Corporation.
 .PP
 This is free software.  You may redistribute copies of it under the
 terms of the GNU General Public License v2 included with the software.
