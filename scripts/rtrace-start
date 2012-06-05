@@ -140,7 +140,7 @@ while [ $# -gt 0 ]; do
 done
 
 # spawn sp-rtrace process to listen for data if tracing should be started
-if [ -n "$opt_execute_command" ] && [ -n "$opt_trace_start" ]; then
+if [ -n "$opt_execute_command" ] && [ -n "$opt_trace_start" ] && [ -z "$opt_manage_preproc" ]; then
     mkfifo /tmp/rtrace-$$
     # launch sp-rtrac through bash so after bash exits the sp-rtrace gets
     # owned by init 
