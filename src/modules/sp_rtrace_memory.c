@@ -37,6 +37,7 @@
 
 #include "sp_rtrace_main.h"
 #include "sp_rtrace_module.h"
+#include "rtrace/rtrace_env.h"
 #include "common/sp_rtrace_proto.h"
 #include "library/sp_rtrace_defs.h"
 #include "common/debug_log.h"
@@ -60,6 +61,9 @@
 #define EMU_HEAP_ALIGN      8
 static char emu_heap[EMU_HEAP_SIZE] = { 0 };
 static char* emu_heap_tail = emu_heap;
+
+/* whether to collect heap usage information */
+static int get_heap = 0;
 
 /* Target function prototypes */
 typedef void* (*malloc_t)(size_t size);
@@ -148,8 +152,11 @@ static void trace_initialize(void)
 
 		case MODULE_LOADED: {
 			if (sp_rtrace_initialize()) {
+				const char* getinfo = getenv(SP_RTRACE_MALLINFO);
+				if (getinfo && *getinfo) {
+					get_heap = 1;
+				}
 				init_mode = MODULE_READY;
-
 				sp_rtrace_register_module(&module_info, enable_tracing);
 				sp_rtrace_register_resource(&res_memory);
 				trace_init_rt = trace_rt;
@@ -298,7 +305,9 @@ static void* trace_malloc(size_t size)
 				.res_id = (pointer_t)rc,
 		};
 		sp_rtrace_write_function_call(&call, NULL, NULL);
-		sp_rtrace_store_heap_info();
+		if (get_heap) {
+			sp_rtrace_store_heap_info();
+		}
 	}
 	return rc;
 }
@@ -318,7 +327,9 @@ static void* trace_calloc(size_t nmemb, size_t size)
 				.res_id = (pointer_t)rc,
 		};
 		sp_rtrace_write_function_call(&call, NULL, NULL);
-		sp_rtrace_store_heap_info();
+		if (get_heap) {
+			sp_rtrace_store_heap_info();
+		}
 	}
 	return rc;
 }
@@ -350,7 +361,9 @@ static void* trace_realloc(void* ptr, size_t size)
 				.res_id = (pointer_t)rc,
 		};
 		sp_rtrace_write_function_call(&call, NULL, NULL);
-		sp_rtrace_store_heap_info();
+		if (get_heap) {
+			sp_rtrace_store_heap_info();
+		}
 	}
 	return rc;
 }
@@ -367,7 +380,9 @@ static int trace_posix_memalign(void **memptr, size_t alignment, size_t size)
 				.res_id = (pointer_t)*memptr,
 		};
 		sp_rtrace_write_function_call(&call, NULL, NULL);
-		sp_rtrace_store_heap_info();
+		if (get_heap) {
+			sp_rtrace_store_heap_info();
+		}
 	}
 	return rc;
 }
@@ -386,7 +401,9 @@ static void trace_free(void* ptr)
 			.res_id = (pointer_t)ptr,
 	};
 	sp_rtrace_write_function_call(&call, NULL, NULL);
-	sp_rtrace_store_heap_info();
+	if (get_heap) {
+		sp_rtrace_store_heap_info();
+	}
 }
 
 static trace_t trace_on = {

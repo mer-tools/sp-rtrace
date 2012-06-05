@@ -5,7 +5,7 @@
 #
 # This file is part of sp-rtrace.
 #
-# Copyright (C) 2006,2010 by Nokia Corporation
+# Copyright (C) 2006,2010,2012 by Nokia Corporation
 #
 # Contact: Eero Tamminen <eero.tamminen@nokia.com>
 #
@@ -84,7 +84,10 @@ get_value ()
 	echo "See the sp-rtrace-postproc output in:"
 	echo "  $3"
 	echo
-	echo "Isn't the trace file from sp-rtrace memory/mallopt module?"
+	echo "Please make sure that you give SP_RTRACE_MALLINFO=1 environment"
+	echo "variable to sp-rtrace when you start tracing, otherwise"
+	echo "heap utilization information needed by this tool is missing"
+	echo "from the sp-rtrace 'memory' module trace data."
 	exit
 }
 

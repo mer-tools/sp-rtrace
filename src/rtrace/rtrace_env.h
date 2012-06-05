@@ -48,6 +48,9 @@
 /* points at the sp-rtrace starting directory */
 #define SP_RTRACE_START_DIR   "SP_RTRACE_START_DIR"
 
+/* whether to get heap usage info (with mallinfo) */
+#define SP_RTRACE_MALLINFO    "SP_RTRACE_MALLINFO"
+
 /**
  * pre-processor(sp-rtrace) option index.
  */

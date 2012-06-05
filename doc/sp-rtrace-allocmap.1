@@ -1,4 +1,4 @@
-.TH SP-RTRACE-ALLOCMAP 1 "2010-08-03" "sp-rtrace"
+.TH SP-RTRACE-ALLOCMAP 1 "2012-06-05" "sp-rtrace"
 .SH NAME
 sp-rtrace-allocmap - visualize fragmentation of given list of allocations
 .SH SYNOPSIS
@@ -14,9 +14,12 @@ There's also an option to zoom into this map (use smaller block size)
 so that you can see whether there's any fragmentation inside the 4KB
 memory blocks (4KB is the minimum Linux and MMU HW memory page size).
 .PP
-As \fIsp-rtrace-allocmap\fP cannot directly process \fIsp-rtrace\fP data,
-this tool is normally used through the \fIrtrace-allocmap\fP or
-\fIrtrace-allocmap-animate\fP scripts.
+As \fIsp-rtrace-allocmap\fP cannot directly process \fIsp-rtrace\fP
+memory module data, this tool is normally used through
+the \fIrtrace-allocmap\fP or \fIrtrace-allocmap-animate\fP scripts.
+.PP
+\fBNOTE\fP: Getting the Glibc heap information to the memory trace
+requires setting SP_RTRACE_MALLINFO=1 environment variable for sp-rtrace.
 .SH OPTIONS
 .TP
 \fB-s\fP
@@ -67,7 +70,7 @@ will just be funny...).
 .IR rtrace-allocmap (1),
 .IR rtrace-allocmap-animate (1)
 .SH COPYRIGHT
-Copyright (C) 2007,2010 Nokia Corporation.
+Copyright (C) 2007,2010,2012 Nokia Corporation.
 .PP
 This is free software.  You may redistribute copies of it under the
 terms of the GNU General Public License v2 included with the software.
