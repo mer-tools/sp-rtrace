@@ -23,6 +23,25 @@ Displays help information and exits.
 Lists all available tracing modules. The first column identifies the module 
 type: P - preload module.
 .TP
+\fI--toggle-signal\fP=<signal> (\fI-S\fP <signal>)
+Specifies the tracing toggle signal. The main tracing module enables/disables
+tracing upon receiving this signal.
+
+By default SIGUSR1 is used, but it can be changed if it interferes with
+the target process signal handling.
+.TP
+\fI--quiet\fP (\fI-q\fP)
+Suppress warning messages. Note that command line parsing warnings
+are not suppressed for options specified before this option.
+.SS Process launching options:
+.TP
+\fI--start\fP (\fI-s\fP)
+Enables tracing when the process is started.
+
+By default process starts with tracing disabled, but it can be enabled later 
+by sending the toggle signal. This option can be used when the process
+startup needs to be traced.
+.TP
 \fI--output-dir\fP=<path> (\fI-o\fP <path)
 Specifies the output directory for storing trace data. 
 
@@ -55,26 +74,6 @@ enable/disable tracing by sending toggle signal to itself.
 
 By default the managed mode (and tracing of child processes)
 is not used.
-
-.TP
-\fI--toggle-signal\fP=<signal> (\fI-S\fP <signal>)
-Specifies the tracing toggle signal. The main tracing module enables/disables
-tracing upon receiving this signal.
-
-By default SIGUSR1 is used, but it can be changed if it interferes with
-the target process signal handling.
-.TP
-\fI--quiet\fP (\fI-q\fP)
-Suppress warning messages. Note that command line parsing warnings
-are not suppressed for options specified before this option.
-.SS Process launching options:
-.TP
-\fI--start\fP (\fI-s\fP)
-Enables tracing when the process is started.
-
-By default process starts with tracing disabled, but it can be enabled later 
-by sending the toggle signal. This option can be used when the process
-startup needs to be traced.
 .TP
 \fI--postproc\fP=<options> (\fI-P\fP <options>)
 Specifies post-processing options passed to the post-processor. 
@@ -91,7 +90,6 @@ Either full name of the module can be specified or its alias. The tracing
 modules are named 'libsp-rtrace-<module>.so'. So both - --preload=memory
 and --preload=libsp-rtrace-memory.so will specify the memory tracing 
 module libsp-rtrace-memory.so
-
 .TP
 \fI--disable-packet-buffering\fP (\fI-B\fP)
 Disables internal packet buffering. Normally the packets are stored in to
@@ -167,9 +165,7 @@ backtraces, see sp-rtrace-postproc manual) and store the resulting (ASCII)
 trace file to the current directory.
 .TP
 sp-rtrace -t $(pidof sample)
-Toggle tracing for an already running 'sample' process.  If traced
-process was started with '-m' or '-f', those options need to be used
-also for toggling.
+Toggle tracing for an already running 'sample' process.
 .TP
 sp-rtrace -l
 List all available tracing modules.
