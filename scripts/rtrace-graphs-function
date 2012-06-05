@@ -3,7 +3,7 @@
 # This script generates leak graphs for given function for all given
 # leak files. This file is part of sp-rtrace.
 #
-# Copyright (C) 2006,2010,2011 by Nokia Corporation
+# Copyright (C) 2006,2010-2012 by Nokia Corporation
 #
 # Contact: Eero Tamminen <eero.tamminen@nokia.com>
 #
@@ -47,6 +47,9 @@
 # - Fix: really convert callgraph to SVG (not PS)
 # - Do callgraph symbol resolving using debug symbols instead of ELF
 #   symbol table (much slower & memory hungry, but much better results)
+# 2012-06-05
+# - Workaround for Ubuntu's Dash shell printf
+# - Support --root option for resolving
 
 # script name
 name=${0##*/}
@@ -54,6 +57,7 @@ name=${0##*/}
 usage ()
 {
 	cat << EOF
+ERROR: $1!
 
 $name generates SVG callgraph(s) of resource allocation
 backtraces going through the methods/functions/libraries with given
@@ -68,11 +72,22 @@ the trace file contents.
 To re-generate the graphs (with new limit), just remove the directory.
 
 EOF
-	echo "usage: $name <function prefix> <limit> <trace files>"
+	echo "usage: $name [--root <path>] <function prefix> <limit> <trace files>"
 	echo
 	echo "ERROR: $1!"
 	exit 1
 }
+
+if [ "$1" = "--root" ]; then
+	if [ -z "$2" -o \! -d "$2" ]; then
+		usage "given '$2' root directory doesn't exist"
+	fi
+	root="--root $2"
+	shift
+	shift
+else
+	root=
+fi
 
 # check command line args
 if [ $# -lt 3 ]; then
@@ -88,6 +103,19 @@ fi
 limit=$2
 shift
 shift
+
+# check for printf without full backslash support
+printf '\xF0'|grep -q F0
+if [ $? -eq 0 ]; then
+	if [ \! -x /usr/bin/printf ]; then
+		echo "ERROR: 'printf' is missing backslash support!" >&2
+		exit 1
+	fi
+	printf=/usr/bin/printf
+	echo "Warning: 'printf' without escape support, using '$printf' instead."
+else
+	printf=printf
+fi
 
 # if path given for script, make sure rest of things can be
 # executed from that path too (helps testing it)
@@ -130,8 +158,8 @@ convert_binary ()
 {
 	# merge & remove leaks & resolve
 	echo "- Resolving and removing freed allocations from binary trace..."
-	echo "  sp-rtrace-postproc -cl < $srt | sp-rtrace-resolve -mmulti-pass > $dst"
-	sp-rtrace-postproc -cl < $src | sp-rtrace-resolve -mmulti-pass > $dst
+	echo "  sp-rtrace-postproc -cl < $srt | sp-rtrace-resolve $root -mmulti-pass > $dst"
+	sp-rtrace-postproc -cl < $src | sp-rtrace-resolve $root -mmulti-pass > $dst
 	if [ $? -ne 0 ]; then
 		echo "  ERROR: conversion failed!"
 		rm $dst
@@ -162,13 +190,13 @@ convert_ascii ()
 	if [ $? -eq 0 ]; then
 		echo "- Already resolved, doing just freed resources removal and backtrace"
 		echo "  merging, for speed reasons.  Remove 'resolve' flag from first line"
-		echo "  in trace to trigger resolving:"
+		echo "  in trace to trigger re-resolving:"
 		echo "  sp-rtrace-postproc -cl < $src > $dst"
 		sp-rtrace-postproc -cl < $src > $dst
 	else
 		echo "- Removing freed allocations and resolving traces:"
-		echo "  sp-rtrace-postproc -cl < $src | sp-rtrace-resolve -mmulti-pass > $dst"
-		sp-rtrace-postproc -cl < $src | sp-rtrace-resolve -mmulti-pass > $dst
+		echo "  sp-rtrace-postproc -cl < $src | sp-rtrace-resolve $root -mmulti-pass > $dst"
+		sp-rtrace-postproc -cl < $src | sp-rtrace-resolve $root -mmulti-pass > $dst
 	fi
 	if [ $? -ne 0 ]; then
 		echo "  ERROR: conversion failed!"
@@ -210,7 +238,7 @@ do
 		echo "- File is already post-processed."
 	elif [ -f $dst ] && [ $dst -nt $src ]; then
 		echo "- Post-processed '$dst' trace exists already."
-	elif [ "$(dd if=$src bs=1 count=1 2> /dev/null)" = "$(printf '\xF0')" ]; then
+	elif [ "$(dd if=$src bs=1 count=1 2> /dev/null)" = "$($printf '\xF0')" ]; then
 		convert_binary
 	elif [ "$(dd if=$src bs=8 count=1 2> /dev/null)" = "version=" ]; then
 		convert_ascii
