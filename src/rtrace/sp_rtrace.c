@@ -363,7 +363,7 @@ static int open_output_file(void)
 static void create_preproc_pipe(char* pipe_path, size_t size)
 {
 	snprintf(pipe_path, size, SP_RTRACE_PIPE_PATTERN "%d", rtrace_options.pid);
-	if (mkfifo(pipe_path, 0666) != 0) {
+	if (access(pipe_path, F_OK) != 0 && mkfifo(pipe_path, 0666) != 0) {
 		msg_error("failed to create named pipe %s\n", pipe_path);
 		exit (-1);
 	}
@@ -774,13 +774,11 @@ static void start_process_managed(char* app, char* args[])
  * handle its event data.
  * @return
  */
-static void enter_listen_mode(void)
+static void enter_listen_mode(const char* pipe_path)
 {
-	/* the output stream will be setup after output settings
-	 * (OS) packet is received.
-	 * connect_output();
-	 */
-	connect_input(0);
+	LOG("Entering listen mode");
+
+	connect_input(pipe_path);
 
 	int rc = process_data();
 
@@ -1041,6 +1039,7 @@ int main(int argc, char* argv[])
 
 		case 'L':
 			rtrace_options.mode = MODE_LISTEN;
+			rtrace_options.pid = atoi(optarg);
 			break;
 
 		case 'q':
@@ -1072,13 +1071,21 @@ int main(int argc, char* argv[])
 			break;
 		}
 		case MODE_LISTEN: {
-			if (!rtrace_options.manage_preproc) {
-				msg_error("-L mode is for internal use only\n");
-				exit (-1);
+			if (rtrace_options.pid) {
+				/* Target process pid is specified if sp-trace was launched from trace
+				 * script. In this case sp-trace should manage the named pipe */
+				char pipe_path[128];
+				create_preproc_pipe(pipe_path, sizeof(pipe_path));
+				enter_listen_mode(pipe_path);
 			}
-			LOG("Switching to listen mode");
+			else {
+				if (!rtrace_options.manage_preproc) {
+					msg_error("-L mode is for internal use only\n");
+					exit (-1);
+				}
+			}
 			rtrace_options.pid = getppid();
-			enter_listen_mode();
+			enter_listen_mode(NULL);
 			break;
 		}
 		default: {
