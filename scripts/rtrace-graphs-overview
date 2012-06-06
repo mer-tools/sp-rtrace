@@ -71,8 +71,8 @@
 #   symbol table (much slower & memory hungry, but much better results)
 # 2012-02-29
 # - Workaround for Ubuntu's Dash shell printf
-# 2012-06-05
-# - Support --root option for resolving
+# 2012-06-06
+# - Support for --bfd and --root resolving options
 
 usage ()
 {
@@ -91,10 +91,8 @@ but in case you want to do the address resolving on another device
 processed ASCII trace files.  These won't be post-processed or
 resolved.
 
-With --root option, resolving is done based on root file system
-found at given path.  Note that <path>/usr/lib/debug<path>
-needs to symlink to to <path>/usr/lib/debug, otherwise
-using debug symbols for resolving won't work properly.
+How resolving is done can be controlled with the --bfd and --root
+options, see manual page for more information on them.
 
 If tools needed for producing the graphs or the intermediate files are
 missing, script will just provide the input files for these tools.
@@ -103,11 +101,21 @@ The postprocessed files are named <basename>-<type>.<extension>.
 EOF
 	# ' <- jed editor shell-mode workaround
 
-	echo "usage: $name [--root <path>] <resource trace files>"
+	echo "usage: $name [--bfd] [--root <path>] <resource trace files>"
 	echo
 	echo "ERROR: $1!"
 	exit 1
 }
+
+# get resolving options
+if [ "$1" = "--bfd" ]; then
+	method="bfd"
+	methodargs="-mmulti-pass"
+	shift
+else
+	method="elf"
+	methodargs="-telf"
+fi
 
 if [ "$1" = "--root" ]; then
 	if [ -z "$2" -o \! -d "$2" ]; then
@@ -349,6 +357,47 @@ done
 
 # ----------------------------------------------
 
+# post-processes given trace file:
+# - exits on failure i.e. return is always successful
+# - uses $src and $dst
+convert_trace ()
+{
+	if [ "${dst%.txt}" != "$dst" ]; then
+		head -1 $src|grep -q resolve
+		if [ $? -eq 0 ]; then
+			echo "  Already resolved, for speed reasons doing just freed resources"
+			echo "  removal and backtrace merging.  Remove 'resolve' flag from first"
+			echo "  line in trace to trigger re-resolving:"
+			echo "  sp-rtrace-postproc -cl < $src > $dst"
+			sp-rtrace-postproc -cl < $src > $dst
+			if [ $? -ne 0 ]; then
+				echo "  ERROR: conversion failed!"
+				rm $dst
+				exit 1
+			fi
+			return 0
+		fi
+	fi
+	# merge & remove leaks & resolve
+	echo "  Removing freed allocations, doing backtrace merging and resolving them:"
+	elfsrc=$(echo $dst|sed 's/-bfd-/-elf-/')
+	if [ $elfsrc != $dst -a -f $elfsrc ]; then
+		# save memory and time by wasting a bit more disk
+		echo "  (converting already ELF resolved file with BFD & debug symbols)"
+		echo "  sp-rtrace-resolve $root $methodargs < $elfsrc > $dst"
+		sp-rtrace-resolve $root $methodargs < $elfsrc > $dst
+	else
+		echo "  sp-rtrace-postproc -cl < $src | sp-rtrace-resolve $root $methodargs > $dst"
+		sp-rtrace-postproc -cl < $src | sp-rtrace-resolve $root $methodargs > $dst
+	fi
+	if [ $? -ne 0 ]; then
+		echo "  ERROR: conversion failed!"
+		rm $dst
+		exit 1
+	fi
+	return 0
+}
+
 # create callgraph input files from binary traces
 callgraphs=""
 if [ \! -z "$binaries" ]; then
@@ -357,7 +406,7 @@ if [ \! -z "$binaries" ]; then
 fi
 for src in $binaries; do	
 	trace_basename $src
-	dst=$base-callgraph.rtrace.txt
+	dst=$base-$method-callgraph.rtrace.txt
 	echo "- $src -> $dst..."
 	# newer target file?
 	if [ -f $dst ] && [ $dst -nt $src ]; then
@@ -371,16 +420,9 @@ for src in $binaries; do
 		fi
 		continue
 	fi
-	# merge & remove leaks & resolve
-	echo "  sp-rtrace-postproc -cl < $src | sp-rtrace-resolve $root -mmulti-pass > $dst"
-	sp-rtrace-postproc -cl < $src | sp-rtrace-resolve $root -mmulti-pass > $dst
-	if [ $? -eq 0 ]; then
-		callgraphs="$callgraphs $dst"
-	else
-		echo "  ERROR: conversion failed!"
-		rm $dst
-		exit 1
-	fi
+	# only succesful merge / leaks remove / resolve returns
+	convert_trace
+	callgraphs="$callgraphs $dst"
 done
 
 # Check ASCII callgraph inputs
@@ -398,7 +440,7 @@ for src in $texts; do
 	fi
 	# needs conversion
 	trace_basename $src
-	dst=$base-callgraph.rtrace.txt
+	dst=$base-$method-callgraph.rtrace.txt
 	echo "- $src -> $dst..."
 	if [ $src = $dst ]; then
 		echo "  SKIPPING: target file already exists, but it lacks required filtering."
@@ -422,25 +464,10 @@ for src in $texts; do
 		echo "  SKIPPING: backtrace depth $depth < 2"
 		continue
 	fi
-	# filter & resolve
-	head -1 $src|grep -q resolve
-	if [ $? -eq 0 ]; then
-		echo "  Already resolved, doing just freed resources removal and backtrace"
-		echo "  merging, for speed reasons.  Remove 'resolve' flag from first line"
-		echo "  in trace to trigger re-resolving:"
-		echo "  sp-rtrace-postproc -cl < $src > $dst"
-		sp-rtrace-postproc -cl < $src > $dst
-	else
-		echo "  sp-rtrace-postproc -cl < $src | sp-rtrace-resolve $root -mmulti-pass > $dst"
-		sp-rtrace-postproc -cl < $src | sp-rtrace-resolve $root -mmulti-pass > $dst
-	fi
-	if [ $? -eq 0 ]; then
-		callgraphs="$callgraphs $dst"
-	else
-		echo "  ERROR: conversion failed!"
-		rm $dst
-		exit 1
-	fi
+
+	# only succesful merge / leaks remove / resolve returns
+	convert_trace
+	callgraphs="$callgraphs $dst"
 done
 
 # if no callgraph tool, skip graphs

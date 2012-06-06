@@ -2,7 +2,7 @@
 .SH NAME
 rtrace-graphs-overview - create overview graphs for rtrace reports
 .SH SYNOPSIS
-rtrace-graphs-overview [--root <path>] <rtrace files>
+rtrace-graphs-overview [--bfd] [--root <path>] <rtrace files>
 .SH DESCRIPTION
 \fIrtrace-graphs-overview\fP is a helper script to generate several
 overview graphs of the given resource traces. Graphs include both
@@ -15,13 +15,40 @@ another device (with correct binaries and debug symbols), it can
 also handle already processed ASCII trace files.  These won't be
 post-processed or re-resolved.
 .PP
-With --root option, resolving is done based on root file system
-found at given path.  Note that <path>/usr/lib/debug<path>
-needs to symlink to to <path>/usr/lib/debug, otherwise
-using debug symbols for resolving won't work properly.
-.PP
 If tools needed for producing the graphs or the intermediate steps are
 missing, script will just provide the input files for further steps.
+.SH OPTIONS
+.TP
+\fI--bfd\fP
+Do resolving with BFD + debug symbols which gives also static function
+names, line number etc. instead of using the default ELF symbol table
+based resolving which gives just the names of the exported functions.
+.PP
+BFD resolving isn't the default because without debug symbols the
+results are worse (misleading).  It's also much slower and takes
+a lot of memory.
+.PP
+Typical workflow would be that if the default, ELF resolved callgraph
+shows something interesting, you install debug symbols for everything
+visible in the graph and run the script again with BFD resolving.
+.TP
+\fI--root\fP \fIpath\fP
+.PP
+With --root option, resolving is done based on binaries (and their
+debug symbols) residing in the target file system which root is
+at given path.
+.PP
+When using --root option together with --bfd option,
+<path>/usr/lib/debug<path> needs to point to (=symlink)
+<path>/usr/lib/debug, otherwise (sp-rtrace-resolve/libbfd)
+debug symbols will be missed.
+.PP
+Note that to get best resolving results (with --bfd), resolving should
+be done with the same system as where the tracing was done, not on PC
+with --root option. Otherwise e.g. C++ method calls which argument
+handling involves creating and destroying inlined object(s)
+\fIwithin\fP the method call, may get resolved to a destructor
+of an inlined object instead of that method call.
 .SH FILES
 The produced files have the same file names as input files with
 following extensions appended to them:
@@ -50,7 +77,10 @@ subdirectory in current directory and the post-processed *.rtrace.txt
 trace files into same directory where the input files are (so that it's
 easier to share them with \fIrtrace-graphs-function\fP script).
 .PP
-To re-generated above files, just remove them or the "overview"
+Callgraph related file names contain also "elf" or "bfd" string
+to indicate which method was used to resolve symbols in them.
+.PP
+To re-generated the files, just remove them or the "overview"
 directory and re-run the \fIrtrace-graphs-overview\fP script.
 .SH DETAILS
 \fIrtrace-graphs-overview\fP automatically post-processes the given
@@ -64,22 +94,23 @@ Post-processing includes merging backtraces to speed up their processing
 for timeline and removing the backtraces to reduce the file size; for
 callgraphs removing freed allocations and resolving the function addresses
 in the backtraces.  Last one requires appropriate binaries, libraries and
-their debug symbols to be present, either in the system or at given
-\fI--root\fP path.
+(optionally) their debug symbols to be present, either in the system or at
+given \fI--root\fP path.
 .PP
 \fIrtrace-graphs-overview\fP gives \fIrtrace-calltree\fP options which
 should create reasonable graphs even for very complicated programs.
 If you want to see more details, use either \fIrtrace-graphs-function\fP
 or just call \fIrtrace-calltree\fP (and \fIdot\fP) with options suitably
 modified from the ones (shown to be) used by this script.
+.PP
 To get more details from \fIsp-rtrace-timeline\fP graphs, use --scalex
 option for histograms and --filter option(s) for other graphs.
 .PP
 Intermediate files aren't removed so that you can do this kind of
 fine-tuned processing on them and also to be able to do the resolving
-on a target device with all the debug symbols and then moving the
-generated files to PC where you re-run the script to get generate
-graphs.
+on a target device with all the debug symbols and then move the
+generated files to PC where you re-run the script to generate
+graphs out of them.
 .SH SEE ALSO
 .IR rtrace-rename (1),
 .IR sp-rtrace-resolve (1),
