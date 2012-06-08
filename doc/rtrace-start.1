@@ -1,0 +1,37 @@
+.TH SP-RTRACE 1 "2012-06-08" "sp-rtrace"
+.SH NAME
+rtrace-start - launch programs with sp-rtrace to trace them
+.SH SYNOPSIS
+rtrace-start \fI<options>\fP [-x \fI<binary>\fP [\fI<arg>\fP] ... [\fI<arg>\fP]]
+.SH DESCRIPTION
+\fIsp-rtrace\fP is a resource consumption tracing manager and data pre-processor.
+\fIrtrace-start\fP is a wrapper script to start programs under sp-rtrace.
+It should support all current sp-rtrace features.
+.PP
+The advantage of starting sp-rtrace through it instead of directly
+with sp-rtrace, is that even in non-managed mode sp-rtrace is started
+to background and the traced program remains on foreground.  Therefore
+the started program always retains the terminal, reacts to key input
+and signals as expected.
+.SH OPTIONS
+.TP 
+\fI-x\fP \fI<binary and its args>\fP
+What program to start for tracing.  If this isn't given, \fIrtrace-start\fP
+just exports the environment variables (LD_PRELOAD etc) that set up
+sp-rtrace tracing according to the other given options.
+.PP
+For the other options, see \fIsp-rtrace\fP manual page.
+.SH FUTURE
+Eventually some subset of the current sp-rtrace option handling will
+most likely be removed and this script will be the only supported way
+to handle them. Because these options are transferred to sp-rtrace
+through environment variables, you may use sp-rtrace also just by
+exporting the environment variables set by this script.
+.SH SEE ALSO
+.IR sp-rtrace (1)
+.SH COPYRIGHT
+Copyright (C) 2012 Nokia Corporation.
+.PP
+This is free software. You may redistribute copies of it under the
+terms of the GNU General Public License v2 included with the software.
+There is NO WARRANTY, to the extent permitted by law.
