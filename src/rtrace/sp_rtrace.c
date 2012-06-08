@@ -811,7 +811,7 @@ static void print_description(int indent, int length, const char* description)
 			while (isalnum(*pend)) {
 				if (pend == pstart) {
 					msg_warning("couldn't split the description (%s) into %d "
-							        "character chunks\n", description, length);
+					            "character chunks\n", description, length);
 					return;
 				}
 				pend--;
@@ -1039,7 +1039,9 @@ int main(int argc, char* argv[])
 
 		case 'L':
 			rtrace_options.mode = MODE_LISTEN;
-			rtrace_options.pid = atoi(optarg);
+			if (optarg) {
+				rtrace_options.pid = atoi(optarg);
+			}
 			break;
 
 		case 'q':
