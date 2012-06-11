@@ -35,7 +35,7 @@ struct option rtrace_long_opt[] = {
 		 {"input-file", 1, 0, 'i'},
 		 {"output-dir", 1, 0, 'o'},
 		 {"manage-preproc", 0, 0, 'm'},
-		 {"preload", 1, 0, 'p'},
+		 {"preload", 1, 0, 'e'},
 		 {"start", 0, 0, 's'},
 		 {"toggle", 1, 0, 't'},
 		 {"follow-forks", 0, 0, 'f'},
