@@ -522,6 +522,7 @@ static bool is_child_process_of(int pid, int ppid)
 
 /**
  * Spawn sp-rtrace to toggle tracing for the specified child process.
+ * (This is a bit wasteful way to do this, but simplifies code)
  * 
  * @param[in] cpid   the child process id.
  */
@@ -785,6 +786,42 @@ static void enter_listen_mode(const char* pipe_path)
 	disconnect_input(0);
 	disconnect_output();
 	exit (rc);
+}
+
+/**
+ * From things listed in "How do I get my program to act like a daemon?":
+ *	http://www.faqs.org/faqs/unix-faq/programmer/faq/
+ * (or Stevens, Advanced Programming in the Unix Environment)
+ * 
+ * This does just double fork (to prevent traced process from getting
+ * SIGCHLD in non-managed mode), setsid() and change to root (to not
+ * block current dir). Closing of stdout/err aren't done because messages
+ * should still go to console.
+ */
+static void daemonize(void)
+{
+	const char* dir;
+	int pid = fork();
+	if (pid == -1) {
+		msg_error("failed to fork in daemonize()\n");
+		exit (-1);
+	}
+	if (pid > 0) {
+		_exit(0);
+	}
+	if (setsid() < 0) {
+		msg_error("setsid: %s\n", strerror(errno));
+	}
+	pid = fork();
+	if (pid > 0) {
+		_exit(0);
+	}
+
+	dir = rtrace_options.output_dir;
+	if (dir && strcmp(dir, "stdout") != 0) {
+		/* output dir set, go to root */
+		chdir("/");
+	}
 }
 
 /**
@@ -1073,6 +1110,7 @@ int main(int argc, char* argv[])
 			break;
 		}
 		case MODE_LISTEN: {
+			daemonize();
 			if (rtrace_options.pid) {
 				/* Target process pid is specified if sp-trace was launched from trace
 				 * script. In this case sp-trace should manage the named pipe */
