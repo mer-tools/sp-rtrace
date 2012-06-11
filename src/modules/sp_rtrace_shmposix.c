@@ -51,10 +51,12 @@
  */
 #define DO_CLEANUP 0
 
+/* mmap2() is a syscall, not Glibc call, disable it */
+#define TRACE_MMAP2 0
 
- /*
-  * file module function set
-  */
+/*
+ * file module function set
+ */
   
 typedef int (*shm_open_t)(const char *name, int oflag, mode_t mode);
 typedef int (*shm_unlink_t)(const char *name);
@@ -74,7 +76,9 @@ typedef struct {
 	open64_t open64;
 	creat_t creat;
 	mmap_t mmap;
+#if TRACE_MMAP2
 	mmap2_t mmap2;
+#endif
 	mmap64_t mmap64;
 	munmap_t munmap;
 	close_t close;
@@ -568,7 +572,9 @@ static void trace_initialize(void)
 			trace_off.open64 = (open64_t)dlsym(RTLD_NEXT, "open64");
 			trace_off.creat = (creat_t)dlsym(RTLD_NEXT, "creat");
 			trace_off.mmap = (mmap_t)dlsym(RTLD_NEXT, "mmap");
+#if TRACE_MMAP2
 			trace_off.mmap2 = (mmap2_t)dlsym(RTLD_NEXT, "mmap2");
+#endif
 			trace_off.mmap64 = (mmap64_t)dlsym(RTLD_NEXT, "mmap64");
 			trace_off.munmap = (munmap_t)dlsym(RTLD_NEXT, "munmap");
 			trace_off.close = (close_t)dlsym(RTLD_NEXT, "close");
@@ -774,6 +780,7 @@ static void* trace_mmap(void *addr, size_t length, int prot, int flags, int fd, 
 	return rc;
 }
 
+#if TRACE_MMAP2
 static void* trace_mmap2(void *addr, size_t length, int prot, int flags, int fd, off_t offset)
 {
 	void* rc = trace_off.mmap2(addr, length, prot, flags, fd, offset);
@@ -782,7 +789,7 @@ static void* trace_mmap2(void *addr, size_t length, int prot, int flags, int fd,
 	}
 	return rc;
 }
-
+#endif
 
 static void* trace_mmap64(void *addr, size_t length, int prot, int flags, int fd, off64_t offset)
 {
@@ -859,7 +866,9 @@ static trace_t trace_on = {
 	.open64 = trace_open64,
 	.creat = trace_creat,
 	.mmap = trace_mmap,
+#if TRACE_MMAP2
 	.mmap2 = trace_mmap2,
+#endif
 	.mmap64 = trace_mmap64,
 	.munmap = trace_munmap,
 	.close = trace_close,
@@ -932,14 +941,14 @@ void* mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset)
 	return rc;
 }
 
-
+#if TRACE_MMAP2
 void* mmap2(void *addr, size_t length, int prot, int flags, int fd, off_t pgoffset)
 {
 	void* rc;
 	rc = trace_rt->mmap2(addr, length, prot, flags, fd, pgoffset);
 	return rc;
 }
-
+#endif
 
 void* mmap64(void *addr, size_t length, int prot, int flags, int fd, off64_t offset)
 {
@@ -1028,12 +1037,14 @@ static void* init_mmap(void *addr, size_t length, int prot, int flags, int fd, o
 	return rc;
 }
 
+#if TRACE_MMAP2
 static void* init_mmap2(void *addr, size_t length, int prot, int flags, int fd, off_t pgoffset)
 {
 	trace_initialize();
 	void* rc = trace_init_rt->mmap2(addr, length, prot, flags, fd, pgoffset);
 	return rc;
 }
+#endif
 
 static void* init_mmap64(void *addr, size_t length, int prot, int flags, int fd, off64_t offset)
 {
@@ -1062,7 +1073,9 @@ static trace_t trace_init = {
 	.open64 = init_open64,
 	.creat = init_creat,
 	.mmap = init_mmap,
+#if TRACE_MMAP2
 	.mmap2 = init_mmap2,
+#endif
 	.mmap64 = init_mmap64,
 	.munmap = init_munmap,
 	.close = init_close,
