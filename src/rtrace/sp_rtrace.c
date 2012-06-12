@@ -369,7 +369,7 @@ static void create_preproc_pipe(char* pipe_path, size_t size)
 	}
 }
 
-int rtrace_connect_output()
+int rtrace_connect_output(void)
 {
 	if (rtrace_options.postproc) {
 		/* post-processor options detected. Spawn sp-rtrace-postproc process
@@ -438,8 +438,10 @@ static void disconnect_input(const char* pipe_path)
 	}
 }
 
+/* ---------- trace toggling specific code ---------------- */
+
 /**
- * Stop tracing the target process.
+ * Stop tracing the *non-managed* target process.
  *
  * The tracing is stopped simply by sending toggle signal to the
  * target process.
@@ -451,47 +453,49 @@ static void stop_tracing(void)
 	kill(rtrace_options.pid, rtrace_options.toggle_signal);
 }
 
-
 /**
- * Starts tracing the target process.
+ * Start tracing the *non-managed* target process.
  *
  * @return
  */
 static void begin_tracing(void)
 {
-	if (rtrace_options.manage_preproc) {
-		/* The pre-processor is managed by the tracing module.
-		 * Simply send toggle signal and exit.
-		 */
-		fprintf(stderr, "INFO: toggling tracing for the process %d started in managed mode.\n", rtrace_options.pid);
-		kill(rtrace_options.pid, rtrace_options.toggle_signal);
-	}
-	else {
-		fprintf(stderr, "INFO: Tracing started. Trace output will be produced after "
-			   "tracing is stopped. To stop tracing either press Ctrl+C, use toggle option "
-			   "again or terminate the target process.\n");
+	char pipe_path[128];
+	fprintf(stderr, "INFO: Tracing started. Trace output will be produced after "
+	        "tracing is stopped. To stop tracing either press Ctrl+C, use toggle option "
+	        "again or terminate the target process.\n");
 
-		char pipe_path[128];
-		/* setup data flow */
+	/* setup data flow */
 
-		/* the output stream will be setup after output settings
-		 * (OS) packet is received.
-		 * connect_output();
-		 */
-		create_preproc_pipe(pipe_path, sizeof(pipe_path));
-		kill(rtrace_options.pid, rtrace_options.toggle_signal);
-		connect_input(pipe_path);
+	/* the output stream will be setup after output settings
+	 * (OS) packet is received.
+	 * connect_output();
+	 */
+	create_preproc_pipe(pipe_path, sizeof(pipe_path));
+	kill(rtrace_options.pid, rtrace_options.toggle_signal);
+	connect_input(pipe_path);
 
-		/* start data processing */
-		int rc  = process_data();
-		/* close data connection */
-		disconnect_output();
-		disconnect_input(pipe_path);
+	/* start data processing */
+	int rc  = process_data();
+	/* close data connection */
+	disconnect_output();
+	disconnect_input(pipe_path);
 
-		exit(rc);
-	}
+	exit(rc);
 }
 
+/**
+ * Toggle tracing of the *managed* target process.
+ *
+ * The tracing is toggled simply by sending toggle signal
+ * to the target process.
+ * @return
+ */
+static void toggle_managed_tracing(void)
+{
+	fprintf(stderr, "INFO: toggling tracing for the process %d started in managed mode.\n", rtrace_options.pid);
+	kill(rtrace_options.pid, rtrace_options.toggle_signal);
+}
 
 /**
  * Checks if pid is a child process of ppid.
@@ -566,23 +570,59 @@ static void toggle_child_processes(int pid)
 		if (de->d_type == DT_DIR) {
 			int cpid = atoi(de->d_name);
 			if (cpid && is_child_process_of(cpid, pid)) {
-				char cmdline[PATH_MAX];
-				snprintf(cmdline, sizeof(cmdline), "/proc/%i/cmdline", cpid);
-				int fd = open(cmdline, O_RDONLY);
-				cmdline[0] = '\0';
-				if (fd) {
-					(void)read(fd, cmdline, sizeof(cmdline));
-					close(fd);
-				}
-				if (!strstr(cmdline, SP_RTRACE_PREPROC)) {
-					toggle_child_process(cpid);
-				}
+				toggle_child_process(cpid);
 			}
 		}
 	}
 	closedir(dir);
 }
 
+
+/**
+ * Checks if the specified process tracing is in managed mode.
+ * 
+ * The check is done by checking whether process has the environment
+ * variable controlling managed tracing.
+ * @param[in] pid  the target process identifier.
+ * @return    true if the process is managed, false otherwise.
+ */
+static bool is_process_managed(int pid)
+{
+	int fd;
+	char buffer[PATH_MAX];
+	sprintf(buffer, "/proc/%d/environ", pid);
+	fd = open(buffer, O_RDONLY);
+	if (fd >= 0) {
+		int count, len = strlen(rtrace_env_opt[OPT_MANAGE_PREPROC]);
+		char *start, *end;
+		start = buffer;
+		count = sizeof(buffer);
+		while ((count = read(fd, start, count)) > 0) {
+			/* contains: <name>=<value>\0 ?
+			 * (value expected to be 0|1)
+			 */
+			start = buffer;
+			while (count >= len+3) {
+				if (strncmp(start, rtrace_env_opt[OPT_MANAGE_PREPROC], len) == 0) {
+					start += len + 1;
+					return atoi(start);
+				}
+				end = memchr(start, '\0', count);
+				if (!end) {
+					break;
+				}
+				end++;
+				count -= (end - start);
+				start = end;
+			}
+			memmove(buffer, start, count);
+			start = buffer + count;
+			count = sizeof(buffer) - count;
+		}
+		close(fd);
+	}
+	return false;
+}
 
 /**
  * Checks if the specified process is being traced.
@@ -599,7 +639,7 @@ static bool is_process_traced(int pid)
 	sprintf(buffer, "/proc/%d/maps", pid);
 	FILE* fp = fopen(buffer, "r");
 	if (fp) {
-		while (fgets(buffer, PATH_MAX, fp)) {
+		while (fgets(buffer, sizeof(buffer), fp)) {
 			if (strstr(buffer, SP_RTRACE_MAIN_MODULE)) {
 				rc = true;
 				break;
@@ -611,53 +651,17 @@ static bool is_process_traced(int pid)
 }
 
 /**
- * Checks if trace is running for the specified process.
- *
- * This function checks both - normal and managed mode traces and
- * returns true if any of them were detected.
- * The normal mode trace is checked by verifying existence of the named
- * pipe used to transfer trace data.
- * The managed mode trace is checked by verifying if the target process
- * has sp-rtrace child process used to pipe the trace data.
- * @param pid
- * @return
+ * Checks if trace is running for the specified *non-managed* process.
+ * @param[in] pid  the target process identifier.
+ * @return    true if the process tracing is enabled
  */
-static bool is_process_trace_running(int pid)
+static bool is_process_tracing_enabled(int pid)
 {
 	char pipe_path[128];
 	/* First check if the named pipe for the process exist (normal mode check) */
 	snprintf(pipe_path, sizeof(pipe_path), SP_RTRACE_PIPE_PATTERN "%d", pid);
 	if (access(pipe_path, F_OK) == 0) return true;
-
-	/* Then check if the process has child process named sp-rtrace (manaed mode check) */
-	bool rc = false;
-	DIR* dir = opendir("/proc");
-	if (dir == NULL) {
-		msg_error("failed to open /proc/ directory\n");
-		return false;
-	}
-	struct dirent *de;
-	while ((de = readdir(dir)) != NULL) {
-		if (de->d_type == DT_DIR) {
-			int cpid = atoi(de->d_name);
-			if (cpid && is_child_process_of(cpid, pid)) {
-				char cmdline[PATH_MAX];
-				snprintf(cmdline, sizeof(cmdline), "/proc/%i/cmdline", cpid);
-				int fd = open(cmdline, O_RDONLY);
-				cmdline[0] = '\0';
-				if (fd) {
-					(void)read(fd, cmdline, sizeof(cmdline));
-					close(fd);
-				}
-				if (strstr(cmdline, SP_RTRACE_PREPROC)) {
-					rc = true;
-					break;
-				}
-			}
-		}
-	}
-	closedir(dir);
-	return rc;
+	return false;
 }
 
 /**
@@ -667,23 +671,31 @@ static bool is_process_trace_running(int pid)
  */
 static void toggle_tracing(void)
 {
+	pid_t pid = rtrace_options.pid;
 	/* first check if the target process is launched in tracing mode */
-	if (!is_process_traced(rtrace_options.pid)) {
+	if (!is_process_traced(pid)) {
 		msg_error("process %d doesn't have sp-rtrace LD_PRELOAD module. Was it started with sp-rtrace tool?\n", rtrace_options.pid);
 		return;
 	}
 
+	rtrace_options.manage_preproc = is_process_managed(pid);
+
 	if (rtrace_options.follow_forks) {
-		toggle_child_processes(rtrace_options.pid);
+		toggle_child_processes(pid);
 	}
 
-	if (is_process_trace_running(rtrace_options.pid)) {
-		stop_tracing();
+	if (rtrace_options.manage_preproc) {
+		toggle_managed_tracing();
 	} else {
-		begin_tracing();
+		if (is_process_tracing_enabled(pid)) {
+			stop_tracing();
+		} else {
+			begin_tracing();
+		}
 	}
 }
 
+/* -------- handling of other trace modes ------------- */
 
 /**
  * Starts tracing for unmanaged mode.
@@ -766,28 +778,6 @@ static void start_process_managed(char* app, char* args[])
 	exit (-1);
 }
 
-
-/**
- * Managed mode data processing.
- *
- * In managed mode pre-processor is spawned
- * by the main tracing module itself to
- * handle its event data.
- * @return
- */
-static void enter_listen_mode(const char* pipe_path)
-{
-	LOG("Entering listen mode");
-
-	connect_input(pipe_path);
-
-	int rc = process_data();
-
-	disconnect_input(0);
-	disconnect_output();
-	exit (rc);
-}
-
 /**
  * From things listed in "How do I get my program to act like a daemon?":
  *	http://www.faqs.org/faqs/unix-faq/programmer/faq/
@@ -822,6 +812,29 @@ static void daemonize(void)
 		/* output dir set, go to root */
 		chdir("/");
 	}
+}
+
+/**
+ * Managed mode data processing.
+ *
+ * In managed mode pre-processor is spawned
+ * by the main tracing module or rtrace-start
+ * to handle its event data.
+ * @return
+ */
+static void enter_listen_mode(const char* pipe_path)
+{
+	LOG("Entering listen mode");
+
+	daemonize();
+
+	connect_input(pipe_path);
+
+	int rc = process_data();
+
+	disconnect_input(0);
+	disconnect_output();
+	exit (rc);
 }
 
 /**
@@ -1110,22 +1123,20 @@ int main(int argc, char* argv[])
 			break;
 		}
 		case MODE_LISTEN: {
-			daemonize();
 			if (rtrace_options.pid) {
 				/* Target process pid is specified if sp-trace was launched from trace
 				 * script. In this case sp-trace should manage the named pipe */
 				char pipe_path[128];
 				create_preproc_pipe(pipe_path, sizeof(pipe_path));
 				enter_listen_mode(pipe_path);
-			}
-			else {
+			} else {
 				if (!rtrace_options.manage_preproc) {
 					msg_error("-L mode is for internal use only\n");
 					exit (-1);
 				}
+				rtrace_options.pid = getppid();
+				enter_listen_mode(NULL);
 			}
-			rtrace_options.pid = getppid();
-			enter_listen_mode(NULL);
 			break;
 		}
 		default: {
