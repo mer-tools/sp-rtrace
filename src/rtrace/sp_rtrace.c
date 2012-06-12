@@ -832,7 +832,7 @@ static void enter_listen_mode(const char* pipe_path)
 
 	int rc = process_data();
 
-	disconnect_input(0);
+	disconnect_input(pipe_path);
 	disconnect_output();
 	exit (rc);
 }
