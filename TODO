@@ -7,6 +7,10 @@ Potential TODOs
   one can easily analyze where the given sized allocations
   (showing in the histogram) originate from.
 
+* It's valid for programs to use open() and several other
+  traced functions in signal context.  Make trace module(s)
+  argument printing signal context safe (= don't use sprintf).
+
 * In file module, support recvmsg() for a socket which passes
   array of file descriptors from another process (behavior
   for them is like for dup(2)).
