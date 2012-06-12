@@ -7,6 +7,10 @@ Potential TODOs
   one can easily analyze where the given sized allocations
   (showing in the histogram) originate from.
 
+* In file module, support recvmsg() for a socket which passes
+  array of file descriptors from another process (behavior
+  for them is like for dup(2)).
+
 * Expand memtransfer module to cover more functions and
   test that it actually gives reasonable results (things
   going through PLT cover enough of such function calls
