@@ -209,10 +209,9 @@ def error_exit(msg):
 
 
 class TotalStats:
-    # estimated average allocation overhead, bytes
-    alloc_overhead = 8
-
-    def __init__(self):
+    def __init__(self, overhead):
+        # estimated average allocation overhead, bytes
+        self.alloc_overhead = overhead
         self.zero()
     
     def zero(self):
@@ -335,14 +334,14 @@ class Node:
 # ---------------- All items hash handling -------------------
 
 class Graph:
-    def __init__(self):
+    def __init__(self, overhead):
         # filled through .update()
         self.info = None
         self.trace_id = 0       # trace count, used as trace ID, start from 1
         self.recursed = 0       # count of recursed functions
         self.nodes = {}         # all nodes in the backtraces
         self.addresses = []     # list of (address, trace id) tuples
-        self.stats = TotalStats()
+        self.stats = TotalStats(overhead)
 
     def show_contents(self):
         "print out Graph contents"
@@ -688,8 +687,6 @@ class Rtrace:
             if line[0] in "0123456789":
                 oldname = name
                 (name,size,addr) = self.get_name_size_addr(line)
-                if only_counts:
-                    size = 1
                 if name != oldname:
                     # backtrace can be missing for previous alloc
                     # or free but it still needs to be handled and
@@ -741,6 +738,8 @@ class Rtrace:
                     sizes = []
                 # get alloc size
                 if size >= options.size_min and size <= options.size_max:
+                    if only_counts:
+                        size = 1
                     sizes.append(size)
                 # get alloc address
                 if (addr > top):
@@ -1464,8 +1463,12 @@ generate PostScript, SVG, PNG etc. formats out of them, or use e.g.
 # ----------------------- main ------------------------
 
 if __name__ == "__main__":
-    graph = Graph()
     options = Options(sys.argv)
+    if options.only_counts:
+        graph = Graph(0)
+    else:
+        # assumed per allocation overhead 8 bytes
+        graph = Graph(8)
     
     debug("\nParsing...")
     leaks = Rtrace(options.tracefile)
