@@ -567,16 +567,6 @@ static void signal_toggle_tracing(int signo __attribute((unused)))
 	LOG("enable=%d\n",  !sp_rtrace_options->enable);
 	sp_rtrace_options->enable = !sp_rtrace_options->enable;
 	if (sp_rtrace_options->enable) {
-		if (sp_rtrace_options->manage_preproc) {
-			/* When sp-rtrace is used to toggle tracing for a running process
-			 * it has no way of telling was the process started in managed or
-			 * normal mode. So sp-rtrace always creates named pipe for data
-			 * transfer. In managed mode the main module handles the data
-			 * connection itself, so it simply opens/closes the named pipe
-			 * indicating that the process is working in managed mode. */
-			int fd = open(pipe_path, O_WRONLY);
-			if (fd != -1) close(fd);
-		}
 		fd_proc = open_pipe();
 		if (fd_proc > 0) {
 			write_initial_data();
