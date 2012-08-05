@@ -7,6 +7,7 @@ debian/tmp/usr/lib/sp-rtrace/*so
 debian/tmp/usr/bin/rtrace-rename
 debian/tmp/usr/bin/rtrace-sort
 debian/tmp/usr/bin/rtrace-stats
+debian/tmp/usr/bin/rtrace-start
 debian/tmp/usr/share/man/man1/sp-rtrace.1
 debian/tmp/usr/share/man/man1/sp-rtrace-postproc.1
 debian/tmp/usr/share/man/man1/sp-rtrace-resolve.1
