@@ -1,4 +1,4 @@
-sp-rtrace (devel), -- --- 2012:
+sp-rtrace (2.0), 05 Aug 2012:
   * new rtrace-start script to start sp-rtrace and traced process.
     With it, sp-rtrace is started onto background and traced process
     runs on foreground

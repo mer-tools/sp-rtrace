@@ -1,5 +1,5 @@
 Name: sp-rtrace
-Version: 1.9
+Version: 2.0
 Release: 1%{?dist}
 Summary:  Resource consumption tracing tools
 Group: Development/Tools
@@ -43,6 +43,7 @@ rm -rf %{buildroot}
 %{_bindir}/rtrace-sort
 %{_bindir}/rtrace-stats
 %{_bindir}/rtrace-function-address
+%{_bindir}/rtrace-start
 %{_libdir}/libsp-rtrace-main.so*
 %{_libdir}/sp-rtrace/
 %{_mandir}/man1/sp-rtrace.1.gz
@@ -140,6 +141,50 @@ Requires: sp-rtrace, python, graphviz
 
 
 %changelog
+
+* Sun Aug 05 2012 Andris Zeila <andris.zeila@gmail.com> 2.0
+  * new rtrace-start script to start sp-rtrace and traced process.
+    With it, sp-rtrace is started onto background and traced process
+    runs on foreground
+  * sp-rtrace managed mode (-m) doesn't anymore cause the traced
+    process to be fork()ed onto background and sp-rtrace exiting,
+    traced process is simple exec()ed
+  * As result of above two changes, traced program execution doesn't
+    anymore annoyingly continue on bg (depending on which tracing mode
+    is used or whether tracing is enabled) and tracing works also for
+    ncurses programs that need console
+  * trace toggling (-t), knows when managed mode (-m) is used by
+    traced process, it doesn't need to be specified
+  * Resolver -s/--sysroot option renamed to -r/--root and fixed to
+    work also outside Sratchbox. Give error if binary referenced
+    in trace isn't found
+  * Support resolver --root option in rtrace-graphs-* scripts
+  * Post-processor allows reading of binary traces from different
+    architecture if endianess and pointer sizes match
+  * Collecting heap information for allocmap in the memory module
+    is disabled unless sp-rtrace is run with SP_RTRACE_MALLINFO
+    environment variable set (because it slows down tracing
+    and it's mostly obsoleted by pagemap module/tool)
+  * Large number of missing functions added to the file module,
+    more info for sockets (extracted from bind/connect calls),
+    and some corner case issues fixed in the module
+  * More readable & consistent function arguments (for callgraphs),
+    all FDs are decimals and hex numbers are prefixed with 0x
+  * Callgraph includes process name etc to callgraph, --include-only
+    option acts on traced functions too
+  * rtrace-rename can rename trace files based on the traced binary
+    name listed in the trace header
+  * New rtrace-function-address and rtrace-alloc-sizes helper scripts
+  * sp-rtrace module API change and code refactoring
+    - exits with error if resolving of any of the functions
+      that module overloads fails
+  * Large code reductions in modules by grouping similar trace
+    functions and using common helpers for printing their trace data
+  * Large number of extra compiler warnings enabled and fixed,
+    fixes to error handling
+  * Fix test-suite tests and it on certain errors killing whole
+    desktop session
+
 * Mon Apr 25 2012 Eero Tamminen <eero.tamminen@nokia.com> 1.9
   * Update to 1.9 with many fixes, add new files
 
