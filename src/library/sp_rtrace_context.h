@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -77,14 +77,14 @@ void sp_context_exit(unsigned int context_id);
 
  * @return  the current call context.
  */
-unsigned int sp_context_get_mask();
+unsigned int sp_context_get_mask(void);
 
 /**
  * Retrieves the number of registered contexts.
 
  * @return  the number of registered contexts.
  */
-unsigned int sp_context_get_count();
+unsigned int sp_context_get_count(void);
 
 #ifdef  __cplusplus
 }

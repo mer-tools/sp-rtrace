@@ -115,9 +115,10 @@ the process-to-trace onto background.  This way one can start large
 number of processes e.g. at device boot to wait for being traced,
 without redundant sp-rtrace instances.
 
-When managed mode is used, pre-processor also exists after launching
-the target process.  The differences is that a new pre-processor is
-started by the sp-rtrace main module itself for data pre-processing.
+When managed mode is used, sp-rtrace uses exec to replace itself with
+the target process.  A new pre-processor is started by the sp-rtrace
+LD_PRELOAD main module itself for data pre-processing when tracing is
+started.
 
 The post-processor keeps track of the module memory mapping and
 rescans /proc/<pid>/maps file whenever new library (NL) packet is

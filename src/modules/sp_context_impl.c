@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -26,6 +26,7 @@
 #include <dlfcn.h>
 #include <string.h>
 
+#include "library/sp_rtrace_context.h"
 #include "sp_context_impl.h"
 #include "sp_rtrace_main.h"
 
@@ -36,13 +37,14 @@
  * Empty call context function, used when context library is not available.
  * @return
  */
-static int empty_get_call_context()
+static int empty_get_call_context(void)
 {
 	return 0;
 }
 
-int sp_rtrace_init_context()
+int sp_rtrace_init_context(void)
 {
+	/* see: sp_rtrace_context.h */
 	void* fn = dlsym(RTLD_DEFAULT, "sp_context_get_mask");
 	if (fn) {
 		sp_rtrace_get_call_context = fn;
@@ -50,7 +52,7 @@ int sp_rtrace_init_context()
 	return 0;
 }
 
-int (*sp_rtrace_get_call_context)() = empty_get_call_context;
+int (*sp_rtrace_get_call_context)(void) = empty_get_call_context;
 
 
 /**
@@ -61,19 +63,17 @@ static unsigned int (*rt_context_create)(const char* name);
 
 unsigned int sp_context_create(const char* name)
 {
-	sp_rtrace_context_t context = {.id = rt_context_create(name), .name = (char*)name};
+	module_context_t context = {.id = rt_context_create(name), .name = name};
 	if (context.id) {
 		sp_rtrace_write_context_registry(&context);
 	}
 	return context.id;
 }
 
-unsigned int init_context_create(const char* name) 
+static unsigned int init_context_create(const char* name) 
 {
 	rt_context_create = dlsym(RTLD_NEXT, "sp_context_create");
 	return rt_context_create(name);
 }
 
 static unsigned int (*rt_context_create)(const char* name) = init_context_create;
-
-

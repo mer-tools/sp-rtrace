@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -35,7 +35,7 @@ struct option rtrace_long_opt[] = {
 		 {"input-file", 1, 0, 'i'},
 		 {"output-dir", 1, 0, 'o'},
 		 {"manage-preproc", 0, 0, 'm'},
-		 {"preload", 1, 0, 'p'},
+		 {"preload", 1, 0, 'e'},
 		 {"start", 0, 0, 's'},
 		 {"toggle", 1, 0, 't'},
 		 {"follow-forks", 0, 0, 'f'},
@@ -46,7 +46,7 @@ struct option rtrace_long_opt[] = {
 		 {"disable-packet-buffering", 0, 0, 'B'},
 		 {"execute", 1, 0, 'x'},
 		 {"list", 0, 0, 'l'},
-		 {"listen", 0, 0, 'L'},
+		 {"listen", 2, 0, 'L'},
 		 {"help", 0, 0, 'h'},
 		 {"backtrace-all", 0, 0, 'A'},
 		 {"libunwind", 0, 0, 'u'},
@@ -60,7 +60,7 @@ struct option rtrace_long_opt[] = {
  * The environment variables must have the same index as
  * related option index.
  */
-char *rtrace_env_opt[] = {
+const char *rtrace_env_opt[] = {
 		/**
 		 * --input-file
 		 * Specifies the output directory for rtrace logs.
@@ -164,7 +164,7 @@ char *rtrace_env_opt[] = {
 };
 
 /* sp_rtrace short option list */
-char* rtrace_short_opt = "+i:o:me:st:fb:TAP:S:Bhx:lLFuM:q";
+const char* rtrace_short_opt = "+i:o:me:st:fb:TAP:S:Bhx:lL::FuM:q";
 
 void rtrace_args_add_opt(rtrace_args_t* args, char opt, const char* value)
 {

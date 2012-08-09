@@ -22,48 +22,64 @@
 #
 #
 
-display_options()
+format="<path>:<address>+<size>"
+usage ()
 {
-	echo "Scans target symbol table for address range of the specified function."
-	echo "  Usage: function-range.sh <target> <function>"
-	echo "    The result is given in format <target>:<start address>+<size>"
+	echo
+	echo "Scans given ELF object/library symbol table for address range"
+	echo "of the specified function and provides corresponding value to"
+	echo "to give for sp-rtrace-postproc --call-address option."
+	echo
+	echo "Usage: ${0##*/} <absolute path to object> <function>"
+	echo
+	echo "The result is given in '$format' format."
+	echo
+	if [ \! -z "$1" ]; then
+		echo "ERROR: $1!"
+		echo
+	fi
+	exit 1
 }
 
-address_range()
+get_address_range ()
 {
 	target=$1
 	address=$(nm -SC  "$target" 2>&1)
 	if [ $? -ne 0 ] || [ "$address" = "nm: $target: no symbols" ]; then
-		echo "" 
-		return
+		address="" 
 	fi
-	echo "$address"
 }
 
-if [ $# -lt 2 ]; then
-	display_options
-	exit 1
+if [ $# -ne 2 ]; then
+	usage "argument(s) missing"
+fi
+if [ \! -f $1 ]; then
+	usage "file '$1' doesn't exist or isn't a regular file"
 fi
 
-if ! type anm >/dev/null 2>&1; then
-    echo "Warning: nm utility was not found in the default path."
+if ! type nm >/dev/null 2>&1; then
+    echo "ERROR: required 'nm' utility was not found from the path!"
     exit 1
 fi
 
-
-target=$1
+if type realpath >/dev/null 2>&1; then
+	target=$(realpath $1)
+else
+	target=$1
+fi
 shift
-function=$1
+func=$1
 
-address=$(address_range $target)
+get_address_range $target
 if [ -z "$address" ]; then
-	address=$(address_range /usr/lib/debug/$target)
+	get_address_range /usr/lib/debug$target
 	if [ -z "$address" ]; then
 		echo "Failed to get symbol table for $target" >&2 
 		exit 1
 	fi
 fi
 
-echo $target:$(echo "$address" | grep "$function" | head -n1 | sed -r "s/([0-9a-f]+) ([0-9a-f]+) .*/\1+\2/" )
+echo "Function '$func' address range ($format):"
+echo $target:$(echo "$address" | grep "$func" | head -n1 | sed -r "s/([0-9a-f]+) ([0-9a-f]+) .*/\1+\2/" )
 
 exit 0

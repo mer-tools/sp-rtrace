@@ -1,5 +1,12 @@
-AM_CFLAGS = -Wall -Wextra -Wno-unused-function -Wno-missing-field-initializers -Wno-unused-parameter
-AM_CXXFLAGS = -Wall -Wextra -Wno-unused-function -Wno-missing-field-initializers -Wno-unused-parameter
+AM_CFLAGS = -Wall -Wextra -Wmissing-prototypes -Wstrict-prototypes \
+	-Wwrite-strings -Wsign-compare -Wformat-security \
+	-Wcast-qual -Wbad-function-cast -Wpointer-arith
+
+# -Wno-unused-function -Wno-missing-field-initializers -Wno-unused-parameter
+AM_CXXFLAGS = -Wall -Wextra -Wwrite-strings -Wsign-compare \
+	-Wformat-security -Wpointer-arith \
+	-Wno-unused-parameter
+# -Wno-unused-function -Wno-missing-field-initializers
 
 # needed for executing post-processors and finding modules under install dir
 AM_CPPFLAGS = -DBINDIR='"$(bindir)"' -DLIBDIR='"$(libdir)"'

@@ -30,6 +30,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <signal.h>
 
 void zero(int size)
@@ -71,7 +72,7 @@ static void sigint_handler(int sig)
 	s_loop = 0;
 }
 
-void start()
+void start(void)
 {
 	int size = 1000;
 	while (s_loop) {

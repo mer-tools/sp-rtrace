@@ -26,6 +26,7 @@
 #include <unistd.h>
 #include <stdio.h>
 
+#include "resolve_utils.h"
 #include "utils.h"
 #include "msg.h"
 
@@ -55,7 +56,7 @@
  * @param path
  * @return
  */
- int rs_mmap_is_absolute(const char* path)
+int rs_mmap_is_absolute(const char* path)
 {
 	FILE *file;
 	Elf_Ehdr_t elf_header;
@@ -72,6 +73,7 @@
 	ret = fread(&elf_header, sizeof(elf_header), 1, file);
 	if (ret != 1) {
 		msg_error("invalid ELF header from %s\n", path);
+		fclose(file);
 		return -EINVAL;
 	}
 
@@ -84,6 +86,7 @@
 	if (ret != elf_header.e_phnum) {
 		free(program_header);
 		msg_error("could not read program header table from %s\n", path);
+		fclose(file);
 		return -EINVAL;
 	}
 

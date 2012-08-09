@@ -37,6 +37,10 @@ steps in the sp-rtrace directory:
   4) Install the bult binaries with "make install"
   5) Run "ldconfig -v" so that dynamic linker finds libsp-rtrace.so
 
+Optional:
+  6) After installing sp-rtrace and dejagnu test framework, run
+     "make check" to verify that sp-rtrace and the modules work fine
+
 
 1.3 Trace data visualization dependencies
 -----------------------------------------
@@ -50,14 +54,14 @@ in Debian).
 1.4 Troubleshooting
 -------------------
 
-While precompiled headers speeds up C++ compilation, often it makes
-hard to locate the error sources. If this is a problem disable precompiled
-headers with --disable-precomp configure option (see Compilation &
-Installation).
+While precompiled headers speed up C++ compilation, it often makes
+it harder to locate the error sources. If this is a problem, disable
+precompiled headers with --disable-precomp configure option (see
+Compilation & Installation).
 
 sp-rtrace will at run-time print additional debug messages when
 configured with --enable-debug-info option (see Compilation &
 Installation).
 
 If sp-rtrace utilities don't find the modules or other utilities, you
-can use "strace -f" to trace where they try to find them.
+can use "strace -f" to trace where they try to find them from.

@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010,2011 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -80,8 +80,8 @@ static int write_attachment_info(rd_attachment_t* file, FILE* fp)
  */
 static long comment_check_index(rd_comment_t* comment, void* data)
 {
-	long index = (long)data;
-	return comment->index < index;
+	long idx = (long)data;
+	return comment->index < idx;
 }
 
 /**
@@ -180,15 +180,15 @@ static void write_heap_information(FILE* fp, rd_hinfo_t* hinfo)
 	TRY(sp_rtrace_print_comment(fp, "##   lowest block 0x%lx\n", hinfo->lowest_block));
 	TRY(sp_rtrace_print_comment(fp, "##   highest block 0x%lx\n", hinfo->highest_block));
 	TRY(sp_rtrace_print_comment(fp, "##   non-mapped space allocated from system %d\n", hinfo->arena));
-	TRY(sp_rtrace_print_comment(fp, "##   number of free chunks %d\n", hinfo->ordblks));
-	TRY(sp_rtrace_print_comment(fp, "##   number of fastbin blocks %d\n", hinfo->smblks));
-	TRY(sp_rtrace_print_comment(fp, "##   number of mapped regions %d\n", hinfo->hblks));
+	TRY(sp_rtrace_print_comment(fp, "##   count of free chunks %d\n", hinfo->ordblks));
+	TRY(sp_rtrace_print_comment(fp, "##   count of freed fastbin blocks %d\n", hinfo->smblks));
+	TRY(sp_rtrace_print_comment(fp, "##   count of mapped regions %d\n", hinfo->hblks));
 	TRY(sp_rtrace_print_comment(fp, "##   space in mapped regions %d\n", hinfo->hblkhd));
 	TRY(sp_rtrace_print_comment(fp, "##   maximum total allocated space %d\n", hinfo->usmblks));
 	TRY(sp_rtrace_print_comment(fp, "##   space available in freed fastbin blocks %d\n", hinfo->fsmblks));
-	TRY(sp_rtrace_print_comment(fp, "##   total allocated space %d\n", hinfo->uordblks));
+	TRY(sp_rtrace_print_comment(fp, "##   total allocated space, both normal and mmapped %d\n", hinfo->uordblks));
 	TRY(sp_rtrace_print_comment(fp, "##   total free space %d\n", hinfo->fordblks));
-	TRY(sp_rtrace_print_comment(fp, "##   top-most, releasable (via malloc_trim) space %d\n", hinfo->keepcost));
+	TRY(sp_rtrace_print_comment(fp, "##   space ideally releasable via malloc_trim %d\n", hinfo->keepcost));
 }
 
 typedef struct {
@@ -205,8 +205,8 @@ typedef struct {
 static void write_leaks(rd_resource_t* res, leaks_t* leaks)
 {
 	TRY(sp_rtrace_print_comment(leaks->fp, "# Resource - %s (%s):\n", res->data.type, res->data.desc));
-	int index = ffs(res->data.id) - 1;
-	TRY(sp_rtrace_print_comment(leaks->fp, "# %d block(s) leaked with total size of %d bytes\n", leaks->leaks[index].count, leaks->leaks[index].total_size));
+	int idx = ffs(res->data.id) - 1;
+	TRY(sp_rtrace_print_comment(leaks->fp, "# %d block(s) leaked with total size of %d bytes\n", leaks->leaks[idx].count, leaks->leaks[idx].total_size));
 
 }
 

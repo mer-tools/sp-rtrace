@@ -1,0 +1,170 @@
+#!/bin/sh
+
+# TODO: replace with the installation lib dir during make phase
+LIBDIR=/usr/lib
+
+
+#
+# Sets sp-rtrace option environment variable.
+#
+# Empty variables aren't set.
+#   $1 - variable name
+#   $2 - variable value
+#
+
+set_envopt()
+{
+    if [ -n "$2" ]; then
+	eval "export $1=$2"
+    fi
+}
+
+#
+# Parses preload (-e) option and sets LD_PRELOAD environment variable
+#
+#   $1 - preload options specified with -e (--preload) option
+#
+set_preload()
+{
+    preload="$LIBDIR/libsp-rtrace-main.so"
+    modules=$(echo $1 | tr ":" "\n")
+    for module in $modules; do
+	if [ "${module#*.}" != "so" ]; then
+	    module="libsp-rtrace-$module.so"
+	fi
+	preload="$preload:$LIBDIR/sp-rtrace/$module"
+    done
+    export LD_PRELOAD="$preload"
+}	
+#
+if ! type sp-rtrace > /dev/null; then
+    echo "Error, failed to locate sp-rtrace utility"
+    exit 1
+fi
+
+# initialize sp-rtrace options
+opt_trace_start=
+opt_execute_command=
+opt_preload=
+opt_output_dir=$(pwd)
+opt_toggle_signal=
+opt_quiet=
+opt_postproc=
+opt_disable_packet_buffering=
+opt_disable_timestamps=
+opt_backtrace_all=
+opt_monitor_size=
+opt_backtrace_depth=
+opt_manage_preproc=
+
+# parse command line 
+while [ $# -gt 0 ]; do
+    case $1 in
+	-s|--start)
+	    opt_trace_start=1
+	;;
+	
+	-h|--help)
+	    sp-rtrace -h
+	    exit 0
+	;;
+	
+	-l|--list)
+	    sp-rtrace -l
+	    exit 0
+	;;
+	
+	-o|--output-dir)
+	    shift
+	    opt_output_dir=$(readlink -m "$1")
+	;;
+	
+	-q|--quiet)
+	    opt_quiet=1
+	;;
+	
+	-S|--toggle-signal)
+	    shift
+	    opt_toggle_signal=$1
+	;;
+	
+	-P|--postproc)
+	    shift
+	    opt_postproc=$1
+	;;
+	
+	-e|--preload)
+	    shift
+	    opt_preload=$1
+	;;
+	
+	-m|--manage-preproc)
+	    opt_manage_preproc=1
+	;;
+	
+	-B|--disable-packet-buffering)
+	    opt_disable_packet_buffering=1
+	;;
+	
+	-T|--disable-timestamps)
+	    opt_disable_timestamps=1
+	;;
+	
+	-A|--backtrace-all)
+	    opt_backtrace_all=1
+	;;
+	
+	-M|--monitor)
+	    shift
+	    opt_monitor_size=$1
+	;;
+	
+	-b|--backtrace-depth)
+	    shift
+	    opt_backtrace_depth=$1
+	;;
+	
+	-x|--execute)
+	    shift
+	    opt_execute_command=$@
+	    break
+	;;
+	
+	*)
+	    echo "Unknown option: $1"
+	    sp-rtrace -h
+	    exit 0
+	;;
+    esac
+    shift
+done
+
+# spawn sp-rtrace process to listen for data if tracing should be started
+if [ -n "$opt_execute_command" ] && [ -n "$opt_trace_start" ] && [ -z "$opt_manage_preproc" ]; then
+    mkfifo /tmp/rtrace-$$
+    # launch non-managed sp-rtrace. With -L it will daemonize itself and get
+    # owned by init i.e. its exit doesn't send SIGCHLD to traced process.
+    sp-rtrace -L$$ &
+fi
+
+# set environment options
+set_envopt "SP_RTRACE_READY" "1"
+set_envopt "SP_RTRACE_START" "$opt_trace_start"
+set_envopt "SP_RTRACE_PRELOAD" "$opt_preload"
+set_envopt "SP_RTRACE_OUTPUT_DIR" "$opt_output_dir"
+set_envopt "SP_RTRACE_TOGGLE_SIGNAL" "$opt_toggle_signal"
+set_envopt "SP_RTRACE_POSTPROC" "$opt_postproc"
+set_envopt "SP_RTRACE_DISABLE_PACKET_BUFFERING" "$opt_disable_packet_buffering"
+set_envopt "SP_RTRACE_DISABLE_TIMESTAMPS" "$opt_disable_timestamps"
+set_envopt "SP_RTRACE_BACKTRACE_ALL" "$opt_backtrace_all"
+set_envopt "SP_RTRACE_MONITOR_SIZE" "$opt_monitor_size"
+set_envopt "SP_RTRACE_BACKTRACE_DEPTH" "$opt_backtrace_depth"
+set_envopt "SP_RTRACE_MANAGE_PREPROC" "$opt_manage_preproc"
+set_envopt "SP_RTRACE_START_DIR" "$pwd"
+
+set_preload "$opt_preload"
+
+# execute the target process
+if [ -n "$opt_execute_command" ]; then
+    exec $opt_execute_command
+fi

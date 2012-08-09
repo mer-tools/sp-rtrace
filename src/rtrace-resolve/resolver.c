@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -34,7 +34,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
+#include <demangle.h>
 
 #include "resolver.h"
 #include "sp_rtrace_resolve.h"
@@ -43,10 +43,13 @@
 #include "common/msg.h"
 #include "namecache.h"
 
+#define DEBUG 1
+#if DEBUG
+# include <execinfo.h>
+#endif
+
 #define DMGL_PARAMS  (1 << 0) /* Include function args */
 #define DMGL_ANSI  (1 << 1)   /* Include const, volatile, etc */
-
-extern char* cplus_demangle(const char* symbol, int flags);
 
 #define TARGET    "default"
 
@@ -54,6 +57,9 @@ extern char* cplus_demangle(const char* symbol, int flags);
 
 /* the name used for unknown symbols */
 #define UNKNOWN_SYMBOL    "in ??"
+
+/* same as in bfd header except for bogus (char*) cast */
+#define bfd_get_const_filename(abfd) (abfd)->filename
 
 /* 64 bit compatibility */
 
@@ -84,33 +90,127 @@ typedef struct {
 	unsigned int line;
 } symbol_info_t;
 
- /**
-  * Free resolver cache record.
-  *
-  * @param[in] rec    the cache record to free.
-  */
- static void rs_cache_record_clear(rs_cache_record_t* rec)
- {
- 	if (rec->symbols) {
- 		free(rec->symbols);
- 		rec->symbols = NULL;
- 	}
- 	if (rec->file) {
- 		bfd_close(rec->file);
- 		rec->file = NULL;
- 	}
- 	if (rec->dbg_name) {
- 		free(rec->dbg_name);
- 		rec->dbg_name = NULL;
- 	}
- 	if (rec->fd) {
- 		munmap(rec->image, rec->image_size);
- 		close(rec->fd);
- 		rec->fd = 0;
- 		rec->image = NULL;
- 	}
- 	rec->mmap = NULL;
- }
+/* BFD will read debug symbols from:
+ *   <host path>DEBUG_PATH<host path><binary path>
+ * In case "-s" option has set a host path, there
+ * needs to be a host path redirection symlink.
+ */
+#define DEBUG_PATH "/usr/lib/debug"
+
+/**
+ * If guest OS root given, check that its debugdir has
+ * required redirection for BFD to find the debug symbols.
+ */
+static void rs_check_debugdir(void)
+{
+	char tmppath[PATH_MAX];
+	char *path, *sep, *last;
+	int len;
+
+	path = resolve_options.root_path;
+	if (!path || *path != '/') {
+		return;
+	}
+	snprintf(tmppath, sizeof(tmppath), "%s%s%s", path, DEBUG_PATH, path);
+	if (access(tmppath, R_OK|X_OK) == 0) {
+		return;
+	}
+
+	/* output information error message and exit */
+	fprintf(stderr, "guest OS debug path redirection symlink is missing:\n  %s\n", tmppath);
+
+	last = strrchr(tmppath, '/');
+	*last++ = '\0';
+	fprintf(stderr, "please create it, e.g. with:\n"
+		"  mkdir -p %s\n  cd %s\n  ln -s ",
+		tmppath, tmppath);
+
+	len = strlen(path);
+	sep = tmppath;
+	/* get up to <host path><debug path> level */
+	for (;;) {
+		while (*sep == '/') {
+			sep++;
+		}
+		if (!(sep = strchr(sep, '/')) || sep-tmppath >= len) {
+			break;
+		}
+		fputs("../", stderr);
+	}
+	fprintf(stderr, " %s\n", last);
+
+	exit (-1);
+}
+
+/**
+ * File path without the resolve -s option path prefix.
+ *
+ * @param[in] path  the file path.
+ * @return          target path.
+ */
+static const char* rs_target_path(const char *path)
+{
+	if (!resolve_options.root_path || *path != '/') {
+		return path;
+	}
+	int len = strlen(resolve_options.root_path);
+	if (strncmp(path, resolve_options.root_path, len) == 0) {
+		path += len;
+		if (*path) {
+			path++;
+		}
+	}
+	return path;
+}
+
+const char* rs_host_path(const char* path)
+{
+	if (!resolve_options.root_path || *path != '/') {
+		return path;
+	}
+	if (strncmp(path, resolve_options.root_path, strlen(resolve_options.root_path)) == 0) {
+		msg_warning("double host path for %s\n", path);
+#if DEBUG
+		/* let's get backtrace */
+		void *addr[8];
+		int count = backtrace(addr, sizeof(addr)/sizeof(*addr));
+		backtrace_symbols_fd(addr, count, fileno(stderr));
+#endif
+		return path;
+	}
+	static char host_path[PATH_MAX];
+	snprintf(host_path, PATH_MAX, "%s/%s", resolve_options.root_path, path);
+	return host_path;
+}
+
+
+/**
+ * Free resolver cache record.
+ *
+ * @param[in] rec    the cache record to free.
+ */
+static void rs_cache_record_clear(rs_cache_record_t* rec)
+{
+	if (rec->symbols) {
+		free(rec->symbols);
+		rec->symbols = NULL;
+	}
+	if (rec->file) {
+		bfd_close(rec->file);
+		rec->file = NULL;
+	}
+	if (rec->dbg_name) {
+		free(rec->dbg_name);
+		rec->dbg_name = NULL;
+	}
+	if (rec->fd) {
+		munmap(rec->image, rec->image_size);
+		close(rec->fd);
+		rec->fd = 0;
+		rec->image = NULL;
+	}
+	rec->mmap = NULL;
+}
 
 /*
  * Memory mapping support
@@ -139,14 +239,14 @@ static long mmap_compare(const rs_mmap_t* mmap1, const rs_mmap_t* mmap2)
  * @param[in] mmap
  * @return
  */
-static void rs_mmap_free_node(rs_mmap_t* mmap)
+static void rs_mmap_free_node(rs_mmap_t* map)
 {
-	if (mmap->module) free(mmap->module);
-	if (mmap->is_cache_owner) {
-		rs_cache_record_clear(mmap->cache);
-		free(mmap->cache);
+	if (map->module) free(map->module);
+	if (map->is_cache_owner) {
+		rs_cache_record_clear(map->cache);
+		free(map->cache);
 	}
-	free(mmap);
+	free(map);
 }
 
 
@@ -171,9 +271,9 @@ static int elf_get_address_info(rs_cache_record_t* rec, pointer_t address, symbo
 	Elf_Off_t soff = ehdr->e_shoff, str_soff;
 	Elf_Shdr_t *shdr, *str_shdr;
 
-	void* abs_address = (void*)address;
+	pointer_t abs_address = address;
 	if (!rec->mmap->is_absolute) {
-		abs_address -= (unsigned long)rec->mmap->from;
+		abs_address -= rec->mmap->from;
 	}
 
 	shdr = (Elf_Shdr_t*)((char*)rec->image + soff);
@@ -199,7 +299,7 @@ static int elf_get_address_info(rs_cache_record_t* rec, pointer_t address, symbo
 
 				for (sym = symtab; sym < symtab_end; sym = (Elf_Sym_t*)((char*)sym + symtab_size)) {
 					if (ELF_ST_TYPE(sym->st_info) == STT_FUNC && sym->st_shndx != SHN_UNDEF) {
-						if ((Elf_Addr_t)abs_address >= sym->st_value && (unsigned long)(abs_address - sym->st_value) < sym->st_size) {
+						if ((Elf_Addr_t)abs_address >= sym->st_value && (abs_address - sym->st_value) < sym->st_size) {
 							if (strtab + sym->st_name) {
 								symbol->name =  strtab + sym->st_name;
 								return 0;
@@ -231,18 +331,18 @@ static int elf_get_address_info(rs_cache_record_t* rec, pointer_t address, symbo
  */
 static int bfd_get_address_info(rs_cache_record_t* rec, pointer_t address, symbol_info_t* symbol)
 {
-	void* abs_address = (void*)address;
+	pointer_t abs_address = address;
 
 	asection *section;
 	bfd_vma pc, vma;
 	bfd_size_type size;
 
 	if (!rec->mmap->is_absolute) {
-		abs_address -= (unsigned long)rec->mmap->from;
+		abs_address -= rec->mmap->from;
 	}
 
 	char addr_hex[LINE_MAX];
-	sprintf(addr_hex, "%#lx", (long)abs_address);
+	sprintf(addr_hex, "%#lx", abs_address);
 
 	/* If frame is not the innermost frame, that normally means that
 	   pc points to *after* the call instruction, and we want to
@@ -281,8 +381,8 @@ static int bfd_get_address_info(rs_cache_record_t* rec, pointer_t address, symbo
  */
 static int get_address_info(rs_cache_record_t* rec, pointer_t address, char* buffer)
 {
-	symbol_info_t bfd = {0};
-	symbol_info_t elf = {0};
+	symbol_info_t bfd = {.name=NULL, .source=NULL};
+	symbol_info_t elf = {.name=NULL, .source=NULL};
 	symbol_info_t* sym = NULL;
 	char* ptr_out = buffer;
 
@@ -340,7 +440,7 @@ static int get_address_info(rs_cache_record_t* rec, pointer_t address, char* buf
 		if (sym->line) ptr_out += sprintf(ptr_out, ":%d", sym->line);
 	}
 	else {
-		ptr_out += sprintf(ptr_out, " from %s", rec->mmap->module);
+		ptr_out += sprintf(ptr_out, " from %s", rs_target_path(rec->mmap->module));
 	}
 	*ptr_out++ = '\n';
 	*ptr_out = '\0';
@@ -356,22 +456,21 @@ static int get_address_info(rs_cache_record_t* rec, pointer_t address, char* buf
  */
 static int rs_open_file(rs_cache_record_t* rec, const char* filename)
 {
-	rec->file = bfd_openr(rs_host_path(filename), TARGET);
+	rec->file = bfd_openr(filename, TARGET);
 
 	if (rec->file == NULL) {
-		msg_error("%s: %s\n", rs_host_path(filename), bfd_errmsg(bfd_get_error()));
+		msg_error("%s: %s\n", filename, bfd_errmsg(bfd_get_error()));
 		return -EINVAL;
 	}
 
 	if (!bfd_check_format (rec->file, bfd_object)) {
 		bfd_close(rec->file);
 		rec->file = NULL;
-		msg_error("file %s not in executable format\n", rs_host_path(filename));
+		msg_error("file %s not in executable format\n", filename);
 		return -EINVAL;
 	}
 	return 0;
 }
-
 
 
 /**
@@ -379,32 +478,32 @@ static int rs_open_file(rs_cache_record_t* rec, const char* filename)
  *
  * @param[in] rec       the resolver cache record.
  * @param[in] filename  the file to read from.
- * @return
+ * @return		0 - success.
  */
 static int rs_load_symbols(rs_cache_record_t* rec, const char* filename)
 {
 	long symcount = 0;
 	unsigned int size;
 	if (resolve_options.mode & MODE_BFD) {
-		static char *places[]={".", "./.debug", "/usr/lib/debug", NULL};
+		static int checked = 0;
 
 		/* locate and open the symbol file */
 		if (rs_open_file(rec, filename) < 0) return -EINVAL;
 
-		int index = 0;
-		while (places[index]) {
-			rec->dbg_name = bfd_follow_gnu_debuglink (rec->file, rs_host_path(places[index]));
-			if (rec->dbg_name) {
-				bfd_close(rec->file);
-				int rc = rs_open_file(rec, rec->dbg_name);
-				if (rc < 0) return -EINVAL;
-				break;
-			}
-			index++;
+		if (!checked) {
+			rs_check_debugdir();
+			checked = 1;
 		}
+		rec->dbg_name = bfd_follow_gnu_debuglink (rec->file, rs_host_path(DEBUG_PATH));
+		if (rec->dbg_name) {
+			bfd_close(rec->file);
+			int rc = rs_open_file(rec, rec->dbg_name);
+			if (rc < 0) return -EINVAL;
+		}
+
 		/* read the symbol table from opened file */
 		if ((bfd_get_file_flags (rec->file) & HAS_SYMS) == 0) {
-			msg_error("no symbols in %s\n", bfd_get_filename(rec->file));
+			msg_error("no symbols in %s\n", bfd_get_const_filename(rec->file));
 			return -EINVAL;
 		}
 
@@ -418,15 +517,13 @@ static int rs_load_symbols(rs_cache_record_t* rec, const char* filename)
 		/* Use elf symbol table lookup, as the bfd_find_nearest_line returns bogus information
 		 * for global constructors when dynamic symbol tables are used.
 		 */
-		rec->fd = open(rs_host_path(filename), O_RDONLY);
+		rec->fd = open(filename, O_RDONLY);
 		if (rec->fd == -1) {
-			fprintf(stderr, "Failed to open image file %s\n", rs_host_path(filename));
+			fprintf(stderr, "Failed to open image file %s\n", filename);
 			return -EINVAL;
 		}
 		struct stat sb;
-		fstat(rec->fd, &sb);
-
-		if (sb.st_size <= EI_CLASS) {
+		if (fstat(rec->fd, &sb) < 0 || sb.st_size <= EI_CLASS) {
 			fprintf(stderr, "Image file too short to contain elf header\n");
 			close(rec->fd);
 			return -EINVAL;
@@ -448,7 +545,7 @@ static int rs_load_symbols(rs_cache_record_t* rec, const char* filename)
 	}
 
 	if (symcount < 0) {
-		msg_error("%s: %s\n", bfd_get_filename(rec->file), bfd_errmsg(bfd_get_error()));
+		msg_error("%s: %s\n", bfd_get_const_filename(rec->file), bfd_errmsg(bfd_get_error()));
 		return -EINVAL;
 	}
 	rec->symcount = symcount;
@@ -486,22 +583,22 @@ const char* rs_resolve_address(rs_cache_t* rs, pointer_t address, const char* na
 	if (nc) return nc->name;
 
 	while (true) {
-		rs_mmap_t* mmap = rs_mmap_find_module(&rs->mmaps, address);
-		if (mmap == NULL) {
+		rs_mmap_t* map = rs_mmap_find_module(&rs->mmaps, address);
+		if (map == NULL) {
 			sprintf(buffer, "\t0x%lx %s\n", address, UNKNOWN_SYMBOL);
 			break;
 		}
-		if (mmap != mmap->cache->mmap) {
-			rs_cache_record_clear(mmap->cache);
-			if (rs_load_symbols(mmap->cache, mmap->module) < 0) {
-				rs_cache_record_clear(mmap->cache);
-				sprintf(buffer, "\t0x%lx from %s\n", address, mmap->module);
+		if (map != map->cache->mmap) {
+			rs_cache_record_clear(map->cache);
+			if (rs_load_symbols(map->cache, map->module) < 0) {
+				rs_cache_record_clear(map->cache);
+				sprintf(buffer, "\t0x%lx from %s\n", address, rs_target_path(map->module));
 				break;
 			}
-			mmap->cache->mmap = mmap;
+			map->cache->mmap = map;
 		}
-		if (get_address_info(mmap->cache, address, buffer) < 0) {
-			sprintf(buffer, "\t0x%lx from %s\n", address, mmap->module);
+		if (get_address_info(map->cache, address, buffer) < 0) {
+			sprintf(buffer, "\t0x%lx from %s\n", address, rs_target_path(map->module));
 			break;
 		}
 		break;
@@ -512,26 +609,26 @@ const char* rs_resolve_address(rs_cache_t* rs, pointer_t address, const char* na
 
 rs_mmap_t* rs_mmap_add_module(rs_cache_t* rs, const char* module, pointer_t from, pointer_t to, bool single_cache)
 {
-	rs_mmap_t* mmap = NULL;
+	rs_mmap_t* map = NULL;
 	int is_absolute = rs_mmap_is_absolute(module);
 	if (is_absolute >= 0) {
-		mmap = malloc_a(sizeof(rs_mmap_t));
-		mmap->module = strdup_a(module);
-		mmap->from = from;
-		mmap->to = to;
-		mmap->fin = NULL;
-		mmap->fout = NULL;
-		mmap->is_absolute = is_absolute;
-		mmap->id = rs->mmaps_size;
-		mmap->cache = single_cache ?  &rs->cache : (rs_cache_record_t*)calloc_a(1, sizeof(rs_cache_record_t));
-		mmap->is_cache_owner = !single_cache;
-		sarray_add(&rs->mmaps, mmap);
+		map = malloc_a(sizeof(rs_mmap_t));
+		map->module = strdup_a(module);
+		map->from = from;
+		map->to = to;
+		map->fin = NULL;
+		map->fout = NULL;
+		map->is_absolute = is_absolute;
+		map->id = rs->mmaps_size;
+		map->cache = single_cache ?  &rs->cache : (rs_cache_record_t*)calloc_a(1, sizeof(rs_cache_record_t));
+		map->is_cache_owner = !single_cache;
+		sarray_add(&rs->mmaps, map);
 		if (rs->mmaps_size == rs->mmaps_limit) {
 			rs->mmaps_limit *= 2;
 			rs->mmaps_index = (rs_mmap_t**)realloc_a(rs->mmaps_index, rs->mmaps_limit * sizeof(rs_mmap_t*));
 		}
-		rs->mmaps_index[rs->mmaps_size++] = mmap;
-		return mmap;
+		rs->mmaps_index[rs->mmaps_size++] = map;
+		return map;
 	}
 	return NULL;
 }
@@ -561,13 +658,4 @@ void rs_cache_free(rs_cache_t* rs)
 	sarray_free(&rs->mmaps, (op_unary_t)rs_mmap_free_node);
 
 	free(rs->mmaps_index);
-}
-
-
-const char* rs_host_path(const char* path)
-{
-	if (!resolve_options.root_path || *path != '/') return path;
-	static char host_path[PATH_MAX];
-	snprintf(host_path, PATH_MAX, "%s/%s", resolve_options.root_path, path);
-	return host_path;
 }

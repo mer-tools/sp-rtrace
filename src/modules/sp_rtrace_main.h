@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010,2011 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -33,6 +33,7 @@
 #include "common/sp_rtrace_proto.h"
 #include "library/sp_rtrace_defs.h"
 #include "library/sp_rtrace_filter.h"
+#include "modules/sp_rtrace_module.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -79,7 +80,7 @@ extern sp_rtrace_options_t* sp_rtrace_options;
  * @param[in] args  the function argument data (can be NULL).
  * @return          the number of bytes written.
  */
-int sp_rtrace_write_function_call(sp_rtrace_fcall_t* call, sp_rtrace_ftrace_t* trace, sp_rtrace_farg_t* args);
+int sp_rtrace_write_function_call(const module_fcall_t* call, const module_ftrace_t* trace, const module_farg_t* args);
 
 
 typedef void (*sp_rtrace_enable_tracing_t)(bool);
@@ -92,14 +93,11 @@ typedef void (*sp_rtrace_enable_tracing_t)(bool);
  * The main module uses registered functions to disable tracing in all modules before
  * calling some libc functions (for example backtrace). Or some functions might end
  * in infinite recursion.
- * @param[in] name          the module name.
- * @param[in] vmajor        the module version major number.
- * @param[in] vminor        the module version minor number.
+ * @param[in] info          pointer to the module information structure.
  * @param[in] enable_func   the trace enabling/disabling function.
  * @return                  the module id or 0 if module registry is full.
  */
-unsigned int sp_rtrace_register_module(const char* name, unsigned char vmajor, unsigned char vminor,
-		sp_rtrace_enable_tracing_t enable_func);
+unsigned int sp_rtrace_register_module(const sp_rtrace_module_info_t *info, sp_rtrace_enable_tracing_t enable_func);
 
 
 /**
@@ -112,11 +110,12 @@ unsigned int sp_rtrace_register_module(const char* name, unsigned char vmajor, u
  * Note that the resource type and desc values must refer to preallocated
  * strings (either static or dynamic), which must not be freed until the module
  * is unloaded.
+ * Resource ID is written to given resource structure.
  * @param[in,out] resource in  - the resource data.
  *                         out - the resource identifier.
  * @return                 the resource type id or 0 if resource registry is full.
  */
-unsigned int sp_rtrace_register_resource(sp_rtrace_resource_t* resource);
+unsigned int sp_rtrace_register_resource(module_resource_t* resource);
 
 /**
  * Stores current heap information (mallinfo()) so it can be sent to pre-processor
@@ -124,7 +123,7 @@ unsigned int sp_rtrace_register_resource(sp_rtrace_resource_t* resource);
  *
  * @return
  */
-void sp_rtrace_store_heap_info();
+void sp_rtrace_store_heap_info(void);
 
 /**
  * Writes context registry packet into processor pipe.
@@ -132,7 +131,7 @@ void sp_rtrace_store_heap_info();
  * @param[in] context     the context data.
  * @return                the number of bytes written.
  */
-int sp_rtrace_write_context_registry(sp_rtrace_context_t* context);
+int sp_rtrace_write_context_registry(const module_context_t* context);
 
 
 /**
@@ -141,7 +140,7 @@ int sp_rtrace_write_context_registry(sp_rtrace_context_t* context);
  * @return   true - the initialization was successful.
  *           false - the initialization failed.
  */
-bool sp_rtrace_initialize();
+bool sp_rtrace_initialize(void);
 
 /**
  * Writes new library (NL) packet into processor pipe.
@@ -158,7 +157,7 @@ int sp_rtrace_write_new_library(const char* library);
  * @param[in] file     the attachment data.
  * @return             the number of bytes written.
  */
-int sp_rtrace_write_attachment(const sp_rtrace_attachment_t* file);
+int sp_rtrace_write_attachment(const module_attachment_t* file);
 
 /**
  * Generates unique filename in the output directory.

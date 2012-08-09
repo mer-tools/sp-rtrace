@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -43,20 +43,24 @@
 #include "common/sp_rtrace_proto.h"
 #include "library/sp_rtrace_defs.h"
 
+/* glibc doesn't declare these for some reason even with _GNU_SOURCE,
+ * declare them if they aren't macros.
+ */
+#ifndef strdupa
+char *strdupa(const char *s);
+#endif
+#ifndef strndupa
+char *strndupa(const char *s, size_t n);
+#endif
+
+/* make sure we don't catch glibc string.h wrapper macros */
+
 #ifdef strdup
  #undef strdup
 #endif
 
 #ifdef strndup
  #undef strndup
-#endif
-
-#ifdef strdupa
- #undef strdupa
-#endif
-
-#ifdef strndupa
- #undef strndupa
 #endif
 
 #ifdef strncpy
@@ -75,23 +79,6 @@
  #undef mempcpy
 #endif
 
-/* Module information */
-static sp_rtrace_module_info_t module_info = {
-		.type = MODULE_TYPE_PRELOAD,
-		.version_major = 1,
-		.version_minor = 0,
-		.name = "memtransfer",
-		.description = "Memory transfer operation tracking module. "
-				       "Tracks calls of the functions that results in changing memtransfer "
-				       "blocks (strcpy, memmove, memset etc).",
-};
-
-static sp_rtrace_resource_t res_memtransfer = {
-		.type = "memtransfer",
-		.desc = "memory transfer operations in bytes",
-		.flags = SP_RTRACE_RESOURCE_DEFAULT,
-};
-
 
 /* Target function prototypes */
 typedef char* (*strcpy_t)(char* dst, const char* src);
@@ -107,8 +94,13 @@ typedef void (*bcopy_t)(const void *src, void *dest, size_t n);
 typedef void (*bzero_t)(void *s, size_t n);
 typedef char* (*strdup_t)(const char *s);
 typedef char* (*strndup_t)(const char *s, size_t n);
+/* igore these if they're macros (like they're in glibc) */
+#ifndef strdupa
 typedef char* (*strdupa_t)(const char *s);
+#endif
+#ifndef strndupa
 typedef char* (*strndupa_t)(const char *s, size_t n);
+#endif
 typedef wchar_t* (*wmemcpy_t)(wchar_t *dest, const wchar_t *src, size_t n);
 typedef wchar_t* (*wmempcpy_t)(wchar_t *dest, const wchar_t *src, size_t n);
 typedef wchar_t* (*wmemmove_t)(wchar_t* dest, const wchar_t* src, size_t b);
@@ -138,8 +130,12 @@ typedef struct trace_t {
 	bzero_t bzero;
 	strdup_t strdup;
 	strndup_t strndup;
+#ifndef strdupa
 	strdupa_t strdupa;
+#endif
+#ifndef strndupa
 	strndupa_t strndupa;
+#endif
 	wmemcpy_t wmemcpy;
 	wmempcpy_t wmempcpy;
 	wmemmove_t wmemmove;
@@ -166,6 +162,25 @@ static trace_t* trace_rt = &trace_init;
 /* Initialization runtime function references */
 static trace_t* trace_init_rt = &trace_off;
 
+/* Module information */
+static const sp_rtrace_module_info_t module_info = {
+	.type = MODULE_TYPE_PRELOAD,
+	.version_major = 1,
+	.version_minor = 0,
+	.symcount = sizeof(trace_t)/sizeof(pointer_t),
+	.symtable = (const pointer_t*)&trace_off,
+	.name = "memtransfer",
+	.description = "Memory transfer operation tracking module. "
+		       "Tracks functions that read/write memory blocks (strcpy, memset, wmemmove etc).",
+};
+
+static module_resource_t res_memtransfer = {
+	.type = "memtransfer",
+	.desc = "memory transfer operations in bytes",
+	.flags = SP_RTRACE_RESOURCE_DEFAULT,
+};
+
+
 /**
  * Enables/disables tracing.
  *
@@ -183,7 +198,7 @@ static void enable_tracing(bool value)
  *
  * @return
  */
-static void trace_initialize()
+static void trace_initialize(void)
 {
 	static int init_mode = MODULE_UNINITIALIZED;
 	switch (init_mode) {
@@ -201,8 +216,12 @@ static void trace_initialize()
 			trace_off.bzero = (bzero_t)dlsym(RTLD_NEXT, "bzero");
 			trace_off.strdup = (strdup_t)dlsym(RTLD_NEXT, "strdup");
 			trace_off.strndup = (strndup_t)dlsym(RTLD_NEXT, "strndup");
+#ifndef strdupa
 			trace_off.strdupa = (strdupa_t)dlsym(RTLD_NEXT, "strdupa");
+#endif
+#ifndef strndupa
 			trace_off.strndupa = (strndupa_t)dlsym(RTLD_NEXT, "strndupa");
+#endif
 			trace_off.wmemcpy = (wmemcpy_t)dlsym(RTLD_NEXT, "wmemcpy");
 			trace_off.wmempcpy = (wmempcpy_t)dlsym(RTLD_NEXT, "wmempcpy");
 			trace_off.wmemmove = (wmemmove_t)dlsym(RTLD_NEXT, "wmemmove");
@@ -221,7 +240,7 @@ static void trace_initialize()
 
 		case MODULE_LOADED: {
 			if (sp_rtrace_initialize()) {
-				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
+				sp_rtrace_register_module(&module_info, enable_tracing);
 				sp_rtrace_register_resource(&res_memtransfer);
 				trace_init_rt = trace_rt;
 				init_mode = MODULE_READY;
@@ -242,10 +261,9 @@ static void trace_initialize()
 static char* trace_strcpy(char* dst, const char* src)
 {
 	char* rc = trace_off.strcpy(dst, src);
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_memtransfer.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_memtransfer.id,
 			.name = "strcpy",
 			.res_size = strlen(src),
 			.res_id = (pointer_t)src,
@@ -257,10 +275,9 @@ static char* trace_strcpy(char* dst, const char* src)
 static void* trace_mempcpy(void *dest, const void *src, size_t n)
 {
 	void* rc = trace_off.mempcpy(dest, src, n);
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_memtransfer.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_memtransfer.id,
 			.name = "mempcpy",
 			.res_size = n,
 			.res_id = (pointer_t)src,
@@ -272,10 +289,9 @@ static void* trace_mempcpy(void *dest, const void *src, size_t n)
 static void* trace_memmove(void *dest, const void *src, size_t n)
 {
 	void* rc = trace_off.memmove(dest, src, n);
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_memtransfer.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_memtransfer.id,
 			.name = "memmove",
 			.res_size = n,
 			.res_id = (pointer_t)src,
@@ -287,10 +303,9 @@ static void* trace_memmove(void *dest, const void *src, size_t n)
 static void* trace_memcpy(void *dest, const void *src, size_t n)
 {
 	void* rc = trace_off.memcpy(dest, src, n);
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_memtransfer.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_memtransfer.id,
 			.name = "memcpy",
 			.res_size = n,
 			.res_id = (pointer_t)src,
@@ -302,10 +317,9 @@ static void* trace_memcpy(void *dest, const void *src, size_t n)
 static void* trace_memset(void *s, int c, size_t n)
 {
 	void* rc = trace_off.memset(s, c, n);
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_memtransfer.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_memtransfer.id,
 			.name = "memset",
 			.res_size = n,
 			.res_id = (pointer_t)s,
@@ -317,10 +331,9 @@ static void* trace_memset(void *s, int c, size_t n)
 static char* trace_strncpy(char *dest, const char *src, size_t n)
 {
 	char* rc = trace_off.strncpy(dest, src, n);
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_memtransfer.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_memtransfer.id,
 			.name = "strncpy",
 			.res_size = n,
 			.res_id = (pointer_t)src,
@@ -332,10 +345,9 @@ static char* trace_strncpy(char *dest, const char *src, size_t n)
 static char* trace_stpcpy(char *dest, const char *src)
 {
 	char* rc = trace_off.stpcpy(dest, src);
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_memtransfer.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_memtransfer.id,
 			.name = "stpcpy",
 			.res_size = strlen(src),
 			.res_id = (pointer_t)src,
@@ -347,10 +359,9 @@ static char* trace_stpcpy(char *dest, const char *src)
 static char* trace_strcat(char *dest, const char *src)
 {
 	char* rc = trace_off.strcat(dest, src);
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_memtransfer.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_memtransfer.id,
 			.name = "strcat",
 			.res_size = strlen(src),
 			.res_id = (pointer_t)src,
@@ -362,10 +373,9 @@ static char* trace_strcat(char *dest, const char *src)
 static char* trace_strncat(char *dest, const char *src, size_t n)
 {
 	char* rc = trace_off.strncat(dest, src, n);
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_memtransfer.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_memtransfer.id,
 			.name = "strncat",
 			.res_size = n,
 			.res_id = (pointer_t)src,
@@ -377,10 +387,9 @@ static char* trace_strncat(char *dest, const char *src, size_t n)
 static void trace_bcopy(const void *src, void *dest, size_t n)
 {
 	trace_off.bcopy(src, dest, n);
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_memtransfer.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_memtransfer.id,
 			.name = "bcopy",
 			.res_size = n,
 			.res_id = (pointer_t)src,
@@ -391,10 +400,9 @@ static void trace_bcopy(const void *src, void *dest, size_t n)
 static void trace_bzero(void *s, size_t n)
 {
 	trace_off.bzero(s, n);
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_memtransfer.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_memtransfer.id,
 			.name = "bzero",
 			.res_size = n,
 			.res_id = (pointer_t)s,
@@ -405,10 +413,9 @@ static void trace_bzero(void *s, size_t n)
 static char* trace_strdup(const char *s)
 {
 	char* rc = trace_off.strdup(s);
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_memtransfer.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_memtransfer.id,
 			.name = "strdup",
 			.res_size = strlen(s),
 			.res_id = (pointer_t)s,
@@ -420,10 +427,9 @@ static char* trace_strdup(const char *s)
 static char* trace_strndup(const char *s, size_t n)
 {
 	char* rc = trace_off.strndup(s, n);
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_memtransfer.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_memtransfer.id,
 			.name = "strndup",
 			.res_size = n,
 			.res_id = (pointer_t)s,
@@ -432,13 +438,13 @@ static char* trace_strndup(const char *s, size_t n)
 	return rc;
 }
 
+#ifndef strdupa
 static char* trace_strdupa(const char *s)
 {
 	char* rc = trace_off.strdupa(s);
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_memtransfer.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_memtransfer.id,
 			.name = "strdupa",
 			.res_size = strlen(s),
 			.res_id = (pointer_t)s,
@@ -446,14 +452,15 @@ static char* trace_strdupa(const char *s)
 	sp_rtrace_write_function_call(&call, NULL, NULL);
 	return rc;
 }
+#endif
 
+#ifndef strndupa
 static char* trace_strndupa(const char *s, size_t n)
 {
 	char* rc = trace_off.strndupa(s, n);
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_memtransfer.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_memtransfer.id,
 			.name = "strndupa",
 			.res_size = n,
 			.res_id = (pointer_t)s,
@@ -461,14 +468,14 @@ static char* trace_strndupa(const char *s, size_t n)
 	sp_rtrace_write_function_call(&call, NULL, NULL);
 	return rc;
 }
+#endif
 
 static wchar_t* trace_wmemcpy(wchar_t *dest, const wchar_t *src, size_t n)
 {
 	wchar_t* rc = trace_off.wmemcpy(dest, src, n);
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_memtransfer.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_memtransfer.id,
 			.name = "wmemcpy",
 			.res_size = n * sizeof(wchar_t),
 			.res_id = (pointer_t)src,
@@ -480,10 +487,9 @@ static wchar_t* trace_wmemcpy(wchar_t *dest, const wchar_t *src, size_t n)
 static wchar_t* trace_wmempcpy(wchar_t *dest, const wchar_t *src, size_t n)
 {
 	wchar_t* rc = trace_off.wmempcpy(dest, src, n);
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_memtransfer.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_memtransfer.id,
 			.name = "wmempcpy",
 			.res_size = n * sizeof(wchar_t),
 			.res_id = (pointer_t)src,
@@ -495,10 +501,9 @@ static wchar_t* trace_wmempcpy(wchar_t *dest, const wchar_t *src, size_t n)
 static wchar_t* trace_wmemmove(wchar_t* dest, const wchar_t* src, size_t n)
 {
 	wchar_t* rc = trace_off.wmemmove(dest, src, n);
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_memtransfer.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_memtransfer.id,
 			.name = "wmemmove",
 			.res_size = n * sizeof(wchar_t),
 			.res_id = (pointer_t)src,
@@ -510,10 +515,9 @@ static wchar_t* trace_wmemmove(wchar_t* dest, const wchar_t* src, size_t n)
 static wchar_t* trace_wmemset(wchar_t *s, wchar_t c, size_t n)
 {
 	wchar_t* rc = trace_off.wmemset(s, c, n);
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_memtransfer.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_memtransfer.id,
 			.name = "wmemset",
 			.res_size = n * sizeof(wchar_t),
 			.res_id = (pointer_t)s,
@@ -525,10 +529,9 @@ static wchar_t* trace_wmemset(wchar_t *s, wchar_t c, size_t n)
 static wchar_t* trace_wcscpy(wchar_t *dest, const wchar_t *src)
 {
 	wchar_t* rc = trace_off.wcscpy(dest, src);
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_memtransfer.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_memtransfer.id,
 			.name = "wcscpy",
 			.res_size =  wcslen(src) * sizeof(wchar_t),
 			.res_id = (pointer_t)src,
@@ -540,10 +543,9 @@ static wchar_t* trace_wcscpy(wchar_t *dest, const wchar_t *src)
 static wchar_t* trace_wcsncpy(wchar_t *dest, const wchar_t *src, size_t n)
 {
 	wchar_t* rc = trace_off.wcsncpy(dest, src, n);
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_memtransfer.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_memtransfer.id,
 			.name = "wcsncpy",
 			.res_size =  n * sizeof(wchar_t),
 			.res_id = (pointer_t)src,
@@ -555,10 +557,9 @@ static wchar_t* trace_wcsncpy(wchar_t *dest, const wchar_t *src, size_t n)
 static wchar_t* trace_wcpcpy(wchar_t *dest, const wchar_t *src)
 {
 	wchar_t* rc = trace_off.wcpcpy(dest, src);
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_memtransfer.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_memtransfer.id,
 			.name = "wcpcpy",
 			.res_size =  wcslen(src) * sizeof(wchar_t),
 			.res_id = (pointer_t)src,
@@ -570,10 +571,9 @@ static wchar_t* trace_wcpcpy(wchar_t *dest, const wchar_t *src)
 static wchar_t* trace_wcpncpy(wchar_t *dest, const wchar_t *src, size_t n)
 {
 	wchar_t* rc = trace_off.wcpncpy(dest, src, n);
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_memtransfer.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_memtransfer.id,
 			.name = "wcpncpy",
 			.res_size =  n * sizeof(wchar_t),
 			.res_id = (pointer_t)src,
@@ -585,10 +585,9 @@ static wchar_t* trace_wcpncpy(wchar_t *dest, const wchar_t *src, size_t n)
 static wchar_t* trace_wcscat(wchar_t *dest, const wchar_t *src)
 {
 	wchar_t* rc = trace_off.wcscat(dest, src);
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_memtransfer.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_memtransfer.id,
 			.name = "wcscat",
 			.res_size =  wcslen(src) * sizeof(wchar_t),
 			.res_id = (pointer_t)src,
@@ -600,10 +599,9 @@ static wchar_t* trace_wcscat(wchar_t *dest, const wchar_t *src)
 static wchar_t* trace_wcsncat(wchar_t *dest, const wchar_t *src, size_t n)
 {
 	wchar_t* rc = trace_off.wcsncat(dest, src, n);
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_memtransfer.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_memtransfer.id,
 			.name = "wcsncat",
 			.res_size =  n * sizeof(wchar_t),
 			.res_id = (pointer_t)src,
@@ -615,10 +613,9 @@ static wchar_t* trace_wcsncat(wchar_t *dest, const wchar_t *src, size_t n)
 static wchar_t* trace_wcsdup(const wchar_t *s)
 {
 	wchar_t* rc = trace_off.wcsdup(s);
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_memtransfer.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_memtransfer.id,
 			.name = "wcsdup",
 			.res_size =   wcslen(s) * sizeof(wchar_t),
 			.res_id = (pointer_t)s,
@@ -642,8 +639,12 @@ static trace_t trace_on = {
 	.bzero = trace_bzero,
 	.strdup = trace_strdup,
 	.strndup = trace_strndup,
+#ifndef strdupa
 	.strdupa = trace_strdupa,
+#endif
+#ifndef strndupa
 	.strndupa = trace_strndupa,
+#endif
 	.wmemcpy = trace_wmemcpy,
 	.wmempcpy = trace_wmempcpy,
 	.wmemmove = trace_wmemmove,
@@ -728,15 +729,18 @@ char* strndup(const char *s, size_t n)
 	return trace_rt->strndup(s, n);
 }
 
+#ifndef strdupa
 char* strdupa(const char *s)
 {
 	return trace_rt->strdupa(s);
 }
-
+#endif
+#ifndef strndupa
 char* strndupa(const char *s, size_t n)
 {
 	return trace_rt->strndupa(s, n);
 }
+#endif
 
 wchar_t* wmemcpy(wchar_t *dest, const wchar_t *src, size_t n)
 {
@@ -875,17 +879,20 @@ static char* init_strndup(const char *s, size_t n)
 	return trace_init_rt->strndup(s, n);
 }
 
+#ifndef strdupa
 static char* init_strdupa(const char *s)
 {
 	trace_initialize();
 	return trace_init_rt->strdupa(s);
 }
-
+#endif
+#ifndef strndupa
 static char* init_strndupa(const char *s, size_t n)
 {
 	trace_initialize();
 	return trace_init_rt->strndupa(s, n);
 }
+#endif
 
 static wchar_t* init_wmemcpy(wchar_t *dest, const wchar_t *src, size_t n)
 {
@@ -968,8 +975,12 @@ static trace_t trace_init = {
 	.bzero = init_bzero,
 	.strdup = init_strdup,
 	.strndup = init_strndup,
+#ifndef strdupa
 	.strdupa = init_strdupa,
+#endif
+#ifndef strndupa
 	.strndupa = init_strndupa,
+#endif
 	.wmemcpy = init_wmemcpy,
 	.wmempcpy = init_wmempcpy,
 	.wmemmove = init_wmemmove,

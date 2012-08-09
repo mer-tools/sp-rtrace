@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -70,7 +70,7 @@ static int hs_size = 0;
  *
  * @return
  */
-int flush_data()
+static int flush_data(void)
 {
 	int size = output_buffer_head - output_buffer;
 	if (fd_out > 0 && size) {
@@ -115,6 +115,7 @@ static int write_data(const char* data, int size)
  */
 dlist_t s_mmaps;
 
+#if 0 /* unused for now */
 /**
  * Compares memory mapping cache record with module name.
  *
@@ -126,6 +127,7 @@ static long mmap_compare(rd_mmap_t* mmap, const char* name)
 {
 	return strcmp(mmap->data.module, name);
 }
+#endif
 
 static long range_compare(rd_mmap_t* mmap1, sp_rtrace_mmap_t* mmap2)
 {
@@ -140,7 +142,7 @@ static long range_compare(rd_mmap_t* mmap1, sp_rtrace_mmap_t* mmap2)
  * @param[in] pid   the target process identifier.
  * @return
  */
-static int scan_mmap_data()
+static int scan_mmap_data(void)
 {
 	char name[PATH_MAX], buffer[PATH_MAX];
 	sprintf(name, "/proc/%d/maps", rtrace_options.pid);
@@ -180,7 +182,10 @@ static int scan_mmap_data()
 				int size = ptr - name;
 				write_dword(name + SP_RTRACE_PROTO_TYPE_SIZE, size - SP_RTRACE_PROTO_TYPE_SIZE - SP_RTRACE_PROTO_LENGTH_SIZE);
 				/* write the assembled packet to the output stream */
-				if (write_data(name, size) < 0) return -1;
+				if (write_data(name, size) < 0) {
+					fclose(fp);
+					return -1;
+				}
 			}
 		}
 		fclose(fp);
@@ -247,7 +252,10 @@ static int process_packet(const char* data, size_t size)
 	if (type == SP_RTRACE_PROTO_OUTPUT_SETTINGS) {
 		char value[PATH_MAX];
 		offset += read_string(data + offset, value, PATH_MAX);
-		if (*value) rtrace_options.output_dir = strdup_a(value);
+		if (*value) {
+			if (rtrace_options.output_dir) free(rtrace_options.output_dir);
+			rtrace_options.output_dir = strdup_a(value);
+		}
 		offset += read_string(data + offset, value, PATH_MAX);
 		if (*value) {
 			if (rtrace_options.postproc) free(rtrace_options.postproc);
@@ -318,7 +326,15 @@ int process_data()
 	dlist_init(&s_mmaps);
 	/* read and process the handshake packet */
 	n = read(fd_in, buffer, BUFFER_SIZE - 1);
-	if (n < 1) {
+	if (n == 0) {
+		/* Pipe was closed before any data was written. That normally can
+		 * happen only when toggle signal was sent to a process started
+		 * in managed mode. In such case sp-rtrace should quietly exit
+		 * and leave pipe/data handling to the main module. */
+		LOG("Input pipe was closed, target process working in managed mode");
+		return 0;
+	}
+	if (n < 0) {
 	    msg_error("failed to read data from pipe\n");
 	    return -1;
 	}
@@ -351,8 +367,12 @@ int process_data()
 			msg_warning("trace was forced to abort before all of data was retrieved.\n");
 			break;
 		}
-		if (nbytes == -1 && errno == EINTR) {
-			continue;
+		if (nbytes == -1) {
+			if (errno == EINTR) {
+				continue;
+			} else {
+				break;
+			}
 		}
 		n += nbytes;
 		ptr_in = buffer;

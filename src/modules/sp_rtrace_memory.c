@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -37,6 +37,7 @@
 
 #include "sp_rtrace_main.h"
 #include "sp_rtrace_module.h"
+#include "rtrace/rtrace_env.h"
 #include "common/sp_rtrace_proto.h"
 #include "library/sp_rtrace_defs.h"
 #include "common/debug_log.h"
@@ -45,24 +46,9 @@
 
 //#define MSG(text) {	char buffer[] = ">>>" text "\n"; if(write(STDERR_FILENO, buffer, sizeof(buffer))){}; }
 
-/* Module information */
-static sp_rtrace_module_info_t module_info = {
-		.type = MODULE_TYPE_PRELOAD,
-		.version_major = 1,
-		.version_minor = 0,
-		.name = "memory",
-		.description = "Memory allocation/deallocation tracking module. "
-				       "Tracks calls of malloc, calloc, realloc, posix_memalign "
-				       "and free functions.",
-};
-
-static sp_rtrace_resource_t res_memory = {
-		.type = "memory",
-		.desc = "memory allocation in bytes",
-		.flags = SP_RTRACE_RESOURCE_DEFAULT,
-};
 
 /* Internal allocation function emulation heap.
+ * Used before the module is fully initialized.
  *
  * The heap structure is:
  *   [size1][chunk1][size2][chunk2]...[sizeN][chunkN]
@@ -75,6 +61,9 @@ static sp_rtrace_resource_t res_memory = {
 #define EMU_HEAP_ALIGN      8
 static char emu_heap[EMU_HEAP_SIZE] = { 0 };
 static char* emu_heap_tail = emu_heap;
+
+/* whether to collect heap usage information */
+static int get_heap = 0;
 
 /* Target function prototypes */
 typedef void* (*malloc_t)(size_t size);
@@ -109,6 +98,26 @@ static trace_t* trace_rt = &trace_init;
 /* Initialization runtime function references */
 static trace_t* trace_init_rt = &trace_off;
 
+/* Module information */
+static const sp_rtrace_module_info_t module_info = {
+	.type = MODULE_TYPE_PRELOAD,
+	.version_major = 1,
+	.version_minor = 0,
+	.symcount = sizeof(trace_t)/sizeof(pointer_t),
+	.symtable = (const pointer_t*)&trace_off,
+	.name = "memory",
+	.description = "Memory allocation/deallocation tracking module. "
+		       "Tracks calls of malloc, calloc, realloc, posix_memalign "
+		       "and free functions.",
+};
+
+static module_resource_t res_memory = {
+	.type = "memory",
+	.desc = "memory allocation in bytes",
+	.flags = SP_RTRACE_RESOURCE_DEFAULT,
+};
+
+
 /**
  * Enables/disables tracing.
  *
@@ -125,7 +134,7 @@ static void enable_tracing(bool value)
  *
  * @return
  */
-static void trace_initialize()
+static void trace_initialize(void)
 {
 	static int init_mode = MODULE_UNINITIALIZED;
 	switch (init_mode) {
@@ -143,9 +152,12 @@ static void trace_initialize()
 
 		case MODULE_LOADED: {
 			if (sp_rtrace_initialize()) {
+				const char* getinfo = getenv(SP_RTRACE_MALLINFO);
+				if (getinfo && *getinfo) {
+					get_heap = 1;
+				}
 				init_mode = MODULE_READY;
-
-				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
+				sp_rtrace_register_module(&module_info, enable_tracing);
 				sp_rtrace_register_resource(&res_memory);
 				trace_init_rt = trace_rt;
 
@@ -222,7 +234,7 @@ static void emu_free(void* ptr)
 static void* emu_realloc(void* ptr, size_t size)
 {
 	unsigned int chunk_size = 0;
-	if (ptr) chunk_size = *(unsigned int*) (ptr - 4);
+	if (ptr) chunk_size = *(unsigned int*) ((pointer_t)ptr - 4);
 
 	emu_free(ptr);
 	void* ptr_new = emu_alloc_mem(size, EMU_HEAP_ALIGN);
@@ -285,16 +297,17 @@ static void* trace_malloc(size_t size)
 	backtrace_lock = 0;
 
 	if (rc) {
-		sp_rtrace_fcall_t call = {
+		module_fcall_t call = {
 				.type = SP_RTRACE_FTYPE_ALLOC,
-				.res_type = (void*)res_memory.id,
-				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.res_type_id = res_memory.id,
 				.name = "malloc",
 				.res_size = size,
 				.res_id = (pointer_t)rc,
 		};
 		sp_rtrace_write_function_call(&call, NULL, NULL);
-		sp_rtrace_store_heap_info();
+		if (get_heap) {
+			sp_rtrace_store_heap_info();
+		}
 	}
 	return rc;
 }
@@ -306,16 +319,17 @@ static void* trace_calloc(size_t nmemb, size_t size)
 	backtrace_lock = 0;
 
 	if (rc) {
-		sp_rtrace_fcall_t call = {
+		module_fcall_t call = {
 				.type = SP_RTRACE_FTYPE_ALLOC,
-				.res_type = (void*)res_memory.id,
-				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.res_type_id = res_memory.id,
 				.name = "calloc",
 				.res_size = nmemb * size,
 				.res_id = (pointer_t)rc,
 		};
 		sp_rtrace_write_function_call(&call, NULL, NULL);
-		sp_rtrace_store_heap_info();
+		if (get_heap) {
+			sp_rtrace_store_heap_info();
+		}
 	}
 	return rc;
 }
@@ -328,10 +342,9 @@ static void* trace_realloc(void* ptr, size_t size)
 	/* if allocation was successful or the requested size was 0,
 	 *  and the old pointer was not NULL - register old pointer freeing */
 	if ((rc || !size) && ptr) {
-		sp_rtrace_fcall_t call = {
+		module_fcall_t call = {
 				.type = SP_RTRACE_FTYPE_FREE,
-				.res_type = (void*)res_memory.id,
-				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.res_type_id = res_memory.id,
 				.name = "realloc",
 				.res_size = 0,
 				.res_id = (pointer_t)ptr,
@@ -340,16 +353,17 @@ static void* trace_realloc(void* ptr, size_t size)
 	}
 	/* if allocation was successful register new pointer allocation */
 	if (rc) {
-		sp_rtrace_fcall_t call = {
+		module_fcall_t call = {
 				.type = SP_RTRACE_FTYPE_ALLOC,
-				.res_type = (void*)res_memory.id,
-				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.res_type_id = res_memory.id,
 				.name = "realloc",
 				.res_size = size,
 				.res_id = (pointer_t)rc,
 		};
 		sp_rtrace_write_function_call(&call, NULL, NULL);
-		sp_rtrace_store_heap_info();
+		if (get_heap) {
+			sp_rtrace_store_heap_info();
+		}
 	}
 	return rc;
 }
@@ -358,16 +372,17 @@ static int trace_posix_memalign(void **memptr, size_t alignment, size_t size)
 {
 	int rc = trace_off.posix_memalign(memptr, alignment, size);
 	if (rc == 0) {
-		sp_rtrace_fcall_t call = {
+		module_fcall_t call = {
 				.type = SP_RTRACE_FTYPE_ALLOC,
-				.res_type = (void*)res_memory.id,
-				.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+				.res_type_id = res_memory.id,
 				.name = "posix_memalign",
 				.res_size = size,
 				.res_id = (pointer_t)*memptr,
 		};
 		sp_rtrace_write_function_call(&call, NULL, NULL);
-		sp_rtrace_store_heap_info();
+		if (get_heap) {
+			sp_rtrace_store_heap_info();
+		}
 	}
 	return rc;
 }
@@ -378,16 +393,17 @@ static void trace_free(void* ptr)
 	/* unlock backtrace after the original function has been called */
 	backtrace_lock = 0;
 
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_FREE,
-			.res_type = (void*)res_memory.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_memory.id,
 			.name = "free",
 			.res_size = 0,
 			.res_id = (pointer_t)ptr,
 	};
 	sp_rtrace_write_function_call(&call, NULL, NULL);
-	sp_rtrace_store_heap_info();
+	if (get_heap) {
+		sp_rtrace_store_heap_info();
+	}
 }
 
 static trace_t trace_on = {
@@ -516,7 +532,7 @@ static void trace_memory_fini(void)
  *
  * @return  the module information data.
  */
-const sp_rtrace_module_info_t* sp_rtrace_get_module_info()
+const sp_rtrace_module_info_t* sp_rtrace_get_module_info(void)
 {
 	return &module_info;
 }

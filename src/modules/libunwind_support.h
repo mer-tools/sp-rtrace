@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -39,12 +39,12 @@ typedef int (*fn_backtrace_t)(void** frames, int size);
  * 
  * @return    the stack frame unwinding function based on libunwind.
  */
-fn_backtrace_t libunwind_initialize();
+fn_backtrace_t libunwind_initialize(void);
 
 /**
  * Releases resources allocated by libunwind_initialize().
  */
-int libunwind_release();
+int libunwind_release(void);
 
 
 #endif

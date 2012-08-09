@@ -51,17 +51,19 @@
 #include "libunwind_support.h"
 
 /* module information */
-static sp_rtrace_module_info_t module_info = {
-		.type = MODULE_TYPE_UNDEFINED,
-		.version_major = 1,
-		.version_minor = 0,
-		.name = "main",
-		.description = "Main tracing module providing pre-processor "
-				       "communication and other tracing module management.",
+static const sp_rtrace_module_info_t module_info = {
+	.type = MODULE_TYPE_UNDEFINED,
+	.version_major = 1,
+	.version_minor = 0,
+	.name = "main",
+	.description = "Main tracing module providing pre-processor "
+		       "communication and other tracing module management.",
 };
 
 /* */
 #define DEFAULT_BACKTRACE_DEPTH    10
+
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 
 /* pre-processor pipe descriptor */
 static int fd_proc = 0;
@@ -100,11 +102,11 @@ sp_rtrace_options_t* sp_rtrace_options = &rtrace_main_options;
 
 /* unnecessary backtrace frames that can be stripped */
 #ifdef __arm__
- #define BT_SKIP_TOP       4
+ #define BT_SKIP_TOP       4	/* first frames in backtrace (=sp-rtrace functions) */
 #else
  #define BT_SKIP_TOP       3
 #endif
-#define BT_SKIP_BOTTOM     0
+#define BT_SKIP_BOTTOM     0	/* towards the main */
 
 
 /*
@@ -118,10 +120,10 @@ sp_rtrace_options_t* sp_rtrace_options = &rtrace_main_options;
  * initialization and pass its trace enable/disable function.
  */
 typedef struct rtrace_module_t {
-    const char* name;
-    int id;
-    unsigned char vmajor;
-    unsigned char vminor;
+	const char* name;
+	int id;
+	unsigned char vmajor;
+	unsigned char vminor;
 	sp_rtrace_enable_tracing_t enable;
 } rtrace_module_t;
 
@@ -133,9 +135,8 @@ static unsigned int rtrace_module_index = 0;
 /*
  * Resource type registry
  */
-static sp_rtrace_resource_t rtrace_resources[32];
+static module_resource_t rtrace_resources[32];
 static unsigned int rtrace_resource_index = 0;
-
 
 /* inserts data at saved position */
 #define PACKET_INSERT(ptr, type, value) \
@@ -170,6 +171,15 @@ static unsigned int rtrace_resource_index = 0;
 		pipe_buffer_unlock(_buffer, _ptr - _buffer); \
 		return _ptr - _buffer;
 
+/**
+ * Returns the current end of the heap.
+ * @return
+ */
+static pointer_t heap_end(void)
+{
+	void* ptr = sbrk(0);
+	return (pointer_t)ptr;
+}
 
 /**
  * Enables/disables tracing.
@@ -193,13 +203,13 @@ static void enable_tracing(bool value)
  * waits until it creates the named pipe.
  * @return    the opened pipe descriptor.
  */
-static int open_pipe()
+static int open_pipe(void)
 {
 	if (sp_rtrace_options->manage_preproc) {
 		LOG("spawning pre-processor process");
 		/* spawn the pre-processor process if */
 		int fd[2];
-		if (pipe(fd) == -1) return -1;
+		if (pipe2(fd, O_CLOEXEC) == -1) return -1;
 		pid_t pid = fork();
 		if (pid == -1) return -1;
 		if (pid == 0) {
@@ -280,7 +290,7 @@ static sync_entity_t pipe_buffer_locked = 0;
  *
  * @return   the number of bytes written.
  */
-static int pipe_buffer_flush()
+static int pipe_buffer_flush(void)
 {
 	int size = pipe_buffer_head - pipe_buffer;
 	if (write(fd_proc, pipe_buffer, size) < 0) {
@@ -299,7 +309,7 @@ static int pipe_buffer_flush()
  *
  * @return   a pointer to the writable area in pipe buffer.
  */
-static char* pipe_buffer_lock()
+static char* pipe_buffer_lock(void)
 {
 	while ( !sync_bool_compare_and_swap(&pipe_buffer_locked, 0, 1));
 	return pipe_buffer_head;
@@ -340,7 +350,7 @@ static void pipe_buffer_unlock(const char* ptr, int size)
  *
  * @return
  */
-static void pipe_buffer_reset()
+static void pipe_buffer_reset(void)
 {
 	pipe_buffer_head = pipe_buffer;
 }
@@ -378,18 +388,18 @@ static void get_proc_name(char* out, size_t size)
  * @param[in] minor   the module version number (minor).
  * @return            the number of bytes written.
  */
-static int write_module_info(int id, const char* name, unsigned char major, unsigned char minor)
+static int write_module_info(const rtrace_module_t *module)
 {
-    if (!sp_rtrace_options->enable) return 0;
-    PACKET_INIT(SP_RTRACE_PROTO_MODULE_INFO);
-    PACKET_WRITE(dword, id);
-    PACKET_WRITE(dword, (major << 16) | minor);
-    PACKET_WRITE(string, name);
-    PACKET_FINISH();
+	if (!sp_rtrace_options->enable) return 0;
+	PACKET_INIT(SP_RTRACE_PROTO_MODULE_INFO);
+	PACKET_WRITE(dword, module->id);
+	PACKET_WRITE(dword, (module->vmajor << 16) | module->vminor);
+	PACKET_WRITE(string, module->name);
+	PACKET_FINISH();
 }
 
 
-static int write_resource_registry(const sp_rtrace_resource_t* resource)
+static int write_resource_registry(const module_resource_t* resource)
 {
 	if (!sp_rtrace_options->enable) return 0;
 	PACKET_INIT(SP_RTRACE_PROTO_RESOURCE_REGISTRY);
@@ -441,14 +451,8 @@ static int write_handshake(int major, int minor, const char* arch)
 static int write_output_settings(const char* output_dir, const char* postproc)
 {
 	PACKET_INIT(SP_RTRACE_PROTO_OUTPUT_SETTINGS);
-	if (sp_rtrace_options->manage_preproc) {
-		PACKET_WRITE(string, NULL);
-		PACKET_WRITE(string, NULL);
-	}
-	else {
-		PACKET_WRITE(string, output_dir);
-		PACKET_WRITE(string, postproc);
-	}
+	PACKET_WRITE(string, output_dir);
+	PACKET_WRITE(string, postproc);
 	PACKET_FINISH();
 }
 
@@ -457,7 +461,7 @@ static int write_output_settings(const char* output_dir, const char* postproc)
  *
  * @return   the number of bytes written.
  */
-static int write_process_info()
+static int write_process_info(void)
 {
 	PACKET_INIT(SP_RTRACE_PROTO_PROCESS_INFO);
 	PACKET_WRITE(dword, getpid());
@@ -477,12 +481,12 @@ static int write_process_info()
  *
  * @return  the number of bytes written.
  */
-static int write_heap_info()
+static int write_heap_info(void)
 {
 	if (heap_info.arena) {
 		PACKET_INIT(SP_RTRACE_PROTO_HEAP_INFO);
 		PACKET_WRITE(dword, heap_bottom);
-		PACKET_WRITE(dword, (pointer_t)sbrk(0));
+		PACKET_WRITE(dword, heap_end());
 		PACKET_WRITE(dword, heap_info.arena);
 		PACKET_WRITE(dword, heap_info.ordblks);
 		PACKET_WRITE(dword, heap_info.smblks);
@@ -506,24 +510,29 @@ static int write_heap_info()
  *
  * @return
  */
-static void write_initial_data()
+static void write_initial_data(void)
 {
-    unsigned int i;
+	rtrace_module_t def_module = {
+		.id = 0, 
+		.name = module_info.name,
+		.vmajor = module_info.version_major,
+		.vminor = module_info.version_minor
+	};
+	unsigned int i;
 
 	pipe_buffer_reset();
 	write_handshake(SP_RTRACE_PROTO_VERSION_MAJOR, SP_RTRACE_PROTO_VERSION_MINOR, BUILD_ARCH);
 	write_output_settings(sp_rtrace_options->output_dir, sp_rtrace_options->postproc);
 	write_process_info();
-	write_module_info(0, module_info.name, module_info.version_major, module_info.version_minor);
+	write_module_info(&def_module);
 	/* write MI packets for all tracing modules */
 	for (i = 0; i < rtrace_module_index; i++) {
-		rtrace_module_t* module = &rtrace_modules[i];
-	    write_module_info(module->id, module->name, module->vmajor, module->vminor);
-    }
+		write_module_info(&rtrace_modules[i]);
+	}
 	/* write resource registry records */
 	for (i = 0; i < rtrace_resource_index; i++) {
-	    write_resource_registry(&rtrace_resources[i]);
-    }
+		write_resource_registry(&rtrace_resources[i]);
+	}
 
 	sp_rtrace_write_new_library("*");
 	pipe_buffer_flush();
@@ -551,7 +560,7 @@ void* dlopen(const char* library, int flag)
 }
 
 /**
- * SIGUSR1 handler. Enables/disables tracing
+ * Signal handler for enabling/disabling tracing
  */
 static void signal_toggle_tracing(int signo __attribute((unused)))
 {
@@ -698,6 +707,24 @@ static void calc_relative_path(const char* from, const char* to, char* out)
 	strcpy(out, ptr_match);
 }
 
+/**
+ * Wrapper to convert module_fcall_t structure used internally to pass
+ * function call event structures between modules to sp_rtrace_fcall_t
+ * structure used to store function call event structures in post-processing
+ * utilities.
+ * @param filter   the filter to validate.
+ * @param call     the call to validate.
+ * @return
+ */
+static bool filter_validate(const sp_rtrace_filter_t* filter, const module_fcall_t* call)
+{
+	sp_rtrace_fcall_t fcall = {
+		.type = call->type,
+		.res_size = call->res_size,
+	};
+	return sp_rtrace_filter_validate(filter, &fcall);
+}
+
 /*
  * Public API implementation
  */
@@ -709,7 +736,7 @@ int sp_rtrace_write_new_library(const char* library)
 	PACKET_FINISH();
 }
 
-int sp_rtrace_write_attachment(const sp_rtrace_attachment_t* file)
+int sp_rtrace_write_attachment(const module_attachment_t* file)
 {
 	/* try to relate the attachment to the output directory */
 	char relative_path[PATH_MAX];
@@ -721,7 +748,7 @@ int sp_rtrace_write_attachment(const sp_rtrace_attachment_t* file)
 	PACKET_FINISH();
 }
 
-int sp_rtrace_write_context_registry(sp_rtrace_context_t* context)
+int sp_rtrace_write_context_registry(const module_context_t* context)
 {
 	if (!sp_rtrace_options->enable) return 0;
 	PACKET_INIT(SP_RTRACE_PROTO_CONTEXT_REGISTRY);
@@ -730,29 +757,25 @@ int sp_rtrace_write_context_registry(sp_rtrace_context_t* context)
 	PACKET_FINISH();
 }
 
-int sp_rtrace_write_function_call(sp_rtrace_fcall_t* call, sp_rtrace_ftrace_t* trace, sp_rtrace_farg_t* args)
+int sp_rtrace_write_function_call(const module_fcall_t* call, const module_ftrace_t* trace, const module_farg_t* args)
 {
 	if (!sp_rtrace_options->enable) return 0;
 
-	/* check if the resource type contains resource identifier */
-	if (call->res_type_flag != SP_RTRACE_FCALL_RFIELD_ID) {
-		return -EINVAL;
-	}
-
 	pointer_t bt_frames[256];
-	sp_rtrace_ftrace_t trace_data = {
-			.nframes = 0,
-			.frames = bt_frames + BT_SKIP_TOP,
+	module_ftrace_t trace_data = {
+		.nframes = 0,
+		.frames = bt_frames + BT_SKIP_TOP,
 	};
 
-	if (!trace && sp_rtrace_options->backtrace_depth && sp_rtrace_filter_validate(sp_rtrace_options->filter, call)) {
+	if (!trace && sp_rtrace_options->backtrace_depth && filter_validate(sp_rtrace_options->filter, call)) {
 		unsigned int bt_depth = sp_rtrace_options->backtrace_depth + BT_SKIP_TOP + BT_SKIP_BOTTOM;
-		if (bt_depth > sizeof(bt_frames) / sizeof(bt_frames[0])) {
-			bt_depth = sizeof(bt_frames) / sizeof(bt_frames[0]);
+		if (bt_depth > ARRAY_SIZE(bt_frames)) {
+			bt_depth = ARRAY_SIZE(bt_frames);
 		}
 		/* backtrace() function could trigger tracked function calls.
 		 * lock those functions for other threads while using the standard
-		 * functions for the current thread  */
+		 * functions for the current thread
+		 */
 		if (backtrace_lock) {
 			fprintf(stderr, "ERROR: infinite recursion detected backtrace() calling %s()\n", call->name);
 			exit (-1);
@@ -772,7 +795,7 @@ int sp_rtrace_write_function_call(sp_rtrace_fcall_t* call, sp_rtrace_ftrace_t* t
 	}
 
 	PACKET_INIT(SP_RTRACE_PROTO_FUNCTION_CALL);
-	PACKET_WRITE(dword, (unsigned long)call->res_type);
+	PACKET_WRITE(dword, (unsigned long)call->res_type_id);
 	PACKET_WRITE(dword, sp_rtrace_get_call_context());
 
 	int timestamp = 0;
@@ -793,7 +816,7 @@ int sp_rtrace_write_function_call(sp_rtrace_fcall_t* call, sp_rtrace_ftrace_t* t
 	if (args) {
 		PACKET_START(SP_RTRACE_PROTO_FUNCTION_ARGS);
 		char* psize = PACKET_RESERVE(sizeof(int));
-		const sp_rtrace_farg_t* first_arg = args;
+		const module_farg_t* first_arg = args;
 		while (args->name) {
 			PACKET_WRITE(string, args->name);
 			PACKET_WRITE(string, args->value);
@@ -820,44 +843,54 @@ int sp_rtrace_write_function_call(sp_rtrace_fcall_t* call, sp_rtrace_ftrace_t* t
 	PACKET_FINISH();
 }
 
-unsigned int sp_rtrace_register_module(const char* name, unsigned char vmajor, unsigned char vminor, sp_rtrace_enable_tracing_t enable_func)
+unsigned int sp_rtrace_register_module(const sp_rtrace_module_info_t *info, sp_rtrace_enable_tracing_t enable_func)
 {
-	if (rtrace_module_index >= sizeof(rtrace_modules) / sizeof(rtrace_modules[0])) {
+	unsigned int i, ok = 1;
+	for (i = 0; i < info->symcount; i++) {
+		if (!info->symtable[i]) {
+			fprintf(stderr, "ERROR: sp-rtrace %s module traced function pointer %d couldn't be resolved!\n", info->name, i);
+			ok = 0;
+		}
+	}
+	if (!ok) {
+		exit(-1);
+	}
+	if (rtrace_module_index >= ARRAY_SIZE(rtrace_modules)) {
 		return 0;
 	}
 	rtrace_module_t* module = &rtrace_modules[rtrace_module_index];
 	module->enable = enable_func;
-	module->vmajor = vmajor;
-	module->vminor = vminor;
-    module->name = name;
-    module->id = (1 << rtrace_module_index++);
-    module->enable(sp_rtrace_options->enable);
+	module->vmajor = info->version_major;
+	module->vminor = info->version_minor;
+	module->name = info->name;
+	module->id = (1 << rtrace_module_index++);
+	module->enable(sp_rtrace_options->enable);
 
 	/* If the tracing has been already enabled,
 	 *  write module info packet for the registered module */
 	if (sp_rtrace_options->enable) {
-		write_module_info(module->id, name, vmajor, vminor);
+		write_module_info(module);
 	}
 	return module->id;
 }
 
-unsigned int sp_rtrace_register_resource(sp_rtrace_resource_t* resource)
+unsigned int sp_rtrace_register_resource(module_resource_t* resource)
 {
 	/* Check if the specified resource type is already registered. If so return
 	 * the registered id. */
 	unsigned int i;
 	for (i = 0; i < rtrace_resource_index; i++) {
-	   if (!strcmp(rtrace_resources[i].type, resource->type)) {
-		   resource->id = rtrace_resources[i].id;
-		   return resource->id;
-	   }
-    }
+		if (!strcmp(rtrace_resources[i].type, resource->type)) {
+			resource->id = rtrace_resources[i].id;
+			return resource->id;
+		}
+	}
 
 	/* Register new resource type */
-	if (rtrace_resource_index >= sizeof(rtrace_resources) / sizeof(rtrace_resources[0])) {
+	if (rtrace_resource_index >= ARRAY_SIZE(rtrace_resources)) {
 		return -1;
 	}
-    ((sp_rtrace_resource_t*)resource)->id = rtrace_resource_index + 1;
+	resource->id = rtrace_resource_index + 1;
 	rtrace_resources[rtrace_resource_index++] = *resource;
 	if (sp_rtrace_options->enable) {
 		write_resource_registry(resource);
@@ -866,18 +899,18 @@ unsigned int sp_rtrace_register_resource(sp_rtrace_resource_t* resource)
 }
 
 
-void sp_rtrace_store_heap_info()
+void sp_rtrace_store_heap_info(void)
 {
 	heap_info = mallinfo();
 }
 
-bool sp_rtrace_initialize()
+bool sp_rtrace_initialize(void)
 {
 	static volatile int initialize_lock = 0;
 	if (sync_bool_compare_and_swap(&initialize_lock, 0, 1)) {
 
 		/* cache the heap bottom address */
-		heap_bottom = (pointer_t)sbrk(0);
+		heap_bottom = heap_end();
 
 		/* first check if the environment is ready */
 		const char* env_ready = getenv(SP_RTRACE_READY);
@@ -929,6 +962,9 @@ bool sp_rtrace_initialize()
 		if (env_manage_preproc && *env_manage_preproc == '1') {
 			sp_rtrace_options->manage_preproc = true;
 			LOG("manage_preproc=%d", sp_rtrace_options->manage_preproc);
+		} else {
+			/* don't propagate non-managed sp-rtrace to child processes */
+			unsetenv("LD_PRELOAD");
 		}
 
 		/* read post-processor options */
@@ -956,9 +992,6 @@ bool sp_rtrace_initialize()
 				}
 				_stpncpy(out, env_output_dir, sizeof(sp_rtrace_options->output_dir) - (out - sp_rtrace_options->output_dir + 1));
 			}
-		}
-		else {
-			_stpncpy(sp_rtrace_options->output_dir, sp_rtrace_options->start_dir, sizeof(sp_rtrace_options->output_dir));
 		}
 		LOG("output_dir=%s", sp_rtrace_options->output_dir);
 
@@ -1012,10 +1045,10 @@ void sp_rtrace_get_out_filename(const char* pattern, char* buffer, size_t size)
 	*ptr++ = '-';
 	ptr = _stpncpy(ptr, pattern, size - (ptr - buffer));
 	*ptr++ = '-';
-	int index = 0;
+	int idx = 0;
 	do {
-		/* increase index until non-existing filename is found */
-		_itoa(ptr, index++);
+		/* increase idx until non-existing filename is found */
+		_itoa(ptr, idx++);
 	} while (access(buffer, F_OK) == 0);
 }
 
@@ -1033,7 +1066,7 @@ int sp_rtrace_copy_file(const char* source, const char* dest)
 	}
 	char buffer[0x8000];
 	int n_in;
-	while ( (n_in = read(fd_in, buffer, sizeof(buffer))) ) {
+	while ( (n_in = read(fd_in, buffer, sizeof(buffer))) > 0 ) {
 		int n_out = write(fd_out, buffer, n_in);
 		if (n_in != n_out) {
 			rc = -errno;
@@ -1054,6 +1087,7 @@ static void trace_main_fini(void) __attribute__((destructor));
  */
 static void trace_main_init(void)
 {
+	/* if env read fails at this stage, this will be called again later */
 	sp_rtrace_initialize();
 
 	int toggle_signal = SIGUSR1;
@@ -1086,5 +1120,3 @@ static void trace_main_fini(void)
 		close_pipe(fd_proc);
 	}
 }
-
-

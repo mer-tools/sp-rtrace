@@ -1,8 +1,7 @@
-
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -47,23 +46,7 @@
 #include "common/htable.h"
 
 
-
-/* Module information */
-static sp_rtrace_module_info_t module_info = {
-		MODULE_TYPE_PRELOAD,
-		1,
-		0,
-		"qobject",
-		"QObject tracking module. Tracks construction and destruction of QObject based class instances.",
-};
-
 #define QOBJECT_RES_SIZE	1
-
-static sp_rtrace_resource_t res_qobject = {
-		.type = "qobject",
-		.desc = "QObject instance",
-		.flags = SP_RTRACE_RESOURCE_DEFAULT,
-};
 
 /* target function prototypes */
 typedef void (*qobject_dtor0_t)(void* self);
@@ -109,6 +92,23 @@ static trace_t* trace_rt = &trace_init;
 /* Initialization runtime function references */
 static trace_t* trace_init_rt = &trace_off;
 
+/* Module information */
+static const sp_rtrace_module_info_t module_info = {
+	MODULE_TYPE_PRELOAD,
+	1,
+	0,
+	.symcount = sizeof(trace_t)/sizeof(pointer_t),
+	.symtable = (const pointer_t*)&trace_off,
+	"qobject",
+	"QObject tracking module. Tracks construction and destruction of QObject based class instances.",
+};
+
+static module_resource_t res_qobject = {
+	.type = "qobject",
+	.desc = "QObject instance",
+	.flags = SP_RTRACE_RESOURCE_DEFAULT,
+};
+
 
 /**
  * Enables/disables tracing.
@@ -128,7 +128,7 @@ static void enable_tracing(bool value)
  *
  * @return
  */
-static void trace_initialize()
+static void trace_initialize(void)
 {
 	static int init_mode = MODULE_UNINITIALIZED;
 	switch (init_mode) {
@@ -153,7 +153,7 @@ static void trace_initialize()
 
 		case MODULE_LOADED: {
 			if (sp_rtrace_initialize()) {
-				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
+				sp_rtrace_register_module(&module_info, enable_tracing);
 				sp_rtrace_register_resource(&res_qobject);
 				trace_init_rt = trace_rt;
 				init_mode = MODULE_READY;
@@ -172,10 +172,9 @@ static void trace_qobject_dtor0(void* self)
 {
 	trace_off.qobject_dtor0(self);
 
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_FREE,
-			.res_type = (void*)res_qobject.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id =res_qobject.id,
 			.name = "QObject::~QObject",
 			.res_size = 0,
 			.res_id = (pointer_t)self,
@@ -187,10 +186,9 @@ static void trace_qobject_dtor1(void* self)
 {
 	trace_off.qobject_dtor1(self);
 
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_FREE,
-			.res_type = (void*)res_qobject.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id =res_qobject.id,
 			.name = "QObject::~QObject",
 			.res_size = 0,
 			.res_id = (pointer_t)self,
@@ -202,10 +200,9 @@ static void trace_qobject_dtor2(void* self)
 {
 	trace_off.qobject_dtor2(self);
 
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_FREE,
-			.res_type = (void*)res_qobject.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id =res_qobject.id,
 			.name = "QObject::~QObject",
 			.res_size = 0,
 			.res_id = (pointer_t)self,
@@ -218,10 +215,9 @@ static void trace_qobject_ctor1(void* self, void* parent)
 {
 	trace_off.qobject_ctor1(self, parent);
 
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_qobject.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id =res_qobject.id,
 			.name = "QObject::QObject",
 			.res_size = QOBJECT_RES_SIZE,
 			.res_id = (pointer_t)self,
@@ -233,10 +229,9 @@ static void trace_qobject_ctor1_char(void* self, void* parent, const char* arg)
 {
 	trace_off.qobject_ctor1_char(self, parent, arg);
 
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_qobject.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id =res_qobject.id,
 			.name = "QObject::QObject",
 			.res_size = QOBJECT_RES_SIZE,
 			.res_id = (pointer_t)self,
@@ -248,10 +243,9 @@ static void trace_qobject_ctor1_priv(void* self, void* priv, void* parent)
 {
 	trace_off.qobject_ctor1_priv(self, priv, parent);
 
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_qobject.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id =res_qobject.id,
 			.name = "QObject::QObject",
 			.res_size = QOBJECT_RES_SIZE,
 			.res_id = (pointer_t)self,
@@ -264,10 +258,9 @@ static void trace_qobject_ctor2(void* self, void* parent)
 {
 	trace_off.qobject_ctor2(self, parent);
 
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_qobject.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id =res_qobject.id,
 			.name = "QObject::QObject",
 			.res_size = QOBJECT_RES_SIZE,
 			.res_id = (pointer_t)self,
@@ -279,10 +272,9 @@ static void trace_qobject_ctor2_char(void* self, void* parent, const char* arg)
 {
 	trace_off.qobject_ctor2_char(self, parent, arg);
 
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_qobject.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id =res_qobject.id,
 			.name = "QObject::QObject",
 			.res_size = QOBJECT_RES_SIZE,
 			.res_id = (pointer_t)self,
@@ -294,10 +286,9 @@ static void trace_qobject_ctor2_priv(void* self, void* priv, void* parent)
 {
 	trace_off.qobject_ctor2_priv(self, priv, parent);
 
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_qobject.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id =res_qobject.id,
 			.name = "QObject::QObject",
 			.res_size = QOBJECT_RES_SIZE,
 			.res_id = (pointer_t)self,
@@ -322,6 +313,20 @@ static trace_t trace_on = {
 /*
  * Target functions.
  */
+
+/* prototypes to silence gcc warnings.  No header contains
+ * the mangled constructor & destructor variant names so
+ * they have to be declared here.
+ */
+void _ZN7QObjectD0Ev(void* self);
+void _ZN7QObjectD1Ev(void* self);
+void _ZN7QObjectD2Ev(void* self);
+void _ZN7QObjectC1EPS_(void* self, void* parent);
+void _ZN7QObjectC1EPS_PKc(void* self, void* parent, const char* arg);
+void _ZN7QObjectC1ER14QObjectPrivatePS_(void* self, void* priv, void* parent);
+void _ZN7QObjectC2EPS_(void* self, void* parent);
+void _ZN7QObjectC2EPS_PKc(void* self, void* parent, const char* arg);
+void _ZN7QObjectC2ER14QObjectPrivatePS_(void* self, void* priv, void* parent);
 
 
 void _ZN7QObjectD0Ev(void* self)
@@ -471,7 +476,7 @@ static void trace_shmem_fini(void)
  *
  * @return  the module information data.
  */
-const sp_rtrace_module_info_t* sp_rtrace_get_module_info()
+const sp_rtrace_module_info_t* sp_rtrace_get_module_info(void)
 {
 	return &module_info;
 }

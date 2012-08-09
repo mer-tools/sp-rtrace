@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2011 by Nokia Corporation
+ * Copyright (C) 2011-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -30,7 +30,7 @@ static unsigned int msg_verbosity = MSG_ALL;
 
 void msg_write(unsigned int level, const char* format, ...)
 {
-	static char* prefixes[] = {
+	const char* prefixes[] = {
 		"",
 		"ERROR: ",
 		"WARNING: ",

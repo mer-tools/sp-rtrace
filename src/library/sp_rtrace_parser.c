@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2011 by Nokia Corporation
+ * Copyright (C) 2011-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -78,7 +78,7 @@ static int parse_backtrace(const char* line, sp_rtrace_btframe_t* data)
 static int parse_function_call(const char* line, sp_rtrace_fcall_t* data)
 {
 	static char res_type_name[512];
-	int index, context = 0;
+	int idx, context = 0;
 	int hours, minutes, seconds, mseconds;
 	int timestamp = 0;
 	pointer_t res_id;
@@ -88,7 +88,7 @@ static int parse_function_call(const char* line, sp_rtrace_fcall_t* data)
 	unsigned int res_type_flag = SP_RTRACE_FCALL_RFIELD_UNDEF;
 
 	/* parse index field <index>. */
-	if (sscanf(ptr, "%d%c", &index, &delim) != 2 || delim != '.') return PARSE_FAIL;
+	if (sscanf(ptr, "%d%c", &idx, &delim) != 2 || delim != '.') return PARSE_FAIL;
 	/* move cursor beyond index field */
 	ptr = strchr(ptr, ' ');
 	if (!ptr) return PARSE_FAIL;
@@ -137,7 +137,7 @@ static int parse_function_call(const char* line, sp_rtrace_fcall_t* data)
 	}
 	if ( !(parse_record_mask & SP_RTRACE_RECORD_CALL) ) return PARSE_IGNORE;
 
-	data->index = index;
+	data->index = idx;
 	/* temporary assign the resource type name to res_type field. After returning
 	 * from this function the correct resource type structure will be found and
 	 * assigned instead. */

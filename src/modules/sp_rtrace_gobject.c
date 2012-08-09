@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -42,22 +42,6 @@
 
 #include "common/sp_rtrace_proto.h"
 
-/* Module information */
-static sp_rtrace_module_info_t module_info = {
-		.type = MODULE_TYPE_PRELOAD,
-		.version_major = 1,
-		.version_minor = 0,
-		.name = "gobject",
-		.description = "GObject tracking module. Tracks GObject references.",
-};
-
-
-static sp_rtrace_resource_t res_gobject = {
-		.type = "gobject",
-		.desc = "GObject instance",
-		.flags = SP_RTRACE_RESOURCE_REFCOUNT,
-};
-
 
  /*
   * file module function set
@@ -88,6 +72,24 @@ static trace_t* trace_rt = &trace_init;
 /* Initialization runtime function references */
 static trace_t* trace_init_rt = &trace_off;
 
+/* Module information */
+static const sp_rtrace_module_info_t module_info = {
+	.type = MODULE_TYPE_PRELOAD,
+	.version_major = 1,
+	.version_minor = 0,
+	.symcount = sizeof(trace_t)/sizeof(pointer_t),
+	.symtable = (const pointer_t*)&trace_off,
+	.name = "gobject",
+	.description = "GObject tracking module. Tracks GObject references.",
+};
+
+static module_resource_t res_gobject = {
+	.type = "gobject",
+	.desc = "GObject instance",
+	.flags = SP_RTRACE_RESOURCE_REFCOUNT,
+};
+
+
 /**
  * Enables/disables tracing.
  *
@@ -104,7 +106,7 @@ static void enable_tracing(bool value)
  *
  * @return
  */
-static void trace_initialize()
+static void trace_initialize(void)
 {
 	static int init_mode = MODULE_UNINITIALIZED;
 	switch (init_mode) {
@@ -120,7 +122,7 @@ static void trace_initialize()
 
 		case MODULE_LOADED: {
 			if (sp_rtrace_initialize()) {
-				sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
+				sp_rtrace_register_module(&module_info, enable_tracing);
 				sp_rtrace_register_resource(&res_gobject);
 				trace_init_rt = trace_rt;
 				init_mode = MODULE_READY;
@@ -139,24 +141,25 @@ static gpointer trace_g_object_newv(GType object_type, guint n_parameters, GPara
 	gpointer rc = trace_off.g_object_newv(object_type, n_parameters, parameters);
 	pointer_t res_id = (pointer_t)rc;
 	size_t res_size = (size_t)1;
+	const char *type_name = "unknown";
+	GTypeQuery type_info;
 
-	GTypeQuery type_info = {0};
 	g_type_query(object_type, &type_info);
 	if (type_info.type) {
 		res_size = type_info.instance_size;
+		type_name = type_info.type_name;
 	}
 
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_gobject.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_gobject.id,
 			.name = "g_object_newv",
 			.res_size = res_size,
 			.res_id = (pointer_t)res_id,
 	};
-	sp_rtrace_farg_t args[] = {
-			{.name = "type", .value = (char*)type_info.type_name},
-			{0}
+	module_farg_t args[] = {
+			{.name = "type", .value = type_name},
+			{.name = NULL, .value = NULL}
 	};
 	sp_rtrace_write_function_call(&call, NULL, args);
 	return rc;
@@ -167,10 +170,9 @@ static void trace_g_type_free_instance(GTypeInstance* instance)
 {
 	trace_off.g_type_free_instance(instance);
 
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_FREE,
-			.res_type = (void*)res_gobject.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_gobject.id,
 			.name = "g_type_free_instance",
 			.res_size = 0,
 			.res_id = (pointer_t)(pointer_t)instance,
@@ -184,23 +186,24 @@ static gpointer trace_g_object_ref(gpointer object)
 	gpointer rc = trace_off.g_object_ref(object);
 	pointer_t res_id = (pointer_t)rc;
 	size_t res_size = (size_t)1;
+	const char *type_name = "unknown";
+	GTypeQuery type_info;
 
-	GTypeQuery type_info = {0};
 	g_type_query(((GObject*)object)->g_type_instance.g_class->g_type, &type_info);
 	if (type_info.type) {
 		res_size = type_info.instance_size;
+		type_name = type_info.type_name;
 	}
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_ALLOC,
-			.res_type = (void*)res_gobject.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_gobject.id,
 			.name = "g_object_ref",
 			.res_size = res_size,
 			.res_id = (pointer_t)res_id,
 	};
-	sp_rtrace_farg_t args[] = {
-			{.name = "type", .value = (char*)type_info.type_name},
-			{0}
+	module_farg_t args[] = {
+			{.name = "type", .value = type_name},
+			{.name = NULL, .value = NULL}
 	};
 	sp_rtrace_write_function_call(&call, NULL, args);
 
@@ -212,10 +215,9 @@ static void trace_g_object_unref(gpointer object)
 {
 	trace_off.g_object_unref(object);
 	
-	sp_rtrace_fcall_t call = {
+	module_fcall_t call = {
 			.type = SP_RTRACE_FTYPE_FREE,
-			.res_type = (void*)res_gobject.id,
-			.res_type_flag = SP_RTRACE_FCALL_RFIELD_ID,
+			.res_type_id = res_gobject.id,
 			.name = "g_object_unref",
 			.res_size = 0,
 			.res_id = (pointer_t)(pointer_t)object,
@@ -327,9 +329,7 @@ static void trace_fini_lib(void)
  *
  * @return  the module information data.
  */
-const sp_rtrace_module_info_t* sp_rtrace_get_module_info()
+const sp_rtrace_module_info_t* sp_rtrace_get_module_info(void)
 {
 	return &module_info;
 }
-
-

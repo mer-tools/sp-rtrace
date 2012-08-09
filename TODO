@@ -1,0 +1,23 @@
+Potential TODOs
+
+* Make "-f" option to toggle also whether sub-processes
+  are traced (= whether LD_PRELOAD is set)?
+
+* Add -M option support to sp-rtrace-postproc too, so that
+  one can easily analyze where the given sized allocations
+  (showing in the histogram) originate from.
+
+* It's valid for programs to use open() and several other
+  traced functions in signal context.  Make trace module(s)
+  argument printing signal context safe (= don't use sprintf).
+
+* In file module, support recvmsg() for a socket which passes
+  array of file descriptors from another process (behavior
+  for them is like for dup(2)).
+
+* Expand memtransfer module to cover more functions and
+  test that it actually gives reasonable results (things
+  going through PLT cover enough of such function calls
+  to tell something relevant about memory reads & writes)
+  as many such operations are done within libc itself or
+  inlined (when size is known at build time).

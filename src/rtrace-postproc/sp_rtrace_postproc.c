@@ -82,7 +82,7 @@ volatile sig_atomic_t postproc_abort = 0;
  *
  * @return
  */
-static void free_options()
+static void free_options(void)
 {
 	if (postproc_options.input_file) free(postproc_options.input_file);
 	if (postproc_options.output_dir) free(postproc_options.output_dir);
@@ -94,7 +94,7 @@ static void free_options()
 /**
  * Display the help information.
  */
-static void display_usage()
+static void display_usage(void)
 {
 	printf( "sp-rtrace-postproc post-processor is used for resource trace data\n"
 			"post processing. This includes freed allocation removal, backtrace\n"
@@ -143,7 +143,7 @@ static FILE* start_resolver(char* filename)
 		exit (-1);
 	}
 	if (postproc_options.pid_resolve == 0) {
-		char* const args[] = {SP_RTRACE_RESOLVER, "-telf", filename ? "-o" : NULL, filename, NULL};
+		const char* const args[] = {SP_RTRACE_RESOLVER, "-telf", filename ? "-o" : NULL, filename, NULL};
 		close(fds[1]);
 		dup2(fds[0], STDIN_FILENO);
 

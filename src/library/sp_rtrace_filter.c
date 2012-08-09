@@ -52,7 +52,7 @@ void sp_rtrace_filter_parse_size_opt(sp_rtrace_filter_t* filter, const char* opt
 		int limit = INITIAL_SIZESET_SIZE;
 		int size = 0;
 		char* split;
-		char* delim = ",";
+		const char* delim = ",";
 		char buffer[PATH_MAX];
 		strcpy(buffer, opt);
 		char* ptr = strtok_r(buffer, delim, &split);
@@ -68,7 +68,7 @@ void sp_rtrace_filter_parse_size_opt(sp_rtrace_filter_t* filter, const char* opt
 	}
 }
 
-bool sp_rtrace_filter_validate(sp_rtrace_filter_t* filter, sp_rtrace_fcall_t* fcall)
+bool sp_rtrace_filter_validate(const sp_rtrace_filter_t* filter, const sp_rtrace_fcall_t* fcall)
 {
 	/* function call type mapping to filter type */
 	static int types[] = {SP_RTRACE_FILTER_TYPE_NONE,

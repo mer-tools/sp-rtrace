@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010-2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -35,7 +35,7 @@ extern int fd_out;
  *
  * @return 0 - success
  */
-int process_data();
+int process_data(void);
 
 
 #endif /* LISTENER_H */

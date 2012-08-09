@@ -70,13 +70,15 @@
 
 /* Module information */
 static sp_rtrace_module_info_t module_info = {
-		.type = MODULE_TYPE_PRELOAD,
-		.version_major = 1,
-		.version_minor = 0,
-		.name = "pagemap",
-		.description = "Memory page utilization module. "
-				       "Finds rw pages containing only zero bytes and attaches page mapping data "
-				       "from /proc/pid/pagemap and /proc/pageflags.",
+	.type = MODULE_TYPE_PRELOAD,
+	.version_major = 1,
+	.version_minor = 0,
+	.symcount = 0,
+	.symtable = NULL,
+	.name = "pagemap",
+	.description = "Memory page utilization module. "
+	               "Finds rw pages containing only zero bytes and attaches page mapping data "
+		       "from /proc/pid/pagemap and /proc/pageflags.",
 };
 
 static bool trace_enabled = false;
@@ -198,8 +200,8 @@ static bool is_zero_page(unsigned long from)
 static unsigned int read_page_mapping_count(unsigned long addr, pfile_data_t* data)
 {
 	uint64_t count = 0;
-	unsigned long index = addr / page_size * 8;
-	lseek(data->fd_map, index, SEEK_SET);
+	unsigned long idx = addr / page_size * 8;
+	lseek(data->fd_map, idx, SEEK_SET);
 
 	uint64_t page_index;
 	size_t n = read(data->fd_map, &page_index, sizeof(uint64_t));
@@ -268,25 +270,26 @@ static int scan_address_range(unsigned long from, unsigned long to, const char* 
  * @return             0 - success.
  *                    <0 - -errno error code.
  */
-static int cut_kpageflags_range(unsigned long from, unsigned long to, const char* rights, pfile_data_t* data)
+static int cut_kpageflags_range(unsigned long from, unsigned long to, __attribute__((unused)) const char* rights, pfile_data_t* data)
 {
+	size_t n;
 	/* store the memory area header data */
 	pageflags_header_t header = {
 		.from = from,
 		.to = to,
 		.size = (to - from) / page_size * sizeof(pageflags_data_t),
 	};
-	size_t n = write(data->fd_out, &header, sizeof(pageflags_header_t));
+	n = write(data->fd_out, &header, sizeof(pageflags_header_t));
 	if (n != sizeof(pageflags_header_t)) return (n == (size_t)-1) ? -errno : -EINVAL;
 
-	unsigned long index = from / page_size * 8;
+	unsigned long idx = from / page_size * 8;
 	unsigned long end = to / page_size * 8;
 
-	lseek(data->fd_map, index, SEEK_SET);
+	lseek(data->fd_map, idx, SEEK_SET);
 
-	while (index < end) {
+	while (idx < end) {
 		uint64_t page_index;
-		size_t n = read(data->fd_map, &page_index, sizeof(uint64_t));
+		n = read(data->fd_map, &page_index, sizeof(uint64_t));
 		if (n != sizeof(uint64_t)) return (n == (size_t)-1) ? -errno : -EINVAL;
 
 		pageflags_data_t page_data = {
@@ -305,7 +308,7 @@ static int cut_kpageflags_range(unsigned long from, unsigned long to, const char
 		}
 		n = write(data->fd_out, &page_data, sizeof(pageflags_data_t));
 		if (n != sizeof(pageflags_data_t)) return (n == (size_t)-1) ? -errno : -EINVAL;
-		index += 8;
+		idx += 8;
 	}
 	return 0;
 }
@@ -496,7 +499,7 @@ static void enable_tracing(bool value)
 		char filename[PATH_MAX];
 		/* copy /proc/self/maps file */
 		sp_rtrace_get_out_filename("pagemap-maps", filename, sizeof(filename));
-		sp_rtrace_attachment_t file_maps = {
+		module_attachment_t file_maps = {
 				.name = "maps",
 				.path = filename,
 		};
@@ -505,7 +508,7 @@ static void enable_tracing(bool value)
 
 		/* copy data from /proc/kpageflags file */
 		sp_rtrace_get_out_filename("pagemap-pageflags", filename, sizeof(filename));
-		sp_rtrace_attachment_t file_kpageflags = {
+		module_attachment_t file_kpageflags = {
 				.name = "pageflags",
 				.path = filename,
 		};
@@ -519,23 +522,23 @@ static void enable_tracing(bool value)
 
 #if DEBUG_INFO
 		/* Copy /proc/self/pagemap, /proc/kpageflags files for debugging purposes */
+		{
+			sp_rtrace_get_out_filename("pagemap-pagemap", filename, sizeof(filename));
+			module_attachment_t file_pagemap = {
+					.name = "pagemap",
+					.path = filename,
+			};
+			sp_rtrace_copy_file("/proc/self/pagemap", filename);
+			sp_rtrace_write_attachment(&file_pagemap);
 
-		sp_rtrace_get_out_filename("pagemap-pagemap", filename, sizeof(filename));
-		sp_rtrace_attachment_t file_pagemap = {
-				.name = "pagemap",
-				.path = filename,
-		};
-		sp_rtrace_copy_file("/proc/self/pagemap", filename);
-		sp_rtrace_write_attachment(&file_pagemap);
-
-		sp_rtrace_get_out_filename("pagemap-kpageflags", filename, sizeof(filename));
-		sp_rtrace_attachment_t file_kpageflags = {
-				.name = "kpageflags",
-				.path = filename,
-		};
-		sp_rtrace_copy_file("/proc/kpageflags", filename);
-		sp_rtrace_write_attachment(&file_kpageflags);
-		*/
+			sp_rtrace_get_out_filename("pagemap-kpageflags", filename, sizeof(filename));
+			module_attachment_t file_kpageflags = {
+					.name = "kpageflags",
+					.path = filename,
+			};
+			sp_rtrace_copy_file("/proc/kpageflags", filename);
+			sp_rtrace_write_attachment(&file_kpageflags);
+		}
 
 
 		/* TODO: remove timing code before release */
@@ -561,7 +564,7 @@ static void trace_pagemap_fini(void) __attribute__((destructor));
 
 static void trace_pagemap_init(void)
 {
-	sp_rtrace_register_module(module_info.name, module_info.version_major, module_info.version_minor, enable_tracing);
+	sp_rtrace_register_module(&module_info, enable_tracing);
 }
 
 static void trace_pagemap_fini(void)

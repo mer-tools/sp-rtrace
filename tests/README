@@ -13,14 +13,16 @@ sp-rtrace.postproc/generate_samples.sh script regenerates sample
 logs used in post-procesor testing. To generate them:
 1) run make check with testing disabled,
 2) run the generate_samples.sh script from sp-rtrace.postproc dir.
-  
+
+
 Running tests on a device:
 ==========================
 1) Compile the package: dpkg-buildpackge -rfakeroot -b 
 2) Compile test applications by executing RT_DISABLE_TEST=1 make check
    in tests directory
 3) Copy the test directory to device.
-4) Increse max pty count on device: echo 8 > /proc/sys/kernel/pty/max
+4) If device has small (non-standard) max pty limit, increase it:
+   echo 32 > /proc/sys/kernel/pty/max
 5) Run testsuite by executing RT_DISABLE_COMPILE=1 runtest --tool=sp-rtrace
 
 Directory structure:
@@ -41,13 +43,13 @@ sp-rtrace.postproc - test cases for post-processing options. Contains
   
 sp-rtrace.resolve - test cases for symbol resolving. Contains basic
   tests of resolving backtraces of applications compiled with and 
-  without debug symbols and c++ name demangling.
+  without debug symbols and C++ name demangling.
   
 sp-rtrace.rtrace - test cases for process launching and trace toggling. 
   Contains tests of starting/toggling target processes with trace
   enabled/disabled at start with/without post-processing options in 
   managed/normal mode.
-  
 
-
-
+  Before running this test, please make sure there aren't trace_test
+  processes left running from a previous (interrupted or failed)
+  run as test expects there to be only single such process.

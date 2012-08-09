@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010,2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -30,12 +30,13 @@
 
 
 #include <stdlib.h>
+#include <unistd.h>
 #include "library/sp_rtrace_context.h"
 
 int context1 = 0;
 int context2 = 0;
 
-static void* zero()
+static void* zero(void)
 {
 	if (malloc(1000) == NULL) {
 		exit (-1);
@@ -43,7 +44,7 @@ static void* zero()
 	return malloc(2000);
 }
 
-void*  one()
+void*  one(void)
 {
 	sp_context_enter(context1);
 	if (malloc(1001) == NULL) {
@@ -54,7 +55,7 @@ void*  one()
 	return malloc(2001);
 }
 
-void* two()
+void* two(void)
 {
 	sp_context_enter(context2);
 	if (malloc(1002) == NULL) {
@@ -65,7 +66,7 @@ void* two()
 	return malloc(2002);
 }
 
-void* three()
+void* three(void)
 {
 	if (malloc(1003) == NULL) {
 		exit (-1);
@@ -74,7 +75,7 @@ void* three()
 	return malloc(2003);
 }
 
-void start()
+void start(void)
 {
 	context1 = sp_context_create("first context");
 	context2 = sp_context_create("second context");

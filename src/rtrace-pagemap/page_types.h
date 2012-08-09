@@ -85,9 +85,9 @@ extern "C" {
 
 
 typedef struct {
-	char mark;
-	char* desc;
-	char* info;
+	const char mark;
+	const char* desc;
+	const char* info;
 } page_flag_name_t;
 
 extern page_flag_name_t page_flag_names[];

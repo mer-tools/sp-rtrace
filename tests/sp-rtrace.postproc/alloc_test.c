@@ -1,7 +1,7 @@
 /*
  * This file is part of sp-rtrace package.
  *
- * Copyright (C) 2010 by Nokia Corporation
+ * Copyright (C) 2010,2012 by Nokia Corporation
  *
  * Contact: Eero Tamminen <eero.tamminen@nokia.com>
  *
@@ -29,9 +29,10 @@
  */
 
 #include <stdlib.h>
+#include <unistd.h>
 
 
-static void* zero()
+static void* zero(void)
 {
 	if (malloc(1000) == NULL) {
 		exit (-1);
@@ -39,7 +40,7 @@ static void* zero()
 	return malloc(2000);
 }
 
-void*  one()
+void*  one(void)
 {
 	if (malloc(1001) == NULL) {
 		exit (-1);
@@ -48,7 +49,7 @@ void*  one()
 	return malloc(2001);
 }
 
-void* two()
+void* two(void)
 {
 	if (malloc(1002) == NULL) {
 		exit (-1);
@@ -57,7 +58,7 @@ void* two()
 	return malloc(2002);
 }
 
-void* three()
+void* three(void)
 {
 	if (malloc(1003) == NULL) {
 		exit (-1);
@@ -66,7 +67,7 @@ void* three()
 	return malloc(2003);
 }
 
-void start()
+void start(void)
 {
 	int i;
 	for (i = 0; i < 5; i++) {

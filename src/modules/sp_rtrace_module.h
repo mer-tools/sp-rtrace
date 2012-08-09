@@ -86,4 +86,85 @@ enum {
 	MODULE_READY,        // The initialization was completed.
 };
 
+/**
+ * Function call data structure.
+ */
+typedef struct module_fcall_t {
+	/* the function call type (sp_rtrace_fcall_type_t structure) */
+	unsigned int type;
+	/* the function call timestamp */
+	unsigned int timestamp;
+	/* the function name */
+	const char* name;
+	/* the resource type identifier  */
+	unsigned int res_type_id;
+	/* the associated (allocated/freed) resource identifier */
+	pointer_t res_id;
+	/* the associated (allocated) resource size */
+	int res_size;
+} module_fcall_t;
+
+
+/**
+ * Function stack trace data
+ */
+typedef struct module_ftrace_t {
+	/* number of frames in stack trace */
+	unsigned long nframes;
+
+	/* the frame return addresses */
+	pointer_t* frames;
+
+	/* The resolved address names. NULL when parsing binary data,
+	 * but text files could contain already resolved names -
+	 * in this case keep them intact. */
+	char** resolved_names;
+} module_ftrace_t;
+
+
+/**
+ * Call context data.
+ */
+typedef struct module_context_t {
+	/* the context id */
+	unsigned long id;
+	/* the context name */
+	const char* name;
+} module_context_t;
+
+/**
+ * Resource type information.
+ */
+typedef struct module_resource_t {
+	/* the resource type id */
+	unsigned long id;
+	/* the resource type */
+	const char* type;
+	/* the resource description */
+	const char* desc;
+	/* resource behaviour flags */
+	unsigned int flags;
+} module_resource_t;
+
+/**
+ * Function argument data
+ */
+typedef struct module_farg_t {
+	/* the function argument name. Usually it matches the function argument prototype name */
+	const char* name;
+	/* the function argument value. */
+	const char* value;
+} module_farg_t;
+
+/**
+ * File attachment data
+ */
+typedef struct module_attachment_t {
+	/* the attachment name */
+	const char* name;
+	/* name of the attached file */
+	const char* path;
+} module_attachment_t;
+
+
 #endif /* SP_RTRACE_MODULE_H_ */

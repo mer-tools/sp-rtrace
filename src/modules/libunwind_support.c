@@ -38,7 +38,7 @@ static const char* const libs[] = {
 /*
  * Public API implementation
  */
-fn_backtrace_t libunwind_initialize()
+fn_backtrace_t libunwind_initialize(void)
 {
 	unsigned i;
 	fn_backtrace_t bt;
@@ -63,7 +63,7 @@ fn_backtrace_t libunwind_initialize()
 	return bt;
 }
 
-int libunwind_release()
+int libunwind_release(void)
 {
 	if (handle) {
 		dlclose(handle);

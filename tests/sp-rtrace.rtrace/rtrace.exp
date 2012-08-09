@@ -1,7 +1,7 @@
 #
 # This file is part of sp-rtrace package.
 #
-# Copyright (C) 2010 by Nokia Corporation
+# Copyright (C) 2010,2012 by Nokia Corporation
 #
 # Contact: Eero Tamminen <eero.tamminen@nokia.com>
 #
@@ -101,7 +101,11 @@ proc test_startup { bt_depth args } {
 	eval spawn $::src_dir/launcher.sh "$::bin_dir/$::out_file" "-o$::bin_dir" "-s" "-A" $args 
 	set launcher_sid $spawn_id
  	after 1000
-	if { [exec kill -SIGUSR2 [pidof $::out_file] ] == -1 } {
+	set pid [pidof $::out_file]
+	if { $pid <= 0 } {
+		return -1
+	}
+	if { [exec kill -SIGUSR2 $pid] == -1 } {
 		return -1
 	}
 	
@@ -138,7 +142,11 @@ proc test_startup_bin_notrace { args } {
 	eval spawn $::src_dir/launcher.sh "$::bin_dir/$::out_file" "-o$::bin_dir" $args 
 	set launcher_sid $spawn_id
  	after 1000
-	if { [exec kill -SIGUSR2 [pidof $::out_file]] == -1 } {
+	set pid [pidof $::out_file]
+	if { $pid <= 0 } {
+		return -1
+	}
+	if { [exec kill -SIGUSR2 $pid] == -1 } {
 		return -1
 	}
 	

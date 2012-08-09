@@ -23,33 +23,6 @@ Displays help information and exits.
 Lists all available tracing modules. The first column identifies the module 
 type: P - preload module.
 .TP
-\fI--output-dir\fP=<path> (\fI-o\fP <path)
-Specifies the output directory for storing trace data. 
-
-By default the home directory is used. Specifying stdout will force
-post-processor to use standard output.
-.TP
-\fI--manage-preproc\fP (\fI-m\fP)
-Specifies that the pre-processor (sp-rtrace) is launched internally by
-the main module. By default the main tracing module tries to connect
-to a named pipe (/tmp/rtrace-<pid>) created by pre-processor. But if
-tracing tracing of the sub processes right after they're forked is
-required, or there are problems in establishing data connection
-through named pipe (for example Scratchbox ARM emulation), or traced
-process controls all terminal output, a managed pre-processor mode can
-be used.
-
-In this mode the sp-rtrace process used for the data pre-processing is
-started by the tracing module. This allows to use the pre-processor
-standard input without using named pipes. However, stopping tracing
-closes pre-processor and sends SIGCHLD signal to the tracing process,
-which can also affect its work.
-
-Managed mode must be used also if the target process enables/disables
-tracing by sending toggle signal to itself.
-
-By default the managed mode is not used.
-.TP
 \fI--toggle-signal\fP=<signal> (\fI-S\fP <signal>)
 Specifies the tracing toggle signal. The main tracing module enables/disables
 tracing upon receiving this signal.
@@ -69,6 +42,39 @@ By default process starts with tracing disabled, but it can be enabled later
 by sending the toggle signal. This option can be used when the process
 startup needs to be traced.
 .TP
+\fI--output-dir\fP=<path> (\fI-o\fP <path)
+Specifies the output directory for storing trace data. 
+
+By default the home directory is used. Specifying stdout will force
+post-processor to use standard output.
+.TP
+\fI--manage-preproc\fP (\fI-m\fP)
+Specifies the use of "managed mode". In managed mode the pre-processor
+sp-rtrace instance will be launched internally when needed.
+Needed for tracing sub-processes and in some other cases.
+
+In non-managed mode the main tracing module tries to connect to
+a named pipe (/tmp/rtrace-<pid>) created by pre-processor. But if
+tracing of the sub-processes is required, or there are problems in
+establishing data connection through named pipe (e.g. because there
+are intermediate processes which result in the started and traced
+processes PIDs not matching), or traced process controls all terminal
+output (like e.g. "top" and many other console programs do), managed
+mode needs to be used.
+
+Because in managed mode sp-rtrace process used for the data
+pre-processing is started by the tracing module, pre-processor
+standard input can be used instead of named pipes.  Another difference
+to non-managed mode is that stopping tracing in managed mode
+terminates the pre-processor and causes SIGCHLD signal to be sent
+the traced process, which can affect its behavior.
+
+Managed mode must be used also when the target process needs to
+enable/disable tracing by sending toggle signal to itself.
+
+By default the managed mode (and tracing of child processes)
+is not used.
+.TP
 \fI--postproc\fP=<options> (\fI-P\fP <options>)
 Specifies post-processing options passed to the post-processor. 
 If this option is specified, sp-rtrace spawns a sp-rtrace-postproc process
@@ -84,7 +90,6 @@ Either full name of the module can be specified or its alias. The tracing
 modules are named 'libsp-rtrace-<module>.so'. So both - --preload=memory
 and --preload=libsp-rtrace-memory.so will specify the memory tracing 
 module libsp-rtrace-memory.so
-
 .TP
 \fI--disable-packet-buffering\fP (\fI-B\fP)
 Disables internal packet buffering. Normally the packets are stored in to
@@ -160,9 +165,7 @@ backtraces, see sp-rtrace-postproc manual) and store the resulting (ASCII)
 trace file to the current directory.
 .TP
 sp-rtrace -t $(pidof sample)
-Toggle tracing for an already running 'sample' process.  If traced
-process was started with '-m' or '-f', those options need to be used
-also for toggling.
+Toggle tracing for an already running 'sample' process.
 .TP
 sp-rtrace -l
 List all available tracing modules.

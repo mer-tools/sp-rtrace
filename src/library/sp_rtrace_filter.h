@@ -87,7 +87,7 @@ void sp_rtrace_filter_parse_size_opt(sp_rtrace_filter_t* filter, const char* opt
  * @param[in] fcall   the record to validate.
  * @return            true if the record matches filter parameters.
  */
-bool sp_rtrace_filter_validate(sp_rtrace_filter_t* filter, sp_rtrace_fcall_t* fcall);
+bool sp_rtrace_filter_validate(const sp_rtrace_filter_t* filter, const sp_rtrace_fcall_t* fcall);
 
 
 #ifdef __cplusplus
