@@ -351,10 +351,10 @@ static int bfd_get_address_info(rs_cache_record_t* rec, pointer_t address, symbo
 
 	for (section = rec->file->sections; section != NULL; section = section->next) {
 
-		if ((bfd_get_section_flags(resolver->bfd_file, section) & SEC_ALLOC) == 0)
+		if ((bfd_get_section_flags(rec->file, section) & SEC_ALLOC) == 0)
 			continue;
 
-		vma = bfd_get_section_vma(resolver->bfd_file, section);
+		vma = bfd_get_section_vma(rec->file, section);
 		if (pc < vma)
 			continue;
 
