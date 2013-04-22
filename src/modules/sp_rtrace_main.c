@@ -171,6 +171,15 @@ static unsigned int rtrace_resource_index = 0;
 		pipe_buffer_unlock(_buffer, _ptr - _buffer); \
 		return _ptr - _buffer;
 
+
+
+/*
+ * function declarations
+ */
+static int _atoi(const char* str);
+static char* _itoa(char* buffer, int value);
+static char* _stpncpy(char* dst, const char* src, int size);
+
 /**
  * Returns the current end of the heap.
  * @return
@@ -236,6 +245,10 @@ static int open_pipe(void)
 		return fd[1];
 	}
 	else {
+		/* get the pre-processor named pipe name */
+		char* ptr = _stpncpy(pipe_path, SP_RTRACE_PIPE_PATTERN, sizeof(pipe_path));
+		_itoa(ptr, getpid());
+
 		LOG("connecting to output pipe %s", pipe_path);
 		/* The pre-processor pipe should be already created.
 		   Otherwise disable the tracing.
@@ -931,10 +944,6 @@ bool sp_rtrace_initialize(void)
 
 		/* read process name */
 		get_proc_name(proc_name, sizeof(proc_name));
-
-		/* get the pre-processor named pipe name */
-		char* ptr = _stpncpy(pipe_path, SP_RTRACE_PIPE_PATTERN, sizeof(pipe_path));
-		_itoa(ptr, getpid());
 
 		/* read backtrace depth */
 		const char* env_backtrace_depth = getenv(rtrace_env_opt[OPT_BACKTRACE_DEPTH]);
