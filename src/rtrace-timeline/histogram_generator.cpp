@@ -113,8 +113,8 @@ void HistogramGenerator::finalize() {
 				mode << " (freed)\"", "", lt_freed);
 
 	// write data
-	for (keys_t::iterator iter = keys.begin(); iter != keys.end(); iter++) {
-		unsigned int size = *iter;
+	for (keys_t::iterator kiter = keys.begin(); kiter != keys.end(); kiter++) {
+		unsigned int size = *kiter;
 		file->writeText(Formatter() << size);
 		ResourceData::data_t::iterator iter = rd->allocs.find(size);
 		if (iter == rd->allocs.end()) {
