@@ -1,6 +1,6 @@
 Name: sp-rtrace
-Version: 2.0
-Release: 1%{?dist}
+Version: 2.0.1
+Release: 1
 Summary:  Resource consumption tracing tools
 Group: Development/Tools
 License: GPLv2+
@@ -129,8 +129,6 @@ Summary: Postprocessing tools for the sp-rtrace report visualization
 Group: Development/Tools
 Requires: sp-rtrace
 Requires: python
-#There's no miminal gnuplot-nox like in Debian
-#Requires: gnuplot
 
 %description visualize
  This package contains various visualization (alloc addressmap,

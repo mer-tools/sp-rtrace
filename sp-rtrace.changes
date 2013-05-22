@@ -1,2 +1,5 @@
+* Wed May 22 2013 Matti Kosola <matti.kosola@jollamobile.com> 2.0.1
+- Take latest commits from master to fix compilation errors
+
 * Thu Apr 25 2013 Matti Kosola <matti.kosola@jollamobile.com> 2.0
 - First version to Mer tools
